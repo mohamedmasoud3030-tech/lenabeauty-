@@ -88,7 +88,7 @@ export default function ReportsPage() {
              <BarChart3 className="h-12 w-12" />
            </div>
            <div className="max-w-md space-y-2">
-             <h3 className="text-lg font-bold text-foreground">{t("Backend Schema Required")}</h3>
+             <h3 className="text-lg font-bold text-foreground">{t("Backend Required")}</h3>
              <p className="text-sm text-muted-foreground leading-relaxed">
                {t("Financial reports and sales analytics require the process_checkout_v1 RPC and invoice schema to be applied to the Supabase database.")}
              </p>

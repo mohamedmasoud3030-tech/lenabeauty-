@@ -290,7 +290,7 @@ export default function SettingsPage() {
       <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 backdrop-blur-sm">
         <AlertTriangle className="h-6 w-6 shrink-0" />
         <div>
-          <span className="text-sm font-bold block">{t("Backend Schema Required")}</span>
+          <span className="text-sm font-bold block">{t("Backend Required")}</span>
           <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
         </div>
       </div>

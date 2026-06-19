@@ -25,6 +25,13 @@ const resources = {
       
       // Dashboard
       "Summary": "الملخص",
+      "Total customers": "إجمالي العملاء",
+      "Manage Services": "إدارة الخدمات",
+      "Monthly Performance Overview": "نظرة عامة على الأداء الشهري",
+      "Financial Health": "الصحة المالية",
+      "Search by name or category...": "البحث بالاسم أو الفئة...",
+      "Clear": "مسح",
+      "Action": "إجراء",
       "Today's Revenue": "إيرادات اليوم",
       "Today's Appointments": "مواعيد اليوم",
       "New Customers": "عملاء جدد",
@@ -425,6 +432,13 @@ const resources = {
       
       // Dashboard
       "Summary": "Summary",
+      "Total customers": "Total Customers",
+      "Manage Services": "Manage Services",
+      "Monthly Performance Overview": "Monthly Performance Overview",
+      "Financial Health": "Financial Health",
+      "Search by name or category...": "Search by name or category...",
+      "Clear": "Clear",
+      "Action": "Action",
       "Today's Revenue": "Today's Revenue",
       "Today's Appointments": "Today's Appointments",
       "New Customers": "New Customers",
