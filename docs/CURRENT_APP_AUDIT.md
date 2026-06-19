@@ -80,8 +80,9 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 - The `PREVIEW_CENTER_ID` mock is structurally isolated and unreachable during Supabase backend parsing.
 
 ### Dashboard/Reporting Risks
-- All analytical read methods are explicitly unsupported and safely return canonical `BACKEND_METHOD_UNSUPPORTED` errors inside the Supabase adapters.
-- `DashboardPage` catches these errors and renders empty states naturally.
+- **Implemented Operational Reads**: Methods like `Dashboard.getSummary`, `Report.getAppointments`, and `Report.getInventory` are implemented in code and successfully map base operational data. However, they remain **code-complete with Live Supabase QA pending** to verify relational query stability.
+- **Blocked Financial Reads**: Methods like `Dashboard.getPnlMonth`, `Dashboard.getRevenueLast7Days`, and `Report.getSales` remain explicitly mapped to `BACKEND_METHOD_UNSUPPORTED`.
+- **UI Integrity**: `DashboardPage` and `ReportsPage` safely catch these unsupported canonical errors and render localized empty or "Backend Required" states rather than falsifying financial data.
 
 ### POS/Invoice/Print Risks
 - The `Invoice.checkout` function is blocked using safe unsupported methods. `PosInvoicesPage` securely intercepts `BACKEND_METHOD_UNSUPPORTED` and displays a localized alert.
@@ -155,7 +156,7 @@ Ensure these are exactly configured in your production or local `.env` (without 
 - `VITE_BRANCH_MODE=single`
 
 ### Required Supabase Schema Checklist
-**Active Tables/Resources** (Must exist and have RLS disabled or matching center_id logic):
+**Active Tables/Resources** (RLS should be enabled for production. Policies must enforce center_id / membership isolation. Any disabled-RLS setup is local/dev-only and must not be treated as production-ready):
 - `customers`
 - `appointments`
 - `services`

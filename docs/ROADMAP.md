@@ -117,7 +117,7 @@
 ## Phase 10A: Supabase Live Activation Readiness and Non-checkout Live QA
 - **Goal**: Formally prepare the application to run against a real Supabase backend and define a clear QA path, enforcing environment variable validation, documenting active and pending schema, and solidifying frontend separation of concerns from database operations.
 - **Tasks**: Added detailed environment checking documentation to `CURRENT_APP_AUDIT.md`, updated `.env.example`, documented required active schemas (customers, appointments, services, products, expenses, employees), and fully restricted invoice checkout/RPC states.
-- **Acceptance Criteria**: Live QA checklists are established and confirmed. Frontend runs in `supabase` mode, reporting safe failures for unimplemented backend tables/RPCs without triggering fake transactions.
+- **Acceptance Criteria**: Live QA checklists are established and confirmed. App is documented/prepared to run in Supabase mode (reporting safe failures for unimplemented backend tables/RPCs without triggering fake transactions), but live browser QA remains pending.
 - **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run --passWithNoTests && npm run build`.
 - **Explicitly out of scope**: Real checkout processing, applying any remote SQL scripts.
 
