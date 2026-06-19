@@ -214,7 +214,7 @@ export default function EmployeesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
       >
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[800px] text-sm md:min-w-full">
             <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
               <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -320,6 +320,86 @@ export default function EmployeesPage() {
               </AnimatePresence>
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-6 opacity-40 py-20">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-xs font-bold uppercase tracking-[0.2em]">{t("Loading Team...")}</p>
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+                <Users className="h-16 w-16" />
+                <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Employees Found")}</p>
+              </div>
+            ) : (
+              employees.map((emp, idx) => (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  key={`m-${emp.id}`}
+                  className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                      {emp.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col items-start gap-1">
+                      <span className="font-bold text-foreground text-lg truncate w-full leading-tight">{emp.name}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Staff ID")}: {emp.id.slice(-6).toUpperCase()}</span>
+                      <div className="inline-flex items-center gap-1.5 rounded-xl bg-muted px-2 py-1 mt-1 text-[10px] font-bold text-muted-foreground border border-transparent shadow-sm shrink-0">
+                        <Briefcase className="h-3 w-3" />
+                        {emp.role}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Base Salary")}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-foreground text-base">{emp.baseSalary.toFixed(2)}</span>
+                          <span className="text-[8px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col text-end">
+                        <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-widest">{t("Commission")}</span>
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="font-bold text-emerald-600 text-lg">{(emp.monthCommissionTotal ?? 0).toFixed(2)}</span>
+                          <span className="text-[8px] font-bold text-emerald-600 uppercase">{t("OMR")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                      <button
+                        onClick={() => setForm(emp)}
+                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                      >
+                        <Edit className="h-4 w-4" />
+                        {t("Edit")}
+                      </button>
+                      <button
+                        onClick={() => void handleDelete(emp.id)}
+                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shadow-sm"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t("Delete")}
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 

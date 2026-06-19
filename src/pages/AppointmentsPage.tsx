@@ -384,109 +384,163 @@ export default function AppointmentsPage() {
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
+        className="space-y-6 lg:space-y-0"
       >
-        <div className="overflow-x-auto scrollbar-hide">
-          <div className="min-w-[1200px]">
-            <div className="grid border-b border-border bg-muted/20" style={{ gridTemplateColumns: `120px repeat(${range.days.length}, 1fr)` }}>
-              <div className="p-8 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-muted-foreground/40" />
-              </div>
-              {range.days.map((d) => (
-                <div key={d.toISOString()} className="border-r border-border/50 p-8 text-center space-y-1">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{d.toLocaleDateString(i18n.language || "ar", { weekday: "long" })}</div>
-                  <div className="text-2xl font-bold text-foreground">{d.toLocaleDateString(i18n.language || "ar", { day: "2-digit", month: "2-digit" })}</div>
+        <div className="hidden lg:block overflow-hidden rounded-[3rem] border border-border bg-card shadow-2xl">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="min-w-[1200px]">
+              <div className="grid border-b border-border bg-muted/20" style={{ gridTemplateColumns: `120px repeat(${range.days.length}, 1fr)` }}>
+                <div className="p-8 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-muted-foreground/40" />
                 </div>
-              ))}
-            </div>
+                {range.days.map((d) => (
+                  <div key={d.toISOString()} className="border-r border-border/50 p-8 text-center space-y-1">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{d.toLocaleDateString(i18n.language || "ar", { weekday: "long" })}</div>
+                    <div className="text-2xl font-bold text-foreground">{d.toLocaleDateString(i18n.language || "ar", { day: "2-digit", month: "2-digit" })}</div>
+                  </div>
+                ))}
+              </div>
 
-            <div className="max-h-[75vh] overflow-y-auto overflow-x-hidden relative scrollbar-hide">
-              <div className="grid" style={{ gridTemplateColumns: `120px repeat(${range.days.length}, 1fr)`, gridTemplateRows: `repeat(${slots.length}, 80px)` }}>
-                {slots.map((slotIdx) => {
-                  const t = slotToDate(range.days[0], slotIdx);
-                  const isHour = t.getMinutes() === 0;
-                  return (
-                    <div key={`time-${slotIdx}`} className="flex items-start justify-center border-b border-border/30 py-4 text-xs font-bold text-muted-foreground/60">
-                      {isHour ? fmtTime(t) : ""}
-                    </div>
-                  );
-                })}
-
-                {range.days.map((day) => {
-                  const dayKey = startOfDay(day).toISOString();
-                  const dayAppts = apptsByDay.get(dayKey) ?? [];
-                  return (
-                    <div key={dayKey} className="relative border-r border-border/30 group/day">
-                      {slots.map((slotIdx) => (
-                        <button
-                          key={`${dayKey}-${slotIdx}`}
-                          onClick={() => openBooking(slotToDate(day, slotIdx))}
-                          className="h-[80px] w-full border-b border-border/30 transition-all hover:bg-primary/[0.02] flex items-center justify-center group/slot"
-                        >
-                          <Plus className="h-4 w-4 text-primary opacity-0 group-hover/slot:opacity-100 transition-opacity" />
-                        </button>
-                      ))}
-
-                      <div className="pointer-events-none absolute inset-0 p-2">
-                        <AnimatePresence>
-                          {dayAppts.map((a) => {
-                            const dt = new Date(a.dateTime);
-                            const minutes = dt.getHours() * 60 + dt.getMinutes();
-                            const row = minutes / SLOT_MINS;
-                            const span = (a.service?.durationMins ?? 30) / SLOT_MINS;
-                            
-                            return (
-                              <motion.div
-                                layoutId={a.id}
-                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                key={a.id}
-                                style={{ position: "absolute", top: row * 80 + 8, right: 8, left: 8, height: span * 80 - 16 }}
-                                className={clsx(
-                                  "pointer-events-auto flex flex-col justify-between rounded-[1.5rem] border p-4 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-0.5 cursor-pointer group/appt",
-                                  statusClass(a.status)
-                                )}
-                                onClick={(e) => { e.stopPropagation(); openEditBooking(a); }}
-                              >
-                                <div className="space-y-1.5 min-w-0">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="truncate text-sm font-bold leading-tight">{a.customer?.name}</div>
-                                    <MoreVertical className="h-4 w-4 opacity-0 group-hover/appt:opacity-100 transition-opacity shrink-0" />
-                                  </div>
-                                  <div className="truncate text-[10px] font-bold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
-                                    <Scissors className="h-3 w-3" />
-                                    {a.service?.name}
-                                  </div>
-                                </div>
-                                <div className="flex items-center justify-between text-[10px] font-bold mt-2">
-                                  <div className="flex items-center gap-2 bg-white/20 px-2 py-1 rounded-lg">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{fmtTime(dt)}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {a.status === AppointmentStatus.SCHEDULED && (
-                                      <button 
-                                        onClick={(e) => { e.stopPropagation(); void sendReminder(a); }}
-                                        className="h-7 w-7 rounded-xl bg-white/40 flex items-center justify-center hover:bg-white/60 transition-all shadow-sm"
-                                      >
-                                        <Bell className="h-3.5 w-3.5" />
-                                      </button>
-                                    )}
-                                    <span className="rounded-xl bg-white/50 px-3 py-1 uppercase text-[9px] tracking-wider shadow-sm">{t(a.status)}</span>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            );
-                          })}
-                        </AnimatePresence>
+              <div className="max-h-[75vh] overflow-y-auto overflow-x-hidden relative scrollbar-hide">
+                <div className="grid" style={{ gridTemplateColumns: `120px repeat(${range.days.length}, 1fr)`, gridTemplateRows: `repeat(${slots.length}, 80px)` }}>
+                  {slots.map((slotIdx) => {
+                    const t = slotToDate(range.days[0], slotIdx);
+                    const isHour = t.getMinutes() === 0;
+                    return (
+                      <div key={`time-${slotIdx}`} className="flex items-start justify-center border-b border-border/30 py-4 text-xs font-bold text-muted-foreground/60">
+                        {isHour ? fmtTime(t) : ""}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+
+                  {range.days.map((day) => {
+                    const dayKey = startOfDay(day).toISOString();
+                    const dayAppts = apptsByDay.get(dayKey) ?? [];
+                    return (
+                      <div key={dayKey} className="relative border-r border-border/30 group/day">
+                        {slots.map((slotIdx) => (
+                          <button
+                            key={`${dayKey}-${slotIdx}`}
+                            onClick={() => openBooking(slotToDate(day, slotIdx))}
+                            className="h-[80px] w-full border-b border-border/30 transition-all hover:bg-primary/[0.02] flex items-center justify-center group/slot"
+                          >
+                            <Plus className="h-4 w-4 text-primary opacity-0 group-hover/slot:opacity-100 transition-opacity" />
+                          </button>
+                        ))}
+
+                        <div className="pointer-events-none absolute inset-0 p-2">
+                          <AnimatePresence>
+                            {dayAppts.map((a) => {
+                              const dt = new Date(a.dateTime);
+                              const minutes = dt.getHours() * 60 + dt.getMinutes();
+                              const row = minutes / SLOT_MINS;
+                              const span = (a.service?.durationMins ?? 30) / SLOT_MINS;
+                              
+                              return (
+                                <motion.div
+                                  layoutId={a.id}
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95 }}
+                                  key={a.id}
+                                  style={{ position: "absolute", top: row * 80 + 8, right: 8, left: 8, height: span * 80 - 16 }}
+                                  className={clsx(
+                                    "pointer-events-auto flex flex-col justify-between rounded-[1.5rem] border p-4 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-0.5 cursor-pointer group/appt",
+                                    statusClass(a.status)
+                                  )}
+                                  onClick={(e) => { e.stopPropagation(); openEditBooking(a); }}
+                                >
+                                  <div className="space-y-1.5 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="truncate text-sm font-bold leading-tight">{a.customer?.name}</div>
+                                      <MoreVertical className="h-4 w-4 opacity-0 group-hover/appt:opacity-100 transition-opacity shrink-0" />
+                                    </div>
+                                    <div className="truncate text-[10px] font-bold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
+                                      <Scissors className="h-3 w-3" />
+                                      {a.service?.name}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between text-[10px] font-bold mt-2">
+                                    <div className="flex items-center gap-2 bg-white/20 px-2 py-1 rounded-lg">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{fmtTime(dt)}</span>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile View */}
+        <div className="lg:hidden space-y-6">
+          {range.days.map((day) => {
+            const dayKey = startOfDay(day).toISOString();
+            const dayAppts = apptsByDay.get(dayKey) ?? [];
+            if (dayAppts.length === 0) return null;
+
+            return (
+              <div key={`mobile-${dayKey}`} className="space-y-4">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-2">
+                  {fmtDayHeader(day)}
+                </h3>
+                <div className="grid gap-4">
+                  {dayAppts.sort((a,b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()).map(a => {
+                    const dt = new Date(a.dateTime);
+                    return (
+                      <motion.div
+                        key={`m-${a.id}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => openEditBooking(a)}
+                        className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4 relative overflow-hidden"
+                      >
+                        <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).replace("bg-", "bg-").split(" ")[0])} />
+                        
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <span className="font-bold text-foreground text-lg">{a.customer?.name}</span>
+                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                              <Scissors className="h-3 w-3" />
+                              {a.service?.name}
+                            </div>
+                          </div>
+                          <span className={clsx("rounded-xl px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-sm", statusClass(a.status))}>
+                            {t(a.status)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-4 border-t border-border pt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                          <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
+                            <Clock className="h-4 w-4 text-primary" />
+                            {fmtTime(dt)}
+                          </div>
+                          <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl flex-1">
+                            <User className="h-4 w-4 text-primary" />
+                            <span className="truncate">{a.employee?.name}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          {Array.from(apptsByDay.values()).flat().length === 0 && !loading && (
+             <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+               <CalendarIcon className="h-16 w-16" />
+               <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Appointments")}</p>
+             </div>
+          )}
         </div>
       </motion.div>
 

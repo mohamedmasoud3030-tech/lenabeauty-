@@ -574,7 +574,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <div className="overflow-auto">
-                    <table className="w-full text-start">
+                    <table className="hidden lg:table w-full text-start">
                       <thead>
                         <tr className="border-b border-border bg-muted/30 [&>th]:px-8 [&>th]:py-4 [&>th]:text-xs [&>th]:font-bold [&>th]:text-muted-foreground [&>th]:uppercase [&>th]:tracking-widest">
                           <th>{t("User")}</th>
@@ -640,6 +640,59 @@ export default function SettingsPage() {
                         )}
                       </tbody>
                     </table>
+
+                    {/* Mobile Cards for Users */}
+                    <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+                      {usersSorted.map((u) => (
+                        <div key={`m-user-${u.id}`} className="bg-card border border-border rounded-[2rem] p-5 shadow-sm flex flex-col gap-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                                {u.username[0].toUpperCase()}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-foreground text-base">{u.username}</span>
+                                <span className={clsx(
+                                  "inline-flex items-center rounded-full mt-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider w-fit",
+                                  u.role === "ADMIN" ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"
+                                )}>
+                                  {u.role === "ADMIN" ? t("Admin") : t("Staff")}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className={clsx("h-2 w-2 rounded-full", u.isActive ? "bg-emerald-500" : "bg-rose-500")} />
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                {u.isActive ? t("Active") : t("Inactive")}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-4 border-t border-border">
+                            <button
+                              onClick={() => onEdit(u)}
+                              className="h-10 flex-1 flex items-center justify-center gap-2 rounded-xl bg-muted border border-border text-xs font-bold text-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              {t("Edit")}
+                            </button>
+                            <button
+                              onClick={() => void onDelete(u.id)}
+                              className="h-10 flex-1 flex items-center justify-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-bold text-rose-600 hover:bg-rose-500 hover:text-white transition-all"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              {t("Delete")}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {usersSorted.length === 0 && (
+                        <div className="py-12 text-center flex flex-col items-center gap-4 opacity-20">
+                          <Users className="h-12 w-12" />
+                          <p className="text-sm font-bold uppercase tracking-widest">{t("No Users Found")}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

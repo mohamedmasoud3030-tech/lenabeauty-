@@ -277,9 +277,9 @@ export default function CustomersPage() {
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl print:hidden"
+        className="print:hidden space-y-4 lg:space-y-0 lg:rounded-[3rem] lg:border border-border lg:bg-card lg:shadow-2xl"
       >
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[800px] text-sm md:min-w-full">
             <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
               <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -373,6 +373,79 @@ export default function CustomersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden grid gap-4 grid-cols-1">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((c, idx) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={c.id}
+                className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase shadow-inner shrink-0">
+                    {c.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <span className="font-bold text-foreground text-lg truncate">{c.name}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{t("Client ID")}: {c.id.slice(-6).toUpperCase()}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-muted/50 px-4 py-3 rounded-xl w-fit">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <span className="font-bold text-foreground text-sm" dir="ltr">{c.phone ?? "—"}</span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-foreground text-xl">{c.totalSpent.toFixed(2)}</span>
+                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR Total")}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 border border-amber-500/20 shadow-sm">
+                    <Sparkles className="h-4 w-4" />
+                    {c.loyaltyPoints} {t("Pts")}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={() => openHistory(c)}
+                    className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                  >
+                    <History className="h-5 w-5" />
+                    {t("History")}
+                  </button>
+                  <button
+                    onClick={() => openEdit(c)}
+                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-all shadow-sm shrink-0"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => void handleDeleteCustomer(c.id)}
+                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-all shadow-sm shrink-0"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {filtered.length === 0 && !loading && (
+             <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+               <Search className="h-16 w-16" />
+               <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Customers Found")}</p>
+             </div>
+          )}
         </div>
       </motion.div>
 

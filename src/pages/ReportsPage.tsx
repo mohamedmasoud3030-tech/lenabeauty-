@@ -327,7 +327,7 @@ export default function ReportsPage() {
                 <Download className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-x-auto scrollbar-hide">
+            <div className="hidden lg:block overflow-x-auto scrollbar-hide">
               <table className="w-full min-w-[800px] text-sm md:min-w-full">
                 <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
                   <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -377,6 +377,53 @@ export default function ReportsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards for Appointments */}
+            <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+              {appData.map((app, idx) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                  key={`m-${app.id}`}
+                  className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                        {app.customer?.name?.[0]}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col items-start gap-1">
+                        <span className="font-bold text-foreground text-lg truncate w-full">{app.customer?.name}</span>
+                        <div className="inline-flex items-center gap-1.5 rounded-xl bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground border border-transparent shadow-sm shrink-0">
+                           {app.service?.name}
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      className={clsx(
+                        "inline-flex items-center rounded-2xl px-2 py-1 text-[8px] font-bold uppercase tracking-[0.2em] shadow-sm shrink-0",
+                        app.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-600" :
+                        app.status === "CANCELED" ? "bg-rose-500/10 text-rose-600" :
+                        "bg-amber-500/10 text-amber-600"
+                      )}
+                    >
+                      {t(app.status)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Date")}</span>
+                      <span className="font-bold text-foreground text-xs uppercase tracking-tight">{new Date(app.dateTime).toLocaleString(i18n.language || "ar", { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    </div>
+                    <div className="flex flex-col gap-1 text-end">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Employee")}</span>
+                      <span className="font-bold text-foreground text-xs uppercase tracking-tight">{app.employee?.name}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
 
@@ -510,7 +557,7 @@ export default function ReportsPage() {
               <Download className="h-5 w-5" />
             </button>
           </div>
-          <div className="overflow-x-auto scrollbar-hide">
+          <div className="hidden lg:block overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[800px] text-sm md:min-w-full font-sans">
               <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
                 <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -555,6 +602,59 @@ export default function ReportsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards for Inventory Status */}
+          <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+            {invData.map((p, idx) => (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                key={`m-inv-${p.id}`}
+                className={clsx(
+                  "bg-card border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4 relative overflow-hidden",
+                  p.stockQuantity < 5 ? "border-rose-500/30" : "border-border"
+                )}
+              >
+                {p.stockQuantity < 5 && (
+                  <div className="absolute top-0 end-0 bg-rose-500/10 text-rose-600 px-3 py-1 rounded-bl-2xl text-[10px] font-bold uppercase tracking-wider">
+                    {t("Low Stock")}
+                  </div>
+                )}
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                    {p.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col items-start gap-1">
+                    <span className="font-bold text-foreground text-lg truncate w-full">{p.name}</span>
+                    <div className={clsx(
+                      "inline-flex items-center gap-1.5 rounded-xl px-2 py-1 text-[10px] font-bold border shadow-sm shrink-0",
+                      p.stockQuantity < 5 ? "bg-rose-500/10 text-rose-700 border-rose-200 animate-pulse" : "bg-muted text-foreground border-border"
+                    )}>
+                      {p.stockQuantity} {t("In Stock")}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Cost")} / {t("Price")}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-muted-foreground text-xs">{p.cost.toFixed(2)}</span>
+                      <span className="text-muted-foreground/30">/</span>
+                      <span className="font-bold text-foreground text-xs">{p.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1 text-end">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("Total Value")}</span>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="font-bold text-primary text-base">{(p.stockQuantity * p.cost).toFixed(2)}</span>
+                      <span className="text-[8px] font-bold text-primary uppercase tracking-widest">{t("OMR")}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
       </div>

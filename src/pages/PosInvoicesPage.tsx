@@ -238,41 +238,41 @@ export default function PosInvoicesPage() {
       )}
 
       {/* Left: Items Selection */}
-      <div className="flex-1 flex flex-col rounded-[2.5rem] border border-border bg-card shadow-sm overflow-hidden print:hidden min-h-[500px]">
+      <div className="flex-1 flex flex-col rounded-[1.5rem] lg:rounded-[2.5rem] border border-border bg-card shadow-sm overflow-hidden print:hidden lg:h-full">
 
-        <div className="p-5 sm:p-8 border-b border-border space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="p-4 sm:p-5 lg:p-8 border-b border-border space-y-4 lg:space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("Service Catalog")}</h2>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">{t("Select items for checkout")}</p>
+              <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-foreground">{t("Service Catalog")}</h2>
+              <p className="text-[10px] lg:text-xs text-muted-foreground font-bold uppercase tracking-widest">{t("Select items for checkout")}</p>
             </div>
-            <div className="flex bg-muted rounded-2xl p-1.5 shadow-inner">
+            <div className="flex bg-muted rounded-2xl p-1.5 shadow-inner self-start sm:self-auto w-full sm:w-auto">
               <button 
                 onClick={() => setActiveTab("SERVICES")}
                 className={clsx(
-                  "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all",
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 lg:px-6 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
                   activeTab === "SERVICES" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Scissors className="h-4 w-4" />
+                <Scissors className="h-4 w-4 shrink-0" />
                 {t("Services")}
               </button>
               <button 
                 onClick={() => setActiveTab("PRODUCTS")}
                 className={clsx(
-                  "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all",
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 lg:px-6 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
                   activeTab === "PRODUCTS" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Package className="h-4 w-4" />
+                <Package className="h-4 w-4 shrink-0" />
                 {t("Products")}
               </button>
             </div>
           </div>
           <div className="relative group">
-            <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Search className="absolute start-4 lg:start-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <input 
-              className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-12 pe-6 py-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+              className="w-full rounded-2xl lg:rounded-[1.5rem] border border-border bg-muted/30 ps-10 lg:ps-12 pe-4 lg:pe-6 py-3 lg:py-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
               placeholder={t("Search by name or category...")}
               value={itemSearchQ}
               onChange={(e) => setItemSearchQ(e.target.value)}
@@ -280,14 +280,14 @@ export default function PosInvoicesPage() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-5 sm:p-8 bg-muted/5 scrollbar-hide">
+        <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-8 bg-muted/5 scrollbar-hide min-h-[50vh] lg:min-h-0">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40">
+            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40 py-20">
               <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
               <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Catalog...")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
               <AnimatePresence mode="popLayout">
                 {filteredItems.map((it, idx) => (
                   <motion.div 
@@ -298,42 +298,58 @@ export default function PosInvoicesPage() {
                     key={it.id} 
                     onClick={() => addToCart(it, activeTab === "SERVICES" ? "service" : "product")}
                     className={clsx(
-                      "group relative cursor-pointer rounded-[2rem] border border-border bg-card p-6 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 hover:border-primary/50",
+                      "group relative cursor-pointer rounded-[1.5rem] lg:rounded-[2rem] border border-border bg-card p-5 lg:p-6 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 hover:border-primary/50 flex flex-row lg:flex-col items-center lg:items-start gap-4",
                       activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
                     )}
                   >
-                    <div className="flex flex-col h-full space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/10 group-hover:text-primary transition-all group-hover:scale-110">
-                          {activeTab === "SERVICES" ? <Scissors className="h-6 w-6" /> : <Package className="h-6 w-6" />}
-                        </div>
+                    <div className="h-12 w-12 rounded-2xl bg-muted flex flex-col items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all lg:group-hover:scale-110">
+                      {activeTab === "SERVICES" ? <Scissors className="h-5 lg:h-6 w-5 lg:w-6" /> : <Package className="h-5 lg:h-6 w-5 lg:w-6" />}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex items-center justify-between gap-2 lg:hidden mb-1">
+                        <h3 className="text-sm font-bold text-foreground leading-tight truncate group-hover:text-primary transition-colors">{it.name}</h3>
                         {activeTab === "PRODUCTS" && (
                           <div className={clsx(
-                            "px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider",
+                            "px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider shrink-0",
                             (it as Product).stockQuantity > 5 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                           )}>
                             {(it as Product).stockQuantity} {t("In Stock")}
                           </div>
                         )}
                       </div>
-                      
-                      <div className="space-y-1">
-                        <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors">{it.name}</h3>
+
+                      <div className="hidden lg:block space-y-1 w-full relative">
+                        <div className="flex justify-between items-start w-full">
+                           <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors pe-2">{it.name}</h3>
+                           {activeTab === "PRODUCTS" && (
+                            <div className={clsx(
+                              "px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider shrink-0 mt-1",
+                              (it as Product).stockQuantity > 5 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                            )}>
+                              {(it as Product).stockQuantity} {t("In Stock")}
+                            </div>
+                           )}
+                        </div>
                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.15em]">
                           {activeTab === "SERVICES" ? t("Service") : t("General")}
                         </p>
                       </div>
 
-                      <div className="pt-4 mt-auto flex items-center justify-between border-t border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.15em] lg:hidden mb-1">
+                          {activeTab === "SERVICES" ? t("Service") : t("General")}
+                      </p>
+
+                      <div className="pt-2 lg:pt-4 mt-auto flex items-center justify-between lg:border-t border-border/50">
                         <div className="flex items-baseline gap-1">
-                          <span className="text-xl font-bold text-foreground">{it.price}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                          <span className="text-lg lg:text-xl font-bold text-foreground">{it.price}</span>
+                          <span className="text-[9px] lg:text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
                         </div>
                         <div className={clsx(
-                          "h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-primary/20",
-                          i18n.language === "ar" ? "-translate-x-4 group-hover:translate-x-0" : "translate-x-4 group-hover:translate-x-0"
+                          "h-8 lg:h-10 w-8 lg:w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-primary/20",
+                          i18n.language === "ar" ? "-translate-x-2 lg:-translate-x-4 group-hover:translate-x-0" : "translate-x-2 lg:translate-x-4 group-hover:translate-x-0"
                         )}>
-                          <Plus className="h-5 w-5" />
+                          <Plus className="h-4 lg:h-5 w-4 lg:w-5" />
                         </div>
                       </div>
                     </div>
@@ -341,9 +357,9 @@ export default function PosInvoicesPage() {
                 ))}
               </AnimatePresence>
               {filteredItems.length === 0 && (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center gap-4 opacity-20">
-                  <Search className="h-16 w-16" />
-                  <p className="text-sm font-bold uppercase tracking-widest">{t("No items found")}</p>
+                <div className="col-span-full py-20 lg:py-32 flex flex-col items-center justify-center gap-4 opacity-20">
+                  <Search className="h-12 lg:h-16 w-12 lg:w-16" />
+                  <p className="text-[10px] lg:text-sm font-bold uppercase tracking-widest">{t("No items found")}</p>
                 </div>
               )}
             </div>
@@ -352,7 +368,7 @@ export default function PosInvoicesPage() {
       </div>
 
       {/* Right: Checkout Panel */}
-      <div className="w-full lg:w-[450px] flex flex-col rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full min-h-[500px]">
+      <div className="w-full lg:w-[450px] flex flex-col rounded-[1.5rem] lg:rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full">
         <div className="p-5 sm:p-8 border-b border-border flex items-center justify-between bg-muted/20">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">

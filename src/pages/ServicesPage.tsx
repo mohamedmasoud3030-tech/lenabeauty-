@@ -260,7 +260,7 @@ export default function ServicesPage() {
               <span className="text-xs font-bold text-primary">{items.length}</span>
             </div>
           </div>
-          <div className="overflow-x-auto scrollbar-hide">
+          <div className="hidden lg:block overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[700px] text-sm md:min-w-full">
               <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
                 <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -344,6 +344,72 @@ export default function ServicesPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((s, idx) => (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  key={s.id}
+                  className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                      {s.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <span className="font-bold text-foreground text-lg truncate">{s.name}</span>
+                      <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0 truncate">
+                        <Tag className="h-3 w-3" />
+                        {s.categoryId}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground text-xl">{s.price.toFixed(2)}</span>
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="font-bold text-foreground text-sm">{s.durationMinutes} {t("min")}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => onEdit(s)}
+                      className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                    >
+                      <Pencil className="h-5 w-5" />
+                      {t("Edit")}
+                    </button>
+                    <button
+                      onClick={() => void onDelete(s.id)}
+                      className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shadow-sm"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                      {t("Delete")}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            {filtered.length === 0 && !loading && (
+               <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+                 <Scissors className="h-16 w-16" />
+                 <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Services Found")}</p>
+               </div>
+            )}
           </div>
         </motion.div>
       </div>

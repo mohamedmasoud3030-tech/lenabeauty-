@@ -314,7 +314,7 @@ export default function InventoryPage() {
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto scrollbar-hide">
+          <div className="hidden lg:block overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[700px] text-sm md:min-w-full font-sans">
               <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
                 <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -368,7 +368,7 @@ export default function InventoryPage() {
                               <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{t("OMR")}</span>
                             </div>
                             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
-                              {t("Profit")}: {((p.price - p.cost) / p.price * 100).toFixed(0)}%
+                              {t("Profit")}: {((p.price - p.cost) / (p.price || 1) * 100).toFixed(0)}%
                             </div>
                           </div>
                         </td>
@@ -410,6 +410,84 @@ export default function InventoryPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((p, idx) => {
+                const low = p.stockQuantity < 5;
+                return (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={`m-${p.id}`}
+                    className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                        {p.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col items-start">
+                        <span className="font-bold text-foreground text-lg truncate w-full">{p.name}</span>
+                        <div className={clsx(
+                          "inline-flex items-center gap-1.5 rounded-xl px-2 py-1 mt-1 text-[10px] font-bold border shrink-0",
+                          low ? "bg-rose-500/10 text-rose-600 border-rose-200 animate-pulse" : "bg-muted text-foreground border-border"
+                        )}>
+                          {p.stockQuantity} {t("In Stock")}
+                          {low && <AlertTriangle className="h-3 w-3" />}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Cost")}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-foreground text-base">{p.cost.toFixed(2)}</span>
+                          <span className="text-[8px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col text-end">
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("Price")}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-primary text-xl">{p.price.toFixed(2)}</span>
+                          <span className="text-[8px] font-bold text-primary uppercase">{t("OMR")}</span>
+                        </div>
+                        <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
+                          {t("Profit")}: {((p.price - p.cost) / (p.price || 1) * 100).toFixed(0)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={() => onEdit(p)}
+                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                      >
+                        <Pencil className="h-5 w-5" />
+                        {t("Edit")}
+                      </button>
+                      <button
+                        onClick={() => void onDelete(p.id)}
+                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shadow-sm"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                        {t("Delete")}
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            {filtered.length === 0 && !loading && (
+               <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+                 <Boxes className="h-16 w-16" />
+                 <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Products Found")}</p>
+               </div>
+            )}
           </div>
         </motion.div>
       </div>

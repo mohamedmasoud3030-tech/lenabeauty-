@@ -96,10 +96,10 @@
 - **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run`. Manual Layout verifications.
 - **Explicitly out of scope**: Individual Page Polish constraints (Deferred to Phase 9B).
 
-## Phase 9B: Page-by-page mobile polish.
-- **Goal**: Finalize comprehensive Tailwind class alignments to respect logical attributes natively avoiding LTR override tearing in isolated components, focusing on nested list items.
+## Phase 9B: Page-by-page mobile polish and unified layout mapping. [CODE COMPLETE]
+- **Goal**: Finalize comprehensive Tailwind class alignments, substituting cramped data tables for dashboard-style mobile stacking cards naturally fitting into the unified mobile shell.
 - **Files Involved**: `src/pages/*.tsx`, `src/shared/components/*.tsx`, `src/ui/**/*.tsx`, Globally applied.
-- **Exact Tasks**: Conduct exhaustive sweeps mapping variables to `ms-/me-/ps-/pe-/start-/end-`. Optimize touch targets for POS and Appointment grids.
-- **Acceptance Criteria**: Changing translation language dynamically rearranges standard visual DOM paths flawlessly on both tight and wide viewports. Clean compilation execution logs.
+- **Exact Tasks**: Transformed comprehensive structural tables into dynamic grid-based flex structures (`hidden lg:block` logic targeting viewports), integrating responsive card loops on all major administrative lists (Customers, Appointments, Services, POS grids, Inventory, Expenses, Employees, Reports, and Settings tables).
+- **Acceptance Criteria**: Desktop layouts never regress. Cards dynamically size within margins and respond smoothly on portrait dimensions mimicking high-fidelity mobile management dashboards. Clean compilation execution logs.
 - **Verification Commands / Steps**: UI Inspector checks, `npm run build`, `npx vitest run`, `npx tsc --noEmit`.
-- **Explicitly out of scope**: Fundamental layout/design overhaul procedures. Follow-up iterative scope inclusion tasks.
+- **Explicitly out of scope**: Functional backend or database behavior alterations. Follow-up iterative scope inclusion tasks.

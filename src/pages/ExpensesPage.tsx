@@ -222,7 +222,7 @@ export default function ExpensesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden"
       >
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[700px] text-sm md:min-w-full">
             <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
               <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
@@ -297,6 +297,65 @@ export default function ExpensesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((exp, idx) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={`m-${exp.id}`}
+                className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
+                    {exp.description[0]}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col items-start">
+                    <span className="font-bold text-foreground text-lg truncate w-full">{exp.description}</span>
+                    <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0 truncate">
+                      <Tag className="h-3 w-3" />
+                      {t(exp.category)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Amount")}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-foreground text-xl">{exp.amount.toFixed(2)}</span>
+                      <ArrowDownRight className="h-4 w-4 text-rose-500" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-foreground text-sm">{new Date(exp.date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    onClick={() => void handleDelete(exp.id)}
+                    className="h-12 w-full rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-500/10 hover:text-rose-600 transition-all shadow-sm"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                    {t("Delete")}
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {filtered.length === 0 && !loading && (
+             <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
+               <Receipt className="h-16 w-16" />
+               <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Expenses Found")}</p>
+             </div>
+          )}
         </div>
       </motion.div>
 
