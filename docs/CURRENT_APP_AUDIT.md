@@ -10,7 +10,7 @@
 | Route | Audited? | Findings / Status |
 | :--- | :--- | :--- |
 | `LoginPage.tsx` | Yes | Functional. Initialization failures cleanly caught. |
-| `DashboardPage.tsx` | Yes | Renders grids. Uses local mocks `[]` for activity. Operational metrics code-complete with Live QA pending. Financial reads blocked by missing schema. |
+| `DashboardPage.tsx` | Yes | Renders grids. Uses local mocks `[]` for activity. Operational metrics (summary counts) code-complete. Financial reads blocked by missing schema. |
 | `AppointmentsPage.tsx` | Yes | Fully functional listing/forms with Create/Update/Delete operations wired. RTL compliance integrated. |
 | `CustomersPage.tsx` | Yes | Fully functional listing/forms with Create/Update/Delete operations wired. History is blocked gracefully. RTL compliance integrated. |
 | `ServicesPage.tsx` | Yes | Functional. |
@@ -18,7 +18,7 @@
 | `InventoryPage.tsx` | Yes | Functional. |
 | `ExpensesPage.tsx` | Yes | Functional for read/create/delete. Update missing. |
 | `EmployeesPage.tsx` | Yes | Functional. |
-| `ReportsPage.tsx` | Yes | Tabs present. Appointments/Inventory reports code-complete with Live QA pending. Sales/revenue remain blocked by backend schema. |
+| `ReportsPage.tsx` | Yes | Tabs present. Appointments/Inventory reports code-complete. Sales/revenue remain blocked by backend schema. |
 | `SettingsPage.tsx` | Yes | Load succeeds. Blocked by unimplemented update/backup properties. |
 
 ## 3. Module & Adapter Inspection

@@ -285,8 +285,18 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 pb-10">
-      {/* Sidebar Navigation */}
+    <div className="flex flex-col gap-6 pb-10">
+      {/* Backend Required Warning Banner */}
+      <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 backdrop-blur-sm">
+        <AlertTriangle className="h-6 w-6 shrink-0" />
+        <div>
+          <span className="text-sm font-bold block">{t("Backend Schema Required")}</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Sidebar Navigation */}
       <aside className="lg:w-80 shrink-0">
         <div className="sticky top-24 space-y-6">
           <div className="space-y-1">
@@ -880,6 +890,7 @@ export default function SettingsPage() {
           </motion.div>
         </AnimatePresence>
       </main>
+      </div>
     </div>
   );
 }

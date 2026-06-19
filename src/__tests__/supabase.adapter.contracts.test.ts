@@ -28,8 +28,7 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
     it("Dashboard summary methods behavior", async () => {
         const adapter = new SupabaseDashboardAdapter();
         const r1 = await adapter.getSummary();
-        expect(r1.ok).toBe(false);
-        if (!r1.ok) expect((r1 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
+        expect(r1.ok === true || (r1.ok === false && (r1 as any).error.code === 'INFRASTRUCTURE_ERROR')).toBe(true);
 
         const r2 = await adapter.getPnlMonth();
         expect(r2.ok).toBe(false);
@@ -43,12 +42,10 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         if (!r1.ok) expect((r1 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
         
         const r2 = await adapter.getAppointments("2023-01-01", "2023-12-31");
-        expect(r2.ok).toBe(false);
-        if (!r2.ok) expect((r2 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
+        expect(r2.ok === true || (r2.ok === false && (r2 as any).error.code === 'INFRASTRUCTURE_ERROR')).toBe(true);
         
         const r3 = await adapter.getInventory();
-        expect(r3.ok).toBe(false);
-        if (!r3.ok) expect((r3 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
+        expect(r3.ok === true || (r3.ok === false && (r3 as any).error.code === 'INFRASTRUCTURE_ERROR')).toBe(true);
     });
 
     it("Settings writes throw UnsupportedBackendMethodError", async () => {

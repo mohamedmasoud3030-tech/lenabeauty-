@@ -3,8 +3,8 @@
 ## Current Top Blockers
 
 1. `SupabaseInvoiceAdapter.checkout` block all checkout processing.
-2. Dashboard financial summary methods (`getPnlMonth`, `getRevenueLast7Days`) unsupported.
-3. Reports sales queries (`getSales`) unmapped.
+2. Dashboard financial reads (`getPnlMonth`, `getRevenueLast7Days`) unsupported (operational reads like `getSummary` are implemented).
+3. Reports sales queries (`getSales`) unmapped (operational reads like `getAppointments`, `getInventory` are implemented).
 4. Invoice print `getForPrint` unsupported.
 5. Settings update/logo/backup/restore unsupported.
 6. Customer history unsupported.

@@ -7,7 +7,7 @@ import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { 
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
-  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle
+  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -184,8 +184,18 @@ export default function PosInvoicesPage() {
       );
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 min-h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] lg:min-h-0 pb-4">
-      {/* Print Area Hidden */}
+    <div className="flex flex-col gap-6 lg:gap-8 min-h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] lg:min-h-0 pb-4">
+      {/* Backend Required Warning Banner */}
+      <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 print:hidden backdrop-blur-sm">
+        <AlertTriangle className="h-6 w-6 shrink-0" />
+        <div>
+          <span className="text-sm font-bold block">{t("Backend Schema Required")}</span>
+          <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col lg:flex-row gap-8 lg:min-h-0">
+        {/* Print Area Hidden */}
       {printData && (
         <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
           <div className="text-center mb-6 space-y-1">
@@ -632,6 +642,7 @@ export default function PosInvoicesPage() {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

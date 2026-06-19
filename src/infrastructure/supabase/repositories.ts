@@ -807,22 +807,22 @@ class SupabaseReportAdapter implements ReportRepository {
       const { data, error } = await client
         .from('appointments')
         .select(`
-          id, start_time, status,
+          id, date_time, status,
           customer_id, employee_id, service_id,
           customers (name),
           employees (name),
           services (name)
         `)
         .eq('center_id', centerRes.data)
-        .gte('start_time', fromStr)
-        .lte('start_time', toStr)
-        .order('start_time', { ascending: false });
+        .gte('date_time', fromStr)
+        .lte('date_time', toStr)
+        .order('date_time', { ascending: false });
 
       if (error) return { ok: false, error: createQueryError("Report.getAppointments", error.message) };
 
       const rows: AppointmentReportRow[] = data.map((d: any) => ({
         id: d.id,
-        dateTime: d.start_time,
+        dateTime: d.date_time,
         status: d.status,
         customer: d.customers ? { name: d.customers.name } : undefined,
         employee: d.employees ? { name: d.employees.name } : undefined,

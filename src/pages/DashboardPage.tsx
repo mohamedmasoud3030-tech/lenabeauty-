@@ -83,8 +83,19 @@ export default function DashboardPage() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-12 pb-12"
+      className="space-y-8 sm:space-y-12 pb-12"
     >
+      {/* Backend Required Warning Banner */}
+      {!summary?.canViewRevenue && (
+        <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 backdrop-blur-sm">
+          <AlertTriangle className="h-6 w-6 shrink-0" />
+          <div>
+            <span className="text-sm font-bold block">{t("Backend Schema Required")}</span>
+            <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
         <div className="space-y-2 sm:space-y-3">
