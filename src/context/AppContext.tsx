@@ -31,8 +31,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         setSessionState(res.data);
         if (res.data.status === "preview") {
+          if (envError) throw envError; // Do not swallow config errors just because we fell back to preview!
           setUser(res.data.session.user);
-          return; // Ignore env error for preview mode
+          return;
         }
 
         if (res.data.status === "authenticated") {
