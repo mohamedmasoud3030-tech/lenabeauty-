@@ -10,7 +10,7 @@
 | Route | Audited? | Findings / Status |
 | :--- | :--- | :--- |
 | `LoginPage.tsx` | Yes | Functional. Initialization failures cleanly caught. |
-| `DashboardPage.tsx` | Yes | Renders grids. Uses local mocks `[]` for activity. Blocked by missing Supabase adapter methods. |
+| `DashboardPage.tsx` | Yes | Renders grids. Uses local mocks `[]` for activity. Operational metrics code-complete with Live QA pending. Financial reads blocked by missing schema. |
 | `AppointmentsPage.tsx` | Yes | Fully functional listing/forms with Create/Update/Delete operations wired. RTL compliance integrated. |
 | `CustomersPage.tsx` | Yes | Fully functional listing/forms with Create/Update/Delete operations wired. History is blocked gracefully. RTL compliance integrated. |
 | `ServicesPage.tsx` | Yes | Functional. |
@@ -18,7 +18,7 @@
 | `InventoryPage.tsx` | Yes | Functional. |
 | `ExpensesPage.tsx` | Yes | Functional for read/create/delete. Update missing. |
 | `EmployeesPage.tsx` | Yes | Functional. |
-| `ReportsPage.tsx` | Yes | Tabs present. Blocked by unsupported table loading methods in Supabase. |
+| `ReportsPage.tsx` | Yes | Tabs present. Appointments/Inventory reports code-complete with Live QA pending. Sales/revenue remain blocked by backend schema. |
 | `SettingsPage.tsx` | Yes | Load succeeds. Blocked by unimplemented update/backup properties. |
 
 ## 3. Module & Adapter Inspection
@@ -28,13 +28,13 @@
 | Module | Read | Create | Update | Delete | Print / Report |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Customers** | Yes | Yes | Yes | Yes | No (`getHistory` unsupported) |
-| **Appointments** | Yes | Yes | Yes | Yes | No (`getAppointments` unsupported)|
+| **Appointments** | Yes | Yes | Yes | Yes | Yes |
 | **Services** | Yes | Yes | Yes | Yes | N/A |
-| **Products (Inventory)**| Yes | Yes | Yes | Yes | No (`getInventory` unsupported)|
+| **Products (Inventory)**| Yes | Yes | Yes | Yes | Yes |
 | **Expenses** | Yes | Yes | **Missing** | Yes | N/A |
 | **Employees** | Yes | Yes | Yes | Yes | N/A |
 | **POS / Invoices** | Yes | **Block** | N/A | N/A | No (`getForPrint` unsupported)|
-| **Dashboard** | No | N/A | N/A | N/A | **Block** (All unsupported)|
+| **Dashboard** | Partial | N/A | N/A | N/A | **Block** (Financials unsupported)|
 | **Settings** | Yes | N/A | **Block** | N/A | No (`backup` unsupported) |
 
 ### Unsupported Supabase Methods Found
@@ -47,10 +47,12 @@ The following methods consistently throw `createUnsupportedWriteError` or `creat
 - `Settings.backup`
 - `Settings.exportData`
 - `Settings.restore`
-- `Dashboard.getSummary`
 - `Dashboard.getPnlMonth`
 - `Dashboard.getRevenueLast7Days`
 - `Report.getSales`
+
+### Implemented Supabase Methods (Code-Complete, Live QA Pending)
+- `Dashboard.getSummary` (Operational metrics)
 - `Report.getAppointments`
 - `Report.getInventory`
 
@@ -91,7 +93,7 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 ### Supabase Adapter Contract Hardening Status (Phase 3)
 - **Preview vs. Supabase Distinction**: Preview adapters are structurally isolated, deterministic read-only mock stubs used exclusively when `VITE_DATA_BACKEND=preview`. They are explicitly demo-only and do not represent functional production readiness. Supabase adapters form the actual backend implementation.
 - **Implemented & Safe (Supabase)**: `Auth`, `Customer(list, getById, create, update, delete)`, `Employee(list, create, update, delete)`, `Service(list, create, update, delete)`, `Appointment(list, create, update, delete)`, `Product(list(Full), create, update, delete)`, `Expense(list, create, delete)`.
-- **Unsupported (Safely Handled in Supabase)**: `Invoice.checkout`, `Invoice.getForPrint`, `Dashboard(getSummary, getPnlMonth, getRevenueLast7Days)`, `Report(getSales, getAppointments, getInventory)`, `Settings(update, uploadLogo, backup, restore, exportData)`, `Customer.getHistory`, `Expense.update`. All of these explicitly return a standardized `UnsupportedBackendMethodError` (`BACKEND_METHOD_UNSUPPORTED` code).
+- **Unsupported (Safely Handled in Supabase)**: `Invoice.checkout`, `Invoice.getForPrint`, `Dashboard(getPnlMonth, getRevenueLast7Days)`, `Report(getSales)`, `Settings(update, uploadLogo, backup, restore, exportData)`, `Customer.getHistory`, `Expense.update`. All of these explicitly return a standardized `UnsupportedBackendMethodError` (`BACKEND_METHOD_UNSUPPORTED` code).
 - UI gracefully catches this canonical code via `formatError` translating it to localized UI warnings.
 
 ### RTL/Mobile Risks
@@ -129,11 +131,65 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
   - *Blocked/Unsupported*: `sales` report (via `getSales`) is safely mapped to `BACKEND_METHOD_UNSUPPORTED`.
 - **Supabase Code vs Live QA**: Phase 7 UI interaction gates, preview rendering, and `DashboardSummary`/`ReportRow` count logic are code-complete. Relational selects on appointments report are locally proven by Typescript schema but strictly require Live Supabase schema QA to guarantee they map.
 
-### Phase 8: Settings and Admin Readiness
+### Settings and Admin Readiness
 - **Settings Audit**: `SettingsRepository.get` behaves correctly via RLS. `update`, `uploadLogo`, `backup`, `restore`, and `exportData` are intentionally and safely mapping to `BACKEND_METHOD_UNSUPPORTED`.
 - **Settings UI Honesty**: The SettingsPage successfully identifies unsupported backend functionality and surfaces clean localized alerts. Action buttons no longer fake successful API calls or simulated disk persistence workflows.
 - **Admin/User Identity**: Role labels are strictly inferred, ensuring unmapped roles do not silently default to `Staff` (mitigating implicit access confusion). Localization is securely mapped between Arabic/English for identity and core dashboard terminology. 
-- **Mobile Design Target (Phase 9A & 9B)**: A unified mobile foundation was laid via `Layout.tsx` and `Sidebar.tsx`, integrating a sticky bottom navigation tab bar containing primary modules, and sliding drawer mechanics. Iconography, localization maps, and user roles are dynamically enforced across all breakpoints properly. Desktop table views have been successfully wrapped in `hidden lg:block` (or similar display filters), substituting comprehensive stacking card structures for small viewports across all primary list modules (Dashboard, Customers, Appointments, Services, POS, Inventory, Expenses, Employees, Reports, and Settings).
+
+### Final Frontend Readiness (Phase 9A, 9B, 9C)
+- **Unified Mobile Navigation**: A robust mobile shell exists via `Layout.tsx` and `Sidebar.tsx`, integrating a sticky bottom navigation tab bar containing primary modules, and sliding drawer mechanics. Iconography, localization maps, and user roles are dynamically enforced across all breakpoints properly.
+- **Responsive Layout Lists (Phase 9B/9C)**: Desktop table views have been successfully wrapped in `hidden lg:block` (or similar display filters), substituting comprehensive stacking card structures for small viewports across all primary list modules (Dashboard, Customers, Appointments, Services, POS, Inventory, Expenses, Employees, Reports, and Settings).
+- **RTL & Translation Integrity (Phase 9C)**: Replaced raw string implementations in employee role selects, preview/demo mode warnings, and schema required labels, adding them into `src/i18n.ts`. Direction behavior utilizes logical css classes (`ps`, `pe`, `start`, `end`, `ms`) rigorously to protect Arabic RTL stability alongside structural flex and gap layouts.
+- **Truthfulness Validated**: Confirmed frontend completely refuses to emit or visualize fake success records for database functionality lacking schema, protecting invoice checkout, print pipelines, and financial revenue tables accurately against silent failures, marking the end of the SPA frontend phase code.
+
+## 5. Live Supabase QA Checklist (Phase 10A)
+
+Before enabling checkout, verify the following manually against a live Supabase project. **frontend code-complete does not mean backend-complete.** "Preview" mode is purely a demonstration and cannot prove production viability.
+
+### Supabase Environment Variables
+Ensure these are exactly configured in your production or local `.env` (without secrets committed):
+- `VITE_DATA_BACKEND=supabase`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_CENTER_ID`
+- `VITE_BRANCH_MODE=single`
+
+### Required Supabase Schema Checklist
+**Active Tables/Resources** (Must exist and have RLS disabled or matching center_id logic):
+- `customers`
+- `appointments`
+- `services`
+- `employees`
+- `products`
+- `expenses`
+
+**Pending Checkout/Finance Schema** (Must remain unapplied during this QA phase):
+- `invoices`
+- `invoice_items`
+- `process_checkout_v1` RPC
+
+### Live QA Steps
+**Auth/Config**
+- [ ] App starts with `VITE_DATA_BACKEND=supabase`. Missing env values fail visibly.
+- [ ] Login works with real admin user mapping to `VITE_CENTER_ID`.
+- [ ] Unknown/missing role does not default to Staff. 
+
+**Live Modules (Pending Browser QA)**
+- [ ] Customer (list/create/update/delete)
+- [ ] Appointment (list/create/update/delete)
+- [ ] Service (list/create/update/delete)
+- [ ] Product/Inventory (list/create/update/delete)
+- [ ] Expense (list/create/delete)
+- [ ] Employee (list/create/update/delete)
+- [ ] Dashboard operational counts
+- [ ] Reports for appointments and inventory
+
+**Blocked/Unsupported Modules (Must visibly block/fail gracefully)**
+- [ ] **POS checkout**: Blocked until `process_checkout_v1` is applied.
+- [ ] **Invoice print**: Blocked until `getForPrint` backend exists.
+- [ ] **Sales/revenue/profit reports**: Blocked until invoice/payment backend exists.
+- [ ] **Settings mutations**: Blocked unless backend support exists.
+- [ ] **Safely unsupported features**: Settings logo/backup/restore, Customer history, Expense update, Stock movement history.
 
 ### General CRUD Status (Customers, Appointments, etc.)
 - **Customers**: End-to-end functionality (List, Create, Update, Delete) is code-complete and wired in the UI. Form validations check for empty strings safely. Invalid actions show localized toasts. Customer History (`getHistory`) safely reports as unsupported without crashing.

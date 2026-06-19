@@ -110,6 +110,13 @@ const resources = {
       "Redeem for": "استبدال مقابل",
       "In Stock": "في المخزن",
       
+      // Roles
+      "Stylist": "مصفف",
+      "Therapist": "معالج",
+      "Assistant": "مساعد",
+      "Receptionist": "موظف استقبال",
+      "Manager": "مدير",
+      
       // Appointments
       "Schedule": "جدول المواعيد",
       "Add Appointment": "إضافة حجز",
@@ -375,6 +382,9 @@ const resources = {
       "View Full Log": "عرض السجل الكامل",
       "Customer Profile": "ملف العميل",
       "Saving...": "جاري الحفظ...",
+      "Backend Schema Required": "مطلوب مخطط قاعدة البيانات",
+      "Preview / Demo-Only Data": "معاينة / بيانات تجريبية فقط",
+      "Financial reports and sales analytics require the process_checkout_v1 RPC and invoice schema to be applied to the Supabase database.": "تتطلب التقارير المالية وتحليلات المبيعات تطبيق إجرائية process_checkout_v1 ومخطط الفواتير على قاعدة بيانات Supabase.",
       "No Appointments": "لا توجد مواعيد مسبقة",
       "No Invoices": "لا توجد فواتير مسبقة",
       "Full Name": "الاسم الكامل",
@@ -498,6 +508,13 @@ const resources = {
       "Loyalty Points": "Loyalty Points",
       "Redeem for": "Redeem for",
       "In Stock": "In Stock",
+      
+      // Roles
+      "Stylist": "Stylist",
+      "Therapist": "Therapist",
+      "Assistant": "Assistant",
+      "Receptionist": "Receptionist",
+      "Manager": "Manager",
       
       // Appointments
       "Schedule": "Schedule",
@@ -764,6 +781,9 @@ const resources = {
       "View Full Log": "View Full Log",
       "Customer Profile": "Customer Profile",
       "Saving...": "Saving...",
+      "Backend Schema Required": "Backend Schema Required",
+      "Preview / Demo-Only Data": "Preview / Demo-Only Data",
+      "Financial reports and sales analytics require the process_checkout_v1 RPC and invoice schema to be applied to the Supabase database.": "Financial reports and sales analytics require the process_checkout_v1 RPC and invoice schema to be applied to the Supabase database.",
       "No Appointments": "No Appointments",
       "No Invoices": "No Invoices",
       "Full Name": "Full Name",

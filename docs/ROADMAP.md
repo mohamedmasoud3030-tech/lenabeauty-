@@ -2,9 +2,9 @@
 
 ## Current Top Blockers
 
-1. `SupabaseInvoiceAdapter.checkout` unsupported.
-2. Dashboard Supabase summary methods unsupported.
-3. Reports Supabase queries unmapped.
+1. `SupabaseInvoiceAdapter.checkout` block all checkout processing.
+2. Dashboard financial summary methods (`getPnlMonth`, `getRevenueLast7Days`) unsupported.
+3. Reports sales queries (`getSales`) unmapped.
 4. Invoice print `getForPrint` unsupported.
 5. Settings update/logo/backup/restore unsupported.
 6. Customer history unsupported.
@@ -103,3 +103,27 @@
 - **Acceptance Criteria**: Desktop layouts never regress. Cards dynamically size within margins and respond smoothly on portrait dimensions mimicking high-fidelity mobile management dashboards. Clean compilation execution logs.
 - **Verification Commands / Steps**: UI Inspector checks, `npm run build`, `npx vitest run`, `npx tsc --noEmit`.
 - **Explicitly out of scope**: Functional backend or database behavior alterations. Follow-up iterative scope inclusion tasks.
+
+## Phase 9C: Final Release QA, i18n deep dive, and frontend readiness polish [CODE COMPLETE]
+- **Goal**: Ensure comprehensive Arabic/English string mapping, robust RTL mobile display behavior, and honest backend gatekeeping prior to production database application.
+- **Files Involved**: `src/i18n.ts`, `docs/CURRENT_APP_AUDIT.md`, `src/pages/*.tsx`.
+- **Exact Tasks**: Completed exhaustive string audits removing hardcoded fragments from forms/dialogs, updated demo/preview financial analytics alerts mitigating fake backend success states, confirmed mobile layout spacing constraints, compiled testing.
+- **Acceptance Criteria**: `tsc`, `vitest`, and `npm run build` execute flawlessly. UI states accurately warn the user if a backend method is missing schema rather than crashing. 
+- **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run --passWithNoTests && npm run build`.
+- **Explicitly out of scope**: Real checkout processing, invoice print layouts, applying any remote SQL scripts.
+
+## Upcoming Backend Activation (Post-Frontend)
+
+## Phase 10A: Supabase Live Activation Readiness and Non-checkout Live QA
+- **Goal**: Formally prepare the application to run against a real Supabase backend and define a clear QA path, enforcing environment variable validation, documenting active and pending schema, and solidifying frontend separation of concerns from database operations.
+- **Tasks**: Added detailed environment checking documentation to `CURRENT_APP_AUDIT.md`, updated `.env.example`, documented required active schemas (customers, appointments, services, products, expenses, employees), and fully restricted invoice checkout/RPC states.
+- **Acceptance Criteria**: Live QA checklists are established and confirmed. Frontend runs in `supabase` mode, reporting safe failures for unimplemented backend tables/RPCs without triggering fake transactions.
+- **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run --passWithNoTests && npm run build`.
+- **Explicitly out of scope**: Real checkout processing, applying any remote SQL scripts.
+
+## Phase 10B: Checkout RPC & Invoice-payment Backend Activation
+- **Goal**: Apply the backend Supabase schema and Remote Procedure Calls (RPC) to unlock full financial functionality.
+- **Tasks**: Execute `process_checkout_v1` SQL from `docs/PHASE_5B_CHECKOUT_SQL_DRAFT.md`. Deploy pending `invoices` and `invoice_items` schemas globally.
+- **Acceptance Criteria**: Actual invoice serialization flow activates on `supabase` mode. Real checkouts deduct inventory and display sales in Reports and Dashboard correctly.
+- **Verification Commands / Steps**: Supabase database tests, Live Supabase browser checkout verification.
+- **Explicitly out of scope**: Frontend layout changes, SaaS expansions, Multi-center expansions.
