@@ -1,6 +1,6 @@
 # Supabase Frontend Activation Checklist
 
-Before the application explicitly moves off the fully-isolated local-memory `Preview Mode` and natively initializes `supabase-js`, these boundaries must be verified.
+Before v1.0 is accepted, the application must be verified in Supabase mode with real auth, real CRUD, and browser QA. Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path.
 
 ## 1. Environment Parsing
 - [x] **Verified Variable:** `VITE_DATA_BACKEND=supabase` switches the UI orchestrators.
@@ -9,7 +9,7 @@ Before the application explicitly moves off the fully-isolated local-memory `Pre
 - [x] **Verified Absence:** No keys named `_SECRET_`, `_SERVICE_ROLE_`, or generic passwords are functionally ingested by `env.ts`.
 
 ## 2. Security Defaults
-- [x] **Preview Default:** Removing or failing to provide proper Supabase domains successfully gracefully defaults the client entirely into isolated `Preview Mode`.
+- [x] **Blocking Setup Errors:** Missing or invalid Supabase configuration must surface a visible setup error for v1.0 verification.
 - [x] **Browser Isolation:** Supabase client bindings strictly pull from the VITE_ prefixed domains, preventing node-environment elevated secrets from breaching the public rollup configurations.
 - [x] **Client Initialization Strategy:** Lazy creation operates flawlessly, preserving the memory block correctly when offline.
 
@@ -19,4 +19,4 @@ Before the application explicitly moves off the fully-isolated local-memory `Pre
 
 ## 4. Activation Decision Gate
 **BLOCKED — PROJECT TYPE REQUIRES USER CONFIRMATION**
-The codebase itself is entirely primed and capable of switching via environment keys immediately. However, doing so requires physically deploying the schema migrations over a Supabase dashboard safely. Until the MCP or remote bridge allows that physical application of the SQL drafts, the application itself will immediately crash with PostgREST `404 Relation Not Found` errors.
+The codebase itself is primed for Supabase mode via environment keys. However, doing so requires safely applying the schema migrations over a Supabase dashboard. Until the required SQL is applied, the application should fail visibly with backend setup errors rather than falling back to Preview Mode.

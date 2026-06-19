@@ -15,9 +15,9 @@ We have explicitly transitioned towards a Clean Architecture bounded presentatio
 - Operates primarily through interface bindings against implementations.
 
 ### 3. The Infrastructure Layer (`src/infrastructure/`)
-- Currently houses `preview/PreviewAdapters.ts` enforcing the explicit read-only rules during system preview phase.
-- Acts as the eventual insertion zone for `persistence/SupabaseAdapters.ts`.
+- Houses Supabase adapters for the v1.0 production path.
+- Also contains legacy `preview/PreviewAdapters.ts` read-only guards for local inspection/tests only; Preview Mode is not a valid v1.0 demo, fallback, sales, or release-verification path.
 
 ### 4. The Presentation Layer (`src/pages/`, `src/ui/`, `src/features/`)
 - Houses the functional interface views, utilizing centralized accessors (`api`) to bridge context boundaries.
-- Adheres to `RequireAuth` boundary logic verifying user session states (`empty`, `loading`, `error`, `preview`, `authenticated`) before proceeding.
+- Adheres to `RequireAuth` boundary logic verifying user session states before proceeding.

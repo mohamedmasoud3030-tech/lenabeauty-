@@ -8,8 +8,8 @@
 4. Invoice print `getForPrint` unsupported.
 5. Settings update/logo/backup/restore unsupported.
 6. Customer history unsupported.
-7. Expense `update` missing.
-8. Preview uses empty mock data and does not prove production behavior.
+7. Expense update implementation and edit UI are deferred to v1.1 unless completed and tested earlier.
+8. Preview uses empty mock data and is not a valid setup, fallback, demo, sales, or release-verification path.
 
 ## Phase 0: Baseline documentation completion
 - **Goal**: Lock in factual engineering states, architectures, and boundaries to act as a source of truth for further iteration.
@@ -24,7 +24,7 @@
 - **Files Involved**: `src/ui/layout/*.tsx`, `src/App.tsx`, `src/pages/*.tsx`
 - **Exact Tasks**: Solidify the desktop navigation hierarchy and generic page boundaries. Establish layout shells. Add "Backend Required" or "WIP" badges where functionality relies on unimplemented Supabase methods to prevent a false sense of module completion.
 - **Acceptance Criteria**: Desktop layout is robust, responsive primarily for desktop usage, routes switch cleanly, and unsupported features correctly flag themselves natively.
-- **Verification Commands / Steps**: Manual preview in desktop resolution.
+- **Verification Commands / Steps**: Browser QA in Supabase mode for release; local layout inspection is not release verification.
 - **Explicitly out of scope**: Mobile-specific responsive adjustments (these are deferred).
 
 ## Phase 2: Runtime/config/auth safety. [COMPLETED]
@@ -55,21 +55,21 @@
 - **Goal**: Resolve crucial transaction-bound operations seamlessly joining billing to entity utilization.
 - **Files Involved**: `src/pages/PosInvoicesPage.tsx`, `src/pages/ServicesPage.tsx`, `src/infrastructure/supabase/repositories.ts`
 - **Exact Tasks**: 
-  - **Pre-Phase 5A**: Fixed initial UX environment crashes, allowing Preview Mode access without blocking on missing Supabase configuration inside AI Studio.
+  - **Pre-Phase 5A**: Fixed initial UX environment crashes so missing Supabase configuration shows a visible setup error instead of crashing.
   - **Phase 5A**: Verified Services CRUD flow mapping correctly (`categoryId`, `durationMinutes`). Validated `PosInvoicesPage` checkout safety so unsupported checkouts fail safely without generating pseudo data.
   - **Phase 5B-1**: Established checkout design and transaction boundaries. Confirmed implementation is BLOCKED pending remote schema validation and RPC execution for atomicity (`process_checkout_v1`). Safely maintained `BACKEND_METHOD_UNSUPPORTED` constraint.
   - **Phase 5B-2**: Completed code-readiness. Stabilized `CheckoutPayload` mapping and POS frontend validations. `SupabaseInvoiceAdapter` wired securely to proxy the unimplemented `process_checkout_v1` RPC—falling back cleanly to `BACKEND_METHOD_UNSUPPORTED` without crashing. Created `docs/SUPABASE_SETUP_CHECKOUT.md` and `docs/PHASE_5B_CHECKOUT_SQL_DRAFT.md` manuals. (Code is complete; remote DB unapplied).
   - **Phase 5B-3**: (Pending) Database Administrator applies the schema migrations and RPC. No more application code required.
 - **Acceptance Criteria**: Receipts generate smoothly handling complex line-item math. (Currently safely blocked awaiting Supabase schema operations/migrations).
-- **Verification Commands / Steps**: `workflows.test.ts` integration validates preview guards. Live verification pending checkout implementation logic.
+- **Verification Commands / Steps**: `workflows.test.ts` integration validates legacy preview guards. Live Supabase verification is required for release.
 - **Explicitly out of scope**: External POS hardware integration (e.g. physical receipt printers/EFTPOS). Implementing fake checkouts.
 
 ## Phase 6: Inventory and expenses correctness. [CODE COMPLETE - LIVE QA PENDING]
 - **Goal**: Streamline operational accounting, establishing boundaries for product restocking logic vs usage deduction.
 - **Files Involved**: `src/pages/InventoryPage.tsx`, `src/pages/ExpensesPage.tsx`
-- **Exact Tasks**: Connected UI validation to missing backend parameters. Clarified stock movement rules: simple update() overrides. Validated Expense logic (create, list, delete) with safe constraints for negative amounts. Formally marked `Expense.update` mathematically as `BACKEND_METHOD_UNSUPPORTED` because append-only tracking satisfies constraints and there's no UI for it.
+- **Exact Tasks**: Connected UI validation to missing backend parameters. Clarified stock movement rules: simple update() overrides. Validated Expense logic (create, list, delete) with safe constraints for negative amounts. Confirmed `Expense.update` already exists in the domain port and Supabase adapter contract; the real Supabase update implementation and edit UI are v1.1 work unless completed and tested earlier.
 - **Acceptance Criteria**: Expense and product creation behaves safely.
-- **Verification Commands / Steps**: `vitest run`, validation tests against PreviewMode interceptors.
+- **Verification Commands / Steps**: `vitest run`, validation tests against legacy Preview guard interceptors. Supabase browser QA remains required for release.
 - **Explicitly out of scope**: Dynamic stock purchasing notifications. Fake success mechanisms.
 
 ## Phase 7: Dashboard and reports backed by real Supabase data. [CODE COMPLETE - LIVE QA PENDING]
@@ -107,12 +107,17 @@
 ## Phase 9C: Final Release QA, i18n deep dive, and frontend readiness polish [CODE COMPLETE]
 - **Goal**: Ensure comprehensive Arabic/English string mapping, robust RTL mobile display behavior, and honest backend gatekeeping prior to production database application.
 - **Files Involved**: `src/i18n.ts`, `docs/CURRENT_APP_AUDIT.md`, `src/pages/*.tsx`.
-- **Exact Tasks**: Completed exhaustive string audits removing hardcoded fragments from forms/dialogs, updated demo/preview financial analytics alerts mitigating fake backend success states, confirmed mobile layout spacing constraints, compiled testing.
+- **Exact Tasks**: Completed exhaustive string audits removing hardcoded fragments from forms/dialogs, updated backend-required financial analytics alerts mitigating fake backend success states, confirmed mobile layout spacing constraints, compiled testing.
 - **Acceptance Criteria**: `tsc`, `vitest`, and `npm run build` execute flawlessly. UI states accurately warn the user if a backend method is missing schema rather than crashing. 
 - **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run --passWithNoTests && npm run build`.
 - **Explicitly out of scope**: Real checkout processing, invoice print layouts, applying any remote SQL scripts.
 
 ## Upcoming Backend Activation (Post-Frontend)
+
+## Product Version Source of Truth
+- **v1.0**: Supabase PWA, real auth, real CRUD, browser QA, no Preview Mode as a valid product/demo/fallback path. Single-customer, single-center hosted Supabase PWA; not multi-customer SaaS.
+- **v1.1**: Checkout, print, reports, settings mutations, expense edit, performance polish.
+- **v2.0**: Future Windows Desktop EXE using Tauri v2, SQLite, local auth, and local backup/export. Do not implement in this branch.
 
 ## Phase 10A: Supabase Live Activation Readiness and Non-checkout Live QA
 - **Goal**: Formally prepare the application to run against a real Supabase backend and define a clear QA path, enforcing environment variable validation, documenting active and pending schema, and solidifying frontend separation of concerns from database operations.
@@ -133,4 +138,4 @@
 - **Tasks**: Execute `process_checkout_v1` SQL from `docs/PHASE_5B_CHECKOUT_SQL_DRAFT.md`. Deploy pending `invoices` and `invoice_items` schemas globally.
 - **Acceptance Criteria**: Actual invoice serialization flow activates on `supabase` mode. Real checkouts deduct inventory and display sales in Reports and Dashboard correctly.
 - **Verification Commands / Steps**: Supabase database tests, Live Supabase browser checkout verification.
-- **Explicitly out of scope**: Frontend layout changes, SaaS expansions, Multi-center expansions.
+- **Explicitly out of scope**: Frontend layout changes, multi-customer SaaS expansions, multi-center expansions.

@@ -16,7 +16,7 @@
 | `ServicesPage.tsx` | Yes | Functional. |
 | `PosInvoicesPage.tsx` | Yes | Cart logic visible. Checkout strictly blocked by unimplemented `checkout` infrastructure. |
 | `InventoryPage.tsx` | Yes | Functional. |
-| `ExpensesPage.tsx` | Yes | Functional for read/create/delete. Update missing. |
+| `ExpensesPage.tsx` | Yes | Functional for read/create/delete. Expense edit UI is v1.1 unless implemented and tested earlier. |
 | `EmployeesPage.tsx` | Yes | Functional. |
 | `ReportsPage.tsx` | Yes | Tabs present. Appointments/Inventory reports code-complete. Sales/revenue remain blocked by backend schema. |
 | `SettingsPage.tsx` | Yes | Load succeeds. Blocked by unimplemented update/backup properties. |
@@ -31,7 +31,7 @@
 | **Appointments** | Yes | Yes | Yes | Yes | Yes |
 | **Services** | Yes | Yes | Yes | Yes | N/A |
 | **Products (Inventory)**| Yes | Yes | Yes | Yes | Yes |
-| **Expenses** | Yes | Yes | **Missing** | Yes | N/A |
+| **Expenses** | Yes | Yes | **v1.1** | Yes | N/A |
 | **Employees** | Yes | Yes | Yes | Yes | N/A |
 | **POS / Invoices** | Yes | **Block** | N/A | N/A | No (`getForPrint` unsupported)|
 | **Dashboard** | Partial | N/A | N/A | N/A | **Block** (Financials unsupported)|
@@ -56,14 +56,14 @@ The following methods consistently throw `createUnsupportedWriteError` or `creat
 - `Report.getAppointments`
 - `Report.getInventory`
 
-In addition, `Expense.update` is entirely undefined in the adapter interface.
+`Expense.update` already exists in the domain port and Supabase adapter contract. The real Supabase update implementation and edit UI are v1.1 work unless completed and tested earlier.
 
 ## 4. Runtime Metrics and Risk Vectors
 
-### Preview-Only Behavior
-- Relies on completely empty data sets (`[]`) and stubbed responses instead of real database reads.
-- **Risk**: Creates a false sense of module completion. Functional layouts in Preview do not equate to production viability and are specifically configured bypassing RLS credentials or transaction capabilities.
-- **Mitigation (Phase 1)**: All structurally unsupported features (like Reports generation, PosInvoices checkout, Dashboard stats, and Settings mutations) now feature explicit "Backend Required" UI badges within the preview screens.
+### Preview Code Path
+- Relies on empty data sets (`[]`) and read-only/stubbed responses instead of real database reads.
+- **Risk**: Creates a false sense of module completion. Functional layouts in Preview do not equate to production viability and bypass real RLS credentials or transaction capabilities.
+- **Release rule**: Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path for v1.0.
 
 ### Supabase-Backed Behavior
 - Strict credential and configuration checks enforce that the single branch environment variable is mapped validly.
@@ -92,7 +92,7 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 - `Settings.update`, `uploadLogo`, `backup`, and `restore` mutations are blocked via canonical typed errors reducing risk of silent failures or simulated UI state loops.
 
 ### Supabase Adapter Contract Hardening Status (Phase 3)
-- **Preview vs. Supabase Distinction**: Preview adapters are structurally isolated, deterministic read-only mock stubs used exclusively when `VITE_DATA_BACKEND=preview`. They are explicitly demo-only and do not represent functional production readiness. Supabase adapters form the actual backend implementation.
+- **Preview vs. Supabase Distinction**: Preview adapters are structurally isolated, deterministic read-only mock stubs used only for legacy local inspection/tests. They are not a valid demo or release-readiness path. Supabase adapters form the actual backend implementation.
 - **Implemented & Safe (Supabase)**: `Auth`, `Customer(list, getById, create, update, delete)`, `Employee(list, create, update, delete)`, `Service(list, create, update, delete)`, `Appointment(list, create, update, delete)`, `Product(list(Full), create, update, delete)`, `Expense(list, create, delete)`.
 - **Unsupported (Safely Handled in Supabase)**: `Invoice.checkout`, `Invoice.getForPrint`, `Dashboard(getPnlMonth, getRevenueLast7Days)`, `Report(getSales)`, `Settings(update, uploadLogo, backup, restore, exportData)`, `Customer.getHistory`, `Expense.update`. All of these explicitly return a standardized `UnsupportedBackendMethodError` (`BACKEND_METHOD_UNSUPPORTED` code).
 - UI gracefully catches this canonical code via `formatError` translating it to localized UI warnings.
@@ -101,9 +101,9 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 - Migrations from absolute positioning (`ml-`, `pr-`) to localized/logical mappings (`start-`, `pe-`, `ps-`) are confirmed primarily in `CustomersPage`. Continual diligence is required across other modal and input modules.
 
 ### UX Config & Runtime Environment Fixes
-- **AI Studio Preview Mode**: Resolved UX constraints where a strictly enforced `VITE_CENTER_ID` check crashed `AppContext.tsx` before reaching the `LoginPage` when `VITE_DATA_BACKEND=supabase` without complete environment variables.
+- **Configuration Error UX**: Resolved UX constraints where a strictly enforced `VITE_CENTER_ID` check crashed `AppContext.tsx` before reaching the `LoginPage` when `VITE_DATA_BACKEND=supabase` without complete environment variables.
 - The `LoginPage` now clearly shows a safe visible red alert `"Supabase production login is disabled until configured."` rather than crashing the interface. 
-- The **"Enter Preview Mode"** button reliably bypasses these specific database config errors to guarantee smooth interactive access within AI Studio previews.
+- Any remaining Preview entry points are legacy code surfaces and are not valid v1.0 release, sales, or fallback paths.
 
 ### Phase 5B: Checkout Design & Transaction Status
 - **Environment Variables**: Confirmed required env var names (`VITE_DATA_BACKEND`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CENTER_ID`, `VITE_BRANCH_MODE`) from `src/config/env.ts`.
@@ -114,7 +114,7 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 - **Inventory/Products Status**: End-to-end functionality (List, Create, Update, Delete) is code-complete and wired in the frontend. Form validations ensure no negative numbers for stock, price, and cost. 
   - **Stock Movement Status**: Explicit, historical stock movement/audit tracing is currently NOT present in the domain or database schema. Standard CRUD `update()` simply replaces `stock_quantity`. Transactional decrements during POS remain securely tied to the pending RPC `process_checkout_v1`.
 - **Expenses Status**: End-to-end functionality (List, Create, Delete) is code-complete and wired in the frontend. UI validations prevent 0 and negative amounts.
-  - **Expense Update Status**: `Expense.update` is safely unsupported (`BACKEND_METHOD_UNSUPPORTED`) because the UI offers no edit surface, matching a simpler append-only financial model until otherwise required.
+  - **Expense Update Status**: `Expense.update` already exists in the domain port and Supabase adapter contract. The real Supabase update implementation and edit UI are v1.1 work unless completed and tested earlier.
 - **Supabase Code vs Live QA**: Phase 6 UI interaction mappings, preview guards, and data adapters are code-complete. All code changes were verified to compile correctly with test coverage. However, as with Phase 4 and 5, live Supabase browser verification is still pending.
 
 ### Phase 4, Phase 5, Phase 6 General Status
@@ -145,7 +145,7 @@ In addition, `Expense.update` is entirely undefined in the adapter interface.
 
 ## 5. Live Supabase QA Checklist (Phase 10A)
 
-Before enabling checkout, verify the following manually against a live Supabase project. **frontend code-complete does not mean backend-complete.** "Preview" mode is purely a demonstration and cannot prove production viability.
+Before enabling checkout, verify the following manually against a live Supabase project. **Frontend code-complete does not mean backend-complete.** Preview Mode is not a valid v1.0 demo, fallback, sales, or release-verification path.
 
 ### Supabase Environment Variables
 Ensure these are exactly configured in your production or local `.env` (without secrets committed):
@@ -197,9 +197,9 @@ Ensure these are exactly configured in your production or local `.env` (without 
 - [ ] **Invoice print**: Blocked until `getForPrint` backend exists.
 - [ ] **Sales/revenue/profit reports**: Blocked until invoice/payment backend exists.
 - [ ] **Settings mutations**: Blocked unless backend support exists.
-- [ ] **Safely unsupported features**: Settings logo/backup/restore, Customer history, Expense update, Stock movement history.
+- [ ] **Deferred features**: Settings logo/backup/restore, Customer history, Expense update implementation/edit UI, Stock movement history.
 
 ### General CRUD Status (Customers, Appointments, etc.)
 - **Customers**: End-to-end functionality (List, Create, Update, Delete) is code-complete and wired in the UI. Form validations check for empty strings safely. Invalid actions show localized toasts. Customer History (`getHistory`) safely reports as unsupported without crashing.
 - **Appointments**: Fully functional booking logic (Create, Update, Delete) is code-complete in the UI. Missing validation states correctly trigger tooltips and error notifications instead of raw stack traces.
-- **Verification & QA constraints**: `workflows.test.ts` validates that the Preview-mode write guards correctly block operations via the `PREVIEW_READ_ONLY` canonical error. It does **not** currently mock the Supabase repositories for deep use case workflows due to interception complexity, and we are missing tests for Supabase adapter mapping itself. Additionally, because actual live Supabase backend testing in a browser was unavailable, Phase 4, Phase 5, Phase 6, and Phase 7 remain **code-complete with Live Supabase QA pending**.
+- **Verification & QA constraints**: `workflows.test.ts` validates that the legacy Preview write guards correctly block operations via the `PREVIEW_READ_ONLY` canonical error. It does **not** replace Supabase browser QA. Because actual live Supabase backend testing in a browser was unavailable, Phase 4, Phase 5, Phase 6, and Phase 7 remain **code-complete with Live Supabase QA pending**.

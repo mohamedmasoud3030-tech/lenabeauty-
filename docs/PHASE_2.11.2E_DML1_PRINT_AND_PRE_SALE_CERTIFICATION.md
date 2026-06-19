@@ -24,11 +24,10 @@ A conclusive sweep across the UI/Usability conditions returns the following obse
 *   **Error / Empty States:** Null states uniformly implement transparent `Search`, `Receipt`, and `Calendar` lucide icons with accompanying "No Items Found" translated prompts.
 
 ## 4. Final Sale Readiness Verdict
-**DEMO READY**
+**SUPERSEDED - NOT A v1.0 SALES GATE**
 
-**Justification:** 
-The application's UI, client-side workflows, responsive stability, and robust thermal-print receipts look and feel entirely polished. The project behaves perfectly in the standard feature-rich `Preview Mode`. It is incredibly stable right now for sales demos to prospect salon/center owners.
-However, it is **NOT READY FOR PILOT** (live data deployment). The Supabase remote DML capability is only currently built for Customers and Services, meaning any attempted actual usage (adding appointments, processing checkout) using a live backend schema will error out safely but prohibit operational usage due to the frozen write-paths. Database RPCs and atomic checkout execution also still need implementation. 
+**Justification:**
+This historical note predates the v1.0 source-of-truth model. Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path. v1.0 sales readiness requires real Supabase auth, real CRUD persistence, and browser QA against the configured single-center Supabase PWA.
 
 ## 5. Recommended Next Phase
 **PHASE 2.11.2F — SUPABASE DML INCREMENT 2 & RPC CHECKOUT**

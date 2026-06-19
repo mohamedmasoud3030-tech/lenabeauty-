@@ -1,9 +1,9 @@
 # Phase 2.11.2E-R+ Multi-Track Pre-Sale Certification
 
 ## 1. Final Phase Verdict
-**CONTROLLED PILOT READY BUT WITH BLOCKERS**
+**SUPERSEDED - NOT A v1.0 SALES GATE**
 
-While the UI and master-data tracking layers are exceedingly stable and perfectly robust locally, actual live-data pilots are fully blocked until the Checkout RPC, robust Inventory execution, and subsequent transactional ledgers are physically wired to the `Supabase` backend.
+This historical certification predates the v1.0 source-of-truth model. v1.0 readiness requires real Supabase auth, real CRUD persistence, and browser QA against the configured single-center Supabase PWA. Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path.
 
 ## 2. Exact Files Inspected
 * `src/infrastructure/supabase/repositories.ts`
@@ -46,7 +46,7 @@ Because the UI must never decide `center_id`, this phase explicitly defines a `g
 LOCAL DATABASE EXECUTION NOT AVAILABLE. (This must be validated over an actual pg_trigger test suite when executing staging).
 
 ## 11. Preview Isolation Findings
-`Preview Mode` successfully isolates write paths correctly against local-state `Map` objects. `getSupabaseClient()` effectively remains untracked and entirely asleep so long as `.env.local` lacks initialization properties.
+`Preview Mode` isolates write paths against local-state `Map` objects. This is a legacy local inspection/test behavior only and is not valid for v1.0 product readiness.
 
 ## 12. Error-State Findings
 Queries to Supabase wrap internally in heavy `try/catch` handlers that map standard SQL/PostgREST error codes. Fallback boundaries correctly parse missing or unexpected row mutations and emit bounded UI toasts.

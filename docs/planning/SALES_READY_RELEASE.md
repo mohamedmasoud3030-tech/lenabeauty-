@@ -11,6 +11,7 @@ Sales-ready means the buyer can use the product against real data with clear exp
 - unsupported features are disclosed before sale.
 - Arabic and RTL layouts are device-tested.
 - backup and recovery path is defined.
+- Preview Mode is not used as a demo, fallback, sales, or release-verification path.
 
 ## v1.0 sales positioning
 

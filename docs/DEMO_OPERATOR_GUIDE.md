@@ -1,59 +1,55 @@
-# Demo Operator Guide
+# Supabase Operator QA Guide
 
-This guide ensures operators can confidently present the Kanzy Spa unified management application to prospective owners or stakeholders while adhering to the safe, functional workflows.
+This guide is for v1.0 browser QA and customer-facing walkthrough preparation against real Supabase data.
 
-## 1. How to Launch Preview Mode
-The application heavily relies on an entirely isolated `Preview Mode`. Because live mutations across transactional tables are frozen to ensure sale readiness and zero risk, the demo operates locally against dynamic mocks that resemble actual data constraints.
-To ensure the app boots in Preview mode, verify `.env.local` lacks active `VITE_SUPABASE_URL` bindings or ensure the environment loader maps the app back to fallback defaults correctly.
+Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path.
 
-## 2. Demo Login Behavior
-When in `Preview Mode`, you can use any username/password combination. The login flow simulates a successful handshake and resolves the session to `{ status: "preview" }`.
-If booted in true Supabase mode, the login relies on the deployed `auth.users` pool.
+## 1. Required Runtime
 
-## 3. Recommended Walkthrough Order
-1. **Login**: Demonstrate the smooth ambient transition.
-2. **Dashboard**: Show the analytics and aggregated POS values.
-3. **App Header & Preferences**: Flip the UI language from English to Arabic, showing the true RTL structural mirroring.
-4. **Customers**: View lists, view customer history logs.
-5. **Services**: Navigate the services management. 
-6. **POS System**: Create a mock checkout (which remains fully supported strictly within the UI-isolated preview logic) and print the receipt.
+Use a configured Supabase environment:
 
-## 4. Customer Management Demonstration
-Create, update, and delete actions for Customers are supported end-to-end within Preview mode and fully mapped for backend Supabase mode. Demonstrate inserting a new customer record to highlight the fast response times and safe input validation.
+- `VITE_DATA_BACKEND=supabase`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_CENTER_ID`
+- `VITE_BRANCH_MODE=single`
 
-## 5. Service Management Demonstration
-Showcase adding new salon services, specifying prices, and attaching duration minutes. You can also manipulate pricing updates inside the modal.
+## 2. Approved v1.0 Positioning
 
-## 6. Appointment Demonstration
-Switch to the built-in calendar to demonstrate the day-view, dragging appointments, and editing statuses constraint. Mention that backend integration for appointments is currently being synchronized securely.
+Present v1.0 as a hosted single-customer, single-center Supabase PWA for daily spa/service-center operations.
 
-## 7. POS Demonstration (Preview Only)
-Navigate to the POS invoice page. Add services, add tips or products, and perform checkout. Explain that behind the scenes, checkout is preparing to be heavily protected through centralized atomicity so bad transactions never occur (which is a massive advantage compared to older standalone software). 
+Do not present v1.0 as:
 
-## 8. Receipt Printing Demonstration
-After checking out inside the POS, the POS engine directly provides a modal. Press the Print button. 
+- multi-customer SaaS.
+- complete POS/accounting.
+- offline desktop software.
+- Windows EXE.
+- Preview/demo-mode product.
 
-## 9. Historical Reprint Demonstration
-Navigate to a Customer's internal historical records page (under "Invoices" tab) and hit the newly minted "Print" option located on historical invoice lists. 
+## 3. Browser QA Walkthrough Order
 
-## 10. Reports Demonstration
-Review the Sales, Inventory, and Analytics tracking. 
+1. Login with a real Supabase user assigned to the configured center.
+2. Verify Dashboard operational counts only.
+3. Flip English/Arabic and confirm RTL/LTR layout behavior.
+4. Verify Customers CRUD against Supabase.
+5. Verify Services CRUD against Supabase.
+6. Verify Appointments CRUD against Supabase.
+7. Verify Products/Inventory CRUD against Supabase.
+8. Verify Expenses list/create/delete against Supabase.
+9. Verify Employees CRUD against Supabase.
+10. Verify unsupported v1.1 features fail with explicit unsupported messaging.
 
-## 11. Mobile Demonstration
-Use Chrome DevTools to showcase 390px layouts or perform the walkthrough directly on an iPad for best experience. Focus on horizontal navigation safety and table overflow resilience.
+## 4. Deferred v1.1 Demonstrations
 
-## 12. Known Limitations
-- The `checkout` flow has not yet been wired for Postgres execution. It operates correctly in preview local-memory mode only.
-- Historical data cannot be deeply modified after POS execution.
-- Complex analytics are purely in read-only aggregations based on fixed backend formulas.
+Do not demonstrate these as available until implemented and browser-tested:
 
-## 13. Actions Not Approved for Production
-Do NOT demo importing heavy external Excel formats via third party plugins. Do NOT demo uploading giant imagery, as bucket integrations might drop the payload without settings synchronized.
-Do NOT modify `.env.local` variables during live demos.
+- Checkout.
+- Receipt/invoice print.
+- Sales/revenue/financial reports.
+- Settings mutations.
+- Expense edit UI and real Supabase update implementation.
+- Customer history.
 
-## 14. Customer Questions that Require Honest Bounded Answers
-**Question:** Does it support multi-branch networks?
-**Answer:** Yes, the fundamental architecture maps a strict `center_id` to everything. However, cross-branch analytics are deferred for a future expansion phase as current operations isolate per-tenant strictly.
+## 5. Future v2.0 Direction
 
-**Question:** Can staff members manipulate past invoices?
-**Answer:** The architecture enforces a zero-trust model meaning historical sales modification is severely blocked in our security layer, ensuring absolute financial integrity for the owner.
+Windows Desktop EXE is a v2.0 direction only and requires Tauri v2, SQLite, local auth, and local backup/export.

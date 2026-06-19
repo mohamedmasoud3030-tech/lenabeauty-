@@ -2,12 +2,18 @@
 
 v1.0 is the first customer-deployable Supabase PWA.
 
+Product position:
+
+- hosted single-customer, single-center Supabase PWA.
+- not multi-customer SaaS.
+- not Windows Desktop EXE.
+
 Release gate:
 
 - Supabase configuration is required.
 - login works with real auth.
 - implemented CRUD is tested in browser.
-- old temporary/demo paths are not used for release verification.
+- Preview Mode is not a valid product, demo, fallback, sales, or release-verification path.
 - missing or invalid env shows a blocking setup error.
 - unsupported backend features show explicit unsupported messaging.
 

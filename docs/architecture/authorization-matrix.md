@@ -4,7 +4,7 @@
 - **ADMIN**: Has unrestricted access to all operations in the platform including System Configurations.
 - **MANAGER**: Has access to all reports, appointments, products, and employee schedules, but may not modify core system behaviors or view overarching system configurations.
 - **STAFF**: Read-only restrictions for global data. Can only manipulate assignments targeting themselves explicitly. Cannot see financial reports or expenses lists.
-- **PREVIEW**: Emulated user with read-only views over UI features. All mutations fail at the structural adapter layer.
+- **PREVIEW**: Legacy local inspection/test role. All mutations fail at the structural adapter layer. It is not a valid v1.0 product, demo, fallback, sales, or release-verification role.
 
 ## Module Authorization Policy
 
@@ -32,4 +32,4 @@
 | View / Configure  | Grant | Deny    | Deny  | Read-Only| Deny            |
 
 ## RLS Preparation
-This matrix serves as the direct map for generating Supabase Row Level Security (RLS) policies targeting the endpoints inside the upcoming phases. The preview session is managed exclusively in frontend-state, and is never propagated visually as an authenticated JWT into backend requests.
+This matrix serves as the direct map for generating Supabase Row Level Security (RLS) policies targeting production data-safety. RLS/data isolation verification is required for Supabase safety and is not SaaS positioning. The preview session is managed exclusively in frontend-state and is never propagated as an authenticated JWT into backend requests.
