@@ -9,7 +9,7 @@
 5. Settings update/logo/backup/restore unsupported.
 6. Customer history unsupported.
 7. Expense edit UI is deferred to v1.1; the `Expense.update` port/adapter contract already exists.
-8. Preview Mode legacy source code must be removed before v1.0 release.
+8. Live Supabase non-checkout QA must be executed before v1.0 release evidence is considered complete.
 
 ## Phase 0: Baseline documentation completion
 - **Goal**: Lock in factual engineering states, architectures, and boundaries to act as a source of truth for further iteration.
@@ -114,11 +114,11 @@
 
 ## Upcoming Backend Activation (Post-Frontend)
 
-## Phase 9D: Remove Preview Mode From Source [NEXT IMPLEMENTATION PR]
+## Phase 9D: Remove Preview Mode From Source [COMPLETED]
 - **Goal**: Delete Preview Mode from source code and enforce Supabase as the only valid v1.0 backend.
 - **Tasks**: Follow `docs/NEXT_IMPLEMENTATION_REMOVE_PREVIEW_MODE.md`.
 - **Acceptance Criteria**: `src/infrastructure/preview/` is deleted, `UserRole.PREVIEW` is gone, `VITE_DATA_BACKEND=preview` and missing `.env` paths produce `EnvironmentConfigurationError`, the Preview button/banner are gone, and all preview-specific tests are rewritten around the hard error path.
-- **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run && npm run build`.
+- **Verification Commands / Steps**: `npx tsc --noEmit && npx vitest run && npm run build`. Certification captured in `docs/PHASE_10A.6_PREVIEW_SOURCE_REMOVAL_CERTIFICATION.md`.
 - **Explicitly out of scope**: Remote Supabase schema changes, checkout RPC implementation, expense edit UI, Desktop EXE implementation, and production environment variable changes.
 
 ## Phase 10A: Supabase Live Activation Readiness and Non-checkout Live QA
@@ -135,7 +135,7 @@
 - **Verification Commands / Steps**: Supabase SQL Editor execution of `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql`, then `docs/SUPABASE_STAGING_SEED_10A5.sql`; `npm run preflight:supabase`; live browser QA checklist.
 - **Explicitly out of scope**: Processing checkout RPC logic or finalizing `invoices`/`payments` tables. Does not alter frontend code.
 
-## Phase 10A.6: Preview Source Removal and Release Evidence
+## Phase 10A.6: Preview Source Removal and Release Evidence [CODE COMPLETE / LIVE QA PENDING]
 - **Goal**: Remove remaining Preview Mode source paths before any financial backend activation so v1.0 release evidence comes only from real Supabase staging.
 - **Tasks**: Execute `docs/NEXT_IMPLEMENTATION_REMOVE_PREVIEW_MODE.md`, replace preview-specific tests with strict configuration-error coverage, and re-run Phase 10A.5 live QA against the captured `VITE_CENTER_ID`.
 - **Acceptance Criteria**: `VITE_DATA_BACKEND=preview` is rejected, preview source code is deleted, tests/build pass, and the live staging QA evidence remains valid.

@@ -14,10 +14,10 @@ import {
 import { getSupabaseClient } from "./client";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
-  mapAuthSession, mapInvoice
+  mapAuthSession, mapInvoice, mapInvoiceItem
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
 
 function getCenterIdFor(operation: string): Result<string, DomainError> {
   try {
@@ -32,6 +32,21 @@ function createAuthError(code: "INVALID_CREDENTIALS" | "INFRASTRUCTURE_ERROR", m
   const err = new Error(message) as AuthError;
   err.code = code;
   return err;
+}
+
+function isMissingBackendFeature(error: { code?: string; message?: string } | null | undefined): boolean {
+  const message = error?.message?.toLowerCase() || "";
+  return error?.code === "PGRST202"
+    || error?.code === "42883"
+    || error?.code === "42P01"
+    || error?.code === "42703"
+    || message.includes("could not find the function")
+    || message.includes("could not find the table")
+    || message.includes("does not exist");
+}
+
+function toDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 class SupabaseAuthAdapter implements AuthRepository {
@@ -714,7 +729,83 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
   }
 
   async getForPrint(id: string): Promise<Result<InvoicePrintData, DomainError>> {
-    return { ok: false, error: createUnsupportedReadError("Invoice.getForPrint") };
+    const centerRes = getCenterIdFor("Invoice.getForPrint");
+    if (!centerRes.ok) return centerRes as any;
+
+    try {
+      const client = getSupabaseClient();
+      const [invoiceRes, itemRes, settingsRes] = await Promise.all([
+        client
+          .from('invoices')
+          .select('*')
+          .eq('id', id)
+          .eq('center_id', centerRes.data)
+          .maybeSingle(),
+        client
+          .from('invoice_items')
+          .select(`
+            *,
+            services (name),
+            products (name)
+          `)
+          .eq('invoice_id', id)
+          .order('created_at', { ascending: true }),
+        client
+          .from('center_settings')
+          .select('*')
+          .eq('center_id', centerRes.data)
+          .maybeSingle()
+      ]);
+
+      if (invoiceRes.error) {
+        if (isMissingBackendFeature(invoiceRes.error)) return { ok: false, error: createUnsupportedReadError("Invoice.getForPrint") };
+        return { ok: false, error: createQueryError("Invoice.getForPrint", invoiceRes.error.message) };
+      }
+      if (itemRes.error) {
+        if (isMissingBackendFeature(itemRes.error)) return { ok: false, error: createUnsupportedReadError("Invoice.getForPrint") };
+        return { ok: false, error: createQueryError("Invoice.getForPrint", itemRes.error.message) };
+      }
+      if (settingsRes.error) return { ok: false, error: createQueryError("Invoice.getForPrint", settingsRes.error.message) };
+      if (!invoiceRes.data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
+
+      const invoice = mapInvoice(invoiceRes.data);
+      let customer: Customer | undefined;
+      if (invoice.customerId) {
+        const customerRes = await client
+          .from('customers')
+          .select('*')
+          .eq('id', invoice.customerId)
+          .eq('center_id', centerRes.data)
+          .maybeSingle();
+        if (customerRes.error) return { ok: false, error: createQueryError("Invoice.getForPrint", customerRes.error.message) };
+        customer = customerRes.data ? mapCustomer(customerRes.data) : undefined;
+      }
+
+      const items = (itemRes.data || []).map((row: any) => {
+        const item = mapInvoiceItem(row);
+        const type: "service" | "product" = item.serviceId ? "service" : "product";
+        const joinedName = item.serviceId ? row.services?.name : row.products?.name;
+        return {
+          id: item.id,
+          type,
+          name: typeof joinedName === "string" ? joinedName : type === "service" ? "Service" : "Product",
+          price: item.price,
+          qty: item.quantity
+        };
+      });
+
+      return {
+        ok: true,
+        data: {
+          invoice,
+          items,
+          customer,
+          settings: settingsRes.data ? mapCenterSettings(settingsRes.data) : undefined
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Invoice.getForPrint", (e as Error).message) };
+    }
   }
 }
 
@@ -737,19 +828,105 @@ class SupabaseSettingsAdapter implements SettingsRepository {
       return { ok: false, error: createQueryError("Settings.get", (e as Error).message) };
     }
   }
-  async update(): Promise<Result<CenterSettings, DomainError>> {
-    return { ok: false, error: createUnsupportedWriteError("Settings.update") };
+  async update(data: Partial<CenterSettings>): Promise<Result<CenterSettings, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.update");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {};
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.currency !== undefined) payload.currency = data.currency;
+      if (data.taxRate !== undefined) payload.tax_rate = data.taxRate;
+      if (data.logoPath !== undefined) payload.logo_path = data.logoPath;
+      if (data.address !== undefined) payload.address = data.address;
+      if (data.phone !== undefined) payload.phone = data.phone;
+      if (data.cr !== undefined) payload.cr = data.cr;
+      if (data.postalCode !== undefined) payload.postal_code = data.postalCode;
+
+      const { data: row, error } = await getSupabaseClient()
+        .from('center_settings')
+        .update(payload)
+        .eq('center_id', centerRes.data)
+        .select()
+        .maybeSingle();
+
+      if (error) return { ok: false, error: createQueryError("Settings.update", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Settings.update", "No data returned after update") };
+      return { ok: true, data: mapCenterSettings(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.update", (e as Error).message) };
+    }
   }
-  async uploadLogo(): Promise<Result<{ logoPath: string }, DomainError>> {
-    return { ok: false, error: createUnsupportedWriteError("Settings.uploadLogo") };
+  async uploadLogo(file: File): Promise<Result<{ logoPath: string }, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.uploadLogo");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client: any = getSupabaseClient();
+      if (!client.storage?.from) return { ok: false, error: createUnsupportedWriteError("Settings.uploadLogo") };
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const logoPath = `${centerRes.data}/logo-${Date.now()}-${safeName}`;
+      const { error } = await client.storage.from('center-assets').upload(logoPath, file, { upsert: true });
+      if (error) return { ok: false, error: createQueryError("Settings.uploadLogo", error.message) };
+      const updateRes = await this.update({ logoPath });
+      if (!updateRes.ok) return updateRes as any;
+      return { ok: true, data: { logoPath } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.uploadLogo", (e as Error).message) };
+    }
   }
   async backup(): Promise<Result<{ message: string }, DomainError>> {
-    return { ok: false, error: createUnsupportedWriteError("Settings.backup") };
+    const exported = await this.exportData();
+    if (!exported.ok) return exported as any;
+    return { ok: true, data: { message: JSON.stringify(exported.data) } };
   }
-  async exportData(): Promise<Result<unknown, DomainError>> {
-    return { ok: false, error: createUnsupportedWriteError("Settings.exportData") };
+  async exportData(): Promise<Result<BackupPayload, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.exportData");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client = getSupabaseClient();
+      const [customers, employees, services, appointments, products, expenses, settings, invoices] = await Promise.all([
+        client.from('customers').select('*').eq('center_id', centerRes.data),
+        client.from('employees').select('*').eq('center_id', centerRes.data),
+        client.from('services').select('*').eq('center_id', centerRes.data),
+        client.from('appointments').select('*').eq('center_id', centerRes.data),
+        client.from('products').select('*').eq('center_id', centerRes.data),
+        client.from('expenses').select('*').eq('center_id', centerRes.data),
+        client.from('center_settings').select('*').eq('center_id', centerRes.data).maybeSingle(),
+        client.from('invoices').select('*').eq('center_id', centerRes.data)
+      ]);
+
+      const responses = [customers, employees, services, appointments, products, expenses, settings, invoices];
+      for (const response of responses) {
+        if (response.error) {
+          if (isMissingBackendFeature(response.error)) return { ok: false, error: createUnsupportedReadError("Settings.exportData") };
+          return { ok: false, error: createQueryError("Settings.exportData", response.error.message) };
+        }
+      }
+
+      return {
+        ok: true,
+        data: {
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+          data: {
+            customers: (customers.data || []).map(mapCustomer),
+            employees: (employees.data || []).map(mapEmployee),
+            services: (services.data || []).map(mapService),
+            appointments: (appointments.data || []).map(mapAppointment),
+            products: (products.data || []).map(mapProduct),
+            expenses: (expenses.data || []).map(mapExpense),
+            settings: settings.data ? mapCenterSettings(settings.data) : undefined,
+            invoices: (invoices.data || []).map(mapInvoice)
+          }
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.exportData", (e as Error).message) };
+    }
   }
-  async restore(): Promise<Result<void, DomainError>> {
+  async restore(data: BackupPayload): Promise<Result<void, DomainError>> {
+    if (!validateBackupPayload(data)) {
+      return { ok: false, error: { name: "DomainError", message: "Invalid backup payload", code: "VALIDATION_ERROR" } };
+    }
     return { ok: false, error: createUnsupportedWriteError("Settings.restore") };
   }
 }
@@ -762,10 +939,11 @@ class SupabaseDashboardAdapter implements DashboardRepository {
     try {
       const client = getSupabaseClient();
       
-      const [custRes, apptRes, prodRes] = await Promise.all([
+      const [custRes, apptRes, prodRes, invoiceRes] = await Promise.all([
         client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
         client.from('appointments').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
-        client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).lte('stock_quantity', 5)
+        client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).lte('stock_quantity', 5),
+        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', toDateOnly(new Date()))
       ]);
 
       if (custRes.error) throw new Error(custRes.error.message);
@@ -777,9 +955,19 @@ class SupabaseDashboardAdapter implements DashboardRepository {
         appointments: apptRes.count || 0,
         sales: 0,
         revenue: 0,
-        canViewRevenue: false, // Explicitly false as it's unsupported
+        canViewRevenue: false,
         lowStockCount: prodRes.count || 0,
       };
+
+      if (!invoiceRes.error) {
+        const revenue = (invoiceRes.data || []).reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
+        data.sales = invoiceRes.data?.length || 0;
+        data.revenue = revenue;
+        data.todayRevenue = revenue;
+        data.canViewRevenue = true;
+      } else if (!isMissingBackendFeature(invoiceRes.error)) {
+        throw new Error(invoiceRes.error.message);
+      }
 
       return { ok: true, data };
     } catch (e: unknown) {
@@ -787,16 +975,139 @@ class SupabaseDashboardAdapter implements DashboardRepository {
     }
   }
   async getPnlMonth(): Promise<Result<PnlData, DomainError>> {
-    return { ok: false, error: createUnsupportedReadError("Dashboard.getPnlMonth") };
+    const centerRes = getCenterIdFor("Dashboard.getPnlMonth");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client = getSupabaseClient();
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      const [invoiceRes, expenseRes, employeeRes] = await Promise.all([
+        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', from).lt('date', to),
+        client.from('expenses').select('amount').eq('center_id', centerRes.data).gte('date', from).lt('date', to),
+        client.from('employees').select('base_salary, salary, commission_percentage, month_commission_total').eq('center_id', centerRes.data).eq('is_active', true)
+      ]);
+
+      for (const response of [invoiceRes, expenseRes, employeeRes]) {
+        if (response.error) {
+          if (isMissingBackendFeature(response.error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getPnlMonth") };
+          return { ok: false, error: createQueryError("Dashboard.getPnlMonth", response.error.message) };
+        }
+      }
+
+      const revenue = (invoiceRes.data || []).reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
+      const expenses = (expenseRes.data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+      const baseSalaries = (employeeRes.data || []).reduce((sum: number, row: any) => sum + Number(row.base_salary ?? row.salary ?? 0), 0);
+      const commissions = (employeeRes.data || []).reduce((sum: number, row: any) => sum + Number(row.month_commission_total || 0), 0);
+
+      return {
+        ok: true,
+        data: {
+          revenue,
+          baseSalaries,
+          commissions,
+          expenses,
+          profit: revenue - baseSalaries - commissions - expenses
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Dashboard.getPnlMonth", (e as Error).message) };
+    }
   }
   async getRevenueLast7Days(): Promise<Result<ChartData[], DomainError>> {
-    return { ok: false, error: createUnsupportedReadError("Dashboard.getRevenueLast7Days") };
+    const centerRes = getCenterIdFor("Dashboard.getRevenueLast7Days");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 6);
+      fromDate.setHours(0, 0, 0, 0);
+      const { data, error } = await getSupabaseClient()
+        .from('invoices')
+        .select('date, total_amount')
+        .eq('center_id', centerRes.data)
+        .gte('date', fromDate.toISOString())
+        .order('date', { ascending: true });
+
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getRevenueLast7Days") };
+        return { ok: false, error: createQueryError("Dashboard.getRevenueLast7Days", error.message) };
+      }
+
+      const buckets = new Map<string, number>();
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(fromDate);
+        day.setDate(fromDate.getDate() + i);
+        buckets.set(toDateOnly(day), 0);
+      }
+      for (const row of data || []) {
+        const key = toDateOnly(new Date((row as any).date));
+        buckets.set(key, (buckets.get(key) || 0) + Number((row as any).total_amount || 0));
+      }
+
+      return { ok: true, data: Array.from(buckets, ([date, revenue]) => ({ date, revenue })) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Dashboard.getRevenueLast7Days", (e as Error).message) };
+    }
   }
 }
 
 class SupabaseReportAdapter implements ReportRepository {
-  async getSales(): Promise<Result<SalesReportRow[], DomainError>> {
-    return { ok: false, error: createUnsupportedReadError("Report.getSales") };
+  async getSales(fromStr: string, toStr: string): Promise<Result<SalesReportRow[], DomainError>> {
+    const centerRes = getCenterIdFor("Report.getSales");
+    if (!centerRes.ok) return centerRes as any;
+
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('invoices')
+        .select(`
+          *,
+          customers (name),
+          invoice_items (
+            id,
+            service_id,
+            product_id,
+            price,
+            quantity,
+            services (name),
+            products (name)
+          )
+        `)
+        .eq('center_id', centerRes.data)
+        .gte('date', fromStr)
+        .lte('date', toStr)
+        .order('date', { ascending: false });
+
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Report.getSales") };
+        return { ok: false, error: createQueryError("Report.getSales", error.message) };
+      }
+
+      const rows: SalesReportRow[] = (data || []).map((row: any) => {
+        const invoice = mapInvoice(row);
+        return {
+          id: invoice.id,
+          date: invoice.date.toISOString(),
+          totalAmount: invoice.totalAmount,
+          discount: invoice.discount,
+          customer: typeof row.customers?.name === "string" ? row.customers.name : undefined,
+          items: (row.invoice_items || []).map((itemRow: any) => {
+            const item = mapInvoiceItem(itemRow);
+            const type: "service" | "product" = item.serviceId ? "service" : "product";
+            return {
+              id: item.id,
+              name: typeof itemRow.services?.name === "string" ? itemRow.services.name : typeof itemRow.products?.name === "string" ? itemRow.products.name : type,
+              type,
+              price: item.price,
+              qty: item.quantity
+            };
+          })
+        };
+      });
+
+      return { ok: true, data: rows };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Report.getSales", (e as Error).message) };
+    }
   }
   async getAppointments(fromStr: string, toStr: string): Promise<Result<AppointmentReportRow[], DomainError>> {
     const centerRes = getCenterIdFor("Report.getAppointments");

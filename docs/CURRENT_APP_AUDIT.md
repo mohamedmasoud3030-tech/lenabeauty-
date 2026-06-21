@@ -61,7 +61,7 @@ In addition, `Expense.update` exists in the domain port and Supabase adapter con
 ## 4. Runtime Metrics and Risk Vectors
 
 ### Removed Preview Behavior
-- Preview Mode is not valid in the released product. `VITE_DATA_BACKEND=preview` must produce a hard blocking configuration error after the next implementation PR.
+- Preview Mode is not valid in the released product. `VITE_DATA_BACKEND=preview` now produces a hard blocking configuration error, and no Preview source adapter remains under `src/infrastructure/`.
 - The application must not rely on empty data sets (`[]`), stubbed responses, deterministic mock center IDs, or demo sessions instead of real database reads.
 - **Mitigation**: Unsupported features such as reports generation, POS checkout, dashboard financials, and settings mutations must surface explicit backend-required or unsupported states against the real Supabase configuration.
 
@@ -77,7 +77,7 @@ In addition, `Expense.update` exists in the domain port and Supabase adapter con
 
 ### Center ID Validation Status
 - **Mitigation (Phase 2)**: In `single` branch mode, `config.centerId` is strictly UUID validated during env initialization. Additionally, during session boot, the client strictly verifies that the authenticated user possesses an explicit membership matching `VITE_CENTER_ID` before mapping the session. Users lacking membership are forcibly rejected via `UNAUTHORIZED_CENTER_MEMBERSHIP`. (Note: True remote backend Row-Level Security isolation relies on the Supabase environment, but the React client application containment is strictly safe now).
-- The next implementation PR must remove the `PREVIEW_CENTER_ID` mock entirely. v1.0 requires a real `VITE_CENTER_ID`.
+- The `PREVIEW_CENTER_ID` mock has been removed from source. v1.0 requires a real `VITE_CENTER_ID`.
 
 ### Dashboard/Reporting Risks
 - **Implemented Operational Reads**: Methods like `Dashboard.getSummary`, `Report.getAppointments`, and `Report.getInventory` are implemented in code and successfully map base operational data. However, they remain **code-complete with Live Supabase QA pending** to verify relational query stability.
@@ -92,7 +92,7 @@ In addition, `Expense.update` exists in the domain port and Supabase adapter con
 - `Settings.update`, `uploadLogo`, `backup`, and `restore` mutations are blocked via canonical typed errors reducing risk of silent failures or simulated UI state loops.
 
 ### Supabase Adapter Contract Hardening Status (Phase 3)
-- **Released Backend Mode**: Supabase is the only valid v1.0 backend. Preview adapters are legacy code awaiting deletion in the next implementation PR.
+- **Released Backend Mode**: Supabase is the only valid v1.0 backend. Preview adapters have been removed from the runtime source tree.
 - **Implemented & Safe (Supabase)**: `Auth`, `Customer(list, getById, create, update, delete)`, `Employee(list, create, update, delete)`, `Service(list, create, update, delete)`, `Appointment(list, create, update, delete)`, `Product(list(Full), create, update, delete)`, `Expense(list, create, delete)`.
 - **Unsupported (Safely Handled in Supabase)**: `Invoice.checkout`, `Invoice.getForPrint`, `Dashboard(getPnlMonth, getRevenueLast7Days)`, `Report(getSales)`, `Settings(update, uploadLogo, backup, restore, exportData)`, `Customer.getHistory`, `Expense.update`. All of these explicitly return a standardized `UnsupportedBackendMethodError` (`BACKEND_METHOD_UNSUPPORTED` code).
 - UI gracefully catches this canonical code via `formatError` translating it to localized UI warnings.
@@ -102,7 +102,7 @@ In addition, `Expense.update` exists in the domain port and Supabase adapter con
 
 ### UX Config & Runtime Environment Fixes
 - Missing or invalid Supabase configuration must render a safe blocking `EnvironmentConfigurationError` screen.
-- The next implementation PR must remove the **"Enter Preview Mode"** button and must not allow UI bypasses around missing database configuration.
+- The **"Enter Preview Mode"** button has been removed and the UI does not allow Preview bypasses around missing database configuration.
 
 ### Phase 5B: Checkout Design & Transaction Status
 - **Environment Variables**: Confirmed required env var names (`VITE_DATA_BACKEND`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_CENTER_ID`, `VITE_BRANCH_MODE`) from `src/config/env.ts`.
@@ -203,4 +203,4 @@ Run `npm run preflight:supabase` before browser QA. The command validates local 
 ### General CRUD Status (Customers, Appointments, etc.)
 - **Customers**: End-to-end functionality (List, Create, Update, Delete) is code-complete and wired in the UI. Form validations check for empty strings safely. Invalid actions show localized toasts. Customer History (`getHistory`) safely reports as unsupported without crashing.
 - **Appointments**: Fully functional booking logic (Create, Update, Delete) is code-complete in the UI. Missing validation states correctly trigger tooltips and error notifications instead of raw stack traces.
-- **Verification & QA constraints**: The next implementation PR must replace preview-specific tests with hard configuration-error coverage for `VITE_DATA_BACKEND=preview` and missing `.env` paths. Deep Supabase repository workflow mocks remain a testing gap. Additionally, because actual live Supabase backend testing in a browser was unavailable, Phase 4, Phase 5, Phase 6, and Phase 7 remain **code-complete with Live Supabase QA pending**.
+- **Verification & QA constraints**: Preview-specific tests have been replaced with hard configuration-error coverage for `VITE_DATA_BACKEND=preview` and missing `.env` paths. Deep Supabase repository workflow mocks remain a testing gap. Additionally, because actual live Supabase backend testing in a browser was unavailable, Phase 4, Phase 5, Phase 6, and Phase 7 remain **code-complete with Live Supabase QA pending**.

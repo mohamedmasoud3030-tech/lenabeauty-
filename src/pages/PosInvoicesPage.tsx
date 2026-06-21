@@ -25,14 +25,7 @@ interface CartItem {
   brand?: string;
 }
 
-interface PosPrintData extends InvoicePrintData {
-  settings?: {
-    name: string;
-    address?: string;
-    phone?: string;
-    currency?: string;
-  };
-}
+type PosPrintData = InvoicePrintData;
 
 export default function PosInvoicesPage() {
   const { showToast } = useToast();

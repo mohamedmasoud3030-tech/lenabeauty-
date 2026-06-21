@@ -16,12 +16,12 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         }
     });
 
-    it("Invoice.getForPrint throws UnsupportedBackendMethodError", async () => {
+    it("Invoice.getForPrint is implemented but remains bounded without infrastructure", async () => {
         const adapter: any = new SupabaseInvoiceAdapter();
         const result = await adapter.getForPrint("123");
         expect(result.ok).toBe(false);
         if (!result.ok) {
-            expect((result as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+            expect((result as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
         }
     });
 
@@ -32,14 +32,14 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
 
         const r2 = await adapter.getPnlMonth();
         expect(r2.ok).toBe(false);
-        if (!r2.ok) expect((r2 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r2.ok) expect((r2 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
     });
 
     it("Reports methods behavior", async () => {
         const adapter: any = new SupabaseReportAdapter();
         const r1 = await adapter.getSales("2023-01-01", "2023-12-31");
         expect(r1.ok).toBe(false);
-        if (!r1.ok) expect((r1 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r1.ok) expect((r1 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
         
         const r2 = await adapter.getAppointments("2023-01-01", "2023-12-31");
         expect(r2.ok === true || (r2.ok === false && (r2 as any).error.code === 'INFRASTRUCTURE_ERROR')).toBe(true);
@@ -48,15 +48,15 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         expect(r3.ok === true || (r3.ok === false && (r3 as any).error.code === 'INFRASTRUCTURE_ERROR')).toBe(true);
     });
 
-    it("Settings writes throw UnsupportedBackendMethodError", async () => {
+    it("Settings mutations are implemented but remain bounded without infrastructure", async () => {
         const adapter: any = new SupabaseSettingsAdapter();
         const r1 = await adapter.update({});
         expect(r1.ok).toBe(false);
-        if (!r1.ok) expect((r1 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r1.ok) expect((r1 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
         
         const r2 = await adapter.backup();
         expect(r2.ok).toBe(false);
-        if (!r2.ok) expect((r2 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r2.ok) expect((r2 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
     });
 
     it("Customer.getHistory throws UnsupportedBackendMethodError", async () => {
