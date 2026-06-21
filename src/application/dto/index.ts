@@ -37,6 +37,7 @@ export interface InvoicePrintData {
     qty: number;
   }[];
   customer?: Customer;
+  settings?: CenterSettings;
 }
 
 export interface DashboardSummary {
