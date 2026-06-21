@@ -1,0 +1,28 @@
+SOLD
+
+**Core management features (verified in code, QA pending):**
+- Complete customer management (CRM)
+- Appointment scheduling and status tracking
+- Service catalog management
+- Employee management and scheduling
+- Product/inventory catalog
+- Expense tracking
+- Operational reports (appointments booked, inventory levels)
+- Real-time operational dashboard
+- Role-based access (Admin vs Staff)
+- Arabic + English bilingual interface
+
+**Honest positioning:** v1.0 is the **operational backbone** of the salon — scheduling, staffing, catalog, and inventory. Billing and financial reporting arrive in v1.1.
+
+---
+
+## SALES-READY GATE (v2.0 — Desktop EXE)
+
+Same criteria as above, plus:
+
+- [ ] Windows 10 + Windows 11 installer QA passed
+- [ ] Offline operation verified (zero internet required)
+- [ ] Arabic RTL in WebView2 verified
+- [ ] Backup/restore round-trip tested
+- [ ] Auto-update works
+- [ ] Code-signed EXE (no SmartScreen warning)
