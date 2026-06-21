@@ -5,6 +5,7 @@ const root = process.cwd();
 const envFiles = [".env.local", ".env"];
 const schemaPath = resolve(root, "docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql");
 const seedPath = resolve(root, "docs/SUPABASE_STAGING_SEED_10A5.sql");
+const checkoutActivationPath = resolve(root, "docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql");
 
 const requiredEnv = [
   "VITE_DATA_BACKEND",
@@ -33,6 +34,15 @@ const forbiddenCheckoutArtifacts = [
   "CREATE TABLE public.invoices",
   "CREATE TABLE public.invoice_items",
   "CREATE TABLE public.payments",
+];
+
+const requiredCheckoutArtifacts = [
+  "CREATE TABLE IF NOT EXISTS public.invoices",
+  "CREATE TABLE IF NOT EXISTS public.invoice_items",
+  "CREATE OR REPLACE FUNCTION public.process_checkout_v1",
+  "ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY",
+  "ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY",
+  "GRANT EXECUTE ON FUNCTION public.process_checkout_v1",
 ];
 
 function parseEnvFile(path) {
@@ -159,6 +169,21 @@ if (!existsSync(seedPath)) {
   for (const artifact of forbiddenCheckoutArtifacts) {
     if (seed.includes(artifact)) {
       fail(`staging seed must not include checkout artifact: ${artifact}`);
+    }
+  }
+}
+
+if (!existsSync(checkoutActivationPath)) {
+  fail("docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql is missing");
+} else {
+  pass("docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql exists");
+  const checkoutActivation = readFileSync(checkoutActivationPath, "utf8");
+
+  for (const artifact of requiredCheckoutArtifacts) {
+    if (!checkoutActivation.includes(artifact)) {
+      fail(`checkout activation missing required artifact: ${artifact}`);
+    } else {
+      pass(`checkout activation includes ${artifact}`);
     }
   }
 }

@@ -1,7 +1,7 @@
 # Phase 5B Checkout SQL Draft
 
-**WARNING: DRAFT ONLY — NOT APPLIED**
-This file proposes the schema and RPC function required for the AI Studio checkout application to work. Do NOT apply this automatically; a Supabase admin must review and execute this manually.
+**SUPERSEDED BY PHASE 10B ACTIVATION SQL**
+This file preserves the original checkout schema draft for design history. Apply `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` for the reviewed executable Supabase SQL that creates `invoices`, `invoice_items`, and `process_checkout_v1`.
 
 ## 1. Tables (If they don't already exist)
 

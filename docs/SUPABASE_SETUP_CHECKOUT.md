@@ -15,19 +15,22 @@ The application relies on the following environment variables (found in `src/con
 The application does **NOT** apply database schemas or migrations automatically. To unlock POS checkout, follow these steps:
 
 1. Open your **Supabase Dashboard** -> **SQL Editor**.
-2. Open the file `docs/PHASE_5B_CHECKOUT_SQL_DRAFT.md` inside this repository.
-3. Review the draft SQL, including:
+2. Apply `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` first if the project does not already have the Phase 10A base schema.
+3. Apply `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql`.
+4. Review the activation SQL, including:
    - `invoices` table creation.
    - `invoice_items` table creation.
    - `process_checkout_v1` RPC function creation.
-4. Copy and paste the validated SQL into the SQL Editor.
-5. Click **Run**.
+   - RLS policies that allow reads by center membership while denying direct invoice writes.
+   - Inventory validation that refuses product checkout when stock is insufficient.
+5. Copy and paste the SQL into the SQL Editor.
+6. Click **Run**.
 
 ## RLS Verification Checklist
 
 Ensure you have established RLS policies so that users only see data for their `center_id`.
 By default, the `process_checkout_v1` is created as `SECURITY DEFINER`, allowing it to bypass RLS to ensure consistency during the transaction, provided the payload validates the `center_id`.
-You must ensure the user executing the RPC provides their assigned `center_id`.
+The function validates that the authenticated user is an active member of the submitted `center_id` before creating invoices or decrementing product stock.
 
 ## Manual Test Example
 
