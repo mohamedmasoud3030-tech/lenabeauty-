@@ -419,6 +419,10 @@ const resources = {
       "Go Home": "الذهاب للرئيسية",
       "No internet connection": "لا توجد اتصالة إنترنت",
       "Connection restored": "تم استعادة الاتصال",
+      "Page": "الصفحة",
+      "of": "من",
+      "Previous": "السابقة",
+      "Next": "التالية",
       "Please fill all fields": "يرجى ملء جميع الحقول",
       "Save": "حفظ",
       
@@ -872,6 +876,10 @@ const resources = {
       "Go Home": "Go Home",
       "No internet connection": "No internet connection",
       "Connection restored": "Connection restored",
+      "Page": "Page",
+      "of": "of",
+      "Previous": "Previous",
+      "Next": "Next",
       "Please fill all fields": "Please fill all fields",
       "Save": "Save",
       
