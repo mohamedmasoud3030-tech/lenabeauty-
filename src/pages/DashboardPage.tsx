@@ -37,10 +37,8 @@ export default function DashboardPage() {
     try {
       const s = await unwrap(useCases.dashboard.getSummary());
       setSummary(s);
-      
-      // Activity is currently mocked in getSummary? No, we need an activity useCase.
-      // For now we will mock the activity in the UI or fetch empty array until activity is explicitly defined in dashboard port.
-      setActivity([]);
+
+      void loadActivity(s);
 
       if (s && s.canViewRevenue) {
         const p = await unwrap(useCases.dashboard.getPnlMonth());
@@ -57,6 +55,72 @@ export default function DashboardPage() {
       }
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadActivity(s: DashboardSummary | null) {
+    type ActivityEvent = { id: string; type: string; message: string; createdAt: string; user?: { username?: string } };
+    try {
+      const now = new Date();
+      const windowStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const windowEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const tasks: Promise<ActivityEvent[]>[] = [
+        useCases.appointments
+          .list({ fromISO: windowStart.toISOString(), toISO: windowEnd.toISOString() })
+          .then((res) =>
+            res.ok
+              ? res.data.map((a) => ({
+                  id: `appt-${a.id}`,
+                  type: "APPOINTMENT_CREATED",
+                  message: t("New appointment scheduled"),
+                  createdAt: new Date(a.createdAt).toISOString(),
+                }))
+              : []
+          )
+          .catch(() => []),
+        useCases.customers
+          .list()
+          .then((res) =>
+            res.ok
+              ? res.data.map((c) => ({
+                  id: `cust-${c.id}`,
+                  type: "USER_CREATED",
+                  message: `${t("New customer")}: ${c.name}`,
+                  createdAt: new Date(c.createdAt).toISOString(),
+                }))
+              : []
+          )
+          .catch(() => []),
+      ];
+
+      if (s?.canViewRevenue) {
+        tasks.push(
+          useCases.expenses
+            .list()
+            .then((res) =>
+              res.ok
+                ? res.data.map((e) => ({
+                    id: `exp-${e.id}`,
+                    type: "EXPENSE_CREATED",
+                    message: `${t("New expense recorded")}: ${e.amount} ${s.currency || ""}`.trim(),
+                    createdAt: new Date(e.createdAt).toISOString(),
+                  }))
+                : []
+            )
+            .catch(() => [])
+        );
+      }
+
+      const results = await Promise.all(tasks);
+      const merged = results
+        .flat()
+        .sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())
+        .slice(0, 8);
+
+      setActivity(merged);
+    } catch {
+      setActivity([]);
     }
   }
 
@@ -210,7 +274,6 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold flex items-center gap-3">
                 <Activity className="h-6 w-6 text-primary" />
                 {t("Live Activity Feed")}
-                <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest">{t("Backend Required")}</span>
               </h2>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Real-time operational updates")}</p>
             </div>
@@ -441,6 +504,7 @@ function ActivityIcon({ type }: { type: string }) {
     case "INVOICE_CREATED": return <Receipt className="h-6 w-6" />;
     case "APPOINTMENT_CREATED": return <CalendarDays className="h-6 w-6" />;
     case "USER_CREATED": return <Users className="h-6 w-6" />;
+    case "EXPENSE_CREATED": return <Coins className="h-6 w-6" />;
     default: return <List className="h-6 w-6" />;
   }
 }
