@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
@@ -7,7 +7,8 @@ import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { 
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
-  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle
+  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
+  Zap, Clock, TrendingUp
 } from "lucide-react";
 import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
 import { motion, AnimatePresence } from "motion/react";
@@ -35,7 +36,6 @@ export default function PosInvoicesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
@@ -48,10 +48,35 @@ export default function PosInvoicesPage() {
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [showCheckoutSummary, setShowCheckoutSummary] = useState(isMobile);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const itemSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadData();
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "F1") {
+        e.preventDefault();
+        itemSearchRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        setShowCheckoutSummary(false);
+      }
+      if (e.key === "Enter" && e.ctrlKey) {
+        handleCheckout();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cart, selectedCustomer, selectedEmployee]);
 
   async function loadData() {
     setLoading(true);
@@ -85,10 +110,18 @@ export default function PosInvoicesPage() {
       return;
     }
     setCart([...cart, { ...item, type, cartId: Math.random().toString(36).substring(2, 11) }]);
+    showToast('success', t("Added"), `${item.name} ${t("added to cart")}`);
   }
 
   function removeFromCart(cartId: string) {
     setCart(cart.filter(it => it.cartId !== cartId));
+  }
+
+  function clearCart() {
+    setCart([]);
+    setSelectedCustomer(null);
+    setDiscount(0);
+    setUseLoyaltyPoints(false);
   }
 
   const subtotal = cart.reduce((sum, item) => sum + Number(item.price), 0);
@@ -153,17 +186,10 @@ export default function PosInvoicesPage() {
         console.error("Print failed", e);
       }
 
-      setCart([]);
-      setSelectedCustomer(null);
-      setDiscount(0);
-      setUseLoyaltyPoints(false);
+      clearCart();
       showToast('success', t("Success"), t("Payment successful!"));
     } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', 'Error', err.message || t("Payment failed"));
-      }
+      showToast('error', 'Error', err.message || t("Payment failed"));
     }
   }
 
@@ -176,11 +202,9 @@ export default function PosInvoicesPage() {
       );
 
   return (
-    <div className="flex flex-col gap-6 lg:gap-8 min-h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] lg:min-h-0 pb-4">
+    <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
 
-
-      <div className="flex-1 flex flex-col lg:flex-row gap-8 lg:min-h-0">
-        {/* Print Modal */}
+      {/* Print Modal */}
       {showPrintModal && printData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl print:p-0 print:bg-transparent">
           <motion.div 
@@ -195,402 +219,427 @@ export default function PosInvoicesPage() {
         </div>
       )}
 
-      {/* Left: Items Selection */}
-      <div className="flex-1 flex flex-col rounded-[1.5rem] lg:rounded-[2.5rem] border border-border bg-card shadow-sm overflow-hidden print:hidden lg:h-full">
-
-        <div className="p-4 sm:p-5 lg:p-8 border-b border-border space-y-4 lg:space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-6">
-            <div className="space-y-1">
-              <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-foreground">{t("Service Catalog")}</h2>
-              <p className="text-[10px] lg:text-xs text-muted-foreground font-bold uppercase tracking-widest">{t("Select items for checkout")}</p>
-            </div>
-            <div className="flex bg-muted rounded-2xl p-1.5 shadow-inner self-start sm:self-auto w-full sm:w-auto">
-              <button 
-                onClick={() => setActiveTab("SERVICES")}
-                className={clsx(
-                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 lg:px-6 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
-                  activeTab === "SERVICES" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Scissors className="h-4 w-4 shrink-0" />
-                {t("Services")}
-              </button>
-              <button 
-                onClick={() => setActiveTab("PRODUCTS")}
-                className={clsx(
-                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 lg:px-6 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
-                  activeTab === "PRODUCTS" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Package className="h-4 w-4 shrink-0" />
-                {t("Products")}
-              </button>
-            </div>
-          </div>
-          <div className="relative group">
-            <Search className="absolute start-4 lg:start-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input 
-              className="w-full rounded-2xl lg:rounded-[1.5rem] border border-border bg-muted/30 ps-10 lg:ps-12 pe-4 lg:pe-6 py-3 lg:py-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
-              placeholder={t("Search by name or category...")}
-              value={itemSearchQ}
-              onChange={(e) => setItemSearchQ(e.target.value)}
-            />
-          </div>
+      {/* Mobile: Toggle between catalog and checkout */}
+      {isMobile && (
+        <div className="flex gap-2 px-4 pt-4">
+          <button
+            onClick={() => setShowCheckoutSummary(false)}
+            className={clsx(
+              "flex-1 py-3 rounded-xl font-bold text-sm transition-all",
+              !showCheckoutSummary 
+                ? "bg-primary text-primary-foreground shadow-lg" 
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {t("Catalog")}
+          </button>
+          <button
+            onClick={() => setShowCheckoutSummary(true)}
+            className={clsx(
+              "flex-1 py-3 rounded-xl font-bold text-sm transition-all relative",
+              showCheckoutSummary 
+                ? "bg-primary text-primary-foreground shadow-lg" 
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            {t("Cart")}
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                {cart.length}
+              </span>
+            )}
+          </button>
         </div>
+      )}
 
-        <div className="flex-1 overflow-auto p-4 sm:p-5 lg:p-8 bg-muted/5 scrollbar-hide min-h-[50vh] lg:min-h-0">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40 py-20">
-              <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Catalog...")}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 lg:gap-6">
-              <AnimatePresence mode="popLayout">
-                {filteredItems.map((it, idx) => (
-                  <motion.div 
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    key={it.id} 
-                    onClick={() => addToCart(it, activeTab === "SERVICES" ? "service" : "product")}
+      <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 lg:min-h-0 px-4 lg:px-0">
+
+        {/* Left: Items Selection (Hidden on mobile if showing checkout) */}
+        {(!isMobile || !showCheckoutSummary) && (
+          <div className="flex-1 flex flex-col rounded-2xl lg:rounded-[2.5rem] border border-border bg-card shadow-sm overflow-hidden print:hidden lg:h-full">
+
+            <div className="p-4 lg:p-6 border-b border-border space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h2 className="text-lg lg:text-xl font-bold tracking-tight text-foreground">{t("Service Catalog")}</h2>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{t("Press F1 to search")}</p>
+                </div>
+                <div className="flex bg-muted rounded-xl p-1 shadow-inner w-full sm:w-auto">
+                  <button 
+                    onClick={() => setActiveTab("SERVICES")}
                     className={clsx(
-                      "group relative cursor-pointer rounded-[1.5rem] lg:rounded-[2rem] border border-border bg-card p-5 lg:p-6 shadow-sm transition-all hover:shadow-2xl hover:-translate-y-1 hover:border-primary/50 flex flex-row lg:flex-col items-center lg:items-start gap-4",
-                      activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
+                      "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                      activeTab === "SERVICES" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <div className="h-12 w-12 rounded-2xl bg-muted flex flex-col items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all lg:group-hover:scale-110">
-                      {activeTab === "SERVICES" ? <Scissors className="h-5 lg:h-6 w-5 lg:w-6" /> : <Package className="h-5 lg:h-6 w-5 lg:w-6" />}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <div className="flex items-center justify-between gap-2 lg:hidden mb-1">
-                        <h3 className="text-sm font-bold text-foreground leading-tight truncate group-hover:text-primary transition-colors">{it.name}</h3>
-                        {activeTab === "PRODUCTS" && (
-                          <div className={clsx(
-                            "px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-wider shrink-0",
-                            (it as Product).stockQuantity > 5 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
-                          )}>
-                            {(it as Product).stockQuantity} {t("In Stock")}
-                          </div>
+                    <Scissors className="h-4 w-4 shrink-0" />
+                    {t("Services")}
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab("PRODUCTS")}
+                    className={clsx(
+                      "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                      activeTab === "PRODUCTS" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Package className="h-4 w-4 shrink-0" />
+                    {t("Products")}
+                  </button>
+                </div>
+              </div>
+              <div className="relative group">
+                <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <input 
+                  ref={itemSearchRef}
+                  className="w-full rounded-xl lg:rounded-2xl border border-border bg-muted/30 ps-10 pe-4 py-3 lg:py-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+                  placeholder={t("Search items... (F1)")}
+                  value={itemSearchQ}
+                  onChange={(e) => setItemSearchQ(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40 py-20">
+                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Catalog...")}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
+                  <AnimatePresence mode="popLayout">
+                    {filteredItems.map((it, idx) => (
+                      <motion.button
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        key={it.id} 
+                        onClick={() => addToCart(it, activeTab === "SERVICES" ? "service" : "product")}
+                        disabled={activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0}
+                        className={clsx(
+                          "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-3 lg:p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 flex flex-col items-start gap-3 text-start",
+                          activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
                         )}
-                      </div>
-
-                      <div className="hidden lg:block space-y-1 w-full relative">
-                        <div className="flex justify-between items-start w-full">
-                           <h3 className="text-base font-bold text-foreground leading-tight group-hover:text-primary transition-colors pe-2">{it.name}</h3>
-                           {activeTab === "PRODUCTS" && (
+                      >
+                        <div className="flex items-start justify-between w-full gap-2">
+                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                            {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                          </div>
+                          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+                            <Plus className="h-4 w-4" />
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 w-full">
+                          <h3 className="text-sm font-bold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">{it.name}</h3>
+                          {activeTab === "PRODUCTS" && (
                             <div className={clsx(
-                              "px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider shrink-0 mt-1",
-                              (it as Product).stockQuantity > 5 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                              "mt-1 text-[10px] font-bold uppercase tracking-wider",
+                              (it as Product).stockQuantity > 5 ? "text-emerald-600" : "text-rose-600"
                             )}>
-                              {(it as Product).stockQuantity} {t("In Stock")}
+                              {(it as Product).stockQuantity} {t("Stock")}
                             </div>
-                           )}
+                          )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.15em]">
-                          {activeTab === "SERVICES" ? t("Service") : t("General")}
-                        </p>
-                      </div>
 
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-[0.15em] lg:hidden mb-1">
-                          {activeTab === "SERVICES" ? t("Service") : t("General")}
-                      </p>
-
-                      <div className="pt-2 lg:pt-4 mt-auto flex items-center justify-between lg:border-t border-border/50">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg lg:text-xl font-bold text-foreground">{it.price}</span>
-                          <span className="text-[9px] lg:text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                        <div className="w-full pt-2 border-t border-border/50 flex items-baseline justify-between">
+                          <span className="text-base lg:text-lg font-bold text-foreground">{it.price}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
                         </div>
-                        <div className={clsx(
-                          "h-8 lg:h-10 w-8 lg:w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg shadow-primary/20",
-                          i18n.language === "ar" ? "-translate-x-2 lg:-translate-x-4 group-hover:translate-x-0" : "translate-x-2 lg:translate-x-4 group-hover:translate-x-0"
-                        )}>
-                          <Plus className="h-4 lg:h-5 w-4 lg:w-5" />
-                        </div>
-                      </div>
+                      </motion.button>
+                    ))}
+                  </AnimatePresence>
+                  {filteredItems.length === 0 && (
+                    <div className="col-span-full py-16 lg:py-24 flex flex-col items-center justify-center gap-4 opacity-20">
+                      <Search className="h-12 w-12" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">{t("No items found")}</p>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {filteredItems.length === 0 && (
-                <div className="col-span-full py-20 lg:py-32 flex flex-col items-center justify-center gap-4 opacity-20">
-                  <Search className="h-12 lg:h-16 w-12 lg:w-16" />
-                  <p className="text-[10px] lg:text-sm font-bold uppercase tracking-widest">{t("No items found")}</p>
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Right: Checkout Panel */}
-      <div className="w-full lg:w-[450px] flex flex-col rounded-[1.5rem] lg:rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full">
-        <div className="p-5 sm:p-8 border-b border-border flex items-center justify-between bg-muted/20">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-              <ShoppingCart className="h-6 w-6" />
-            </div>
-            <div className="space-y-0.5">
-              <h2 className="text-xl font-bold">{t("Current Order")}</h2>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Manage your cart")}</p>
-            </div>
           </div>
-          <motion.div 
-            key={cart.length}
-            initial={{ scale: 1.2, color: "var(--primary)" }}
-            animate={{ scale: 1, color: "inherit" }}
-            className="bg-primary/10 text-primary px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest"
-          >
-            {cart.length} {t("Items")}
-          </motion.div>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-auto p-5 sm:p-8 space-y-4 scrollbar-hide">
-          <AnimatePresence initial={false} mode="popLayout">
-            {cart.length === 0 ? (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-20"
-              >
-                <div className="h-24 w-24 rounded-[2rem] bg-muted flex items-center justify-center">
-                  <ShoppingCart className="h-12 w-12" />
+        {/* Right: Checkout Panel (Hidden on mobile if showing catalog) */}
+        {(!isMobile || showCheckoutSummary) && (
+          <div className="w-full lg:w-[420px] flex flex-col rounded-2xl lg:rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full">
+            
+            {/* Header */}
+            <div className="p-4 lg:p-6 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <ShoppingCart className="h-5 w-5" />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-bold uppercase tracking-widest">{t("Cart is Empty")}</p>
-                  <p className="text-xs">{t("Add items from the catalog to start")}</p>
+                <div className="space-y-0.5">
+                  <h2 className="text-lg font-bold">{t("Order")}</h2>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{cart.length} {t("Items")}</p>
                 </div>
-              </motion.div>
-            ) : (
-              cart.map((item, idx) => (
-                <motion.div 
-                  layout
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                  key={item.cartId} 
-                  className="group flex items-center gap-5 rounded-[1.5rem] border border-border p-5 transition-all hover:bg-muted/30 hover:shadow-inner"
+              </div>
+              {cart.length > 0 && (
+                <motion.button
+                  key={cart.length}
+                  initial={{ scale: 1.2 }}
+                  animate={{ scale: 1 }}
+                  onClick={clearCart}
+                  className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                  title={t("Clear cart")}
                 >
-                  <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    {item.type === "service" ? <Scissors className="h-5 w-5" /> : <Package className="h-5 w-5" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate text-foreground leading-tight">{item.name}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">
-                      {item.type === "service" ? t("Service") : t("Product")} • {item.category || t("General")}
-                    </p>
-                  </div>
-                  <div className="text-end space-y-1">
-                    <p className="text-sm font-bold text-foreground">{item.price} <span className="text-[10px] opacity-50">{t("OMR")}</span></p>
-                    <button 
-                      onClick={() => removeFromCart(item.cartId)} 
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
-        </div>
+                  <Trash2 className="h-4 w-4" />
+                </motion.button>
+              )}
+            </div>
 
-        <div className="p-5 sm:p-8 bg-muted/30 border-t border-border space-y-8">
-          <div className="space-y-6">
-            {/* Customer Search */}
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ms-1">
-                <User className="h-3 w-3" />
-                {t("Customer")}
-              </label>
-              <AnimatePresence mode="wait">
-                {selectedCustomer ? (
+            {/* Cart Items */}
+            <div className="flex-1 overflow-auto p-4 lg:p-6 space-y-2 scrollbar-hide">
+              <AnimatePresence initial={false} mode="popLayout">
+                {cart.length === 0 ? (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 p-5 shadow-inner"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-30 py-8"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground text-lg font-bold shadow-lg shadow-primary/20">
-                        {selectedCustomer.name[0]}
-                      </div>
-                      <div>
-                        <span className="text-sm font-bold text-foreground block">{selectedCustomer.name}</span>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{selectedCustomer.phone}</span>
-                      </div>
+                    <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center">
+                      <ShoppingCart className="h-8 w-8" />
                     </div>
-                    <button 
-                      onClick={() => setSelectedCustomer(null)} 
-                      className="h-10 w-10 flex items-center justify-center rounded-xl bg-background border border-border text-rose-500 hover:bg-rose-500/10 transition-all"
-                    >
-                      <XCircle className="h-5 w-5" />
-                    </button>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold uppercase tracking-widest">{t("Cart is Empty")}</p>
+                      <p className="text-[10px]">{t("Add items to start")}</p>
+                    </div>
                   </motion.div>
                 ) : (
-                  <div className="relative group">
-                    <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <input
-                      className="w-full rounded-2xl border border-border bg-card ps-12 pe-6 py-4 text-sm font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                      placeholder={t("Search or Add Customer...")}
-                      value={searchQ}
-                      onChange={(e) => searchCustomers(e.target.value)}
-                    />
-                    <AnimatePresence>
-                      {customers.length > 0 && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute bottom-full inset-x-0 mb-4 rounded-[2rem] border border-border bg-card shadow-2xl max-h-64 overflow-auto z-50 p-2"
+                  cart.map((item) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                      key={item.cartId} 
+                      className="group flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:bg-muted/30 hover:shadow-inner"
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors text-sm font-bold">
+                        {item.type === "service" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate text-foreground leading-tight">{item.name}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">
+                          {item.type === "service" ? t("Service") : t("Product")}
+                        </p>
+                      </div>
+                      <div className="text-end space-y-1">
+                        <p className="text-xs font-bold text-foreground">{item.price} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
+                        <button 
+                          onClick={() => removeFromCart(item.cartId)} 
+                          className="h-6 w-6 flex items-center justify-center rounded-md text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
                         >
-                          {customers.map(c => (
-                            <button 
-                              key={c.id} 
-                              onClick={() => { setSelectedCustomer(c); setCustomers([]); setSearchQ(""); }}
-                              className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted rounded-2xl text-start transition-all group/item"
-                            >
-                              <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-sm font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">{c.name[0]}</div>
-                              <div className="flex-1 text-start">
-                                <p className="text-sm font-bold text-foreground">{c.name}</p>
-                                <p className="text-[10px] text-muted-foreground font-bold tracking-widest">{c.phone}</p>
-                              </div>
-                              <ChevronRight className={clsx("h-4 w-4 text-muted-foreground opacity-0 group-hover/item:opacity-100 transition-all", i18n.language === "ar" && "rotate-180")} />
-                            </button>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Employee Select */}
-            <div className="space-y-3">
-              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ms-1">
-                <Scissors className="h-3 w-3" />
-                {t("Assigned Specialist")}
-              </label>
-              <div className="relative">
-                <select 
-                  className="w-full rounded-2xl border border-border bg-card ps-6 pe-12 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                >
-                  <option value="">{t("Choose a specialist")}</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
-                <ChevronRight className="absolute end-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
-              </div>
-            </div>
+            {/* Checkout Form */}
+            <div className="p-4 lg:p-6 bg-muted/30 border-t border-border space-y-6">
+              <div className="space-y-4">
+                
+                {/* Customer Search */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <User className="h-3 w-3" />
+                    {t("Customer")}
+                  </label>
+                  <AnimatePresence mode="wait">
+                    {selectedCustomer ? (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 shadow-inner"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-lg">
+                            {selectedCustomer.name[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-foreground block truncate">{selectedCustomer.name}</span>
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{selectedCustomer.phone}</span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedCustomer(null)} 
+                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-rose-500 hover:bg-rose-500/10 transition-all shrink-0"
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <div className="relative group">
+                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <input
+                          ref={searchInputRef}
+                          className="w-full rounded-lg border border-border bg-card ps-10 pe-3 py-2.5 text-xs font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                          placeholder={t("Search customer...")}
+                          value={searchQ}
+                          onChange={(e) => searchCustomers(e.target.value)}
+                        />
+                        <AnimatePresence>
+                          {customers.length > 0 && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute bottom-full inset-x-0 mb-2 rounded-lg border border-border bg-card shadow-2xl max-h-48 overflow-auto z-50 p-1"
+                            >
+                              {customers.map(c => (
+                                <button 
+                                  key={c.id} 
+                                  onClick={() => { setSelectedCustomer(c); setCustomers([]); setSearchQ(""); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted rounded-lg text-start transition-all group/item"
+                                >
+                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{c.name[0]}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-foreground truncate">{c.name}</p>
+                                    <p className="text-[9px] text-muted-foreground font-bold tracking-widest truncate">{c.phone}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-            {/* Payment & Discount */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ms-1">
-                  <Wallet className="h-3 w-3" />
-                  {t("Payment")}
-                </label>
-                <div className="relative">
-                  <select 
-                    className="w-full rounded-2xl border border-border bg-card px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                {/* Employee Select */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <Scissors className="h-3 w-3" />
+                    {t("Specialist")}
+                  </label>
+                  <div className="relative">
+                    <select 
+                      className="w-full rounded-lg border border-border bg-card ps-3 pe-8 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                      value={selectedEmployee}
+                      onChange={(e) => setSelectedEmployee(e.target.value)}
+                    >
+                      <option value="">{t("Choose specialist")}</option>
+                      {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                    </select>
+                    <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
+                  </div>
+                </div>
+
+                {/* Payment & Discount */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <Wallet className="h-3 w-3" />
+                      {t("Payment")}
+                    </label>
+                    <div className="relative">
+                      <select 
+                        className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      >
+                        <option value="CASH">{t("Cash")}</option>
+                        <option value="CARD">{t("Card")}</option>
+                        <option value="TRANSFER">{t("Transfer")}</option>
+                      </select>
+                      <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <Minus className="h-3 w-3" />
+                      {t("Discount")}
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                        value={discount}
+                        onChange={(e) => setDiscount(Number(e.target.value))}
+                        placeholder="0.00"
+                      />
+                      <div className="absolute end-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground uppercase pointer-events-none">{t("OMR")}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loyalty Points */}
+                {selectedCustomer && selectedCustomer.loyaltyPoints >= 100 && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 shadow-inner"
                   >
-                    <option value="CASH">{t("Cash")}</option>
-                    <option value="CARD">{t("Card")}</option>
-                    <option value="TRANSFER">{t("Transfer")}</option>
-                  </select>
-                  <ChevronRight className="absolute end-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
-                </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{loyaltyDiscount} {t("OMR Discount")}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                      className={clsx(
+                        "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shadow-inner shrink-0",
+                        useLoyaltyPoints ? "bg-emerald-500" : "bg-muted"
+                      )}
+                    >
+                      <span className={clsx(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-md",
+                        useLoyaltyPoints ? "translate-x-5" : "translate-x-1"
+                      )} />
+                    </button>
+                  </motion.div>
+                )}
               </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground ms-1">
-                  <Minus className="h-3 w-3" />
-                  {t("Discount")}
-                </label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    className="w-full rounded-2xl border border-border bg-card px-6 py-4 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                    value={discount}
-                    onChange={(e) => setDiscount(Number(e.target.value))}
-                    placeholder="0.00"
-                  />
-                  <div className="absolute end-6 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</div>
-                </div>
-              </div>
-            </div>
 
-            {/* Loyalty Points */}
-            {selectedCustomer && selectedCustomer.loyaltyPoints >= 100 && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center justify-between rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 shadow-inner"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-600">
-                    <Sparkles className="h-6 w-6" />
+              {/* Summary & Checkout */}
+              <div className="pt-4 border-t border-border space-y-4">
+                <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <span>{t("Subtotal")}</span>
+                    <span>{subtotal.toFixed(2)} OMR</span>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{t("Loyalty Points")}: {selectedCustomer.loyaltyPoints}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase">{t("Redeem for")} {loyaltyDiscount} {t("Discount")}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
-                  className={clsx(
-                    "relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none shadow-inner",
-                    useLoyaltyPoints ? "bg-emerald-500" : "bg-muted"
+                  {(discount > 0 || loyaltyDiscount > 0) && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
+                      <span>{t("Discounts")}</span>
+                      <span>-{(discount + loyaltyDiscount).toFixed(2)} OMR</span>
+                    </div>
                   )}
-                >
-                  <span className={clsx(
-                    "inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-md",
-                    useLoyaltyPoints ? "translate-x-7" : "translate-x-1"
-                  )} />
-                </button>
-              </motion.div>
-            )}
-          </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                    <span className="text-xs font-bold text-foreground uppercase tracking-[0.1em]">{t("Total")}</span>
+                    <div className="text-end">
+                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{total.toFixed(2)}</span>
+                      <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="pt-8 border-t border-border space-y-6">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                <span>{t("Subtotal")}</span>
-                <span>{subtotal} OMR</span>
-              </div>
-              {(discount > 0 || loyaltyDiscount > 0) && (
-                <div className="flex items-center justify-between text-xs font-bold text-rose-500 uppercase tracking-widest">
-                  <span>{t("Total Discounts")}</span>
-                  <span>-{discount + loyaltyDiscount} OMR</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-4">
-                <span className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">{t("Grand Total")}</span>
-                <div className="text-end">
-                  <span className="text-4xl font-bold tracking-tighter text-primary">{total}</span>
-                  <span className="text-xs font-bold text-muted-foreground ms-2 uppercase">{t("OMR")}</span>
-                </div>
+                <button 
+                  onClick={handleCheckout}
+                  disabled={cart.length === 0 || !selectedCustomer || !selectedEmployee}
+                  className="group relative w-full rounded-lg bg-primary py-3 lg:py-4 font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 overflow-hidden text-sm lg:text-base"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                  <CheckCircle2 className="h-5 w-5 relative z-10" />
+                  <span className="relative z-10">{t("Complete Payment")}</span>
+                  <span className="text-[7px] lg:text-[8px] font-bold">(Ctrl+Enter)</span>
+                </button>
               </div>
             </div>
-
-            <button 
-              onClick={handleCheckout}
-              disabled={cart.length === 0 || !selectedCustomer || !selectedEmployee}
-              className="group relative w-full rounded-[2rem] bg-primary py-5 font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-3 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              <CheckCircle2 className="h-6 w-6 relative z-10" />
-              <span className="text-lg relative z-10">{t("Complete Payment")}</span>
-              <span className="absolute top-2 start-2 bg-black/30 text-white text-[8px] px-2 py-0.5 rounded-full uppercase tracking-widest">{t("Backend Required")}</span>
-            </button>
           </div>
-        </div>
-      </div>
+        )}
       </div>
     </div>
   );
