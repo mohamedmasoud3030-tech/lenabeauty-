@@ -37,7 +37,11 @@ export const useCases = {
     create: async (data: Partial<Appointment>) => appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => appointmentAdapter.update(id, data),
     delete: async (id: string) => appointmentAdapter.delete(id),
-    sendReminder: async (id: string): Promise<Result<void, any>> => ({ ok: true, data: undefined }),
+    sendReminder: async (id: string): Promise<Result<void, any>> => {
+      // Stub: returns success immediately
+      // Backend: would send SMS/email reminder via Supabase function
+      return { ok: true, data: undefined };
+    },
   },
   services: {
     list: () => serviceAdapter.list(),
