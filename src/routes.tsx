@@ -4,6 +4,7 @@ import Layout from "./ui/layout/Layout";
 import { RequireAdmin, RequireAuth } from "./route-guards";
 import { PageLoader } from "./shared/components/PageLoader";
 
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const PosInvoicesPage = lazy(() => import("./pages/PosInvoicesPage"));
@@ -19,11 +20,12 @@ const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+          <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
           <Route path="/pos" element={<Suspense fallback={<PageLoader />}><PosInvoicesPage /></Suspense>} />
           <Route path="/services" element={<Suspense fallback={<PageLoader />}><ServicesPage /></Suspense>} />
           <Route path="/appointments" element={<Suspense fallback={<PageLoader />}><AppointmentsPage /></Suspense>} />
@@ -37,9 +39,10 @@ export function AppRoutes() {
             <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
