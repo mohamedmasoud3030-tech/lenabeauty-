@@ -72,6 +72,7 @@ export const useCases = {
   expenses: {
     list: () => expenseAdapter.list(),
     create: async (data: Partial<Expense>) => expenseAdapter.create(data),
+    update: async (id: string, data: Partial<Expense>) => expenseAdapter.update(id, data),
     delete: async (id: string) => expenseAdapter.delete(id),
   },
   settings: {
