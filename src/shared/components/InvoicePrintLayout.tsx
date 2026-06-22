@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
 import QRCode from "qrcode.react";
+import brandingService from "../../infrastructure/services/brandingService";
 
 interface Props {
   data: InvoicePrintData;
@@ -75,21 +76,17 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           )}
           <div className="text-center">
             <h1 className="font-bold text-sm uppercase tracking-tight">
-              {settings?.name || "KANZY SPA"}
+              {brandingService.getSalonName(isRtl)}
             </h1>
             <p className="text-[9px] opacity-80 mt-0.5">
-              {settings?.address || ""}
+              {brandingService.getAddress(isRtl)}
             </p>
-            {settings?.phone && (
-              <p className="text-[9px] opacity-80">
-                {t("Tel")}: {settings.phone}
-              </p>
-            )}
-            {settings?.cr && (
-              <p className="text-[9px] opacity-80">
-                {t("CR")}: {settings.cr}
-              </p>
-            )}
+            <p className="text-[9px] opacity-80">
+              {t("Tel")}: {brandingService.getSetting('phone')}
+            </p>
+            <p className="text-[9px] opacity-80">
+              {t("Tax ID")}: {brandingService.getSetting('taxNumber')}
+            </p>
           </div>
         </div>
 
@@ -218,13 +215,13 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
             {t("Thank you for your visit")}
           </p>
           <p className="opacity-60">
-            {settings?.name || "KANZY SPA"}
+            {brandingService.getSalonName(isRtl)}
           </p>
           <p className="text-[7px] opacity-50 mt-1">
             {t("Invoice ID")}: {invoice.id.slice(0, 12)}
           </p>
           <p className="text-[7px] opacity-50">
-            Powered by Kanzy
+            {brandingService.getFooterText(isRtl)}
           </p>
         </div>
 
