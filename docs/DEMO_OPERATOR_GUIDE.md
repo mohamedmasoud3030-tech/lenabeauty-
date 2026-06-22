@@ -1,10 +1,12 @@
-# Demo Operator Guide
+# Supabase Operator QA Guide
 
-This guide ensures operators can present the Kanzy Spa unified management application while staying aligned with the current product scope.
+This guide is for v1.0 browser QA and customer-facing walkthrough preparation against real Supabase data.
 
-## 1. How to Launch a Demo
+Preview Mode is not a valid setup, fallback, demo, sales, or release-verification path.
 
-Preview Mode is removed. Product demos must run against a configured Supabase backend:
+## 1. Required Runtime
+
+Use a configured Supabase environment:
 
 - `VITE_DATA_BACKEND=supabase`
 - `VITE_SUPABASE_URL`
@@ -12,37 +14,42 @@ Preview Mode is removed. Product demos must run against a configured Supabase ba
 - `VITE_CENTER_ID`
 - `VITE_BRANCH_MODE=single`
 
-Use `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` as the canonical v1.0 bootstrap schema. Do not use mock data, fake checkouts, or Preview Mode as demo evidence.
+## 2. Approved v1.0 Positioning
 
-## 2. Login
+Present v1.0 as a hosted single-customer, single-center Supabase PWA for daily spa/service-center operations.
 
-Use a real Supabase Auth user with a valid membership for `VITE_CENTER_ID`. Missing or invalid configuration must block startup instead of falling back to a demo session.
+Do not present v1.0 as:
 
-## 3. Recommended Walkthrough Order
+- multi-customer SaaS.
+- complete POS/accounting.
+- offline desktop software.
+- Windows EXE.
+- Preview/demo-mode product.
 
-1. **Login**: Demonstrate real authentication.
-2. **Dashboard**: Show operational metrics that are backed by available Supabase data.
-3. **App Header & Preferences**: Flip the UI language from English to Arabic, showing RTL structural mirroring.
-4. **Customers**: Create, update, and delete real customer records.
-5. **Services**: Navigate service management and show real CRUD behavior.
-6. **Appointments**: Demonstrate booking flow using persisted Supabase records.
-7. **POS System**: Show cart composition and validation only. Checkout and print are v1.1 work.
-8. **Reports**: Show implemented operational reports; financial reports are v1.1 work.
-9. **Mobile**: Use Chrome DevTools to showcase 390px layouts or perform the walkthrough directly on an iPad.
+## 3. Browser QA Walkthrough Order
 
-## 4. Current Scope Boundaries
+1. Login with a real Supabase user assigned to the configured center.
+2. Verify Dashboard operational counts only.
+3. Flip English/Arabic and confirm RTL/LTR layout behavior.
+4. Verify Customers CRUD against Supabase.
+5. Verify Services CRUD against Supabase.
+6. Verify Appointments CRUD against Supabase.
+7. Verify Products/Inventory CRUD against Supabase.
+8. Verify Expenses list/create/delete against Supabase.
+9. Verify Employees CRUD against Supabase.
+10. Verify unsupported v1.1 features fail with explicit unsupported messaging.
 
-- v1.0 is a single-customer, single-center Supabase PWA with real auth and real CRUD.
-- Checkout RPC, invoice print, financial reports, settings mutations, and expense edit UI are v1.1 work.
-- Windows Desktop EXE delivery is v2.0 work using Tauri v2 + SQLite with no Supabase dependency.
-- Do not modify `.env.local` variables during live demos.
+## 4. Deferred v1.1 Demonstrations
 
-## 5. Customer Questions that Require Honest Bounded Answers
+Do not demonstrate these as available until implemented and browser-tested:
 
-**Question:** Does it support multi-branch networks?
+- Checkout.
+- Receipt/invoice print.
+- Sales/revenue/financial reports.
+- Settings mutations.
+- Expense edit UI and real Supabase update implementation.
+- Customer history.
 
-**Answer:** No. v1.0 is intentionally single-customer and single-center. Multi-center or SaaS expansion is not part of the locked product scope.
+## 5. Future v2.0 Direction
 
-**Question:** Can staff members manipulate past invoices?
-
-**Answer:** No. The architecture is designed around strict authorization and financial integrity. Invoice mutation workflows are not part of v1.0.
+Windows Desktop EXE is a v2.0 direction only and requires Tauri v2, SQLite, local auth, and local backup/export.

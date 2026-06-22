@@ -85,8 +85,8 @@ When `VITE_DATA_BACKEND=supabase`:
 5. `AppContext` catches error, transitions into `ERROR` state.
 6. The `LoginPage` cleanly captures the code (`AUTH_NOT_CONFIGURED`) and correctly displays "لم يتم إعداد المصادقة بعد. يرجى إعداد قاعدة البيانات أولاً." (Graceful UI presentation without runtime crash). No further reads are aggressively invoked since protected routes block them.
 
-## 9. Preview-mode Regression Result
-`VITE_DATA_BACKEND=preview` strictly skips Supabase client generation and successfully accesses the standard Mock Adapters. Tested via static analysis (factory tests) and confirmed to ignore URL/Publishable key requirements entirely. Verification passes smoothly.
+## 9. Preview-code Regression Result
+`VITE_DATA_BACKEND=preview` strictly skips Supabase client generation and accesses the legacy mock adapters. This is a local safety regression check only. It is not a valid setup, fallback, demo, sales, or release-verification path for v1.0.
 
 ## 10. Static-Scan Results
 - Zero runtime occurrences of `.insert(`, `.update(`, `.delete(`, `.rpc(`.
@@ -123,7 +123,7 @@ Grouped by Repository:
 2. All Reports aggregate screens.
 3. Checkout Screen / Invoice Generation.
 4. Customer Detail Sub-tabs (Appointment histories, payment records).
-5. Application features behind Auth (cannot proceed past Login locally without preview mode due to mocked authentication boundaries).
+5. Application features behind Auth require real Supabase auth for v1.0 release verification.
 
 ## 16. Blockers and Mismatches
 None at this time. The schema alignment matches successfully. The architecture correctly blocks all mutations by design.
