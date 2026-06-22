@@ -417,6 +417,8 @@ const resources = {
       "Reload Page": "إعادة تحميل الصفحة",
       "Try Again": "محاولة مجددا",
       "Go Home": "الذهاب للرئيسية",
+      "No internet connection": "لا توجد اتصالة إنترنت",
+      "Connection restored": "تم استعادة الاتصال",
       "Please fill all fields": "يرجى ملء جميع الحقول",
       "Save": "حفظ",
       
@@ -868,6 +870,8 @@ const resources = {
       "Reload Page": "Reload Page",
       "Try Again": "Try Again",
       "Go Home": "Go Home",
+      "No internet connection": "No internet connection",
+      "Connection restored": "Connection restored",
       "Please fill all fields": "Please fill all fields",
       "Save": "Save",
       
