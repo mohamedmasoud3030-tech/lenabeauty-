@@ -1,11 +1,12 @@
 import { Outlet, useLocation, NavLink } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, Search, ChevronRight, LayoutGrid, Sparkles, Zap, Star, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
+import { Menu, Bell, ChevronRight, LayoutGrid, Sparkles, Zap, Star, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
+import { GlobalSearch } from "../../shared/components/GlobalSearch";
 
 export default function Layout() {
   const { me, logout } = useAuth();
@@ -98,16 +99,9 @@ export default function Layout() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-1 sm:gap-3 ml-auto">
-              <div className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg border border-border shadow-inner group focus-within:ring-4 focus-within:ring-primary/10 focus-within:border-primary transition-all">
-                <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary flex-shrink-0" />
-                <input 
-                  type="text" 
-                  placeholder={t("Search...")}
-                  className="bg-transparent border-none outline-none text-xs font-bold text-foreground placeholder:text-muted-foreground/70 w-32"
-                />
-              </div>
+              <GlobalSearch />
 
-              <button className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95">
+              <button className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
                 <Bell className="h-5 w-5 group-hover:rotate-12 transition-transform" />
                 <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-primary border-2 border-card shadow-sm" />
               </button>
