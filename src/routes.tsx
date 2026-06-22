@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import Layout from "./ui/layout/Layout";
 import { RequireAdmin, RequireAuth } from "./route-guards";
+import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -14,10 +15,6 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-
-function PageLoader() {
-  return <div className="w-full h-screen flex items-center justify-center"><div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
-}
 
 export function AppRoutes() {
   return (
