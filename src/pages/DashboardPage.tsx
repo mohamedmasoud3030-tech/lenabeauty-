@@ -195,7 +195,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 md:gap-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           variants={item}
           title={t("Today's Revenue")} 
@@ -239,7 +239,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions Bento */}
-      <motion.div variants={item} className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={item} className="grid gap-4 sm:gap-6 md:gap-8 md:grid-cols-2 lg:grid-cols-4">
         <QuickActionCard 
           title={t("Book Appointment")} 
           icon={<Calendar className="h-6 w-6" />} 
@@ -266,10 +266,10 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      <div className="grid gap-10 lg:grid-cols-5">
+      <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-5">
         {/* Recent Activity */}
         <motion.div variants={item} className="lg:col-span-3 rounded-[2rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between border-b border-border px-6 py-5 sm:px-10 sm:py-8 bg-muted/30">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-6 sm:py-5 lg:px-10 lg:py-8 bg-muted/30">
             <div className="space-y-1">
               <h2 className="text-xl font-bold flex items-center gap-3">
                 <Activity className="h-6 w-6 text-primary" />

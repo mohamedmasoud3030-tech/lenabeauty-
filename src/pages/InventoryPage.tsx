@@ -122,7 +122,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-6 sm:space-y-10 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
@@ -209,11 +209,11 @@ export default function InventoryPage() {
         </motion.div>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[450px_1fr]">
+      <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-[450px_1fr]">
         <motion.div 
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
-          className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-6 sm:p-10 shadow-2xl h-fit space-y-6 sm:space-y-10 sticky top-10"
+          className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-4 sm:p-6 lg:p-10 shadow-2xl h-fit space-y-4 sm:space-y-6 lg:space-y-10 sticky top-10"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -301,7 +301,7 @@ export default function InventoryPage() {
           animate={{ opacity: 1, x: 0 }}
           className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
         >
-          <div className="border-b border-border bg-muted/30 px-6 sm:px-10 py-5 sm:py-8 flex items-center justify-between">
+          <div className="border-b border-border bg-muted/30 px-4 sm:px-6 lg:px-10 py-4 sm:py-6 lg:py-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <List className="h-5 w-5" />

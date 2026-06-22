@@ -190,7 +190,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-6 sm:space-y-10 pb-10">
       {/* Print Area Hidden */}
       {printData && (
         <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>

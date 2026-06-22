@@ -5,7 +5,7 @@ export class EnvironmentConfigurationError extends Error {
   }
 }
 
-export type BackendMode = "supabase";
+export type BackendMode = "supabase" | "tauri";
 export type BranchMode = "single" | "multi";
 
 function validateUrl(url: string | undefined): boolean {
@@ -28,11 +28,11 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
   const getEnv = (key: string) => customEnv ? customEnv[key] : import.meta.env[key];
 
   const backendRaw = getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase();
-  if (backendRaw !== "supabase") {
-    throw new EnvironmentConfigurationError("INVALID_SUPABASE_CONFIGURATION");
+  if (backendRaw !== "supabase" && backendRaw !== "tauri") {
+    throw new EnvironmentConfigurationError("INVALID_BACKEND_CONFIGURATION: must be 'supabase' or 'tauri'");
   }
 
-  const backend: BackendMode = "supabase";
+  const backend: BackendMode = backendRaw as BackendMode;
   const url = getEnv("VITE_SUPABASE_URL")?.trim() || undefined;
   const key = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY")?.trim() || undefined;
   
@@ -61,19 +61,21 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
   }
 
   // Security check: reject explicit secret keys injected anywhere
-  if (key && key.startsWith("sb_secret_")) {
-    throw new EnvironmentConfigurationError("INVALID_SUPABASE_CONFIGURATION");
-  }
+  if (backend === "supabase") {
+    if (key && key.startsWith("sb_secret_")) {
+      throw new EnvironmentConfigurationError("INVALID_SUPABASE_CONFIGURATION");
+    }
 
-  const missing: string[] = [];
-  if (!url || !validateUrl(url)) missing.push("VITE_SUPABASE_URL");
-  if (!key) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
+    const missing: string[] = [];
+    if (!url || !validateUrl(url)) missing.push("VITE_SUPABASE_URL");
+    if (!key) missing.push("VITE_SUPABASE_PUBLISHABLE_KEY");
 
-  if (missing.length > 0) {
-    if (!customEnv && import.meta.env.MODE === "test") {
-      // Skip
-    } else {
-      throw new EnvironmentConfigurationError(`INVALID_SUPABASE_CONFIGURATION: Missing or invalid ${missing.join(", ")}`);
+    if (missing.length > 0) {
+      if (!customEnv && import.meta.env.MODE === "test") {
+        // Skip
+      } else {
+        throw new EnvironmentConfigurationError(`INVALID_SUPABASE_CONFIGURATION: Missing or invalid ${missing.join(", ")}`);
+      }
     }
   }
 

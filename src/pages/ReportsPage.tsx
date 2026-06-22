@@ -310,7 +310,7 @@ export default function ReportsPage() {
           ))}
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_450px]">
+        <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-[1fr_450px]">
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -662,7 +662,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-6 sm:space-y-10 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">

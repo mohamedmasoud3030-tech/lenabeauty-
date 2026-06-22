@@ -355,7 +355,7 @@ export default function SettingsPage() {
           >
             {tab === "center" && (
               <div className="space-y-8">
-                <div className="rounded-[2.5rem] border border-border bg-card p-10 shadow-sm space-y-10">
+                <div className="rounded-[2.5rem] border border-border bg-card p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-10">
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                       <Building2 className="h-6 w-6" />
@@ -838,7 +838,7 @@ export default function SettingsPage() {
             )}
 
             {tab === "devtools" && (
-              <div className="rounded-[2.5rem] border border-border bg-card p-10 shadow-sm space-y-10">
+              <div className="rounded-[2.5rem] border border-border bg-card p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-10">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
                     <Terminal className="h-6 w-6" />

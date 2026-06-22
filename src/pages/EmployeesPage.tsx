@@ -75,7 +75,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-6 sm:space-y-10 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
