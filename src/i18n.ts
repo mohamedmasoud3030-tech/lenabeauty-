@@ -4,7 +4,7 @@ import { initReactI18next } from 'react-i18next';
 const resources = {
   ar: {
     translation: {
-      "Kanzy Spa": "كانزي سبا",
+      "LenaBeauty": "لينا بيوتي",
       "Beauty Center": "مركز تجميل",
       "Home": "الرئيسية",
       "Sales & Invoices": "المبيعات والفواتير",

@@ -62,17 +62,17 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     setIsDark(next);
     if (next) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("kanzy_theme", "dark");
+      localStorage.setItem("lenabeauty_theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("kanzy_theme", "light");
+      localStorage.setItem("lenabeauty_theme", "light");
     }
   }
 
   function toggleLanguage() {
     const nextLang = i18n.language === 'ar' ? 'en' : 'ar';
     i18n.changeLanguage(nextLang);
-    localStorage.setItem("kanzy_lang", nextLang);
+    localStorage.setItem("lenabeauty_lang", nextLang);
     document.documentElement.lang = nextLang;
     document.documentElement.dir = nextLang === "ar" ? "rtl" : "ltr";
   }

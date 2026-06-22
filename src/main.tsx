@@ -4,12 +4,12 @@ import App from './App.tsx';
 import './index.css';
 import './i18n';
 
-const savedLang = localStorage.getItem("kanzy_lang") || "ar";
+const savedLang = localStorage.getItem("lenabeauty_lang") || "ar";
 document.documentElement.lang = savedLang;
 document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
 
 // Load theme from localStorage
-const savedTheme = localStorage.getItem("kanzy_theme");
+const savedTheme = localStorage.getItem("lenabeauty_theme");
 if (savedTheme === "light") {
   document.documentElement.classList.remove("dark");
 } else {
@@ -27,10 +27,10 @@ if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js")
       .then((reg) => {
-        console.log("Kanzy PWA Service Worker registered successfully: ", reg.scope);
+        console.log("LenaBeauty PWA Service Worker registered successfully: ", reg.scope);
       })
       .catch((err) => {
-        console.error("Kanzy PWA Service Worker registration failed: ", err);
+        console.error("LenaBeauty PWA Service Worker registration failed: ", err);
       });
   });
 }
