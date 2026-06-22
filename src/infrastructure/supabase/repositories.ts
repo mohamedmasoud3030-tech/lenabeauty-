@@ -241,8 +241,29 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     }
   }
 
-  async getHistory(): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>> {
-    return { ok: false, error: createUnsupportedReadError("Customer.getHistory") };
+  async getHistory(id: string): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>> {
+    const centerRes = getCenterIdFor("Customer.getHistory");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client = getSupabaseClient();
+      const [apptsRes, invsRes] = await Promise.all([
+        client.from('appointments').select('*').eq('customer_id', id).eq('center_id', centerRes.data).order('date_time', { ascending: false }),
+        client.from('invoices').select('*').eq('customer_id', id).eq('center_id', centerRes.data).order('date', { ascending: false })
+      ]);
+
+      if (apptsRes.error) return { ok: false, error: createQueryError("Customer.getHistory", apptsRes.error.message) };
+      if (invsRes.error) return { ok: false, error: createQueryError("Customer.getHistory", invsRes.error.message) };
+
+      return {
+        ok: true,
+        data: {
+          appointments: (apptsRes.data || []).map(mapAppointment),
+          invoices: (invsRes.data || []).map(mapInvoice)
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Customer.getHistory", (e as Error).message) };
+    }
   }
 }
 
@@ -664,7 +685,29 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
   }
 
   async update(id: string, data: Partial<Expense>): Promise<Result<Expense, DomainError>> {
-    return { ok: false, error: createUnsupportedWriteError("Expense.update") };
+    const centerRes = getCenterIdFor("Expense.update");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {};
+      if (data.amount !== undefined) payload.amount = data.amount;
+      if (data.category !== undefined) payload.category = data.category;
+      if (data.description !== undefined) payload.description = data.description;
+      if (data.date !== undefined) payload.date = data.date.toISOString();
+
+      const { data: row, error } = await getSupabaseClient()
+        .from('expenses')
+        .update(payload)
+        .eq('id', id)
+        .eq('center_id', centerRes.data)
+        .select()
+        .maybeSingle();
+
+      if (error) return { ok: false, error: createQueryError("Expense.update", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Expense.update", "No data returned") };
+      return { ok: true, data: mapExpense(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Expense.update", (e as Error).message) };
+    }
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {

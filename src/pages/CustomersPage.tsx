@@ -77,11 +77,7 @@ export default function CustomersPage() {
       const res = await unwrap(useCases.customers.getHistory(customer.id));
       setHistory(res as CustomerHistoryType);
     } catch (e: any) {
-      if (e.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', 'Error', e?.message || "Failed to load history");
-      }
+      showToast('error', 'Error', e?.message || "Failed to load history");
     }
   }
 
@@ -249,7 +245,9 @@ export default function CustomersPage() {
             <User className="h-8 w-8 transition-transform group-hover:rotate-12" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">{t("Customers")}</h1>
+            <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
+              {t("Customers")}
+            </h1>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Manage your client database")}</p>
           </div>
         </div>

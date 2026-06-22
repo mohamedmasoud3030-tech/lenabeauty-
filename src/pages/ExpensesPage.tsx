@@ -149,7 +149,9 @@ export default function ExpensesPage() {
             <Receipt className="h-8 w-8 transition-transform group-hover:rotate-12" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">{t("Expenses")}</h1>
+            <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
+              {t("Expenses")}
+            </h1>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Track your business costs")}</p>
           </div>
         </div>

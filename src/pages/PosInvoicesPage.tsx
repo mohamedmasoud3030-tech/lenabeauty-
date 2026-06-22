@@ -9,6 +9,7 @@ import {
   Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle
 } from "lucide-react";
+import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
@@ -46,6 +47,7 @@ export default function PosInvoicesPage() {
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -146,10 +148,7 @@ export default function PosInvoicesPage() {
       try {
         const pData = await unwrap(useCases.invoices.getForPrint(res.invoice.id));
         setPrintData(pData);
-        setTimeout(() => {
-          window.print();
-          setPrintData(null);
-        }, 500);
+        setShowPrintModal(true);
       } catch (e) {
         console.error("Print failed", e);
       }
@@ -178,65 +177,21 @@ export default function PosInvoicesPage() {
 
   return (
     <div className="flex flex-col gap-6 lg:gap-8 min-h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] lg:min-h-0 pb-4">
-      {/* Backend Required Warning Banner */}
-      <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 print:hidden backdrop-blur-sm">
-        <AlertTriangle className="h-6 w-6 shrink-0" />
-        <div>
-          <span className="text-sm font-bold block">{t("Backend Required")}</span>
-          <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
-        </div>
-      </div>
+
 
       <div className="flex-1 flex flex-col lg:flex-row gap-8 lg:min-h-0">
-        {/* Print Area Hidden */}
-      {printData && (
-        <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-          <div className="text-center mb-6 space-y-1">
-            <h1 className="font-bold text-xl">{printData.settings?.name || "Kanzy Spa"}</h1>
-            <div className="text-xs opacity-70">{printData.settings?.address}</div>
-            <div className="text-xs opacity-70">{printData.settings?.phone}</div>
-          </div>
-          <div className="border-t border-b border-dashed border-black py-3 mb-4 text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "رقم الفاتورة:" : "Invoice No:"}</span> 
-              <span className="font-bold">{printData.invoice.id.slice(-6).toUpperCase()}</span>
+        {/* Print Modal */}
+      {showPrintModal && printData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl print:p-0 print:bg-transparent">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-lg w-full max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-h-none"
+          >
+            <div id="invoice-print-container">
+              <InvoicePrintLayout data={printData} onClose={() => setShowPrintModal(false)} />
             </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "التاريخ:" : "Date:"}</span> 
-              <span>{new Date(printData.invoice.date).toLocaleString(i18n.language || "ar")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "العميل:" : "Customer:"}</span> 
-              <span className="font-bold">{printData.customer?.name}</span>
-            </div>
-          </div>
-          <table className="w-full text-xs mb-4">
-            <thead>
-              <tr className="border-b border-black">
-                <th className="py-2 text-start">
-                  {i18n.language === "ar" ? "الصنف" : "Item"}
-                </th>
-                <th className="py-2 text-end">
-                  {i18n.language === "ar" ? "السعر" : "Price"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dashed divide-black/20">
-              {printData.items.map((it) => (
-                <tr key={it.id}>
-                  <td className="py-2">{it.name}</td>
-                  <td className="py-2 font-bold text-end">{it.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="border-t border-black pt-3 text-base font-bold flex justify-between">
-            <span>{i18n.language === "ar" ? "الإجمالي:" : "Total Amount:"}</span>
-            <span>{printData.invoice.totalAmount} {printData.settings?.currency}</span>
-          </div>
-          <div className="text-center mt-10 text-xs opacity-50 italic">
-            {i18n.language === "ar" ? "شكراً لزيارتكم!" : "Thank you for your visit!"}
-          </div>
+          </motion.div>
         </div>
       )}
 

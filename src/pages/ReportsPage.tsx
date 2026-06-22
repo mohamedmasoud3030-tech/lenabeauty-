@@ -85,10 +85,7 @@ export default function ReportsPage() {
              <BarChart3 className="h-12 w-12" />
            </div>
            <div className="max-w-md space-y-2">
-             <h3 className="text-lg font-bold text-foreground">{t("Backend Required")}</h3>
-             <p className="text-sm text-muted-foreground leading-relaxed">
-               {t("Financial reports and sales analytics require the process_checkout_v1 RPC and invoice schema to be applied to the Supabase database.")}
-             </p>
+             <h3 className="text-lg font-bold text-foreground">{t("No Sales Data")}</h3>
            </div>
         </div>
       );
@@ -671,7 +668,6 @@ export default function ReportsPage() {
           <div className="space-y-1">
             <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
               {t("Reports")}
-              <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-widest leading-tight">{t("Backend Required")}</span>
             </h1>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Analyze your business performance")}</p>
           </div>

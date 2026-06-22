@@ -149,16 +149,7 @@ export default function DashboardPage() {
       animate="show"
       className="space-y-8 sm:space-y-12 pb-12"
     >
-      {/* Backend Required Warning Banner */}
-      {!summary?.canViewRevenue && (
-        <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 backdrop-blur-sm">
-          <AlertTriangle className="h-6 w-6 shrink-0" />
-          <div>
-            <span className="text-sm font-bold block">{t("Backend Required")}</span>
-            <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
-          </div>
-        </div>
-      )}
+
 
       {/* Welcome Header */}
       <motion.div variants={item} className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8">
@@ -336,26 +327,24 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold flex items-center gap-3">
                 <Wallet className="h-6 w-6 text-emerald-500" />
                 {t("Financial Health")}
-                <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest">{t("Backend Required")}</span>
               </h2>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Monthly Performance Overview")}</p>
             </div>
           </div>
           <div className="p-6 sm:p-10 flex-1 flex flex-col">
-            {!summary?.canViewRevenue ? (
+            {loading ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-6">
+                <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{t("Processing Analytics...")}</p>
+              </div>
+            ) : !pnl ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
                 <div className="h-24 w-24 rounded-[2.5rem] bg-muted flex items-center justify-center">
                   <Coins className="h-12 w-12 text-muted-foreground/30" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">{t("Backend Required")}</p>
-                  <p className="text-xs text-muted-foreground px-12 leading-relaxed">{t("Financial data requires the process_checkout_v1 RPC and invoice schema to be implemented.")}</p>
+                  <p className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">{t("No Financial Data")}</p>
                 </div>
-              </div>
-            ) : !pnl ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-6">
-                <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{t("Processing Analytics...")}</p>
               </div>
             ) : (
               <div className="space-y-6 sm:space-y-10 h-full flex flex-col">

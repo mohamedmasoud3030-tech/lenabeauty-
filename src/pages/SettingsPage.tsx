@@ -286,14 +286,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      {/* Backend Required Warning Banner */}
-      <div className="w-full bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-[1.5rem] py-3 px-6 shrink-0 flex items-center justify-start gap-4 backdrop-blur-sm">
-        <AlertTriangle className="h-6 w-6 shrink-0" />
-        <div>
-          <span className="text-sm font-bold block">{t("Backend Required")}</span>
-          <span className="text-[10px] font-medium uppercase tracking-widest opacity-80">{t("BACKEND_METHOD_UNSUPPORTED")}</span>
-        </div>
-      </div>
+
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar Navigation */}
@@ -718,7 +711,6 @@ export default function SettingsPage() {
                     <div>
                       <div className="flex items-center gap-3">
                         <h2 className="text-xl font-bold">{t("Data Export")}</h2>
-                        <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest">{t("Backend Required")}</span>
                       </div>
                       <p className="text-sm text-muted-foreground">{t("Download your business data for safekeeping.")}</p>
                     </div>
@@ -811,7 +803,6 @@ export default function SettingsPage() {
                       <div>
                         <div className="flex items-center gap-3">
                           <h2 className="text-xl font-bold text-rose-900">{t("Restore Data")}</h2>
-                          <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest">{t("Backend Required")}</span>
                         </div>
                         <p className="text-sm text-rose-700/70">{t("Restore from a previous backup file.")}</p>
                       </div>
