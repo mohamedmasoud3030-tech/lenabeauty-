@@ -18,6 +18,15 @@ const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotificationsSettingsPage = lazy(() => import("./pages/NotificationsSettingsPage"));
 
+// صفحات الموظفين والحضور
+const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
+const AttendancePage = lazy(() => import("./pages/AttendancePage"));
+const AdvancesPage = lazy(() => import("./pages/AdvancesPage"));
+const StaffAnalyticsPage = lazy(() => import("./pages/StaffAnalyticsPage"));
+
+// صفحات الإعدادات المتقدمة
+const BrandingSettingsPage = lazy(() => import("./pages/BrandingSettingsPage"));
+
 export function AppRoutes() {
   return (
     <Routes>
@@ -35,10 +44,17 @@ export function AppRoutes() {
           <Route path="/inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
           <Route path="/expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
 
+          {/* صفحات الموظفين */}
+          <Route path="/payroll" element={<Suspense fallback={<PageLoader />}><PayrollPageEnhanced /></Suspense>} />
+          <Route path="/attendance" element={<Suspense fallback={<PageLoader />}><AttendancePage /></Suspense>} />
+          <Route path="/advances" element={<Suspense fallback={<PageLoader />}><AdvancesPage /></Suspense>} />
+          <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
+
           <Route element={<RequireAdmin />}>
             <Route path="/reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
             <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
-          <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsSettingsPage /></Suspense>} />
+            <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsSettingsPage /></Suspense>} />
+            <Route path="/branding" element={<Suspense fallback={<PageLoader />}><BrandingSettingsPage /></Suspense>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

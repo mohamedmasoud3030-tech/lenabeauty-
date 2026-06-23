@@ -4,7 +4,8 @@ import {
   History, X, Search, User, Phone, Coins, Calendar, 
   Receipt, Plus, FileText, Save, CheckCircle2, UserPlus,
   ChevronRight, MoreVertical, Mail, MapPin, Sparkles, XCircle,
-  ArrowUpRight, TrendingUp, Wallet, Pencil, Trash2
+  ArrowUpRight, TrendingUp, Wallet, Pencil, Trash2,
+  Download, Star, Users, Crown
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
@@ -26,6 +27,34 @@ interface InvoiceHistoryItem extends Invoice {
 interface CustomerHistoryType {
   appointments: Appointment[];
   invoices: InvoiceHistoryItem[];
+}
+
+// Loyalty tier helper
+function getLoyaltyTier(points: number) {
+  if (points >= 1000) return { label: 'Platinum', color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: '💎' };
+  if (points >= 500) return { label: 'Gold', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '🥇' };
+  if (points >= 200) return { label: 'Silver', color: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/20', icon: '🥈' };
+  return { label: 'Bronze', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: '🥉' };
+}
+
+// Export customers to CSV
+function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
+  const headers = [t('Name'), t('Phone'), t('Total Spent'), t('Loyalty Points'), t('Tier')];
+  const rows = customers.map(c => [
+    c.name,
+    c.phone ?? '',
+    c.totalSpent.toFixed(3),
+    c.loyaltyPoints,
+    getLoyaltyTier(c.loyaltyPoints).label
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `customers_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function CustomersPage() {
@@ -68,6 +97,16 @@ export default function CustomersPage() {
     if (!text) return rows;
     return rows.filter((c) => (c.name + " " + (c.phone ?? "")).toLowerCase().includes(text));
   }, [rows, q]);
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    totalRevenue: rows.reduce((s, c) => s + c.totalSpent, 0),
+    vip: rows.filter(c => c.loyaltyPoints >= 500).length,
+    newThisMonth: rows.filter(c => {
+      // approximate: customers with low totalSpent are likely new
+      return c.totalSpent < 50;
+    }).length,
+  }), [rows]);
 
   async function openHistory(customer: Customer) {
     setOpenId(customer.id);
@@ -263,6 +302,13 @@ export default function CustomersPage() {
             />
           </div>
           <button
+            onClick={() => exportCustomersCSV(filtered, t)}
+            className="h-14 w-full sm:w-auto px-6 rounded-[1.5rem] border border-border bg-card font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+          >
+            <Download className="h-5 w-5" />
+            {t("Export")}
+          </button>
+          <button
             onClick={() => setShowAddModal(true)}
             className="h-14 w-full sm:w-auto px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
@@ -270,6 +316,30 @@ export default function CustomersPage() {
             {t("Add Customer")}
           </button>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 print:hidden">
+        {[
+          { label: t('Total Clients'), value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: t('Total Revenue'), value: stats.totalRevenue.toFixed(2) + ' OMR', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+          { label: t('VIP Clients'), value: stats.vip, icon: Crown, color: 'text-amber-600', bg: 'bg-amber-500/10' },
+          { label: t('New Clients'), value: stats.newThisMonth, icon: Star, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+        ].map(({ label, value, icon: Icon, color, bg }, i) => (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm hover:shadow-md transition-all"
+          >
+            <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+              <Icon className={`h-5 w-5 ${color}`} />
+            </div>
+            <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{label}</div>
+          </motion.div>
+        ))}
       </div>
 
       <motion.div 
@@ -326,10 +396,16 @@ export default function CustomersPage() {
                       </div>
                     </td>
                     <td>
-                      <div className="inline-flex items-center gap-3 rounded-2xl bg-amber-500/10 px-5 py-2.5 text-xs font-bold text-amber-600 border border-amber-500/20 shadow-sm">
-                        <Sparkles className="h-4 w-4" />
-                        {c.loyaltyPoints} {t("Points")}
-                      </div>
+                      {(() => {
+                        const tier = getLoyaltyTier(c.loyaltyPoints);
+                        return (
+                          <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold border shadow-sm ${tier.bg} ${tier.color} ${tier.border}`}>
+                            <span>{tier.icon}</span>
+                            <span>{tier.label}</span>
+                            <span className="opacity-60">· {c.loyaltyPoints} {t('pts')}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">

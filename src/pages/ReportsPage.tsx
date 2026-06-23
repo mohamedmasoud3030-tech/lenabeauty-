@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { SalesReportRow, AppointmentReportRow, InventoryReportRow } from "../application/dto";
+import { LazyChart, MobileAwareChart } from "../shared/components/LazyChart";
 
 export default function ReportsPage() {
   const { t, i18n } = useTranslation();
@@ -170,7 +171,8 @@ export default function ReportsPage() {
             </button>
           </div>
           <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <LazyChart height={220}>
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -201,8 +203,11 @@ export default function ReportsPage() {
                   fill="url(#areaGradient)"
                   animationDuration={1500}
                 />
-              </AreaChart>
+                            </AreaChart>
             </ResponsiveContainer>
+            </LazyChart>
+
+
           </div>
         </motion.div>
 
@@ -313,7 +318,8 @@ export default function ReportsPage() {
             </div>
           </div>
           <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
+            <LazyChart height={220}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -332,6 +338,7 @@ export default function ReportsPage() {
                 <Tooltip formatter={(value) => `${value} ${t("appointments")}`} />
               </PieChart>
             </ResponsiveContainer>
+            </LazyChart>
           </div>
         </motion.div>
       </motion.div>

@@ -313,8 +313,16 @@ export default function AppointmentsPage() {
     return map;
   }, [appts]);
 
+  // Stats
+  const apptStats = useMemo(() => ({
+    total: appts.length,
+    scheduled: appts.filter(a => a.status === AppointmentStatus.SCHEDULED).length,
+    completed: appts.filter(a => a.status === AppointmentStatus.COMPLETED).length,
+    cancelled: appts.filter(a => a.status === AppointmentStatus.CANCELLED).length,
+  }), [appts]);
+
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
@@ -379,6 +387,30 @@ export default function AppointmentsPage() {
             {t("New Appointment")}
           </button>
         </div>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: t('Total'), value: apptStats.total, color: 'text-primary', bg: 'bg-primary/10', icon: CalendarDays },
+          { label: t('Scheduled'), value: apptStats.scheduled, color: 'text-amber-600', bg: 'bg-amber-500/10', icon: Clock },
+          { label: t('Completed'), value: apptStats.completed, color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
+          { label: t('Cancelled'), value: apptStats.cancelled, color: 'text-rose-600', bg: 'bg-rose-500/10', icon: XCircle },
+        ].map(({ label, value, color, bg, icon: Icon }, i) => (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06 }}
+            className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm hover:shadow-md transition-all"
+          >
+            <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
+              <Icon className={`h-4 w-4 ${color}`} />
+            </div>
+            <div className={`text-2xl font-bold ${color}`}>{value}</div>
+            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{label}</div>
+          </motion.div>
+        ))}
       </div>
 
       <motion.div 

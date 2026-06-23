@@ -6,7 +6,8 @@ import {
   X, CheckCircle2, TrendingUp, Wallet, 
   AlertCircle, ArrowUpRight, ArrowDownRight,
   LayoutGrid, List, Filter, RefreshCw, Sparkles,
-  ChevronRight, MoreVertical, Tag, Layers
+  ChevronRight, MoreVertical, Tag, Layers,
+  Download, Bell, TrendingDown, ShoppingCart
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -18,6 +19,26 @@ import { motion, AnimatePresence } from "motion/react";
 
 type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number };
 
+// Export products to CSV
+function exportToCSV(products: Product[], t: (k: string) => string) {
+  const headers = [t('Product'), t('Stock'), t('Cost'), t('Price'), t('Profit %')];
+  const rows = products.map(p => [
+    p.name,
+    p.stockQuantity,
+    p.cost.toFixed(3),
+    p.price.toFixed(3),
+    ((p.price - p.cost) / (p.price || 1) * 100).toFixed(1) + '%'
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function InventoryPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -27,6 +48,8 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [lowStockThreshold] = useState(5);
   const [name, setName] = useState("");
   const [stockQuantity, setStockQuantity] = useState("0");
   const [cost, setCost] = useState("0");
@@ -49,10 +72,12 @@ export default function InventoryPage() {
   }, []);
 
   const filtered = useMemo(() => {
+    let result = rows;
     const text = q.trim().toLowerCase();
-    if (!text) return rows;
-    return rows.filter((p) => p.name.toLowerCase().includes(text));
-  }, [rows, q]);
+    if (text) result = result.filter((p) => p.name.toLowerCase().includes(text));
+    if (showLowStockOnly) result = result.filter((p) => p.stockQuantity < lowStockThreshold);
+    return result;
+  }, [rows, q, showLowStockOnly, lowStockThreshold]);
 
   const stats = useMemo(() => {
     const totalItems = rows.length;
@@ -123,6 +148,26 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
+      {/* Low Stock Alert Banner */}
+      {stats.lowStock > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 px-5 py-4 text-rose-600"
+        >
+          <Bell className="h-5 w-5 flex-shrink-0 animate-pulse" />
+          <p className="text-sm font-bold">
+            {t("Warning")}: {stats.lowStock} {t("products are running low on stock")}
+          </p>
+          <button
+            onClick={() => setShowLowStockOnly(true)}
+            className="ms-auto text-xs font-bold underline underline-offset-2 hover:opacity-70 transition-opacity"
+          >
+            {t("View All")}
+          </button>
+        </motion.div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
@@ -309,6 +354,25 @@ export default function InventoryPage() {
               <h3 className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">{t("Inventory List")}</h3>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowLowStockOnly(v => !v)}
+                className={clsx(
+                  "h-10 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-sm",
+                  showLowStockOnly
+                    ? "bg-rose-500 text-white border-rose-500"
+                    : "border-border bg-card text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"
+                )}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("Low Stock")}</span>
+              </button>
+              <button
+                onClick={() => exportToCSV(filtered, t)}
+                className="h-10 px-3 rounded-xl border border-border bg-card flex items-center gap-2 text-xs font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">{t("Export")}</span>
+              </button>
               <button className="h-10 w-10 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm">
                 <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} onClick={load} />
               </button>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Calendar, Clock, Fingerprint, Eye, Face, Smartphone, Download, Filter, Plus, X } from 'lucide-react';
+import { Calendar, Clock, Fingerprint, Eye, Scan, Smartphone, Download, Filter, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 

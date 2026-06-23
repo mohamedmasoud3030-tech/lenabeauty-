@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { 
   AlertTriangle, CalendarDays, Coins, List, 
@@ -19,6 +19,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, Legend, Cell
 } from "recharts";
+import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components/LazyChart";
 import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 
@@ -32,6 +33,17 @@ export default function DashboardPage() {
   const [last7Days, setLast7Days] = useState<{date: string; revenue: number}[]>([]);
   const [activity, setActivity] = useState<{id: string, type: string, message: string, createdAt: string, user?: {username?: string}}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Auto-refresh every 60 seconds
+  const loadRef = useCallback(async () => { await load(); }, []);
 
   async function load() {
     setLoading(true);
@@ -271,8 +283,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <LazyChart height={isMobile ? 180 : 260}>
+              <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
+                <AreaChart data={chartData} margin={{ top: 10, right: isMobile ? 10 : 30, left: isMobile ? -20 : 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
@@ -309,6 +322,7 @@ export default function DashboardPage() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              </LazyChart>
             )}
           </div>
         </motion.div>
