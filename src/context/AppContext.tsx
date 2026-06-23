@@ -9,6 +9,7 @@ export interface AppContextType {
   sessionState: SessionState;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   init: () => Promise<void>;
+  applyAuthenticatedSession: (sessionState: SessionState) => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | null>(null);
@@ -18,50 +19,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [user, setUser] = useState<User | null>(null);
 
+  async function applySessionState(resolvedSessionState: SessionState, envError: Error | null) {
+    setSessionState(resolvedSessionState);
+    if (resolvedSessionState.status === "authenticated") {
+      if (envError) throw envError; // Block Supabase login if misconfigured
+      const userObj = resolvedSessionState.session.user;
+      setUser(userObj);
+
+      const centersRes = await useCases.auth.getMyCenters?.();
+      if (centersRes && centersRes.ok && centersRes.data.length > 0) {
+        const targetCenters = centersRes.data;
+
+        if (config.branchMode === "single") {
+          const hasMembership = targetCenters.some(c => c.id === config.centerId);
+          if (!hasMembership) {
+            const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
+            setSessionState({ status: "error", error: err });
+            setUser(null);
+            return;
+          }
+          localStorage.removeItem("activeCenterId");
+        } else {
+          let activeId = localStorage.getItem("activeCenterId");
+          if (!activeId || !targetCenters.find(c => c.id === activeId)) {
+            activeId = targetCenters[0].id;
+          }
+          useCases.tenant.setActiveCenterId(activeId);
+          localStorage.setItem("activeCenterId", activeId);
+        }
+      }
+    } else {
+      // unauthenticated
+      if (envError) throw envError;
+      setUser(null);
+    }
+  }
+
+  function getEnvironmentError() {
+    try {
+      validateEnvironment(config);
+      return null;
+    } catch (e: any) {
+      return e as Error;
+    }
+  }
+
   async function init() {
     try {
-      let envError: Error | null = null;
-      try {
-        validateEnvironment(config);
-      } catch (e: any) {
-        envError = e;
-      }
+      const envError = getEnvironmentError();
 
       const res = await useCases.auth.getSession();
       if (res.ok) {
-        setSessionState(res.data);
-        if (res.data.status === "authenticated") {
-          if (envError) throw envError; // Block Supabase login if misconfigured
-          const userObj = res.data.session.user;
-          setUser(userObj);
-
-          const centersRes = await useCases.auth.getMyCenters?.();
-          if (centersRes && centersRes.ok && centersRes.data.length > 0) {
-            const targetCenters = centersRes.data;
-
-            if (config.branchMode === "single") {
-              const hasMembership = targetCenters.some(c => c.id === config.centerId);
-              if (!hasMembership) {
-                const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
-                setSessionState({ status: "error", error: err });
-                setUser(null);
-                return;
-              }
-              localStorage.removeItem("activeCenterId");
-            } else {
-              let activeId = localStorage.getItem("activeCenterId");
-              if (!activeId || !targetCenters.find(c => c.id === activeId)) {
-                activeId = targetCenters[0].id;
-              }
-              useCases.tenant.setActiveCenterId(activeId);
-              localStorage.setItem("activeCenterId", activeId);
-            }
-          }
-        } else {
-          // unauthenticated
-          if (envError) throw envError;
-          setUser(null);
-        }
+        await applySessionState(res.data, envError);
       } else {
         if (envError) throw envError;
         const errorRes = res as { ok: false; error: Error };
@@ -77,12 +86,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function applyAuthenticatedSession(nextSessionState: SessionState) {
+    try {
+      await applySessionState(nextSessionState, getEnvironmentError());
+      setIsInitialized(true);
+    } catch (error: any) {
+      console.error("[AppContext] Login session application failed:", error);
+      setSessionState({ status: "error", error: error as Error });
+      setUser(null);
+      setIsInitialized(true);
+      throw error;
+    }
+  }
+
   useEffect(() => {
     void init();
   }, []);
 
   return (
-    <AppContext.Provider value={{ isInitialized, sessionState, user, setUser, init }}>
+    <AppContext.Provider value={{ isInitialized, sessionState, user, setUser, init, applyAuthenticatedSession }}>
       {children}
     </AppContext.Provider>
   );

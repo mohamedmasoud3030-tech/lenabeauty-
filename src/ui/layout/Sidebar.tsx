@@ -34,6 +34,7 @@ import { clsx } from "clsx";
 import { useAuth } from "../../auth";
 import { motion, AnimatePresence } from "motion/react";
 import { SalonLogo } from "../../shared/components/LazyImage";
+import { persistLanguage, persistTheme } from "../../preferences";
 
 type NavItem = {
   to: string;
@@ -108,17 +109,17 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     setIsDark(next);
     if (next) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("lenabeauty_theme", "dark");
+      persistTheme("dark");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("lenabeauty_theme", "light");
+      persistTheme("light");
     }
   }
 
   function toggleLanguage() {
     const nextLang = i18n.language === "ar" ? "en" : "ar";
     i18n.changeLanguage(nextLang);
-    localStorage.setItem("lenabeauty_lang", nextLang);
+    persistLanguage(nextLang);
     document.documentElement.lang = nextLang;
     document.documentElement.dir = nextLang === "ar" ? "rtl" : "ltr";
   }

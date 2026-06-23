@@ -3,7 +3,11 @@ import { Zap } from "lucide-react";
 
 export function PageLoader() {
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-background to-muted/10">
+    <div
+      className="w-full h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-background to-muted/10"
+      role="status"
+      aria-live="polite"
+    >
       {/* Animated Spinner */}
       <motion.div
         animate={{ rotate: 360 }}

@@ -3,13 +3,14 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './i18n';
+import { getStoredLanguage, getStoredTheme } from './preferences';
 
-const savedLang = localStorage.getItem("spa-lang") || "ar";
+const savedLang = getStoredLanguage();
 document.documentElement.lang = savedLang;
 document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
 
 // Load theme from localStorage
-const savedTheme = localStorage.getItem("spa-theme");
+const savedTheme = getStoredTheme();
 if (savedTheme === "light") {
   document.documentElement.classList.remove("dark");
 } else {
@@ -34,4 +35,3 @@ if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       });
   });
 }
-

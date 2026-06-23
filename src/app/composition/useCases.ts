@@ -4,39 +4,36 @@ import { Appointment, Customer, Employee, Expense, Product, Service, CenterSetti
 import { CheckoutPayload, BackupPayload } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId } from "../../infrastructure/tenantContext";
 
-const {
-  authAdapter,
-  customerAdapter,
-  employeeAdapter,
-  serviceAdapter,
-  appointmentAdapter,
-  productAdapter,
-  expenseAdapter,
-  invoiceAdapter,
-  settingsAdapter,
-  dashboardAdapter,
-  reportAdapter
-} = createRepositoryBundle();
+type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
+
+let repositoryBundle: RepositoryBundle | null = null;
+
+export function getRepositoryBundle(): RepositoryBundle {
+  if (!repositoryBundle) {
+    repositoryBundle = createRepositoryBundle();
+  }
+  return repositoryBundle;
+}
 
 // Generic helper to unwrap Result and enforce errors instead of silently failing,
 // but for our React hooks we will pass the promise.
 export const useCases = {
   auth: {
-    login: (u: string, p: string) => authAdapter.login(u, p),
-    logout: () => authAdapter.logout(),
-    getSession: () => authAdapter.getSession(),
-    getMyCenters: () => authAdapter.getMyCenters(),
+    login: (u: string, p: string) => getRepositoryBundle().authAdapter.login(u, p),
+    logout: () => getRepositoryBundle().authAdapter.logout(),
+    getSession: () => getRepositoryBundle().authAdapter.getSession(),
+    getMyCenters: () => getRepositoryBundle().authAdapter.getMyCenters(),
   },
   dashboard: {
-    getSummary: () => dashboardAdapter.getSummary(),
-    getPnlMonth: () => dashboardAdapter.getPnlMonth(),
-    getRevenueLast7Days: () => dashboardAdapter.getRevenueLast7Days(),
+    getSummary: () => getRepositoryBundle().dashboardAdapter.getSummary(),
+    getPnlMonth: () => getRepositoryBundle().dashboardAdapter.getPnlMonth(),
+    getRevenueLast7Days: () => getRepositoryBundle().dashboardAdapter.getRevenueLast7Days(),
   },
   appointments: {
-    list: (range?: { fromISO: string, toISO: string }) => appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
-    create: async (data: Partial<Appointment>) => appointmentAdapter.create(data),
-    update: async (id: string, data: Partial<Appointment>) => appointmentAdapter.update(id, data),
-    delete: async (id: string) => appointmentAdapter.delete(id),
+    list: (range?: { fromISO: string, toISO: string }) => getRepositoryBundle().appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
+    create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
+    update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
     sendReminder: async (id: string): Promise<Result<void, any>> => {
       // Stub: returns success immediately
       // Backend: would send SMS/email reminder via Supabase function
@@ -44,53 +41,53 @@ export const useCases = {
     },
   },
   services: {
-    list: () => serviceAdapter.list(),
-    create: async (data: Partial<Service>) => serviceAdapter.create(data),
-    update: async (id: string, data: Partial<Service>) => serviceAdapter.update(id, data),
-    delete: async (id: string) => serviceAdapter.delete(id),
+    list: () => getRepositoryBundle().serviceAdapter.list(),
+    create: async (data: Partial<Service>) => getRepositoryBundle().serviceAdapter.create(data),
+    update: async (id: string, data: Partial<Service>) => getRepositoryBundle().serviceAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().serviceAdapter.delete(id),
   },
   customers: {
-    list: (q?: string) => customerAdapter.list(q),
-    create: async (data: Partial<Customer>) => customerAdapter.create(data),
-    update: async (id: string, data: Partial<Customer>) => customerAdapter.update(id, data),
-    getHistory: (id: string) => customerAdapter.getHistory(id),
-    delete: async (id: string) => customerAdapter.delete(id),
+    list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),
+    create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
+    update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
+    getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
+    delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
   },
   employees: {
-    list: () => employeeAdapter.list(),
-    create: async (data: Partial<Employee>) => employeeAdapter.create(data),
-    update: async (id: string, data: Partial<Employee>) => employeeAdapter.update(id, data),
-    delete: async (id: string) => employeeAdapter.delete(id),
+    list: () => getRepositoryBundle().employeeAdapter.list(),
+    create: async (data: Partial<Employee>) => getRepositoryBundle().employeeAdapter.create(data),
+    update: async (id: string, data: Partial<Employee>) => getRepositoryBundle().employeeAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().employeeAdapter.delete(id),
   },
   products: {
-    list: () => productAdapter.list(),
-    listFull: () => productAdapter.listFull(),
-    create: async (data: Partial<Product>) => productAdapter.create(data),
-    update: async (id: string, data: Partial<Product>) => productAdapter.update(id, data),
-    delete: async (id: string) => productAdapter.delete(id),
+    list: () => getRepositoryBundle().productAdapter.list(),
+    listFull: () => getRepositoryBundle().productAdapter.listFull(),
+    create: async (data: Partial<Product>) => getRepositoryBundle().productAdapter.create(data),
+    update: async (id: string, data: Partial<Product>) => getRepositoryBundle().productAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().productAdapter.delete(id),
   },
   expenses: {
-    list: () => expenseAdapter.list(),
-    create: async (data: Partial<Expense>) => expenseAdapter.create(data),
-    update: async (id: string, data: Partial<Expense>) => expenseAdapter.update(id, data),
-    delete: async (id: string) => expenseAdapter.delete(id),
+    list: () => getRepositoryBundle().expenseAdapter.list(),
+    create: async (data: Partial<Expense>) => getRepositoryBundle().expenseAdapter.create(data),
+    update: async (id: string, data: Partial<Expense>) => getRepositoryBundle().expenseAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().expenseAdapter.delete(id),
   },
   settings: {
-    get: () => settingsAdapter.get(),
-    update: async (data: Partial<CenterSettings>) => settingsAdapter.update(data),
-    uploadLogo: async (file: File) => settingsAdapter.uploadLogo(file),
-    backup: async () => settingsAdapter.backup(),
-    exportData: async () => settingsAdapter.exportData(),
-    restore: async (data: BackupPayload) => settingsAdapter.restore(data),
+    get: () => getRepositoryBundle().settingsAdapter.get(),
+    update: async (data: Partial<CenterSettings>) => getRepositoryBundle().settingsAdapter.update(data),
+    uploadLogo: async (file: File) => getRepositoryBundle().settingsAdapter.uploadLogo(file),
+    backup: async () => getRepositoryBundle().settingsAdapter.backup(),
+    exportData: async () => getRepositoryBundle().settingsAdapter.exportData(),
+    restore: async (data: BackupPayload) => getRepositoryBundle().settingsAdapter.restore(data),
   },
   invoices: {
-    checkout: async (data: CheckoutPayload) => invoiceAdapter.checkout(data),
-    getForPrint: (id: string) => invoiceAdapter.getForPrint(id),
+    checkout: async (data: CheckoutPayload) => getRepositoryBundle().invoiceAdapter.checkout(data),
+    getForPrint: (id: string) => getRepositoryBundle().invoiceAdapter.getForPrint(id),
   },
   reports: {
-    getSales: (f: string, t: string) => reportAdapter.getSales(f, t),
-    getAppointments: (f: string, t: string) => reportAdapter.getAppointments(f, t),
-    getInventory: () => reportAdapter.getInventory(),
+    getSales: (f: string, t: string) => getRepositoryBundle().reportAdapter.getSales(f, t),
+    getAppointments: (f: string, t: string) => getRepositoryBundle().reportAdapter.getAppointments(f, t),
+    getInventory: () => getRepositoryBundle().reportAdapter.getInventory(),
   },
   tenant: {
     setActiveCenterId: (id: string | null) => {

@@ -6,8 +6,9 @@ import { Lock, User, Eye, EyeOff, Sparkles, Sun, Moon, Globe } from "lucide-reac
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { AppLanguage, isValidLanguage, persistLanguage } from "../preferences";
 
-const LANGUAGES = [
+const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
   { code: "ar", label: "العربية", dir: "rtl" },
   { code: "en", label: "English", dir: "ltr" },
 ];
@@ -31,11 +32,12 @@ export default function LoginPage() {
       ? sessionState.error.message
       : null;
 
-  const switchLanguage = (code: string) => {
+  const switchLanguage = (code: AppLanguage) => {
+    if (!isValidLanguage(code)) return;
     i18n.changeLanguage(code);
     document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = code;
-    localStorage.setItem("spa-lang", code);
+    persistLanguage(code);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -149,7 +151,7 @@ export default function LoginPage() {
           style={{ borderColor: cardBorder, background: cardBg, backdropFilter: "blur(12px)", color: textPrimary }}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
-          title={theme === "dark" ? "Light mode" : "Dark mode"}
+          title={theme === "dark" ? t("Light mode") : t("Dark mode")}
         >
           <AnimatePresence mode="wait">
             {theme === "dark" ? (
@@ -200,7 +202,7 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
             >
-              {isRtl ? "مرحباً بعودتك" : "Welcome Back"}
+              {t("Welcome Back")}
             </motion.h1>
             <motion.p
               className="mt-1 text-sm"
@@ -209,7 +211,7 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.45 }}
             >
-              {isRtl ? "سجّل دخولك للمتابعة" : t("Enter credentials to continue")}
+              {t("Enter credentials to continue")}
             </motion.p>
           </div>
 
@@ -346,7 +348,7 @@ export default function LoginPage() {
                           animate={{ rotate: 360 }}
                           transition={{ duration: 0.7, repeat: Infinity, ease: "linear" }}
                         />
-                        {isRtl ? "جاري التحقق..." : "Signing in..."}
+                        {t("Signing in...")}
                       </motion.span>
                     ) : (
                       <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -366,7 +368,7 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }}
             >
-              {isRtl ? "نظام إدارة السبا — النسخة 1.1" : "Spa Management System — v1.1"}
+              {t("Spa Management System — v1.1")}
             </motion.p>
           </div>
         </div>

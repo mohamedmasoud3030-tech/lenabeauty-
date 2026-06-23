@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { useCases } from "./app/composition/useCases";
 import { unwrap } from "./shared/hooks/useApplication";
-import { User } from "./domain/entities/Session";
+import { SessionState, User } from "./domain/entities/Session";
 import { useAppContext } from "./context/AppContext";
 
 type Session = User | null;
@@ -19,15 +19,15 @@ const Ctx = createContext<{
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user: me, init } = useAppContext();
+  const { user: me, init, applyAuthenticatedSession } = useAppContext();
 
   async function refresh() {
     await init();
   }
 
   async function login(username: string, password: string) {
-    await unwrap(useCases.auth.login(username, password));
-    await init();
+    const sessionState = await unwrap<SessionState>(useCases.auth.login(username, password));
+    await applyAuthenticatedSession(sessionState);
   }
 
   async function logout() {

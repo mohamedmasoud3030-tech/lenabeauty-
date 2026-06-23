@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { getStoredLanguage } from './preferences';
 
 const resources = {
   ar: {
@@ -10,9 +11,15 @@ const resources = {
       
       // LoginPage
       "Sign In": "تسجيل الدخول",
+      "Signing in...": "جاري تسجيل الدخول...",
+      "Welcome Back": "مرحباً بعودتك",
+      "Spa Management System — v1.1": "نظام إدارة السبا — النسخة 1.1",
+      "Light mode": "الوضع الفاتح",
+      "Dark mode": "الوضع الداكن",
       "Enter credentials to continue": "أدخل بياناتك للمتابعة",
       "Username": "اسم المستخدم",
       "Password": "كلمة المرور",
+      "Invalid credentials": "بيانات الدخول غير صحيحة",
       "Username is required": "اسم المستخدم مطلوب",
       "Password is required": "كلمة المرور مطلوبة",
       "Authentication not configured yet. Database setup required.": "لم يتم إعداد المصادقة بعد. يلزم إعداد قاعدة البيانات.",
@@ -25,6 +32,7 @@ const resources = {
       "UNAUTHORIZED_CENTER_MEMBERSHIP": "ليس لديك صلاحية الوصول إلى هذا المركز.",
       "BACKEND_METHOD_UNSUPPORTED": "هذه الميزة تتطلب تنفيذ خلفية. (قيد التطوير)",
       "Backend Required": "يلزم الخادم الخلفي",
+      "Supabase production login is disabled until configured.": "تسجيل الدخول الإنتاجي معطل حتى يكتمل الإعداد.",
 
       // POS
       
@@ -104,9 +112,15 @@ const resources = {
       
       // LoginPage
       "Sign In": "Sign In",
+      "Signing in...": "Signing in...",
+      "Welcome Back": "Welcome Back",
+      "Spa Management System — v1.1": "Spa Management System — v1.1",
+      "Light mode": "Light mode",
+      "Dark mode": "Dark mode",
       "Enter credentials to continue": "Enter credentials to continue",
       "Username": "Username",
       "Password": "Password",
+      "Invalid credentials": "Invalid credentials",
       "Authentication not configured yet. Database setup required.": "Authentication not configured yet. Database setup required.",
       "Login failed. Check your details.": "Login failed. Check your details.",
       "MISSING_SINGLE_BRANCH_CENTER_ID": "VITE_CENTER_ID is missing or invalid for single branch mode.",
@@ -117,6 +131,7 @@ const resources = {
       "UNAUTHORIZED_CENTER_MEMBERSHIP": "You do not have access to this center. Please contact management.",
       "BACKEND_METHOD_UNSUPPORTED": "This feature requires a backend implementation. (WIP)",
       "Backend Required": "Backend Required",
+      "Supabase production login is disabled until configured.": "Supabase production login is disabled until configured.",
       "Settings saved successfully": "Settings saved successfully",
       "Failed to upload logo": "Failed to upload logo",
       "Backup created successfully": "Backup created successfully",
@@ -503,7 +518,7 @@ const resources = {
   }
 };
 
-const savedLang = localStorage.getItem('spa-lang') || 'ar';
+const savedLang = getStoredLanguage();
 
 i18n
   .use(initReactI18next)

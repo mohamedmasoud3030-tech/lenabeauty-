@@ -4,7 +4,6 @@ import {
   SupabaseDashboardAdapter, SupabaseSettingsAdapter,
   SupabaseCustomerAdapter, SupabaseExpenseAdapter
 } from "../infrastructure/supabase/repositories";
-import { UnsupportedBackendMethodError } from "../infrastructure/supabase/errors";
 
 describe("Phase 3: Supabase Adapter Contract Hardening", () => {
     it("Invoice.checkout throws UnsupportedBackendMethodError or Query Error depending on mock state", async () => {
@@ -59,17 +58,17 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         if (!r2.ok) expect((r2 as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
     });
 
-    it("Customer.getHistory throws UnsupportedBackendMethodError", async () => {
+    it("Customer.getHistory is supported but remains bounded without infrastructure", async () => {
         const adapter: any = new SupabaseCustomerAdapter();
         const r1 = await adapter.getHistory("123");
         expect(r1.ok).toBe(false);
-        if (!r1.ok) expect((r1 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r1.ok) expect((r1 as any).error.code).toBe("INFRASTRUCTURE_ERROR");
     });
 
-    it("Expense.update throws UnsupportedBackendMethodError", async () => {
+    it("Expense.update is supported but remains bounded without infrastructure", async () => {
         const adapter: any = new SupabaseExpenseAdapter();
         const r1 = await adapter.update("123", {});
         expect(r1.ok).toBe(false);
-        if (!r1.ok) expect((r1 as any).error.code).toBe("BACKEND_METHOD_UNSUPPORTED");
+        if (!r1.ok) expect((r1 as any).error.code).toBe("INFRASTRUCTURE_ERROR");
     });
 });
