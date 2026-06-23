@@ -10,7 +10,7 @@ The following table defines the server-enforced permissions for each role within
 | Table | SELECT | INSERT | UPDATE | DELETE | Constraint |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | `centers` | Member | - | - | - | `id = ANY(user_center_ids)` |
-| `center_memberships` | Self | Admin+ | Admin+ | Admin+ | `profile_id = auth.uid()` or Admin role |
+| `center_memberships` | Self | Admin+ | Admin+ | Admin+ | `user_id = auth.uid()` or Admin role |
 | `center_settings` | Member | - | Manager+ | - | `center_id = ANY(user_center_ids)` |
 | `customers` | Member | Member | Member | Member | `center_id = ANY(user_center_ids)` |
 | `employees` | Member | Member | Member | Member | `center_id = ANY(user_center_ids)` |
@@ -36,14 +36,21 @@ RLS policies for `appointments` and `invoice_items` now explicitly verify that a
 - **Production Build**: `PASSED` (`pnpm run build`)
 
 ### RLS Isolation Test
-- **Script**: `src/__tests__/integration/rls_isolation.test.ts`
-- **Status**: `READY FOR EXECUTION`
-- **Requirement**: Real test user credentials for two different centers are required to run the final "green" verification loop.
+- **Script**: `scripts/verify-rls-isolation.ts` (run via `pnpm verify:rls`)
+- **Status**: `BLOCKED — Real verification not executed`
+- **Requirements**: `.env.local` must provide:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_PUBLISHABLE_KEY`
+  - `TEST_USER_A_EMAIL`, `TEST_USER_A_PASS`
+  - `TEST_USER_B_EMAIL`, `TEST_USER_B_PASS`
+  - `I_KNOW_WHAT_I_AM_DOING_RLS_TEST=true` (remote Supabase acknowledgement)
+  
+  The test exits with an error message if credentials are missing. No migration has been applied and no two-user/two-center verification has run.
 
 ## 6. Changed Files
 - `supabase/migrations/20260623000002_enable_rls_and_policies.sql` (Harden RLS)
 - `src/infrastructure/supabase/repositories.ts` (Repository write-path hardening)
 - `src/pages/LoginPage.tsx` (Build fix for framer-motion)
-- `src/__tests__/integration/rls_isolation.test.ts` (New integration test)
+- `scripts/verify-rls-isolation.ts` (RLS verification script — destructive, not part of normal test suite)
 - `docs/MEMBERSHIP_BOOTSTRAP.md` (Provisioning guide)
 - `docs/RLS_HARDENING_REPORT.md` (This report)
