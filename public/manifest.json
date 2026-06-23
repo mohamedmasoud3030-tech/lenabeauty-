@@ -1,7 +1,7 @@
 {
-  "name": "Kanzy Spa Manager",
-  "short_name": "Kanzy Spa",
-  "description": "Premium Spa Management System & POS Invoicing PWA",
+  "name": "Lena Beauty Manager",
+  "short_name": "Lena Beauty",
+  "description": "Premium Beauty Salon Management System & POS Invoicing PWA",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0f1d",

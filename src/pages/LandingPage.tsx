@@ -142,7 +142,7 @@ export default function LandingPage() {
     show: {
       opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 300, damping: 24 },
+      transition: { type: "spring" as const, stiffness: 300, damping: 24 },
     },
   };
 
@@ -153,9 +153,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold">
-              K
+              L
             </div>
-            <span className="font-bold text-lg text-foreground">Kanzy</span>
+            <span className="font-bold text-lg text-foreground">Lena Beauty</span>
           </div>
           <button
             onClick={() => navigate("/login")}
@@ -379,7 +379,7 @@ export default function LandingPage() {
               {t("Loved by Salon Owners")}
             </motion.h2>
             <motion.p variants={item} className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              {t("See what salon owners are saying about Kanzy")}
+              {t("See what salon owners are saying about Lena Beauty")}
             </motion.p>
           </motion.div>
 
@@ -425,7 +425,7 @@ export default function LandingPage() {
               {t("Ready to Transform Your Salon?")}
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              {t("Join hundreds of salon owners who are already growing their business with Kanzy")}
+              {t("Join hundreds of salon owners who are already growing their business with Lena Beauty")}
             </p>
             <button
               onClick={() => navigate("/login")}
@@ -442,7 +442,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-border/20 bg-card/30 backdrop-blur-sm py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; 2026 Kanzy Spa. {t("All rights reserved.")} | {t("Privacy Policy")} | {t("Terms of Service")}</p>
+          <p>&copy; 2026 Lena Beauty. {t("All rights reserved.")} | {t("Privacy Policy")} | {t("Terms of Service")}</p>
         </div>
       </footer>
     </div>

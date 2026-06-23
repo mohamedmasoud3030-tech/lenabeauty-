@@ -108,7 +108,7 @@ export default function ReportsPage() {
 
     const item = {
       hidden: { y: 20, opacity: 0 },
-      show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+      show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
     };
 
     return (
@@ -267,7 +267,7 @@ export default function ReportsPage() {
 
     const item = {
       hidden: { y: 20, opacity: 0 },
-      show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+      show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
     };
 
     return (
@@ -356,7 +356,7 @@ export default function ReportsPage() {
 
     const item = {
       hidden: { y: 20, opacity: 0 },
-      show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+      show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
     };
 
     return (
@@ -383,14 +383,14 @@ export default function ReportsPage() {
               <tbody>
                 {invData.slice(0, 10).map((item, idx) => (
                   <tr key={idx} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-4 px-4 font-bold text-foreground">{item.productName}</td>
-                    <td className="py-4 px-4 text-foreground">{item.quantity}</td>
+                    <td className="py-4 px-4 font-bold text-foreground">{(item as any).productName ?? item.name}</td>
+                    <td className="py-4 px-4 text-foreground">{(item as any).quantity ?? item.stockQuantity}</td>
                     <td className="py-4 px-4">
                       <span className={clsx(
                         "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold",
-                        item.quantity > 10 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                        ((item as any).quantity ?? item.stockQuantity) > 10 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                       )}>
-                        {item.quantity > 10 ? "✓ In Stock" : "⚠ Low Stock"}
+                        {((item as any).quantity ?? item.stockQuantity) > 10 ? "✓ In Stock" : "⚠ Low Stock"}
                       </span>
                     </td>
                   </tr>

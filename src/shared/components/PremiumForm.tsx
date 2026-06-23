@@ -1,4 +1,4 @@
-import { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes } from "react";
+import React, { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
@@ -242,7 +242,7 @@ export function PremiumRadio({ label, className, ...props }: PremiumRadioProps) 
   );
 }
 
-interface PremiumButtonProps extends InputHTMLAttributes<HTMLButtonElement> {
+interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger" | "ghost";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
@@ -273,6 +273,8 @@ export function PremiumButton({
     ghost: "text-foreground hover:bg-muted/50",
   };
 
+  const motionProps = props as any;
+
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
@@ -286,7 +288,7 @@ export function PremiumButton({
         className
       )}
       disabled={loading || props.disabled}
-      {...props}
+      {...motionProps}
     >
       {loading ? (
         <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

@@ -93,9 +93,12 @@ export interface Invoice {
   date: Date;
   totalAmount: number;
   discount: number;
+  tax?: number;
   loyaltyPointsUsed: number;
   paymentMethod: string;
   customerId: string;
+  employeeId?: string;
+  staffName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -27,7 +27,7 @@ export function PremiumCard({
 
   return (
     <motion.div
-      whileHover={hoverable ? { y: -4, shadow: "0 20px 40px rgba(0,0,0,0.2)" } : {}}
+      whileHover={hoverable ? { y: -4 } : {}}
       whileTap={interactive ? { scale: 0.98 } : {}}
       onClick={onClick}
       className={clsx(

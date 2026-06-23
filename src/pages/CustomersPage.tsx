@@ -230,7 +230,7 @@ export default function CustomersPage() {
       {printData && (
         <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
           <div className="text-center mb-6 space-y-1">
-            <h1 className="font-bold text-xl">{printData.settings?.name || "Kanzy Spa"}</h1>
+            <h1 className="font-bold text-xl">{printData.settings?.name || "Lena Beauty"}</h1>
             <div className="text-xs opacity-70">{printData.settings?.address}</div>
             <div className="text-xs opacity-70">{printData.settings?.phone}</div>
           </div>

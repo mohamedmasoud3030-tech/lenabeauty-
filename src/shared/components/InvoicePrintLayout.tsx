@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
-import QRCode from "qrcode.react";
+import { QRCodeSVG as QRCode } from "qrcode.react";
 import brandingService from "../../infrastructure/services/brandingService";
 
 interface Props {
@@ -204,7 +204,6 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
               size={60}
               level="L"
               includeMargin={false}
-              renderAs="canvas"
             />
           </div>
         </div>
