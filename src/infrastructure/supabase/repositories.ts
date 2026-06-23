@@ -177,8 +177,6 @@ class SupabaseCustomerAdapter implements CustomerRepository {
         notes: data.notes,
         total_spent: data.totalSpent,
         loyalty_points: data.loyaltyPoints,
-        // center_id is intentionally omitted, trusting the backend trigger or function to assign it if required.
-        // It's possible the current schema draft will cause this to fail if no default exists.
       };
 
       const { data: row, error } = await getSupabaseClient()

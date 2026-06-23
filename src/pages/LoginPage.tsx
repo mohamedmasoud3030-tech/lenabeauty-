@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Lock, User, Eye, EyeOff, Sparkles, Sun, Moon, Globe } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { AppLanguage, isValidLanguage, persistLanguage } from "../preferences";
 
 const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
