@@ -1,4 +1,4 @@
-# Kanzy Spa - Feature Roadmap & Enhancement Proposals
+# LenaBeauty - Feature Roadmap & Enhancement Proposals
 
 **Document Date**: June 23, 2026  
 **Market**: Sultanate of Oman  
@@ -8,7 +8,7 @@
 
 ## 📊 Executive Summary
 
-Kanzy Spa is a comprehensive salon management system built for the Omani market. This roadmap outlines **15+ premium features** that will significantly enhance the product's value proposition and competitive advantage.
+LenaBeauty is a comprehensive salon management system built for the Omani market. This roadmap outlines **15+ premium features** that will significantly enhance the product's value proposition and competitive advantage.
 
 ---
 
@@ -682,7 +682,7 @@ We welcome customer feedback! Please share:
 - Improvement suggestions
 - Use case stories
 
-**Contact**: support@kanzy.om
+**Contact**: support@lenabeauty.om
 
 ---
 

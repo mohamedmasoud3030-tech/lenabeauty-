@@ -59,7 +59,7 @@ const resources = {
   },
   en: {
     translation: {
-      "Kanzy Spa": "Lena Beauty",
+      "LenaBeauty": "لينا بيوتي",
       "Beauty Center": "Beauty Center",
       "Home": "Home",
       "Sales & Invoices": "Sales & Invoices",
@@ -503,7 +503,7 @@ const resources = {
   }
 };
 
-const savedLang = localStorage.getItem('kanzy_lang') || 'ar';
+const savedLang = localStorage.getItem('spa-lang') || 'ar';
 
 i18n
   .use(initReactI18next)

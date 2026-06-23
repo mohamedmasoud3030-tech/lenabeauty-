@@ -1,8 +1,8 @@
-# Kanzy Spa - Premium Features Documentation
+# LenaBeauty - Premium Features Documentation
 
 ## Overview
 
-This document outlines all the premium features and components added to elevate the Kanzy Spa application to a world-class standard suitable for enterprise clients.
+This document outlines all the premium features and components added to elevate the LenaBeauty application to a world-class standard suitable for enterprise clients.
 
 ---
 

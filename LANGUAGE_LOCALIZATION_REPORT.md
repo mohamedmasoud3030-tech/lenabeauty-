@@ -1,14 +1,14 @@
 # Language Localization & Accuracy Report
 
 **Report Date**: June 23, 2026  
-**Application**: Kanzy Spa v1.0  
+**Application**: LenaBeauty v1.0  
 **Status**: ✅ Production Ready
 
 ---
 
 ## 📋 Executive Summary
 
-This report verifies the accuracy and completeness of Arabic and English language support in Kanzy Spa. After comprehensive review, the application demonstrates **professional-grade localization** with proper RTL support, accurate translations, and consistent terminology.
+This report verifies the accuracy and completeness of Arabic and English language support in LenaBeauty. After comprehensive review, the application demonstrates **professional-grade localization** with proper RTL support, accurate translations, and consistent terminology.
 
 ---
 
@@ -406,7 +406,7 @@ This report verifies the accuracy and completeness of Arabic and English languag
 ## 📞 Contact & Support
 
 For localization issues or suggestions:
-- **Email**: localization@kanzy.om
+- **Email**: localization@lenabeauty.om
 - **WhatsApp**: +968 9414 1330
 - **Support Hours**: 8 AM - 6 PM (Omani Time)
 

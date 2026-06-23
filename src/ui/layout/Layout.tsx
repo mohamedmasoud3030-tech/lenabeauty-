@@ -180,7 +180,7 @@ export default function Layout() {
               </div>
             </div>
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] opacity-30">
-              &copy; {new Date().getFullYear()} KANZY SPA &bull; {t("All Rights Reserved")}
+              &copy; {new Date().getFullYear()} LenaBeauty &bull; {t("All Rights Reserved")}
             </div>
           </footer>
         </div>

@@ -1,7 +1,7 @@
-# Kanzy Spa - UI/UX Improvements Summary
+# LenaBeauty - UI/UX Improvements Summary
 
 ## Overview
-This document summarizes the comprehensive UI/UX improvements made to the Kanzy Spa application to prepare it for market launch. The improvements focus on making the application more user-friendly, performant, and professional.
+This document summarizes the comprehensive UI/UX improvements made to the LenaBeauty application to prepare it for market launch. The improvements focus on making the application more user-friendly, performant, and professional.
 
 ---
 

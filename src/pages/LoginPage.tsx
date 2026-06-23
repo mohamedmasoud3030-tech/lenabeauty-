@@ -92,8 +92,8 @@ export default function LoginPage() {
     >
       {/* Inject dynamic placeholder colour — can't set ::placeholder via inline style */}
       <style>{`
-        .kanzy-input::placeholder { color: ${placeholderColor}; opacity: 1; }
-        .kanzy-input { font-size: 16px; /* prevents iOS zoom on focus */ }
+        .lb-input::placeholder { color: ${placeholderColor}; opacity: 1; }
+        .lb-input { font-size: 16px; /* prevents iOS zoom on focus */ }
       `}</style>
       {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -258,7 +258,7 @@ export default function LoginPage() {
                   <input
                     autoFocus
                     placeholder={t("Username")}
-                    className="kanzy-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
+                    className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
                       border: `1px solid ${inputBorder}`,
@@ -290,7 +290,7 @@ export default function LoginPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder={t("Password")}
-                    className="kanzy-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
+                    className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
                       border: `1px solid ${inputBorder}`,

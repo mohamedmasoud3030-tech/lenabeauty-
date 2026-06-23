@@ -1,8 +1,8 @@
-# Invoice Printing Guide - Kanzy Spa
+# Invoice Printing Guide - LenaBeauty
 
 ## 📋 Overview
 
-The Kanzy Spa application includes a professional invoice printing system designed specifically for thermal printers used in salons. This guide covers all aspects of invoice generation, printing, and customization.
+The LenaBeauty application includes a professional invoice printing system designed specifically for thermal printers used in salons. This guide covers all aspects of invoice generation, printing, and customization.
 
 ---
 
@@ -60,7 +60,7 @@ The Kanzy Spa application includes a professional invoice printing system design
 ### Footer
 - **Thank You Message**: In Arabic and English
 - **Invoice ID**: For reference
-- **Powered By**: Kanzy branding
+- **Powered By**: LenaBeauty branding
 
 ---
 
@@ -183,7 +183,7 @@ Customers can scan to verify authenticity.
     "phone": "+968 9123 4567"
   },
   "settings": {
-    "name": "KANZY SPA",
+    "name": "LenaBeauty",
     "address": "السيب، مسقط",
     "phone": "+968 9414 1330",
     "cr": "OM1234567",

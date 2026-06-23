@@ -1,8 +1,8 @@
-# تطبيق Kanzy Spa - دليل إعداد نسخة Desktop (EXE)
+# تطبيق LenaBeauty - دليل إعداد نسخة Desktop (EXE)
 
 ## نظرة عامة
 
-هذا الدليل يشرح كيفية تحويل تطبيق Kanzy Spa من تطبيق ويب إلى تطبيق سطح مكتب قابل للتثبيت على أجهزة Windows و Mac و Linux.
+هذا الدليل يشرح كيفية تحويل تطبيق LenaBeauty من تطبيق ويب إلى تطبيق سطح مكتب قابل للتثبيت على أجهزة Windows و Mac و Linux.
 
 ## المتطلبات
 
@@ -80,8 +80,8 @@ npx tauri init
 سيطلب منك الإجابة على الأسئلة التالية:
 
 ```
-? What is your app name? (Kanzy Spa)
-? What should the window title be? (Kanzy Spa - نظام إدارة الصالونات)
+? What is your app name? (LenaBeauty)
+? What should the window title be? (LenaBeauty - نظام إدارة الصالونات)
 ? Where are your web assets (src-tauri/target/release/bundle) located, relative to the <current dir>/src-tauri/tauri.conf.json file that will be created? (../dist)
 ? A relative custom protocol to use in development. By default, this is localhost, so tauri dev and tauri build use a local server. Set it to a blank string to use a file protocol instead. (tauri)
 ? Enable fullscreen on startup? (false)
@@ -106,7 +106,7 @@ npx tauri init
         "fullscreen": false,
         "height": 900,
         "resizable": true,
-        "title": "Kanzy Spa - نظام إدارة الصالونات",
+        "title": "LenaBeauty - نظام إدارة الصالونات",
         "width": 1200
       }
     ],
@@ -115,7 +115,7 @@ npx tauri init
     }
   },
   "package": {
-    "productName": "Kanzy Spa",
+    "productName": "LenaBeauty",
     "version": "1.0.0"
   }
 }

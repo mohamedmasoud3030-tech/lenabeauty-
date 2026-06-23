@@ -1,5 +1,5 @@
 -- ============================================================
--- Kanzy Salon Management — Initial Schema
+-- LenaBeauty Salon Management — Initial Schema
 -- Generated from full code audit: repositories.ts + mappers.ts
 -- HOW TO RUN: Supabase Dashboard → SQL Editor → paste & run
 -- ============================================================
@@ -202,11 +202,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- 15. SEED: Center row (must match VITE_CENTER_ID)
 INSERT INTO centers (id, name)
-VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'Kanzy Salon')
+VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'LenaBeauty')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO center_settings (center_id, name, currency)
-VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'Kanzy Salon', 'OMR')
+VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'LenaBeauty', 'OMR')
 ON CONFLICT (center_id) DO NOTHING;
 
 -- 16. RLS — DISABLE FOR DEVELOPMENT (re-enable + add policies before production)
