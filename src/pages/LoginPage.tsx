@@ -74,10 +74,12 @@ export default function LoginPage() {
   const textPrimary = theme === "dark" ? "#f1f5f9" : "#1c1917";
   const textMuted   = theme === "dark" ? "rgba(241,245,249,0.45)" : "rgba(28,25,23,0.45)";
 
-  const inputBg     = theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.90)";
-  const inputBorder = theme === "dark" ? "rgba(255,255,255,0.12)" : "rgba(217,119,6,0.30)";
-  const inputFocus  = "rgba(217,119,6,0.75)";
-  const iconColor   = theme === "dark" ? "rgba(255,255,255,0.30)" : "rgba(120,80,0,0.35)";
+  const inputBg          = theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.90)";
+  const inputBorder      = theme === "dark" ? "rgba(255,255,255,0.12)" : "rgba(217,119,6,0.30)";
+  const inputFocus       = "rgba(217,119,6,0.75)";
+  const iconColor        = theme === "dark" ? "rgba(255,255,255,0.30)" : "rgba(120,80,0,0.35)";
+  // Placeholder colour — must be visible on both dark & light glass inputs
+  const placeholderColor = theme === "dark" ? "rgba(241,245,249,0.40)" : "rgba(28,25,23,0.40)";
 
   const blob1Color = theme === "dark" ? "#7c3aed" : "#d97706";
   const blob2Color = theme === "dark" ? "#0ea5e9" : "#a16207";
@@ -88,6 +90,11 @@ export default function LoginPage() {
       dir={isRtl ? "rtl" : "ltr"}
       style={{ background: bgGradient }}
     >
+      {/* Inject dynamic placeholder colour — can't set ::placeholder via inline style */}
+      <style>{`
+        .kanzy-input::placeholder { color: ${placeholderColor}; opacity: 1; }
+        .kanzy-input { font-size: 16px; /* prevents iOS zoom on focus */ }
+      `}</style>
       {/* Background blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -251,7 +258,7 @@ export default function LoginPage() {
                   <input
                     autoFocus
                     placeholder={t("Username")}
-                    className="w-full py-3 text-sm rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
+                    className="kanzy-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
                       border: `1px solid ${inputBorder}`,
@@ -283,7 +290,7 @@ export default function LoginPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder={t("Password")}
-                    className="w-full py-3 text-sm rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
+                    className="kanzy-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
                       border: `1px solid ${inputBorder}`,
