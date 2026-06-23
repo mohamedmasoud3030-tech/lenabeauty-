@@ -18,11 +18,12 @@ ALTER TABLE public.center_memberships ADD COLUMN IF NOT EXISTS role public.membe
 
 -- Helper to get current user's authorized center IDs
 -- Returns empty array instead of NULL for safer policy checks
+-- Uses profile_id to match the base schema's naming convention
 CREATE OR REPLACE FUNCTION app_private.get_user_center_ids()
 RETURNS UUID[] AS $$
   SELECT COALESCE(array_agg(center_id), ARRAY[]::UUID[])
   FROM public.center_memberships 
-  WHERE user_id = auth.uid();
+  WHERE profile_id = auth.uid() AND is_active = true;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, auth;
 
 -- Revoke public execution of the helper
@@ -34,8 +35,9 @@ CREATE OR REPLACE FUNCTION app_private.has_center_role(_center_id UUID, _roles p
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.center_memberships
-    WHERE user_id = auth.uid() 
+    WHERE profile_id = auth.uid() 
       AND center_id = _center_id 
+      AND is_active = true 
       AND role = ANY(_roles)
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, auth;
@@ -66,7 +68,7 @@ USING (id = ANY(app_private.get_user_center_ids()));
 -- Memberships: Users can only see their own memberships
 CREATE POLICY "Users view their own memberships" 
 ON public.center_memberships FOR SELECT 
-USING (user_id = auth.uid());
+USING (profile_id = auth.uid());
 
 -- Center Settings: Only managers+ can update
 CREATE POLICY "Members view settings" 

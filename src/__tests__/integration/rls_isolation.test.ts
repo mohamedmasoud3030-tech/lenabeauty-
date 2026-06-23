@@ -155,6 +155,29 @@ async function runTest() {
     await clientB.from("customers").delete().eq("id", bCust2.id);
   }
 
+  // TEST: Cross-Table Integrity (Appointments)
+  // User A attempts to create an appointment in Center A but referencing a Customer from Center B
+  if (bCust) {
+    const { error: crossTableErr } = await clientA.from("appointments").insert({
+      center_id: centerA,
+      customer_id: bCust.id,
+      date_time: new Date().toISOString(),
+      status: "scheduled"
+    });
+    await assert(!!crossTableErr, "User A cannot create an appointment referencing a customer from Center B");
+  }
+
+  // TEST: Storage Isolation
+  const { error: storageUploadErr } = await clientA.storage
+    .from("center-assets")
+    .upload(`${centerB}/malicious.txt`, "content");
+  await assert(!!storageUploadErr, "User A cannot upload to Center B's storage folder");
+
+  const { data: storageList } = await clientA.storage
+    .from("center-assets")
+    .list(centerB);
+  await assert(!storageList || storageList.length === 0, "User A cannot list Center B's storage folder");
+
   if (failures > 0) {
       console.error(`\n--- Test Failed with ${failures} failures ---`);
       process.exit(1);
