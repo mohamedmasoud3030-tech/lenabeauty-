@@ -1,4 +1,4 @@
-import { Outlet, useLocation, NavLink } from "react-router-dom";
+import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
 import { Menu, Bell, ChevronRight, LayoutGrid, Sparkles, Zap, Star, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
@@ -9,6 +9,7 @@ import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
 
 export default function Layout() {
+  const nav = useNavigate();
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [showSidebar, setShowSidebar] = useState(false);
@@ -132,7 +133,7 @@ export default function Layout() {
                         </p>
                       </div>
                       <button
-                        onClick={() => { setShowUserMenu(false); window.location.href = "/settings"; }}
+                        onClick={() => { setShowUserMenu(false); nav("/settings"); }}
                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/50 transition-all"
                       >
                         <Settings className="h-4 w-4" />

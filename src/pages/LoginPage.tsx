@@ -258,7 +258,6 @@ export default function LoginPage() {
                     } as React.CSSProperties}
                   />
                   <input
-                    autoFocus
                     placeholder={t("Username")}
                     className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
@@ -368,7 +367,7 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }}
             >
-              {t("Spa Management System — v1.1")}
+              LenaBeauty &bull; {t("Beauty Center")}
             </motion.p>
           </div>
         </div>

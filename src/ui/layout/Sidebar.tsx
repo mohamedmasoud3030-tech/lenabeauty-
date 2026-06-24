@@ -286,7 +286,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             {!!me?.role && (
               <span className="text-[9px] text-primary uppercase font-bold tracking-widest mt-1 flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 flex-shrink-0" />
-                {me.role === "ADMIN" ? t("Admin") : t("Staff")}
+                {me.role === "ADMIN" ? t("Admin") : me.role === "MANAGER" ? t("Manager") : t("Staff Member")}
               </span>
             )}
           </div>
