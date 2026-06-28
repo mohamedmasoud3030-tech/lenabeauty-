@@ -2,7 +2,7 @@ import {
   AuthRepository, CustomerRepository, EmployeeRepository, ServiceRepository, 
   AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository, 
   SettingsRepository, DashboardRepository, ReportRepository, Result, DomainError, AuthError,
-  BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository
+  BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, 
@@ -15,7 +15,7 @@ import {
 import { getSupabaseClient } from "./client";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
-  mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction
+  mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
@@ -1409,6 +1409,52 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
   }
 }
 
+class SupabaseServicePackageAdapter implements ServicePackageRepository {
+  async list(): Promise<Result<any[], DomainError>> {
+    const centerRes = getCenterIdFor("ServicePackage.list");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('service_packages')
+        .select(`
+          *,
+          service_package_items (*)
+        `)
+        .eq('center_id', centerRes.data)
+        .order('created_at', { ascending: false });
+      if (error) return { ok: false, error: createQueryError("ServicePackage.list", error.message) };
+      return { ok: true, data: (data || []).map(mapServicePackage) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("ServicePackage.list", (e as Error).message) };
+    }
+  }
+
+  async create(input: { name: string; description?: string; packagePrice: number; items: { serviceId: string; quantity: number }[] }): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("ServicePackage.create");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc('create_service_package_v1', {
+        p_center_id: centerRes.data,
+        p_name: input.name,
+        p_description: input.description || null,
+        p_package_price: input.packagePrice,
+        p_items: input.items.map((item) => ({ serviceId: item.serviceId, quantity: item.quantity })),
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("ServicePackage.create") };
+        }
+        return { ok: false, error: createQueryError("ServicePackage.create", error.message) };
+      }
+      const row = (data || {}) as any;
+      if (!row.service_package) return { ok: false, error: createQueryError("ServicePackage.create", "Invalid response from package RPC") };
+      return { ok: true, data: mapServicePackage({ ...row.service_package, service_package_items: input.items.map((item, idx) => ({ id: `tmp-${idx}`, package_id: row.service_package.id, service_id: item.serviceId, quantity: item.quantity, created_at: new Date().toISOString() })) }) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("ServicePackage.create", (e as Error).message) };
+    }
+  }
+}
+
 class SupabaseBookingAdapter implements BookingRepository {
   async listServices(): Promise<Result<PublicService[], DomainError>> {
     const centerRes = getCenterIdFor("Booking.listServices");
@@ -1508,5 +1554,6 @@ export {
   SupabaseDashboardAdapter,
   SupabaseReportAdapter,
   SupabaseGiftCardAdapter,
+  SupabaseServicePackageAdapter,
   SupabaseBookingAdapter
 };

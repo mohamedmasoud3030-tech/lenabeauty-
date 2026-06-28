@@ -91,6 +91,26 @@ export interface GiftCardTransaction {
   createdAt: Date;
 }
 
+export interface ServicePackageItem {
+  id: string;
+  packageId: string;
+  serviceId: string;
+  quantity: number;
+  createdAt: Date;
+}
+
+export interface ServicePackage {
+  id: string;
+  centerId: string;
+  name: string;
+  description?: string;
+  packagePrice: number;
+  isActive: boolean;
+  items?: ServicePackageItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Product {
   id: string;
   name: string;

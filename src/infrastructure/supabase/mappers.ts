@@ -1,6 +1,6 @@
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, InvoiceItem, CenterSettings,
-  AppointmentStatus, GiftCard, GiftCardTransaction
+  AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem
 } from "../../domain/entities";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
@@ -285,5 +285,32 @@ export function mapGiftCardTransaction(row: unknown): GiftCardTransaction {
     invoiceId: typeof row.invoice_id === "string" ? row.invoice_id : undefined,
     note: typeof row.note === "string" ? row.note : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapGiftCardTransaction")
+  };
+}
+
+export function mapServicePackage(row: unknown): ServicePackage {
+  assertRowObject(row, "mapServicePackage");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.name !== "string") {
+    throw createMappingError("mapServicePackage", "Missing or invalid required fields (id, center_id, name)");
+  }
+  const items = Array.isArray((row as any).service_package_items)
+    ? (row as any).service_package_items.map((item: any): ServicePackageItem => ({
+        id: String(item.id),
+        packageId: String(item.package_id ?? row.id),
+        serviceId: String(item.service_id),
+        quantity: Number(item.quantity) || 1,
+        createdAt: parseDate(item.created_at, "created_at", "mapServicePackage.items")
+      }))
+    : undefined;
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    name: row.name,
+    description: typeof row.description === "string" ? row.description : undefined,
+    packagePrice: Number(row.package_price) || 0,
+    isActive: typeof row.is_active === "boolean" ? row.is_active : true,
+    items,
+    createdAt: parseDate(row.created_at, "created_at", "mapServicePackage"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapServicePackage")
   };
 }

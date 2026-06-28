@@ -1,7 +1,7 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
 import { Result, BookingInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings } from "../../domain/entities";
-import { CheckoutPayload, BackupPayload, IssueGiftCardInput } from "../../application/dto";
+import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
@@ -82,6 +82,10 @@ export const useCases = {
     list: () => getRepositoryBundle().giftCardAdapter.list(),
     issue: (input: IssueGiftCardInput) => getRepositoryBundle().giftCardAdapter.issue(input),
     getTransactions: (giftCardId: string) => getRepositoryBundle().giftCardAdapter.getTransactions(giftCardId),
+  },
+  servicePackages: {
+    list: () => getRepositoryBundle().servicePackageAdapter.list(),
+    create: (input: CreateServicePackageInput) => getRepositoryBundle().servicePackageAdapter.create(input),
   },
   reports: {
     getSales: (f: string, t: string) => getRepositoryBundle().reportAdapter.getSales(f, t),

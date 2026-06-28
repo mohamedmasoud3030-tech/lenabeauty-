@@ -1,6 +1,6 @@
 import {
   Customer, Employee, Service, ServiceCategory,
-  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction
+  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -77,6 +77,11 @@ export interface GiftCardRepository {
   list(): Promise<Result<GiftCard[], DomainError>>;
   issue(input: { code: string; initialBalance: number; customerId?: string; note?: string; expiresAtISO?: string }): Promise<Result<GiftCard, DomainError>>;
   getTransactions(giftCardId: string): Promise<Result<GiftCardTransaction[], DomainError>>;
+}
+
+export interface ServicePackageRepository {
+  list(): Promise<Result<ServicePackage[], DomainError>>;
+  create(input: { name: string; description?: string; packagePrice: number; items: { serviceId: string; quantity: number }[] }): Promise<Result<ServicePackage, DomainError>>;
 }
 
 export interface SettingsRepository {

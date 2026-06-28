@@ -16,7 +16,14 @@ export interface ProductCheckoutItem {
   price: number;
 }
 
-export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem;
+export interface PackageCheckoutItem {
+  type: "package";
+  packageId: string;
+  qty: number;
+  price: number;
+}
+
+export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem | PackageCheckoutItem;
 
 export interface CheckoutPayload {
   customerId: string;
@@ -151,4 +158,11 @@ export interface IssueGiftCardInput {
   customerId?: string;
   note?: string;
   expiresAtISO?: string;
+}
+
+export interface CreateServicePackageInput {
+  name: string;
+  description?: string;
+  packagePrice: number;
+  items: { serviceId: string; quantity: number }[];
 }

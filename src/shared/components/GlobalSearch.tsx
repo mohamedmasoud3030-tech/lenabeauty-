@@ -28,6 +28,8 @@ export function GlobalSearch() {
     { id: "services", title: t("Services"), category: t("Navigation"), path: "/services", icon: "✂️" },
     { id: "appointments", title: t("Appointments"), category: t("Navigation"), path: "/appointments", icon: "📅" },
     { id: "customers", title: t("Customers"), category: t("Navigation"), path: "/customers", icon: "👥" },
+    { id: "gift-cards", title: t("Gift Cards"), category: t("Navigation"), path: "/gift-cards", icon: "🎁" },
+    { id: "packages", title: t("Packages"), category: t("Navigation"), path: "/packages", icon: "📦" },
     { id: "employees", title: t("Employees"), category: t("Navigation"), path: "/employees", icon: "👔" },
     { id: "inventory", title: t("Inventory"), category: t("Navigation"), path: "/inventory", icon: "📦" },
     { id: "expenses", title: t("Expenses"), category: t("Navigation"), path: "/expenses", icon: "💰" },

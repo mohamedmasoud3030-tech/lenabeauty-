@@ -59,6 +59,8 @@ const navGroups: NavGroup[] = [
       { to: "/pos", labelKey: "Sales & Invoices", Icon: Receipt },
       { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
       { to: "/customers", labelKey: "Customers", Icon: Users },
+      { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
+      { to: "/packages", labelKey: "Packages", Icon: Boxes },
     ],
   },
   {

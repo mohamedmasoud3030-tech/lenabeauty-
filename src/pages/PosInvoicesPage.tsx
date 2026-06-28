@@ -5,7 +5,7 @@ import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { 
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
-  Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
+  Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
   Zap, Clock, TrendingUp
 } from "lucide-react";
@@ -20,12 +20,13 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
-  type: "service" | "product";
+  type: "service" | "product" | "package";
   cartId: string;
   qty?: number;
   stockQuantity?: number;
   category?: string;
   brand?: string;
+  includedServices?: number;
 }
 
 type PosPrintData = InvoicePrintData;
@@ -35,6 +36,7 @@ export default function PosInvoicesPage() {
   const { t, i18n } = useTranslation();
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -48,7 +50,7 @@ export default function PosInvoicesPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
-  const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
+  const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS" | "PACKAGES">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -85,15 +87,17 @@ export default function PosInvoicesPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, p, e, settings, gc] = await Promise.all([
+      const [s, p, pkg, e, settings, gc] = await Promise.all([
         unwrap(useCases.services.list()),
         unwrap(useCases.products.list()),
+        useCases.servicePackages.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
         unwrap(useCases.employees.list()),
         useCases.settings.get().then((r) => (r.ok ? r.data : null)).catch(() => null),
         useCases.giftCards.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
       ]);
       setServices(s);
       setProducts(p);
+      setPackages(pkg);
       setEmployees(e);
       setGiftCards(gc);
       if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
@@ -112,7 +116,7 @@ export default function PosInvoicesPage() {
     }
   }
 
-  function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number}, type: "service" | "product") {
+  function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number, includedServices?: number}, type: "service" | "product" | "package") {
     if (type === "product" && item.stockQuantity !== undefined && item.stockQuantity <= 0) {
       showToast('error', t("Error"), t("Out of stock!"));
       return;
@@ -194,10 +198,17 @@ export default function PosInvoicesPage() {
               qty: Number(it.qty ?? 1),
               price: Number(it.price)
             };
-          } else {
+          } else if (it.type === "product") {
             return {
               type: "product" as const,
               productId: it.id,
+              qty: Number(it.qty ?? 1),
+              price: Number(it.price)
+            };
+          } else {
+            return {
+              type: "package" as const,
+              packageId: it.id,
               qty: Number(it.qty ?? 1),
               price: Number(it.price)
             };
@@ -223,12 +234,10 @@ export default function PosInvoicesPage() {
   }
 
   const filteredItems = activeTab === "SERVICES"
-    ? services.filter(it => 
-        it.name.toLowerCase().includes(itemSearchQ.toLowerCase())
-      )
-    : products.filter(it => 
-        it.name.toLowerCase().includes(itemSearchQ.toLowerCase())
-      );
+    ? services.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+    : activeTab === "PRODUCTS"
+      ? products.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+      : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
@@ -314,6 +323,16 @@ export default function PosInvoicesPage() {
                     <Package className="h-4 w-4 shrink-0" />
                     {t("Products")}
                   </button>
+                  <button 
+                    onClick={() => setActiveTab("PACKAGES")}
+                    className={clsx(
+                      "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                      activeTab === "PACKAGES" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Boxes className="h-4 w-4 shrink-0" />
+                    {t("Packages")}
+                  </button>
                 </div>
               </div>
               <div className="relative group">
@@ -344,7 +363,7 @@ export default function PosInvoicesPage() {
                         animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         key={it.id} 
-                        onClick={() => addToCart(it, activeTab === "SERVICES" ? "service" : "product")}
+                        onClick={() => addToCart(it as any, activeTab === "SERVICES" ? "service" : activeTab === "PRODUCTS" ? "product" : "package")}
                         disabled={activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0}
                         className={clsx(
                           "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-3 lg:p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 flex flex-col items-start gap-3 text-start",
@@ -353,7 +372,7 @@ export default function PosInvoicesPage() {
                       >
                         <div className="flex items-start justify-between w-full gap-2">
                           <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                            {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                            {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : activeTab === "PRODUCTS" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                           </div>
                           <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">
                             <Plus className="h-4 w-4" />
@@ -368,6 +387,11 @@ export default function PosInvoicesPage() {
                               (it as Product).stockQuantity > 5 ? "text-emerald-600" : "text-rose-600"
                             )}>
                               {(it as Product).stockQuantity} {t("Stock")}
+                            </div>
+                          )}
+                          {activeTab === "PACKAGES" && (
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                              {(it as any).items?.length || 0} {t("Included Services")}
                             </div>
                           )}
                         </div>
@@ -448,12 +472,12 @@ export default function PosInvoicesPage() {
                       className="group flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:bg-muted/30 hover:shadow-inner"
                     >
                       <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors text-sm font-bold">
-                        {item.type === "service" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                        {item.type === "service" ? <Scissors className="h-4 w-4" /> : item.type === "product" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate text-foreground leading-tight">{item.name}</p>
                         <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">
-                          {item.type === "service" ? t("Service") : t("Product")}
+                          {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")}
                         </p>
                       </div>
                       <div className="text-end space-y-1">
