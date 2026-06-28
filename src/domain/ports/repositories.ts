@@ -27,6 +27,7 @@ export interface CustomerRepository {
   getById(id: string): Promise<Result<Customer, DomainError>>;
   create(data: Partial<Customer>): Promise<Result<Customer, DomainError>>;
   update(id: string, data: Partial<Customer>): Promise<Result<Customer, DomainError>>;
+  rotatePortalToken(id: string): Promise<Result<{ customerId: string; portalAccessToken: string }, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
   getHistory(id: string): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>>;
 }
@@ -68,7 +69,7 @@ export interface ExpenseRepository {
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile } from "../../application/dto";
 
 export interface InvoiceRepository {
   checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number }, DomainError>>;
@@ -129,4 +130,6 @@ export interface BookingRepository {
   getCenterInfo(): Promise<Result<PublicCenterInfo, DomainError>>;
   getTakenSlots(dayISO: string): Promise<Result<{ dateTimeISO: string; employeeId?: string }[], DomainError>>;
   createBooking(input: BookingInput): Promise<Result<{ appointmentId: string }, DomainError>>;
+  clientPortalLogin(phone: string, token: string): Promise<Result<ClientPortalSession, DomainError>>;
+  getClientPortalProfile(customerId: string, phone: string, token: string): Promise<Result<ClientPortalProfile, DomainError>>;
 }

@@ -45,6 +45,7 @@ export const useCases = {
     list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
+    rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),
     getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
     delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
   },
@@ -103,6 +104,8 @@ export const useCases = {
     getCenterInfo: () => getRepositoryBundle().bookingAdapter.getCenterInfo(),
     getTakenSlots: (dayISO: string) => getRepositoryBundle().bookingAdapter.getTakenSlots(dayISO),
     createBooking: (input: BookingInput) => getRepositoryBundle().bookingAdapter.createBooking(input),
+    clientPortalLogin: (phone: string, token: string) => getRepositoryBundle().bookingAdapter.clientPortalLogin(phone, token),
+    getClientPortalProfile: (customerId: string, phone: string, token: string) => getRepositoryBundle().bookingAdapter.getClientPortalProfile(customerId, phone, token),
   },
   tenant: {
     setActiveCenterId: (id: string | null) => { setActiveCenter(id); },

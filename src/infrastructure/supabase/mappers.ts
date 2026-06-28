@@ -50,6 +50,9 @@ export function mapCustomer(row: unknown): Customer {
     totalSpent: Number(row.total_spent) || 0,
     loyaltyPoints: Number(row.loyalty_points) || 0,
     lastVisit: parseOptionalDate(row.last_visit, "last_visit", "mapCustomer"),
+    portalAccessToken: typeof row.portal_access_token === "string" ? row.portal_access_token : undefined,
+    portalAccessEnabled: typeof row.portal_access_enabled === "boolean" ? row.portal_access_enabled : true,
+    portalLastLoginAt: parseOptionalDate(row.portal_last_login_at, "portal_last_login_at", "mapCustomer"),
     createdAt: parseDate(row.created_at, "created_at", "mapCustomer"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapCustomer")
   };

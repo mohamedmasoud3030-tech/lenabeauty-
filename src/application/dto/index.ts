@@ -192,3 +192,47 @@ export interface PaymentGatewaySettingsInput {
   successUrl?: string;
   cancelUrl?: string;
 }
+
+export interface ClientPortalSession {
+  customerId: string;
+  name: string;
+  phone?: string;
+  loyaltyPoints: number;
+  totalSpent: number;
+  lastVisitISO?: string;
+  portalLastLoginAtISO?: string;
+}
+
+export interface ClientPortalProfile {
+  customer: {
+    id: string;
+    name: string;
+    phone?: string;
+    email?: string;
+    notes?: string;
+    loyaltyPoints: number;
+    totalSpent: number;
+    lastVisitISO?: string;
+    portalLastLoginAtISO?: string;
+  };
+  appointments: {
+    id: string;
+    dateTimeISO: string;
+    status: string;
+    notes?: string;
+    depositAmount: number;
+    noShowFeeAmount: number;
+    noShowFeeCharged: number;
+    employeeName?: string;
+    serviceName?: string;
+  }[];
+  invoices: {
+    id: string;
+    serialNumber?: string;
+    dateISO: string;
+    totalAmount: number;
+    discount: number;
+    tax: number;
+    paymentMethod: string;
+  }[];
+}

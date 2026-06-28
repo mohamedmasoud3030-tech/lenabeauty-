@@ -232,6 +232,30 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     }
   }
 
+  async rotatePortalToken(id: string): Promise<Result<{ customerId: string; portalAccessToken: string }, DomainError>> {
+    const centerRes = getCenterIdFor("Customer.rotatePortalToken");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc('rotate_customer_portal_token_v1', {
+        p_center_id: centerRes.data,
+        p_customer_id: id,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Customer.rotatePortalToken") };
+        }
+        return { ok: false, error: createQueryError("Customer.rotatePortalToken", error.message) };
+      }
+      const row = (data || {}) as any;
+      if (!row.customer_id || !row.portal_access_token) {
+        return { ok: false, error: createQueryError("Customer.rotatePortalToken", "Invalid response from portal token RPC") };
+      }
+      return { ok: true, data: { customerId: String(row.customer_id), portalAccessToken: String(row.portal_access_token) } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Customer.rotatePortalToken", (e as Error).message) };
+    }
+  }
+
   async delete(id: string): Promise<Result<void, DomainError>> {
     const centerRes = getCenterIdFor("Customer.delete");
     if (!centerRes.ok) return centerRes as any;
@@ -1670,6 +1694,90 @@ class SupabaseBookingAdapter implements BookingRepository {
       return { ok: true, data: { appointmentId: String(row.appointment_id) } };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Booking.createBooking", (e as Error).message) };
+    }
+  }
+
+  async clientPortalLogin(phone: string, token: string): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Booking.clientPortalLogin");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc("public_client_portal_login_v1", {
+        p_center_id: centerRes.data,
+        p_phone: phone,
+        p_token: token,
+      });
+      if (error) return { ok: false, error: createQueryError("Booking.clientPortalLogin", error.message) };
+      const row = (data || {}) as any;
+      const customer = row.customer;
+      if (!customer?.id) return { ok: false, error: createQueryError("Booking.clientPortalLogin", "Invalid response from client portal login RPC") };
+      return {
+        ok: true,
+        data: {
+          customerId: String(customer.id),
+          name: String(customer.name || ""),
+          phone: customer.phone ? String(customer.phone) : undefined,
+          loyaltyPoints: Number(customer.loyalty_points) || 0,
+          totalSpent: Number(customer.total_spent) || 0,
+          lastVisitISO: customer.last_visit ? new Date(customer.last_visit).toISOString() : undefined,
+          portalLastLoginAtISO: customer.portal_last_login_at ? new Date(customer.portal_last_login_at).toISOString() : undefined,
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Booking.clientPortalLogin", (e as Error).message) };
+    }
+  }
+
+  async getClientPortalProfile(customerId: string, phone: string, token: string): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Booking.getClientPortalProfile");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc("public_client_portal_profile_v1", {
+        p_center_id: centerRes.data,
+        p_customer_id: customerId,
+        p_phone: phone,
+        p_token: token,
+      });
+      if (error) return { ok: false, error: createQueryError("Booking.getClientPortalProfile", error.message) };
+      const row = (data || {}) as any;
+      if (!row.customer?.id) return { ok: false, error: createQueryError("Booking.getClientPortalProfile", "Invalid response from client portal profile RPC") };
+      return {
+        ok: true,
+        data: {
+          customer: {
+            id: String(row.customer.id),
+            name: String(row.customer.name || ""),
+            phone: row.customer.phone ? String(row.customer.phone) : undefined,
+            email: row.customer.email ? String(row.customer.email) : undefined,
+            notes: row.customer.notes ? String(row.customer.notes) : undefined,
+            loyaltyPoints: Number(row.customer.loyalty_points) || 0,
+            totalSpent: Number(row.customer.total_spent) || 0,
+            lastVisitISO: row.customer.last_visit ? new Date(row.customer.last_visit).toISOString() : undefined,
+            portalLastLoginAtISO: row.customer.portal_last_login_at ? new Date(row.customer.portal_last_login_at).toISOString() : undefined,
+          },
+          appointments: Array.isArray(row.appointments) ? row.appointments.map((item: any) => ({
+            id: String(item.id),
+            dateTimeISO: new Date(item.date_time).toISOString(),
+            status: String(item.status),
+            notes: item.notes ? String(item.notes) : undefined,
+            depositAmount: Number(item.deposit_amount) || 0,
+            noShowFeeAmount: Number(item.no_show_fee_amount) || 0,
+            noShowFeeCharged: Number(item.no_show_fee_charged) || 0,
+            employeeName: item.employee_name ? String(item.employee_name) : undefined,
+            serviceName: item.service_name ? String(item.service_name) : undefined,
+          })) : [],
+          invoices: Array.isArray(row.invoices) ? row.invoices.map((item: any) => ({
+            id: String(item.id),
+            serialNumber: item.serial_number ? String(item.serial_number) : undefined,
+            dateISO: new Date(item.date).toISOString(),
+            totalAmount: Number(item.total_amount) || 0,
+            discount: Number(item.discount) || 0,
+            tax: Number(item.tax) || 0,
+            paymentMethod: String(item.payment_method || ""),
+          })) : [],
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Booking.getClientPortalProfile", (e as Error).message) };
     }
   }
 }

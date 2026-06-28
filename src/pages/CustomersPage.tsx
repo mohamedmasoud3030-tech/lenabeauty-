@@ -5,7 +5,7 @@ import {
   Receipt, Plus, FileText, Save, CheckCircle2, UserPlus,
   ChevronRight, MoreVertical, Mail, MapPin, Sparkles, XCircle,
   ArrowUpRight, TrendingUp, Wallet, Pencil, Trash2,
-  Download, Star, Users, Crown
+  Download, Star, Users, Crown, KeyRound, Copy
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
@@ -201,6 +201,18 @@ export default function CustomersPage() {
   }
 
   const [printData, setPrintData] = useState<any | null>(null);
+
+  async function handleRotatePortalToken(customer: Customer) {
+    try {
+      const res = await unwrap(useCases.customers.rotatePortalToken(customer.id));
+      const shareText = `${window.location.origin}/portal\n${t("Phone")}: ${customer.phone || ""}\n${t("Portal Code")}: ${res.portalAccessToken}`;
+      await navigator.clipboard.writeText(shareText);
+      showToast('success', t("Success"), t("Portal access copied to clipboard"));
+      await load();
+    } catch (err: any) {
+      showToast('error', t("Error"), err?.message || t("Failed to rotate portal code"));
+    }
+  }
 
   async function handleReprint(invoiceId: string) {
     try {
@@ -412,6 +424,13 @@ export default function CustomersPage() {
                           <History className="h-6 w-6" />
                         </button>
                         <button
+                          onClick={() => handleRotatePortalToken(c)}
+                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+                          title={t("Rotate Portal Code")}
+                        >
+                          <KeyRound className="h-5 w-5" />
+                        </button>
+                        <button
                           onClick={() => openEdit(c)}
                           className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/20 transition-all shadow-sm hover:scale-110 active:scale-95"
                           title={t("Edit")}
@@ -492,6 +511,12 @@ export default function CustomersPage() {
                   >
                     <History className="h-5 w-5" />
                     {t("History")}
+                  </button>
+                  <button
+                    onClick={() => handleRotatePortalToken(c)}
+                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-all shadow-sm shrink-0"
+                  >
+                    <KeyRound className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => openEdit(c)}
