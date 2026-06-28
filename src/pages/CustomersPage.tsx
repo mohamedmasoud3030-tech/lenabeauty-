@@ -681,7 +681,6 @@ export default function CustomersPage() {
                                 >
                                   <Receipt className="h-3 w-3" />
                                   {t("Print")}
-                                  <span className="absolute -top-2 -end-2 bg-amber-500 text-white text-[8px] px-1 rounded-full leading-tight uppercase">{t("WIP")}</span>
                                 </button>
                               </div>
                             </motion.div>

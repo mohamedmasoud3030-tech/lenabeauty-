@@ -175,16 +175,21 @@ Must cover:
 
 ## OUT OF SCOPE FOR v1.0
 
-| Feature | Reason |
+> ⚠️ This table is OUTDATED. As of 2026-06-28 the items below are IMPLEMENTED
+> in code. They only require a live Supabase project + the migrations in
+> `supabase/migrations/` to function. See `docs/PRODUCTION_READINESS.md`.
+
+| Feature | Status (2026-06-28) |
 |---|---|
-| POS Checkout | Requires `SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` — v1.1 |
-| Invoice print | Same dependency |
-| Financial dashboard (P&L, revenue) | Same dependency |
-| Sales reports | Same dependency |
-| Customer visit history | Same dependency |
-| Settings mutations | Not yet implemented — v1.1 |
-| Expense edit UI | Contract exists; UI is v1.1 |
-| Bundle code-split | Performance — v1.1 |
+| POS Checkout | ✅ Implemented — RPC `supabase/migrations/20260628000003_checkout_rpc.sql` |
+| Invoice print | ✅ Implemented — `getForPrint` + `InvoicePrintLayout` + reprint |
+| Financial dashboard (P&L, revenue) | ✅ Implemented — real `invoices`/`expenses` queries |
+| Sales reports | ✅ Implemented — `ReportAdapter` real queries |
+| Customer visit history | ✅ Implemented — `Customer.getHistory` |
+| Settings mutations | ✅ Implemented — `Settings.update` |
+| Expense edit UI | ✅ Implemented — edit flow in `ExpensesPage` |
+| Settings restore | ✅ Implemented — `Settings.restore` (upsert, center-scoped) |
+| Bundle code-split | ✅ Implemented — `manualChunks` in `vite.config.ts` |
 
 ---
 

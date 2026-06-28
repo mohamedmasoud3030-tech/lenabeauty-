@@ -976,7 +976,130 @@ class SupabaseSettingsAdapter implements SettingsRepository {
     if (!validateBackupPayload(data)) {
       return { ok: false, error: { name: "DomainError", message: "Invalid backup payload", code: "VALIDATION_ERROR" } };
     }
-    return { ok: false, error: createUnsupportedWriteError("Settings.restore") };
+
+    const centerRes = getCenterIdFor("Settings.restore");
+    if (!centerRes.ok) return centerRes as any;
+    const centerId = centerRes.data;
+
+    try {
+      const client = getSupabaseClient();
+      const d = data.data || {};
+
+      // Stamp every row with the active center so a backup can only ever be
+      // restored into the caller's own tenant (RLS also enforces this).
+      const withCenter = <T extends Record<string, any>>(rows: T[] | undefined): any[] =>
+        (rows || []).map((r) => ({ ...r, center_id: centerId }));
+
+      // Customers
+      if (d.customers?.length) {
+        const rows = withCenter(
+          d.customers.map((c) => ({
+            id: c.id,
+            name: c.name,
+            category: c.category ?? null,
+            phone: c.phone ?? null,
+            email: c.email ?? null,
+            notes: c.notes ?? null,
+            total_spent: c.totalSpent ?? 0,
+            loyalty_points: c.loyaltyPoints ?? 0,
+          }))
+        );
+        const { error } = await client.from("customers").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Employees
+      if (d.employees?.length) {
+        const rows = withCenter(
+          d.employees.map((e) => ({
+            id: e.id,
+            name: e.name,
+            role: e.role,
+            phone: e.phone ?? null,
+            salary: e.salary ?? 0,
+            base_salary: e.baseSalary ?? 0,
+            commission_percentage: e.commissionPercentage ?? 0,
+            is_active: e.isActive ?? true,
+          }))
+        );
+        const { error } = await client.from("employees").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Services
+      if (d.services?.length) {
+        const rows = withCenter(
+          d.services.map((s) => ({
+            id: s.id,
+            name: s.name,
+            category_id: s.categoryId ?? null,
+            price: s.price ?? 0,
+            duration_minutes: s.durationMinutes ?? 30,
+            is_active: s.isActive ?? true,
+          }))
+        );
+        const { error } = await client.from("services").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Products
+      if (d.products?.length) {
+        const rows = withCenter(
+          d.products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            barcode: p.barcode ?? null,
+            price: p.price ?? 0,
+            cost: p.cost ?? 0,
+            stock_quantity: p.stockQuantity ?? 0,
+          }))
+        );
+        const { error } = await client.from("products").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Expenses
+      if (d.expenses?.length) {
+        const rows = withCenter(
+          d.expenses.map((x) => ({
+            id: x.id,
+            amount: x.amount ?? 0,
+            category: x.category,
+            description: x.description ?? null,
+            date: x.date instanceof Date ? x.date.toISOString() : x.date,
+          }))
+        );
+        const { error } = await client.from("expenses").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Center settings (single row, keyed by center_id)
+      if (d.settings) {
+        const s = d.settings;
+        const { error } = await client
+          .from("center_settings")
+          .update({
+            name: s.name,
+            currency: s.currency,
+            tax_rate: s.taxRate ?? 0,
+            logo_path: s.logoPath ?? null,
+            address: s.address ?? null,
+            phone: s.phone ?? null,
+            cr: s.cr ?? null,
+            postal_code: s.postalCode ?? null,
+          })
+          .eq("center_id", centerId);
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // NOTE: invoices/invoice_items are intentionally NOT restored — they are
+      // financial records created only via the checkout RPC and protected by
+      // deny-direct-insert RLS. Restoring them would bypass integrity controls.
+
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.restore", (e as Error).message) };
+    }
   }
 }
 
