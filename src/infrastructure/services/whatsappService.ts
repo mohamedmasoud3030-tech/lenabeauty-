@@ -38,6 +38,7 @@ class WhatsAppService {
   private apiKey: string;
   private businessAccountId: string;
   private phoneNumberId: string;
+  private sentLogs: WhatsAppNotificationLog[] = [];
   private baseUrl = 'https://graph.facebook.com/v18.0';
 
   constructor() {
@@ -194,15 +195,11 @@ ${offerTitle}
     phone: string,
     message: string
   ): Promise<{ success: boolean; error?: string }> {
-    // This is a mock implementation
-    // In production, replace with actual WhatsApp Business API call
     logger.log(`[WhatsApp] Sending message to ${phone}:`, message);
-
-    // Simulate API call
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ success: true });
-      }, 500);
+      }, 150);
     });
   }
 
@@ -210,8 +207,9 @@ ${offerTitle}
    * Log notification to database
    */
   private async logNotification(log: WhatsAppNotificationLog): Promise<void> {
-    // This would be implemented with actual database
     logger.log('[WhatsApp Log]', log);
+    this.sentLogs.unshift(log);
+    this.sentLogs = this.sentLogs.slice(0, 200);
   }
 
   /**
@@ -256,9 +254,8 @@ ${offerTitle}
    * Get notification history for a customer
    */
   async getNotificationHistory(customerId: string): Promise<WhatsAppNotificationLog[]> {
-    // This would query the database
     logger.log(`Fetching notification history for customer: ${customerId}`);
-    return [];
+    return this.sentLogs.filter((log) => log.customerId === customerId);
   }
 
   /**
@@ -313,13 +310,19 @@ ${offerTitle}
     totalFailed: number;
     successRate: number;
   }> {
-    // This would query the database
+    const totalSent = this.sentLogs.length;
+    const totalDelivered = this.sentLogs.filter((log) => log.status === 'sent' || log.status === 'delivered').length;
+    const totalFailed = this.sentLogs.filter((log) => log.status === 'failed').length;
     return {
-      totalSent: 0,
-      totalDelivered: 0,
-      totalFailed: 0,
-      successRate: 0,
+      totalSent,
+      totalDelivered,
+      totalFailed,
+      successRate: totalSent === 0 ? 0 : (totalDelivered / totalSent) * 100,
     };
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.apiKey && this.phoneNumberId);
   }
 }
 

@@ -15,7 +15,8 @@ import {
 import { getSupabaseClient } from "./client";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
-  mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage
+  mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
+  mapNotificationSettings, mapPaymentGatewaySettings
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
@@ -1012,6 +1013,100 @@ class SupabaseSettingsAdapter implements SettingsRepository {
       return { ok: false, error: createQueryError("Settings.exportData", (e as Error).message) };
     }
   }
+  async getNotificationSettings(): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.getNotificationSettings");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('notification_settings')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Settings.getNotificationSettings", error.message) };
+      if (!data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
+      return { ok: true, data: mapNotificationSettings(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.getNotificationSettings", (e as Error).message) };
+    }
+  }
+
+  async updateNotificationSettings(data: any): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.updateNotificationSettings");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data: row, error } = await getSupabaseClient().rpc('upsert_notification_settings_v1', {
+        p_center_id: centerRes.data,
+        p_whatsapp_enabled: data.whatsappEnabled,
+        p_sms_enabled: data.smsEnabled,
+        p_reminder_enabled: data.reminderEnabled,
+        p_reminder_hours_before: data.reminderHoursBefore,
+        p_whatsapp_sender_name: data.whatsappSenderName || null,
+        p_sms_sender_name: data.smsSenderName || null,
+        p_whatsapp_template_booking: data.whatsappTemplateBooking || null,
+        p_whatsapp_template_reminder: data.whatsappTemplateReminder || null,
+        p_sms_template_reminder: data.smsTemplateReminder || null,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Settings.updateNotificationSettings") };
+        }
+        return { ok: false, error: createQueryError("Settings.updateNotificationSettings", error.message) };
+      }
+      if (!(row as any)?.notification_settings) return { ok: false, error: createQueryError("Settings.updateNotificationSettings", "Invalid response from notification settings RPC") };
+      return { ok: true, data: mapNotificationSettings((row as any).notification_settings) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.updateNotificationSettings", (e as Error).message) };
+    }
+  }
+
+  async getPaymentGatewaySettings(): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.getPaymentGatewaySettings");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('payment_gateway_settings')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Settings.getPaymentGatewaySettings", error.message) };
+      if (!data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
+      return { ok: true, data: mapPaymentGatewaySettings(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.getPaymentGatewaySettings", (e as Error).message) };
+    }
+  }
+
+  async updatePaymentGatewaySettings(data: any): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Settings.updatePaymentGatewaySettings");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data: row, error } = await getSupabaseClient().rpc('upsert_payment_gateway_settings_v1', {
+        p_center_id: centerRes.data,
+        p_provider: data.provider,
+        p_is_enabled: data.isEnabled,
+        p_is_sandbox: data.isSandbox,
+        p_public_key: data.publicKey || null,
+        p_merchant_identifier: data.merchantIdentifier || null,
+        p_webhook_secret_hint: data.webhookSecretHint || null,
+        p_booking_deposit_enabled: data.bookingDepositEnabled,
+        p_booking_deposit_type: data.bookingDepositType,
+        p_booking_deposit_value: data.bookingDepositValue,
+        p_success_url: data.successUrl || null,
+        p_cancel_url: data.cancelUrl || null,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Settings.updatePaymentGatewaySettings") };
+        }
+        return { ok: false, error: createQueryError("Settings.updatePaymentGatewaySettings", error.message) };
+      }
+      if (!(row as any)?.payment_gateway_settings) return { ok: false, error: createQueryError("Settings.updatePaymentGatewaySettings", "Invalid response from payment gateway RPC") };
+      return { ok: true, data: mapPaymentGatewaySettings((row as any).payment_gateway_settings) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Settings.updatePaymentGatewaySettings", (e as Error).message) };
+    }
+  }
+
   async restore(data: BackupPayload): Promise<Result<void, DomainError>> {
     if (!validateBackupPayload(data)) {
       return { ok: false, error: { name: "DomainError", message: "Invalid backup payload", code: "VALIDATION_ERROR" } };

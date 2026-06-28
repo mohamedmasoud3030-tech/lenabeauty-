@@ -1,6 +1,7 @@
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, InvoiceItem, CenterSettings,
-  AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem
+  AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
+  NotificationSettingsEntity, PaymentGatewaySettings
 } from "../../domain/entities";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
@@ -290,6 +291,54 @@ export function mapGiftCardTransaction(row: unknown): GiftCardTransaction {
     invoiceId: typeof row.invoice_id === "string" ? row.invoice_id : undefined,
     note: typeof row.note === "string" ? row.note : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapGiftCardTransaction")
+  };
+}
+
+export function mapNotificationSettings(row: unknown): NotificationSettingsEntity {
+  assertRowObject(row, "mapNotificationSettings");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string") {
+    throw createMappingError("mapNotificationSettings", "Missing or invalid required fields (id, center_id)");
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    whatsappEnabled: Boolean(row.whatsapp_enabled),
+    smsEnabled: Boolean(row.sms_enabled),
+    reminderEnabled: row.reminder_enabled !== false,
+    reminderHoursBefore: Number(row.reminder_hours_before) || 24,
+    whatsappSenderName: typeof row.whatsapp_sender_name === "string" ? row.whatsapp_sender_name : undefined,
+    smsSenderName: typeof row.sms_sender_name === "string" ? row.sms_sender_name : undefined,
+    whatsappTemplateBooking: typeof row.whatsapp_template_booking === "string" ? row.whatsapp_template_booking : undefined,
+    whatsappTemplateReminder: typeof row.whatsapp_template_reminder === "string" ? row.whatsapp_template_reminder : undefined,
+    smsTemplateReminder: typeof row.sms_template_reminder === "string" ? row.sms_template_reminder : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapNotificationSettings"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapNotificationSettings")
+  };
+}
+
+export function mapPaymentGatewaySettings(row: unknown): PaymentGatewaySettings {
+  assertRowObject(row, "mapPaymentGatewaySettings");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.provider !== "string") {
+    throw createMappingError("mapPaymentGatewaySettings", "Missing or invalid required fields (id, center_id, provider)");
+  }
+  const provider = ["manual", "thawani", "paytabs", "stripe"].includes(row.provider) ? row.provider as "manual" | "thawani" | "paytabs" | "stripe" : "manual";
+  const depositType = ["fixed", "percentage"].includes(String(row.booking_deposit_type)) ? row.booking_deposit_type as "fixed" | "percentage" : "fixed";
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    provider,
+    isEnabled: Boolean(row.is_enabled),
+    isSandbox: row.is_sandbox !== false,
+    publicKey: typeof row.public_key === "string" ? row.public_key : undefined,
+    merchantIdentifier: typeof row.merchant_identifier === "string" ? row.merchant_identifier : undefined,
+    webhookSecretHint: typeof row.webhook_secret_hint === "string" ? row.webhook_secret_hint : undefined,
+    bookingDepositEnabled: Boolean(row.booking_deposit_enabled),
+    bookingDepositType: depositType,
+    bookingDepositValue: Number(row.booking_deposit_value) || 0,
+    successUrl: typeof row.success_url === "string" ? row.success_url : undefined,
+    cancelUrl: typeof row.cancel_url === "string" ? row.cancel_url : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapPaymentGatewaySettings"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapPaymentGatewaySettings")
   };
 }
 

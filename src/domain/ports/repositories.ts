@@ -1,6 +1,7 @@
 import {
   Customer, Employee, Service, ServiceCategory,
-  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage
+  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
+  NotificationSettingsEntity, PaymentGatewaySettings
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -92,6 +93,10 @@ export interface SettingsRepository {
   backup(): Promise<Result<{ message: string }, DomainError>>;
   exportData(): Promise<Result<any, DomainError>>;
   restore(data: BackupPayload): Promise<Result<void, DomainError>>;
+  getNotificationSettings(): Promise<Result<NotificationSettingsEntity, DomainError>>;
+  updateNotificationSettings(data: Partial<NotificationSettingsEntity>): Promise<Result<NotificationSettingsEntity, DomainError>>;
+  getPaymentGatewaySettings(): Promise<Result<PaymentGatewaySettings, DomainError>>;
+  updatePaymentGatewaySettings(data: Partial<PaymentGatewaySettings>): Promise<Result<PaymentGatewaySettings, DomainError>>;
 }
 
 export interface DashboardRepository {

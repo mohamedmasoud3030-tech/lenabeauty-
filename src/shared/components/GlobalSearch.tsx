@@ -35,6 +35,8 @@ export function GlobalSearch() {
     { id: "expenses", title: t("Expenses"), category: t("Navigation"), path: "/expenses", icon: "💰" },
     { id: "reports", title: t("Reports"), category: t("Navigation"), path: "/reports", icon: "📈" },
     { id: "settings", title: t("Settings"), category: t("Navigation"), path: "/settings", icon: "⚙️" },
+    { id: "notifications", title: t("Notifications"), category: t("Navigation"), path: "/notifications", icon: "🔔" },
+    { id: "payment-gateway", title: t("Payment Gateway"), category: t("Navigation"), path: "/payment-gateway", icon: "💳" },
   ];
 
   // Keyboard shortcuts

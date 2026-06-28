@@ -89,6 +89,7 @@ const navGroups: NavGroup[] = [
       { to: "/reports", labelKey: "Reports", Icon: FileBarChart, adminOnly: true },
       { to: "/branding", labelKey: "Branding", Icon: Palette, adminOnly: true },
       { to: "/notifications", labelKey: "Notifications", Icon: Bell, adminOnly: true },
+      { to: "/payment-gateway", labelKey: "Payment Gateway", Icon: CreditCard, adminOnly: true },
       { to: "/settings", labelKey: "Settings", Icon: Settings, adminOnly: true },
     ],
   },

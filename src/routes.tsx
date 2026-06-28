@@ -18,6 +18,7 @@ const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotificationsSettingsPage = lazy(() => import("./pages/NotificationsSettingsPage"));
+const PaymentGatewaySettingsPage = lazy(() => import("./pages/PaymentGatewaySettingsPage"));
 const GiftCardsPage = lazy(() => import("./pages/GiftCardsPage"));
 const PackagesPage = lazy(() => import("./pages/PackagesPage"));
 
@@ -60,6 +61,7 @@ export function AppRoutes() {
             <Route path="/reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
             <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
             <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsSettingsPage /></Suspense>} />
+            <Route path="/payment-gateway" element={<Suspense fallback={<PageLoader />}><PaymentGatewaySettingsPage /></Suspense>} />
             <Route path="/branding" element={<Suspense fallback={<PageLoader />}><BrandingSettingsPage /></Suspense>} />
           </Route>
 

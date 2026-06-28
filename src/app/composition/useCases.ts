@@ -1,7 +1,7 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
 import { Result, BookingInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings } from "../../domain/entities";
-import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput } from "../../application/dto";
+import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
@@ -74,6 +74,10 @@ export const useCases = {
     backup: async () => getRepositoryBundle().settingsAdapter.backup(),
     exportData: async () => getRepositoryBundle().settingsAdapter.exportData(),
     restore: async (data: BackupPayload) => getRepositoryBundle().settingsAdapter.restore(data),
+    getNotificationSettings: () => getRepositoryBundle().settingsAdapter.getNotificationSettings(),
+    updateNotificationSettings: async (data: NotificationSettingsInput) => getRepositoryBundle().settingsAdapter.updateNotificationSettings(data),
+    getPaymentGatewaySettings: () => getRepositoryBundle().settingsAdapter.getPaymentGatewaySettings(),
+    updatePaymentGatewaySettings: async (data: PaymentGatewaySettingsInput) => getRepositoryBundle().settingsAdapter.updatePaymentGatewaySettings(data),
   },
   invoices: {
     checkout: async (data: CheckoutPayload) => getRepositoryBundle().invoiceAdapter.checkout(data),

@@ -166,3 +166,29 @@ export interface CreateServicePackageInput {
   packagePrice: number;
   items: { serviceId: string; quantity: number }[];
 }
+
+export interface NotificationSettingsInput {
+  whatsappEnabled: boolean;
+  smsEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  whatsappSenderName?: string;
+  smsSenderName?: string;
+  whatsappTemplateBooking?: string;
+  whatsappTemplateReminder?: string;
+  smsTemplateReminder?: string;
+}
+
+export interface PaymentGatewaySettingsInput {
+  provider: "manual" | "thawani" | "paytabs" | "stripe";
+  isEnabled: boolean;
+  isSandbox: boolean;
+  publicKey?: string;
+  merchantIdentifier?: string;
+  webhookSecretHint?: string;
+  bookingDepositEnabled: boolean;
+  bookingDepositType: "fixed" | "percentage";
+  bookingDepositValue: number;
+  successUrl?: string;
+  cancelUrl?: string;
+}

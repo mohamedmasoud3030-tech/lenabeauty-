@@ -251,12 +251,19 @@ export function QuickNotificationSender({
 }: QuickNotificationSenderProps) {
   const [message, setMessage] = useState("");
   const [type, setType] = useState<"whatsapp" | "sms">("whatsapp");
+  const [recipientText, setRecipientText] = useState("");
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
 
   const handleSend = () => {
-    if (message.trim() && selectedRecipients.length > 0) {
-      onSend(message, type, selectedRecipients);
+    const recipients = recipientText
+      .split(/[\n,;]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (message.trim() && recipients.length > 0) {
+      setSelectedRecipients(recipients);
+      onSend(message, type, recipients);
       setMessage("");
+      setRecipientText("");
       setSelectedRecipients([]);
     }
   };
@@ -292,6 +299,22 @@ export function QuickNotificationSender({
 
       <div>
         <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
+          Recipients
+        </label>
+        <textarea
+          value={recipientText}
+          onChange={(e) => setRecipientText(e.target.value)}
+          placeholder="+96890000000, +96891111111"
+          className="w-full px-4 py-3 rounded-lg border border-border bg-card/50 text-foreground font-bold resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+          rows={3}
+        />
+        <p className="text-xs text-muted-foreground mt-2">
+          Enter one phone number per line or separate them with commas.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
           Message
         </label>
         <textarea
@@ -310,7 +333,7 @@ export function QuickNotificationSender({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={handleSend}
-        disabled={loading || !message.trim() || selectedRecipients.length === 0}
+        disabled={loading || !message.trim() || recipientText.trim().length === 0}
         className="w-full px-6 py-3 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-lg hover:shadow-xl disabled:opacity-50 transition-all"
       >
         {loading ? "Sending..." : "Send Message"}

@@ -181,3 +181,37 @@ export interface CenterSettings {
   cr?: string;
   postalCode?: string;
 }
+
+export interface NotificationSettingsEntity {
+  id: string;
+  centerId: string;
+  whatsappEnabled: boolean;
+  smsEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  whatsappSenderName?: string;
+  smsSenderName?: string;
+  whatsappTemplateBooking?: string;
+  whatsappTemplateReminder?: string;
+  smsTemplateReminder?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaymentGatewaySettings {
+  id: string;
+  centerId: string;
+  provider: "manual" | "thawani" | "paytabs" | "stripe";
+  isEnabled: boolean;
+  isSandbox: boolean;
+  publicKey?: string;
+  merchantIdentifier?: string;
+  webhookSecretHint?: string;
+  bookingDepositEnabled: boolean;
+  bookingDepositType: "fixed" | "percentage";
+  bookingDepositValue: number;
+  successUrl?: string;
+  cancelUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
