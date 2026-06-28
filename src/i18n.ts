@@ -444,6 +444,9 @@ const resources = {
       "Attendance": "الحضور",
       "Advances": "السلف",
       "Payroll": "الرواتب",
+      "Demo data": "بيانات تجريبية",
+      "This screen shows sample data for preview only. It is not yet connected to the database and nothing here is saved.": "هذه الشاشة تعرض بيانات نموذجية للعرض فقط. غير متصلة بقاعدة البيانات ولا يتم حفظ أي شيء هنا.",
+      "Demo preview": "عرض تجريبي",
       "Branding": "الهوية البصرية",
       "Premium Center": "مركز متميز",
       "Operations": "العمليات",
@@ -526,7 +529,6 @@ const resources = {
       "Terms of Service": "شروط الخدمة",
       "All rights reserved.": "جميع الحقوق محفوظة.",
       "Developed by": "تطوير",
-      "Contact": "اتصال",
     }
   },
   en: {
@@ -1048,8 +1050,10 @@ const resources = {
       "Privacy Policy": "Privacy Policy",
       "Terms of Service": "Terms of Service",
       "All rights reserved.": "All rights reserved.",
+      "Demo data": "Demo data",
+      "This screen shows sample data for preview only. It is not yet connected to the database and nothing here is saved.": "This screen shows sample data for preview only. It is not yet connected to the database and nothing here is saved.",
+      "Demo preview": "Demo preview",
       "Developed by": "Developed by",
-      "Contact": "Contact",
     }
   }
 };
