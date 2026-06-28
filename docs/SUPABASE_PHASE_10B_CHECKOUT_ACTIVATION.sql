@@ -1,3 +1,12 @@
+-- ⚠️ SUPERSEDED — DO NOT RUN AGAINST THE CURRENT SCHEMA.
+-- This Phase-10B draft assumes schema elements that DO NOT EXIST in the
+-- shipped schema (soft-delete `deleted_at`, a `member_role` enum, and
+-- app_private.has_center_role). Running it will fail.
+--
+-- The OFFICIAL, schema-aligned checkout RPC now lives in:
+--   supabase/migrations/20260628000003_checkout_rpc.sql
+-- Kept here only for historical reference.
+
 -- SUPABASE CHECKOUT ACTIVATION (PHASE 10B)
 -- Apply after docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql and the staging seed.
 -- Enables real POS checkout, invoice serialization, dashboard revenue, and sales reports.
