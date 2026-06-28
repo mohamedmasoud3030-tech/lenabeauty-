@@ -15,6 +15,8 @@ import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData } from "../application/dto";
+import { desktopRepository } from "../desktop/repository";
+import { isDesktopShell } from "../desktop/config";
 
 interface CartItem {
   id: string;
@@ -222,6 +224,10 @@ export default function PosInvoicesPage() {
         const pData = await unwrap(useCases.invoices.getForPrint(res.invoice.id));
         setPrintData(pData);
         setShowPrintModal(true);
+        if (isDesktopShell()) {
+          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${pData.invoice.totalAmount}</p></div>`;
+          await desktopRepository.printHtml(`Invoice ${pData.invoice.id}`, invoiceHtml);
+        }
       } catch (e) {
         console.error("Print failed", e);
       }

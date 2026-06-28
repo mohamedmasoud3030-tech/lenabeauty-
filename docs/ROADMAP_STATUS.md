@@ -3,7 +3,7 @@
 
 وثيقة حيّة تتعقّب: ما تم إنجازه، وما تبقّى، والمراحل القادمة. تُحدَّث مع كل دفعة.
 
-الحالة التقنية الحالية: `tsc --strict` = 0 أخطاء · **170 اختبار ناجح** · بناء PWA نظيف + Tauri desktop foundation متقدمة (SQLite/backup/restore/print bridges) مع بقاء `cargo check` مؤجلًا لغياب Rust toolchain في البيئة.
+الحالة التقنية الحالية: `tsc --strict` = 0 أخطاء · **171 اختبار ناجح** · بناء PWA نظيف + Tauri desktop foundation متقدمة (SQLite/backup/restore/print bridges + POS desktop print wiring) مع بقاء `cargo check` مؤجلًا لغياب Rust toolchain في البيئة.
 
 ---
 
