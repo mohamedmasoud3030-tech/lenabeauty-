@@ -4,7 +4,6 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { useAuth } from "../auth";
 import { 
   Plus, Trash2, Edit, Users, UserPlus, X, Save, 
@@ -70,7 +69,7 @@ export default function EmployeesPage() {
       setForm(null);
       load();
     } catch (err: any) {
-      showToast('error', 'Error', ((err as Error).message || String(err)));
+      showToast('error', t("Error"), ((err as Error).message || String(err)));
     }
   }
 

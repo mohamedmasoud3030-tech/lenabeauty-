@@ -11,7 +11,6 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
@@ -116,7 +115,7 @@ export default function CustomersPage() {
       const res = await unwrap(useCases.customers.getHistory(customer.id));
       setHistory(res as CustomerHistoryType);
     } catch (e: any) {
-      showToast('error', 'Error', e?.message || "Failed to load history");
+      showToast('error', t("Error"), e?.message || "Failed to load history");
     }
   }
 
@@ -125,13 +124,13 @@ export default function CustomersPage() {
     setSavingNotes(true);
     try {
       await unwrap(useCases.customers.update(openId, { notes }));
-      showToast('error', 'Error', t("Notes saved successfully"));
+      showToast('error', t("Error"), t("Notes saved successfully"));
       await load();
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setSavingNotes(false);
@@ -139,7 +138,7 @@ export default function CustomersPage() {
   }
 
   async function handleAddCustomer() {
-    if (!newName.trim()) return showToast('error', 'Error', t("Please fill all fields"));
+    if (!newName.trim()) return showToast('error', t("Error"), t("Please fill all fields"));
     setAdding(true);
     try {
       await unwrap(useCases.customers.create({ name: newName, phone: newPhone || null }));
@@ -152,7 +151,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setAdding(false);
@@ -167,7 +166,7 @@ export default function CustomersPage() {
 
   async function handleEditCustomer() {
     if (!editId) return;
-    if (!editName.trim()) return showToast('error', 'Error', t("Please fill all fields"));
+    if (!editName.trim()) return showToast('error', t("Error"), t("Please fill all fields"));
     setAdding(true);
     try {
       await unwrap(useCases.customers.update(editId, { name: editName, phone: editPhone || null }));
@@ -178,7 +177,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setAdding(false);
@@ -200,7 +199,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
@@ -219,7 +218,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }

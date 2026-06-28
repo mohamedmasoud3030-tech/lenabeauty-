@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { 
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
@@ -106,7 +105,7 @@ export default function PosInvoicesPage() {
 
   function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number}, type: "service" | "product") {
     if (type === "product" && item.stockQuantity !== undefined && item.stockQuantity <= 0) {
-      showToast('error', 'Error', t("Out of stock!"));
+      showToast('error', t("Error"), t("Out of stock!"));
       return;
     }
     setCart([...cart, { ...item, type, cartId: Math.random().toString(36).substring(2, 11) }]);
@@ -130,23 +129,23 @@ export default function PosInvoicesPage() {
 
   async function handleCheckout() {
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
-      showToast('error', 'Error', t("Please select a customer, employee, and add items to the cart"));
+      showToast('error', t("Error"), t("Please select a customer, employee, and add items to the cart"));
       return;
     }
 
     if (discount + loyaltyDiscount > subtotal) {
-      showToast('error', 'Error', t("Discount cannot exceed subtotal"));
+      showToast('error', t("Error"), t("Discount cannot exceed subtotal"));
       return;
     }
 
     if (!["cash", "card", "transfer"].includes(paymentMethod.toLowerCase())) {
-      showToast('error', 'Error', t("Invalid payment method"));
+      showToast('error', t("Error"), t("Invalid payment method"));
       return;
     }
 
     const hasInvalidPriceOrQty = cart.some(it => isNaN(Number(it.price)) || Number(it.price) < 0);
     if (hasInvalidPriceOrQty) {
-      showToast('error', 'Error', t("One or more items have an invalid price or quantity"));
+      showToast('error', t("Error"), t("One or more items have an invalid price or quantity"));
       return;
     }
 
@@ -189,7 +188,7 @@ export default function PosInvoicesPage() {
       clearCart();
       showToast('success', t("Success"), t("Payment successful!"));
     } catch (err: any) {
-      showToast('error', 'Error', err.message || t("Payment failed"));
+      showToast('error', t("Error"), err.message || t("Payment failed"));
     }
   }
 

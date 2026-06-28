@@ -47,12 +47,18 @@ describe("Authorization Rules", () => {
 });
 
 describe("Error Mapping", () => {
-  it("Maps INVALID_CREDENTIALS correctly", () => {
-    const message = mapErrorToMessage({ code: "INVALID_CREDENTIALS" });
+  it("Maps INVALID_CREDENTIALS to a stable i18n key", () => {
+    const key = mapErrorToMessage({ code: "INVALID_CREDENTIALS" });
+    expect(key).toBe("error.invalid_credentials");
+  });
+
+  it("Resolves the key via a provided translate function", () => {
+    const t = (k: string) => (k === "error.invalid_credentials" ? "بيانات الاعتماد غير صحيحة." : k);
+    const message = mapErrorToMessage({ code: "INVALID_CREDENTIALS" }, t);
     expect(message).toBe("بيانات الاعتماد غير صحيحة.");
   });
 
-  it("Falls back to generic error message", () => {
+  it("Falls back to the raw message when code is unknown", () => {
     const message = mapErrorToMessage({ code: "UNKNOWN_ERROR", message: "foo" });
     expect(message).toBe("foo");
   });

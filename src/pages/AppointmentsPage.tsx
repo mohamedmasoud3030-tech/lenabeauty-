@@ -8,7 +8,6 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
@@ -89,16 +88,6 @@ function fmtDayHeader(d: Date) {
 function fmtTime(d: Date) {
   const lang = i18n.language || "ar";
   return d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
-}
-
-function statusLabel(s: AppointmentStatus | string) {
-  switch (s) {
-    case AppointmentStatus.SCHEDULED: return "معلق";
-    case "CONFIRMED": return "مؤكد";
-    case AppointmentStatus.COMPLETED: return "مكتمل";
-    case AppointmentStatus.CANCELLED: return "ملغي";
-    default: return s;
-  }
 }
 
 function statusClass(s: AppointmentStatus | string) {
@@ -238,16 +227,16 @@ export default function AppointmentsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
 
   async function submitBooking() {
     if (!slotDate) return;
-    if (!customerId) return showToast('error', 'Error', t("Please select a customer"));
-    if (!serviceId) return showToast('error', 'Error', t("Please select a service"));
-    if (!employeeId) return showToast('error', 'Error', t("Please select an employee"));
+    if (!customerId) return showToast('error', t("Error"), t("Please select a customer"));
+    if (!serviceId) return showToast('error', t("Error"), t("Please select a service"));
+    if (!employeeId) return showToast('error', t("Error"), t("Please select an employee"));
 
     setBusy(true);
     try {
@@ -276,7 +265,7 @@ export default function AppointmentsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setBusy(false);
@@ -292,13 +281,13 @@ export default function AppointmentsPage() {
   }
 
   async function sendReminder(appt: Appt) {
-    if (!appt.customer?.phone) return showToast('error', 'Error', t("Customer phone number not found"));
+    if (!appt.customer?.phone) return showToast('error', t("Error"), t("Customer phone number not found"));
     try {
       setBusy(true);
       await unwrap(useCases.appointments.sendReminder(appt.id));
-      showToast('error', 'Error', t("Reminder sent successfully (Simulated)"));
+      showToast('error', t("Error"), t("Reminder sent successfully (Simulated)"));
     } catch (e) {
-      showToast('error', 'Error', ((e as Error).message || String(e)));
+      showToast('error', t("Error"), ((e as Error).message || String(e)));
     } finally {
       setBusy(false);
     }

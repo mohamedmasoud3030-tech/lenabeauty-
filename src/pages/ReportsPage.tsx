@@ -49,7 +49,7 @@ export default function ReportsPage() {
       } else if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-        showToast('error', 'Error', err.message || t("Error"));
+        showToast('error', t("Error"), err.message || t("Error"));
       }
       setData([]);
     } finally {

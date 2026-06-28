@@ -10,7 +10,6 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -84,7 +83,7 @@ export default function ServicesPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
@@ -112,7 +111,7 @@ export default function ServicesPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
