@@ -48,6 +48,7 @@ export interface AppointmentRepository {
   list(range: { fromISO: string, toISO: string }): Promise<Result<Appointment[], DomainError>>;
   create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   update(id: string, data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
+  markNoShow(id: string, input?: { chargeNoShowFee?: boolean; note?: string }): Promise<Result<{ appointment: Appointment; chargedAmount: number }, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 

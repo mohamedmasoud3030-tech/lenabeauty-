@@ -31,6 +31,7 @@ export const useCases = {
     list: (range?: { fromISO: string, toISO: string }) => getRepositoryBundle().appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
     create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
+    markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
     delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
     sendReminder: async (_id: string): Promise<Result<void, any>> => ({ ok: true, data: undefined }),
   },

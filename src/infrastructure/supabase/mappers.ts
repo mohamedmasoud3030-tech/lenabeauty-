@@ -131,6 +131,11 @@ export function mapAppointment(row: unknown): Appointment {
         dateTime: parseDate(row.date_time, "date_time", "mapAppointment"),
         status: status,
         notes: typeof row.notes === "string" ? row.notes : undefined,
+        depositAmount: Number(row.deposit_amount) || 0,
+        noShowFeeAmount: Number(row.no_show_fee_amount) || 0,
+        noShowFeeCharged: Number(row.no_show_fee_charged) || 0,
+        noShowMarkedAt: parseOptionalDate(row.no_show_marked_at, "no_show_marked_at", "mapAppointment"),
+        noShowNote: typeof row.no_show_note === "string" ? row.no_show_note : undefined,
         createdAt: parseDate(row.created_at, "created_at", "mapAppointment"),
         updatedAt: parseDate(row.updated_at, "updated_at", "mapAppointment")
     };

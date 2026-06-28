@@ -124,6 +124,10 @@ export default function AppointmentsPage() {
   const [status, setStatus] = useState<AppointmentStatus>(AppointmentStatus.SCHEDULED);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(0);
+  const [noShowFeeAmount, setNoShowFeeAmount] = useState(0);
+  const [chargeNoShowFee, setChargeNoShowFee] = useState(true);
+  const [noShowNote, setNoShowNote] = useState("");
 
   const range = useMemo(() => {
     if (mode === "day") {
@@ -198,6 +202,10 @@ export default function AppointmentsPage() {
     setCustomerQ("");
     setCustomers([]);
     setStatus(AppointmentStatus.SCHEDULED);
+    setDepositAmount(0);
+    setNoShowFeeAmount(0);
+    setChargeNoShowFee(true);
+    setNoShowNote("");
   }
 
   function openEditBooking(appt: Appt) {
@@ -208,6 +216,10 @@ export default function AppointmentsPage() {
     setStatus(appt.status);
     setServiceId(appt.serviceId ?? "");
     setEmployeeId(appt.employeeId ?? "");
+    setDepositAmount(appt.depositAmount ?? 0);
+    setNoShowFeeAmount(appt.noShowFeeAmount ?? 0);
+    setChargeNoShowFee((appt.noShowFeeAmount ?? 0) > 0 || (appt.depositAmount ?? 0) > 0);
+    setNoShowNote(appt.noShowNote ?? "");
     setOpen(true);
   }
 
@@ -247,6 +259,9 @@ export default function AppointmentsPage() {
           customerId,
           employeeId,
           serviceId,
+          depositAmount,
+          noShowFeeAmount,
+          noShowNote: noShowNote || undefined,
         }));
         showToast('success', t("Success"), t("Appointment updated successfully"));
       } else {
@@ -256,6 +271,9 @@ export default function AppointmentsPage() {
           customerId,
           employeeId,
           serviceId,
+          depositAmount,
+          noShowFeeAmount,
+          noShowNote: noShowNote || undefined,
         }));
         showToast('success', t("Success"), t("Appointment created successfully"));
       }
@@ -308,6 +326,8 @@ export default function AppointmentsPage() {
     scheduled: appts.filter(a => a.status === AppointmentStatus.SCHEDULED).length,
     completed: appts.filter(a => a.status === AppointmentStatus.COMPLETED).length,
     cancelled: appts.filter(a => a.status === AppointmentStatus.CANCELLED).length,
+    noShow: appts.filter(a => a.status === AppointmentStatus.NO_SHOW).length,
+    protected: appts.filter(a => (a.depositAmount ?? 0) > 0 || (a.noShowFeeAmount ?? 0) > 0).length,
   }), [appts]);
 
   return (
@@ -379,11 +399,13 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {[
           { label: t('Total'), value: apptStats.total, color: 'text-primary', bg: 'bg-primary/10', icon: CalendarDays },
           { label: t('Scheduled'), value: apptStats.scheduled, color: 'text-amber-600', bg: 'bg-amber-500/10', icon: Clock },
           { label: t('Completed'), value: apptStats.completed, color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
+          { label: t('No-Show'), value: apptStats.noShow, color: 'text-orange-600', bg: 'bg-orange-500/10', icon: Bell },
+          { label: t('Protected Appointments'), value: apptStats.protected, color: 'text-sky-600', bg: 'bg-sky-500/10', icon: Sparkles },
           { label: t('Cancelled'), value: apptStats.cancelled, color: 'text-rose-600', bg: 'bg-rose-500/10', icon: XCircle },
         ].map(({ label, value, color, bg, icon: Icon }, i) => (
           <motion.div
@@ -724,6 +746,41 @@ export default function AppointmentsPage() {
                   </div>
                 </div>
 
+                <div className="grid gap-8 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Deposit Amount")}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      className="w-full rounded-[1.5rem] border border-border bg-card py-4.5 px-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("No-Show Fee")}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      className="w-full rounded-[1.5rem] border border-border bg-card py-4.5 px-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                      value={noShowFeeAmount}
+                      onChange={(e) => setNoShowFeeAmount(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("No-Show Policy Note")}</label>
+                  <textarea
+                    className="w-full rounded-[1.5rem] border border-border bg-card py-4.5 px-6 text-sm font-medium focus:ring-4 focus:ring-primary/10 outline-none transition-all min-h-[96px] resize-y"
+                    value={noShowNote}
+                    onChange={(e) => setNoShowNote(e.target.value)}
+                    placeholder={t("Optional deposit or no-show policy details") }
+                  />
+                </div>
+
                 {editApptId && (
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Status")}</label>
@@ -745,8 +802,50 @@ export default function AppointmentsPage() {
                   </div>
                 )}
 
-                <div className="flex gap-4">
-                  {editApptId && (
+                <div className="flex flex-col gap-4">
+                  {editApptId && status !== AppointmentStatus.NO_SHOW && (
+                    <div className="rounded-[1.5rem] border border-orange-500/20 bg-orange-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-orange-700">{t("Mark as No-Show")}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          {t("Charge on no-show")}: {Math.max(depositAmount, noShowFeeAmount).toFixed(2)} {t("OMR")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 text-xs font-bold text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={chargeNoShowFee}
+                            onChange={(e) => setChargeNoShowFee(e.target.checked)}
+                          />
+                          {t("Charge no-show fee")}
+                        </label>
+                        <button
+                          onClick={async () => {
+                            if (!editApptId) return;
+                            setBusy(true);
+                            try {
+                              const res = await unwrap(useCases.appointments.markNoShow(editApptId, { chargeNoShowFee, note: noShowNote || undefined }));
+                              showToast('success', t("Success"), `${t("No-show saved")}: ${res.chargedAmount.toFixed(2)} ${t("OMR")}`);
+                              await load();
+                              setOpen(false);
+                            } catch (err: any) {
+                              showToast('error', t("Error"), err?.message || t("Failed to mark no-show"));
+                            } finally {
+                              setBusy(false);
+                            }
+                          }}
+                          className="h-12 px-5 rounded-2xl bg-orange-500 text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50"
+                          disabled={busy}
+                        >
+                          {t("Mark as No-Show")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-4">
+                    {editApptId && (
                     <button
                       onClick={() => void deleteAppt(editApptId)}
                       className="w-16 h-16 shrink-0 rounded-[2rem] bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center flex-col gap-1 border border-rose-500/20 active:scale-95"
@@ -764,6 +863,7 @@ export default function AppointmentsPage() {
                     <CheckCircle2 className="h-6 w-6 relative z-10" />
                     <span className="text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
                   </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

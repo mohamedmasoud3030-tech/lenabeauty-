@@ -62,6 +62,11 @@ export interface Appointment {
   dateTime: Date;
   status: AppointmentStatus;
   notes?: string;
+  depositAmount?: number;
+  noShowFeeAmount?: number;
+  noShowFeeCharged?: number;
+  noShowMarkedAt?: Date;
+  noShowNote?: string;
   createdAt: Date;
   updatedAt: Date;
 }

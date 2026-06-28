@@ -606,6 +606,16 @@ const resources = {
       "No packages found": "لا توجد باقات",
       "Package created successfully": "تم إنشاء الباقة بنجاح",
       "Package name and at least one service are required": "اسم الباقة وخدمة واحدة على الأقل مطلوبان",
+      "No-Show": "عدم حضور",
+      "No-Show Fee": "رسوم عدم الحضور",
+      "Deposit Amount": "مبلغ العربون",
+      "Protected Appointments": "مواعيد محمية",
+      "No-Show Policy Note": "ملاحظة سياسة عدم الحضور",
+      "Optional deposit or no-show policy details": "تفاصيل اختيارية للعربون أو سياسة عدم الحضور",
+      "Charge no-show fee": "تحصيل رسوم عدم الحضور",
+      "Mark as No-Show": "تحديد كعدم حضور",
+      "No-show saved": "تم حفظ حالة عدم الحضور",
+      "Failed to mark no-show": "فشل تحديد الموعد كعدم حضور",
     }
   },
   en: {
@@ -1208,6 +1218,16 @@ const resources = {
       "No packages found": "No packages found",
       "Package created successfully": "Package created successfully",
       "Package name and at least one service are required": "Package name and at least one service are required",
+      "No-Show": "No-Show",
+      "No-Show Fee": "No-Show Fee",
+      "Deposit Amount": "Deposit Amount",
+      "Protected Appointments": "Protected Appointments",
+      "No-Show Policy Note": "No-Show Policy Note",
+      "Optional deposit or no-show policy details": "Optional deposit or no-show policy details",
+      "Charge no-show fee": "Charge no-show fee",
+      "Mark as No-Show": "Mark as No-Show",
+      "No-show saved": "No-show saved",
+      "Failed to mark no-show": "Failed to mark no-show",
     }
   }
 };

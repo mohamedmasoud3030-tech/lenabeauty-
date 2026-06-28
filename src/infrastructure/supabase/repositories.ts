@@ -490,7 +490,10 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
         service_id: data.serviceId,
         date_time: data.dateTime?.toISOString(),
         status: data.status || 'SCHEDULED', // Map AppointmentStatus
-        notes: data.notes
+        notes: data.notes,
+        deposit_amount: data.depositAmount ?? 0,
+        no_show_fee_amount: data.noShowFeeAmount ?? 0,
+        no_show_note: data.noShowNote
       };
 
       const { data: row, error } = await getSupabaseClient()
@@ -518,6 +521,11 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
       if (data.dateTime !== undefined) payload.date_time = data.dateTime.toISOString();
       if (data.status !== undefined) payload.status = data.status;
       if (data.notes !== undefined) payload.notes = data.notes;
+      if (data.depositAmount !== undefined) payload.deposit_amount = data.depositAmount;
+      if (data.noShowFeeAmount !== undefined) payload.no_show_fee_amount = data.noShowFeeAmount;
+      if (data.noShowFeeCharged !== undefined) payload.no_show_fee_charged = data.noShowFeeCharged;
+      if (data.noShowMarkedAt !== undefined) payload.no_show_marked_at = data.noShowMarkedAt?.toISOString();
+      if (data.noShowNote !== undefined) payload.no_show_note = data.noShowNote;
 
       const { data: row, error } = await getSupabaseClient()
         .from('appointments')
@@ -532,6 +540,36 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
       return { ok: true, data: mapAppointment(row) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Appointment.update", (e as Error).message) };
+    }
+  }
+
+  async markNoShow(id: string, input?: { chargeNoShowFee?: boolean; note?: string }): Promise<Result<{ appointment: Appointment; chargedAmount: number }, DomainError>> {
+    const centerRes = getCenterIdFor("Appointment.markNoShow");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc('mark_appointment_no_show_v1', {
+        p_center_id: centerRes.data,
+        p_appointment_id: id,
+        p_charge_no_show_fee: input?.chargeNoShowFee ?? true,
+        p_note: input?.note || null,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Appointment.markNoShow") };
+        }
+        return { ok: false, error: createQueryError("Appointment.markNoShow", error.message) };
+      }
+      const row = (data || {}) as any;
+      if (!row.appointment) return { ok: false, error: createQueryError("Appointment.markNoShow", "Invalid response from no-show RPC") };
+      return {
+        ok: true,
+        data: {
+          appointment: mapAppointment(row.appointment),
+          chargedAmount: Number(row.charged_amount) || 0,
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Appointment.markNoShow", (e as Error).message) };
     }
   }
 
