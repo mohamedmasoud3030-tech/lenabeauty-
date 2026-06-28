@@ -1,0 +1,29 @@
+[package]
+name = "lenabeauty-desktop"
+version = "0.1.0"
+edition = "2021"
+description = "LenaBeauty desktop shell powered by Tauri"
+authors = ["Arena Agent"]
+license = "Proprietary"
+repository = "https://github.com/mohamedmasoud3030-tech/lenabeauty-.git"
+default-run = "lenabeauty-desktop"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-deep-link = "2"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

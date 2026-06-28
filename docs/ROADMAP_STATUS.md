@@ -3,7 +3,7 @@
 
 وثيقة حيّة تتعقّب: ما تم إنجازه، وما تبقّى، والمراحل القادمة. تُحدَّث مع كل دفعة.
 
-الحالة التقنية الحالية: `tsc --strict` = 0 أخطاء · **151 اختبار ناجح** · بناء PWA نظيف.
+الحالة التقنية الحالية: `tsc --strict` = 0 أخطاء · **161 اختبار ناجح** · بناء PWA نظيف + Tauri foundation جاهزة (فحص Rust مؤجل لغياب cargo في البيئة).
 
 ---
 
@@ -101,4 +101,6 @@
 11. `20260628000010_notifications_payment_gateway.sql`
 12. `20260628000011_client_portal.sql`
 13. `20260628000012_customer_experience_forecasting_accounting_advanced.sql`
+14. `20260628000013_booking_reschedule_cancel.sql`
+ience_forecasting_accounting_advanced.sql`
 14. `20260628000013_booking_reschedule_cancel.sql`

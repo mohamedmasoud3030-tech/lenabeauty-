@@ -11,7 +11,12 @@
     "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "desktop:dev": "vite --host 127.0.0.1 --port 1420",
+    "desktop:build:web": "vite build",
+    "desktop:tauri:check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "desktop:test": "vitest run src/__tests__/tauri-foundation.test.ts src/__tests__/desktop-shell.test.tsx",
+    "desktop:preflight": "npm run typecheck && npm run desktop:test && npm run build && npm run desktop:tauri:check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.107.0",
