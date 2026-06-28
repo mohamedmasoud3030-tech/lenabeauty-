@@ -13,6 +13,7 @@ import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
+import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData } from "../application/dto";
 
 interface CartItem {
@@ -131,13 +132,18 @@ export default function PosInvoicesPage() {
   // Mirror the server RPC (process_checkout_v1): 1 loyalty point = 1 OMR,
   // capped at (subtotal - manual discount). Previously this used /100 which
   // disagreed with the backend and showed the customer the wrong discount.
+  // Automatic tier discount from the customer's lifetime spend
+  // (server-authoritative; mirrored here for an accurate preview).
+  const tierInfo = selectedCustomer ? getTierBySpend(selectedCustomer.totalSpent) : null;
+  const tierPercent = tierInfo?.discountPercent ?? 0;
+  const tierDiscount = Math.round(subtotal * tierPercent / 100 * 1000) / 1000;
   const loyaltyDiscount =
     useLoyaltyPoints && selectedCustomer
-      ? Math.max(0, Math.min(subtotal - discount, selectedCustomer.loyaltyPoints))
+      ? Math.max(0, Math.min(subtotal - discount - tierDiscount, selectedCustomer.loyaltyPoints))
       : 0;
   // Net (pre-tax) after discounts, then VAT from center settings, then total.
   // Mirrors the server RPC exactly so the preview equals what is persisted.
-  const net = Math.max(0, subtotal - discount - loyaltyDiscount);
+  const net = Math.max(0, subtotal - discount - tierDiscount - loyaltyDiscount);
   const tax = Math.round(net * (taxRate || 0) / 100 * 1000) / 1000;
   const total = net + tax;
 
@@ -147,7 +153,7 @@ export default function PosInvoicesPage() {
       return;
     }
 
-    if (discount + loyaltyDiscount > subtotal) {
+    if (discount + tierDiscount + loyaltyDiscount > subtotal) {
       showToast('error', t("Error"), t("Discount cannot exceed subtotal"));
       return;
     }
@@ -624,6 +630,12 @@ export default function PosInvoicesPage() {
                     <span>{t("Subtotal")}</span>
                     <span>{subtotal.toFixed(2)} OMR</span>
                   </div>
+                  {tierDiscount > 0 && tierInfo && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
+                      <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
+                      <span>-{tierDiscount.toFixed(2)} OMR</span>
+                    </div>
+                  )}
                   {(discount > 0 || loyaltyDiscount > 0) && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
                       <span>{t("Discounts")}</span>

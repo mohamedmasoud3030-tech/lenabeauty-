@@ -14,6 +14,7 @@ import { useConfirm } from "../shared/components/ConfirmDialog";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
+import { getTierBySpend } from "../domain/loyalty";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -28,13 +29,8 @@ interface CustomerHistoryType {
   invoices: InvoiceHistoryItem[];
 }
 
-// Loyalty tier helper
-function getLoyaltyTier(points: number) {
-  if (points >= 1000) return { label: 'Platinum', color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: '💎' };
-  if (points >= 500) return { label: 'Gold', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '🥇' };
-  if (points >= 200) return { label: 'Silver', color: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/20', icon: '🥈' };
-  return { label: 'Bronze', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: '🥉' };
-}
+// Loyalty tier is derived from lifetime spend via the shared domain model
+// (src/domain/loyalty.ts) — single source of truth across the app.
 
 // Export customers to CSV
 function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
@@ -44,7 +40,7 @@ function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
     c.phone ?? '',
     c.totalSpent.toFixed(3),
     c.loyaltyPoints,
-    getLoyaltyTier(c.loyaltyPoints).label
+    t(getTierBySpend(c.totalSpent).labelKey)
   ]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -396,11 +392,11 @@ export default function CustomersPage() {
                     </td>
                     <td>
                       {(() => {
-                        const tier = getLoyaltyTier(c.loyaltyPoints);
+                        const tier = getTierBySpend(c.totalSpent);
                         return (
                           <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold border shadow-sm ${tier.bg} ${tier.color} ${tier.border}`}>
                             <span>{tier.icon}</span>
-                            <span>{tier.label}</span>
+                            <span>{t(tier.labelKey)}</span>
                             <span className="opacity-60">· {c.loyaltyPoints} {t('pts')}</span>
                           </div>
                         );

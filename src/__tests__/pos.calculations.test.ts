@@ -22,8 +22,12 @@ function loyaltyDiscountOf(subtotal: number, discount: number, points: number, u
   return Math.max(0, Math.min(subtotal - discount, points));
 }
 
-function netOf(subtotal: number, discount: number, loyalty: number): number {
-  return Math.max(0, subtotal - discount - loyalty);
+function tierDiscountOf(subtotal: number, tierPercent: number): number {
+  return Math.round((subtotal * (tierPercent || 0)) / 100 * 1000) / 1000;
+}
+
+function netOf(subtotal: number, discount: number, loyalty: number, tierDiscount = 0): number {
+  return Math.max(0, subtotal - discount - tierDiscount - loyalty);
 }
 
 function taxOf(net: number, taxRate: number): number {
@@ -82,5 +86,21 @@ describe("POS calculations (mirror server RPC)", () => {
   it("zero tax rate leaves the total unchanged", () => {
     const sub = subtotalOf([{ price: 50 }]);
     expect(totalOf(sub, 0, 0, 0)).toBe(50);
+  });
+
+  it("applies an automatic tier discount before tax (gold = 10%)", () => {
+    const sub = subtotalOf([{ price: 100 }]);
+    const tier = tierDiscountOf(sub, 10); // gold
+    expect(tier).toBe(10);
+    const net = netOf(sub, 0, 0, tier); // 90
+    expect(net).toBe(90);
+    expect(net + taxOf(net, 5)).toBe(94.5); // +5% VAT
+  });
+
+  it("stacks manual + tier + loyalty discounts without going negative", () => {
+    const sub = subtotalOf([{ price: 100 }]);
+    const tier = tierDiscountOf(sub, 15); // platinum -> 15
+    const net = netOf(sub, 20, 1000, tier); // 100 - 20 - 15 - (loyalty capped) => 0
+    expect(net).toBe(0);
   });
 });
