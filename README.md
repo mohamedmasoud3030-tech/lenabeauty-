@@ -1,50 +1,93 @@
-# Salon Management PWA
+# LenaBeauty — Salon Management PWA
 
-This repository is currently a frontend-first installable PWA foundation.  
-The legacy local backend and SQLite database have been removed.  
-Supabase integration is intentionally deferred to the next implementation phase.
+A single-center salon/spa management Progressive Web App for the Omani market,
+built with React 19, TypeScript, Vite 6, Tailwind CSS v4, and a live
+**Supabase** backend (Auth + Postgres + Storage + RPC).
 
-## Current Architecture
+> Status: v1.0 in progress. Core CRUD is wired to Supabase. A live Supabase
+> connection is required to run — there is no offline/fake operating mode.
 
-The application is built using:
-- **Vite** (Build Tool)
-- **React** (Frontend Library)
-- **Tailwind CSS v4** (Styling)
-- **Vite PWA Plugin** (Installable PWA support)
+## Architecture
 
-## Development
+Clean / hexagonal architecture (ports & adapters):
+
+- `src/domain/` — entities + repository **ports** (interfaces) and the
+  `Result<T, E>` type. No framework or infrastructure code.
+- `src/application/` — DTOs and error mapping.
+- `src/infrastructure/supabase/` — Supabase **adapters** that implement the
+  domain ports (client, mappers, repositories, errors).
+- `src/pages/`, `src/ui/`, `src/shared/` — React UI, layout, and reusable
+  components.
+- `src/config/env.ts` — hard environment validation. Boot fails fast on
+  missing/invalid config (no silent fallback).
+
+## Tech Stack
+
+- **Vite 6** (build) · **React 19** + **React Router 7**
+- **Tailwind CSS v4** · **lucide-react** · **motion** · **recharts**
+- **@supabase/supabase-js** (backend)
+- **i18next / react-i18next** — Arabic (RTL) + English
+- **vite-plugin-pwa** (Workbox) — installable PWA
+- **Vitest** + Testing Library
+
+## Getting Started
 
 ```bash
 npm install
+cp .env.example .env   # then fill in real Supabase values
 npm run dev
 ```
 
-## Production Build
+### Required environment variables
+
+See `.env.example`. Locally these live in `.env`; in production set them in the
+**Vercel dashboard** (Project → Settings → Environment Variables), not in
+`vercel.json`.
+
+| Variable | Purpose |
+|---|---|
+| `VITE_DATA_BACKEND` | Must be `supabase` |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (never the secret key) |
+| `VITE_CENTER_ID` | UUID of the center (seeded by the initial migration) |
+| `VITE_BRANCH_MODE` | `single` (multi-branch not yet implemented) |
+
+## Supabase setup
+
+Run the migrations in order in the Supabase SQL Editor:
+
+1. `supabase/migrations/20260623000001_initial_schema.sql` — tables, indexes,
+   triggers, seed center.
+2. `supabase/migrations/20260628000001_enable_rls.sql` — enables Row Level
+   Security and tenant-isolation policies. **Required before production.**
+3. `supabase/migrations/20260628000002_admin_bootstrap.sql` — links the admin
+   auth user to the center and sets their role (edit the UUID first).
+
+For the POS checkout RPC, also apply
+`docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql`.
+
+## Scripts
 
 ```bash
-npm run build
+npm run dev          # dev server
+npm run build        # production build (dist/)
+npm run preview      # preview the build
+npm run typecheck    # tsc --noEmit (0 errors expected)
+npm run test         # vitest run
+npm run preflight:supabase   # verify live Supabase connectivity
 ```
 
-## Type Checking
+## Status of features
 
-```bash
-npm run typecheck
-```
+| Area | Backend | Notes |
+|---|---|---|
+| Auth, Customers, Employees, Services, Products, Appointments, Expenses, Invoices/POS, Settings, Dashboard, Reports | ✅ Supabase | Core v1.0 CRUD |
+| Attendance, Advances, Payroll, Staff Analytics | ⚠️ Demo only | UI complete but **not** backed by Supabase yet — flagged in-app with a "Demo preview" banner. |
+| WhatsApp / notifications | ⚠️ Scaffolding | Service layer present; requires WhatsApp Business API credentials. |
 
-## Setup & Limitations
+## Security notes
 
-- **No local database persistence:** The previous SQLite infrastructure and Express backend have been completely removed.
-- **Explicitly disabled write workflows:** Financial actions, configurations, appointments, user management, and auth will fail gracefully indicating the API is disconnected.
-- **Future Supabase integration boundary:** `src/api.ts` contains the neutral domain contracts that return `Promise.reject`. In the next phase, these contracts should be replaced by a proper Supabase adapter. 
-- **Offline Shell:** The PWA is configured to cache static assets using Workbox through `vite-plugin-pwa`.
-
-## Directories
-
-- `src/`: Main source files
-- `src/pages/`: UI Pages
-- `src/context/`: Central context states (currently disabled auth mode)
-- `src/ui/`: Contains layout and shared components
-
-## Note
-
-This implies no actual backend connectivity. The software is **not production-ready** until the Supabase phase is completed.
+- RLS must be enabled (migration 2) before any real data is stored.
+- Never commit `.env` or real keys. If a publishable key was ever committed,
+  rotate it in the Supabase dashboard.
+- Security headers (CSP, X-Frame-Options, etc.) are configured in `vercel.json`.

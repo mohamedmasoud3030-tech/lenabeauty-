@@ -1,6 +1,6 @@
 # تقرير تدقيق توافق قاعدة البيانات — LenaBeauty v1.1
 **التاريخ:** 2026-06-23  
-**المصدر:** قراءة كاملة لـ repositories.ts + mappers.ts مقابل Supabase project: ktmizdznbdwvalmmfvfc
+**المصدر:** قراءة كاملة لـ repositories.ts + mappers.ts مقابل Supabase project: YOUR_PROJECT_REF
 
 ---
 

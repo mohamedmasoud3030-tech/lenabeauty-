@@ -41,6 +41,7 @@ type NavItem = {
   labelKey: string;
   Icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
+  demo?: boolean;
 };
 
 type NavGroup = {
@@ -72,10 +73,10 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { to: "/employees", labelKey: "Employees", Icon: UserCog, adminOnly: true },
-      { to: "/attendance", labelKey: "Attendance", Icon: Clock, adminOnly: true },
-      { to: "/advances", labelKey: "Advances", Icon: Wallet, adminOnly: true },
-      { to: "/payroll", labelKey: "Payroll", Icon: CreditCard, adminOnly: true },
-      { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: BarChart3, adminOnly: true },
+      { to: "/attendance", labelKey: "Attendance", Icon: Clock, adminOnly: true, demo: true },
+      { to: "/advances", labelKey: "Advances", Icon: Wallet, adminOnly: true, demo: true },
+      { to: "/payroll", labelKey: "Payroll", Icon: CreditCard, adminOnly: true, demo: true },
+      { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: BarChart3, adminOnly: true, demo: true },
     ],
   },
   {
@@ -230,7 +231,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden space-y-1"
                   >
-                    {visibleItems.map(({ to, labelKey, Icon }, idx) => (
+                    {visibleItems.map(({ to, labelKey, Icon, demo }, idx) => (
                       <motion.li
                         initial={{ opacity: 0, x: 12 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -252,6 +253,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                           <div className="flex items-center gap-3 min-w-0">
                             <Icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                             <span className="truncate">{t(labelKey)}</span>
+                            {demo && (
+                              <span className="ms-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 flex-shrink-0">
+                                {t("Demo preview")}
+                              </span>
+                            )}
                           </div>
                           <ChevronRight
                             className={clsx(

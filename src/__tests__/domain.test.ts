@@ -28,6 +28,22 @@ describe("Authorization Rules", () => {
   it("Anonymous users cannot view settings", () => {
     expect(can({ status: "anonymous" }, "settings.view")).toBe(false);
   });
+
+  it("Manager cannot access admin-only sections (must match RequireAdmin)", () => {
+    const session = {
+      status: "authenticated" as const,
+      session: {
+        user: { id: "3", username: "manager", role: UserRole.MANAGER }
+      }
+    };
+    // Admin-only sections are guarded by RequireAdmin (ADMIN only).
+    expect(can(session, "settings.view")).toBe(false);
+    expect(can(session, "settings.update")).toBe(false);
+    expect(can(session, "reports.view")).toBe(false);
+    // But managers keep operational permissions.
+    expect(can(session, "pos.checkout")).toBe(true);
+    expect(can(session, "customers.create")).toBe(true);
+  });
 });
 
 describe("Error Mapping", () => {

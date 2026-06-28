@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './i18n';
 import { getStoredLanguage, getStoredTheme } from './preferences';
+import { logger } from './shared/logger';
 
 const savedLang = getStoredLanguage();
 document.documentElement.lang = savedLang;
@@ -28,7 +29,7 @@ if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js")
       .then((reg) => {
-        console.log("LenaBeauty PWA Service Worker registered successfully: ", reg.scope);
+        logger.info("LenaBeauty PWA Service Worker registered successfully: ", reg.scope);
       })
       .catch((err) => {
         console.error("LenaBeauty PWA Service Worker registration failed: ", err);

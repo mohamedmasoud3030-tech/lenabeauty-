@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '../logger';
 
 /**
  * Hook for mobile optimization
@@ -107,7 +108,7 @@ export const useLowBatteryMode = (): boolean => {
           return () => battery.removeEventListener('levelchange', updateBatteryStatus);
         }
       } catch (error) {
-        console.debug('Battery API not available');
+        logger.debug('Battery API not available');
       }
     };
 

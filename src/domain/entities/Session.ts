@@ -21,13 +21,18 @@ export interface AuthenticatedSession {
   user: User;
 }
 
-// Permissions granted to each role (additive — higher roles include lower ones).
-const MANAGER_PERMISSIONS = new Set([
-  "reports.view",
-  "settings.view",
-  "settings.update",
-]);
+// Permission model — single source of truth for role capabilities.
+//
+// IMPORTANT: This must stay consistent with the route-level enforcement in
+// `src/route-guards.tsx`. In v1.0, admin-only sections (reports, settings,
+// branding, notifications) are guarded by `RequireAdmin` (ADMIN role only),
+// and the sidebar hides `adminOnly` items for non-ADMIN users. Therefore the
+// permission sets below grant reports/settings to ADMIN only — MANAGER and
+// STAFF share operational (day-to-day) permissions and do NOT include the
+// admin-only sections. Do not re-add reports/settings to MANAGER without also
+// loosening `RequireAdmin`, or the two layers will drift apart.
 
+// Operational permissions shared by STAFF and MANAGER (additive).
 const STAFF_PERMISSIONS = new Set([
   "appointments.view",
   "appointments.create",
@@ -40,6 +45,10 @@ const STAFF_PERMISSIONS = new Set([
   "products.view",
   "pos.checkout",
 ]);
+
+// MANAGER currently has the same operational scope as STAFF. Admin-only
+// sections remain ADMIN-exclusive to match `RequireAdmin`.
+const MANAGER_PERMISSIONS = new Set<string>([]);
 
 export function can(sessionState: SessionState, permission: string): boolean {
   if (sessionState.status !== "authenticated") return false;

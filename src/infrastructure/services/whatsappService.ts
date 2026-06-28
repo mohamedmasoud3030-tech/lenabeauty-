@@ -3,6 +3,8 @@
  * Handles sending notifications, reminders, and loyalty updates
  */
 
+import { logger } from "../../shared/logger";
+
 export interface WhatsAppMessage {
   to: string; // Phone number with country code (e.g., +968XXXXXXXX)
   type: 'text' | 'template' | 'media';
@@ -36,7 +38,7 @@ class WhatsAppService {
   private apiKey: string;
   private businessAccountId: string;
   private phoneNumberId: string;
-  private baseUrl = 'https://graph.instagram.com/v18.0';
+  private baseUrl = 'https://graph.facebook.com/v18.0';
 
   constructor() {
     this.apiKey = process.env.WHATSAPP_API_KEY || '';
@@ -194,7 +196,7 @@ ${offerTitle}
   ): Promise<{ success: boolean; error?: string }> {
     // This is a mock implementation
     // In production, replace with actual WhatsApp Business API call
-    console.log(`[WhatsApp] Sending message to ${phone}:`, message);
+    logger.log(`[WhatsApp] Sending message to ${phone}:`, message);
 
     // Simulate API call
     return new Promise((resolve) => {
@@ -209,7 +211,7 @@ ${offerTitle}
    */
   private async logNotification(log: WhatsAppNotificationLog): Promise<void> {
     // This would be implemented with actual database
-    console.log('[WhatsApp Log]', log);
+    logger.log('[WhatsApp Log]', log);
   }
 
   /**
@@ -255,7 +257,7 @@ ${offerTitle}
    */
   async getNotificationHistory(customerId: string): Promise<WhatsAppNotificationLog[]> {
     // This would query the database
-    console.log(`Fetching notification history for customer: ${customerId}`);
+    logger.log(`Fetching notification history for customer: ${customerId}`);
     return [];
   }
 
@@ -267,7 +269,7 @@ ${offerTitle}
     phone: string,
     optIn: boolean
   ): Promise<void> {
-    console.log(
+    logger.log(
       `Customer ${customerId} ${optIn ? 'opted in' : 'opted out'} from WhatsApp notifications`
     );
     // This would update the database

@@ -9,6 +9,8 @@
  *   const result = await client.query('SELECT * FROM customers');
  */
 
+import { logger } from "../../shared/logger";
+
 export class TauriClient {
   private static instance: TauriClient;
 
@@ -30,7 +32,7 @@ export class TauriClient {
     try {
       // In v2.0, this will invoke Tauri backend
       // For now: stub that returns empty results
-      console.log('[Tauri] query:', sql, params);
+      logger.log('[Tauri] query:', sql, params);
       return { ok: true, data: [] };
     } catch (error) {
       console.error('[Tauri] query error:', error);

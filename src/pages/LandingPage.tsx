@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight, Check, Star, Zap, Users, TrendingUp, Shield, Clock,
-  Smartphone, BarChart3, Heart, Sparkles, ChevronDown, Play
+  Smartphone, BarChart3, Heart, Sparkles, ChevronDown, Play, Globe
 } from "lucide-react";
 
 export default function LandingPage() {
