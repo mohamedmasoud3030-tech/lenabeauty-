@@ -14,8 +14,8 @@
     <circle cx="150" cy="0" r="12" fill="url(#gold)"/>
     <circle cx="36" cy="180" r="10" fill="url(#gold)"/>
     <circle cx="264" cy="180" r="10" fill="url(#gold)"/>
-    <!-- Elegant Serif 'K' in center of gold element representing Kanzy Spa -->
-    <text x="150" y="195" font-family="'Cairo', serif" font-weight="bold" font-size="75" fill="#000000" text-anchor="middle" opacity="0.3">K</text>
-    <text x="150" y="193" font-family="'Cairo', serif" font-weight="bold" font-size="75" fill="url(#gold)" text-anchor="middle">K</text>
+    <!-- Elegant Serif 'L' in center of gold element representing LenaBeauty -->
+    <text x="150" y="195" font-family="'Cairo', serif" font-weight="bold" font-size="75" fill="#000000" text-anchor="middle" opacity="0.3">L</text>
+    <text x="150" y="193" font-family="'Cairo', serif" font-weight="bold" font-size="75" fill="url(#gold)" text-anchor="middle">L</text>
   </g>
 </svg>

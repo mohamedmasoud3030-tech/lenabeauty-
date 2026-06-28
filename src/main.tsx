@@ -4,7 +4,6 @@ import App from './App.tsx';
 import './index.css';
 import './i18n';
 import { getStoredLanguage, getStoredTheme } from './preferences';
-import { logger } from './shared/logger';
 
 const savedLang = getStoredLanguage();
 document.documentElement.lang = savedLang;
@@ -24,15 +23,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// Register Progressive Web App Service Worker
-if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then((reg) => {
-        logger.info("LenaBeauty PWA Service Worker registered successfully: ", reg.scope);
-      })
-      .catch((err) => {
-        console.error("LenaBeauty PWA Service Worker registration failed: ", err);
-      });
-  });
-}
+// Service Worker registration is handled automatically by vite-plugin-pwa
+// (registerType: 'autoUpdate' injects registerSW). A manual
+// navigator.serviceWorker.register('/sw.js') here caused a double
+// registration and is intentionally removed.
