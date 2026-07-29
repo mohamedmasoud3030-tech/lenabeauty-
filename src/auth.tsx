@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from "react";
+import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { useCases } from "./app/composition/useCases";
 import { unwrap } from "./shared/hooks/useApplication";
 import { SessionState, User } from "./domain/entities/Session";
@@ -21,21 +21,25 @@ const Ctx = createContext<{
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user: me, init, applyAuthenticatedSession } = useAppContext();
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     await init();
-  }
+  }, [init]);
 
-  async function login(username: string, password: string) {
+  const login = useCallback(async (username: string, password: string) => {
     const sessionState = await unwrap<SessionState>(useCases.auth.login(username, password));
     await applyAuthenticatedSession(sessionState);
-  }
+  }, [applyAuthenticatedSession]);
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await unwrap(useCases.auth.logout());
     await init();
-  }
+  }, [init]);
 
-  const value = useMemo(() => ({ me, refresh, login, logout }), [me, init]);
+  const value = useMemo(
+    () => ({ me, refresh, login, logout }),
+    [me, refresh, login, logout]
+  );
+
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

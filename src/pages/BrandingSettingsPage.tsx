@@ -106,7 +106,7 @@ export default function BrandingSettingsPage() {
           }
           handleSave();
         } catch (err) {
-          alert('فشل استيراد الإعدادات. تأكد من صيغة الملف.');
+          alert(isArabic ? 'فشل استيراد الإعدادات. تأكد من صيغة الملف.' : 'Failed to import settings. Please check the file format.');
         }
       };
       reader.readAsText(file);

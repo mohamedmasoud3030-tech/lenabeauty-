@@ -10,7 +10,14 @@ import {
   InvoiceRepository,
   SettingsRepository,
   DashboardRepository,
-  ReportRepository
+  ReportRepository,
+  BookingRepository,
+  GiftCardRepository,
+  ServicePackageRepository,
+  CustomerExperienceRepository,
+  ForecastRepository,
+  AccountingRepository,
+  AdvancedRepository
 } from "../domain/ports/repositories";
 import {
   SupabaseAuthAdapter,
@@ -23,7 +30,14 @@ import {
   SupabaseInvoiceAdapter,
   SupabaseSettingsAdapter,
   SupabaseDashboardAdapter,
-  SupabaseReportAdapter
+  SupabaseReportAdapter,
+  SupabaseBookingAdapter,
+  SupabaseGiftCardAdapter,
+  SupabaseServicePackageAdapter,
+  SupabaseCustomerExperienceAdapter,
+  SupabaseForecastAdapter,
+  SupabaseAccountingAdapter,
+  SupabaseAdvancedAdapter
 } from "./supabase";
 
 export interface RepositoryBundle {
@@ -38,6 +52,13 @@ export interface RepositoryBundle {
   settingsAdapter: SettingsRepository;
   dashboardAdapter: DashboardRepository;
   reportAdapter: ReportRepository;
+  bookingAdapter: BookingRepository;
+  giftCardAdapter: GiftCardRepository;
+  servicePackageAdapter: ServicePackageRepository;
+  customerExperienceAdapter: CustomerExperienceRepository;
+  forecastAdapter: ForecastRepository;
+  accountingAdapter: AccountingRepository;
+  advancedAdapter: AdvancedRepository;
 }
 
 export class InfrastructureError extends Error {
@@ -60,7 +81,14 @@ export function createRepositoryBundle(): RepositoryBundle {
       invoiceAdapter: new SupabaseInvoiceAdapter(),
       settingsAdapter: new SupabaseSettingsAdapter(),
       dashboardAdapter: new SupabaseDashboardAdapter(),
-      reportAdapter: new SupabaseReportAdapter()
+      reportAdapter: new SupabaseReportAdapter(),
+      bookingAdapter: new SupabaseBookingAdapter(),
+      giftCardAdapter: new SupabaseGiftCardAdapter(),
+      servicePackageAdapter: new SupabaseServicePackageAdapter(),
+      customerExperienceAdapter: new SupabaseCustomerExperienceAdapter(),
+      forecastAdapter: new SupabaseForecastAdapter(),
+      accountingAdapter: new SupabaseAccountingAdapter(),
+      advancedAdapter: new SupabaseAdvancedAdapter()
     };
   }
 

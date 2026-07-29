@@ -1,8 +1,8 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
-import { Result } from "../../domain/ports/repositories";
-import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, Invoice } from "../../domain/entities";
-import { CheckoutPayload, BackupPayload } from "../../application/dto";
-import { tenantContext, requireConfiguredCenterId } from "../../infrastructure/tenantContext";
+import { Result, BookingInput } from "../../domain/ports/repositories";
+import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings } from "../../domain/entities";
+import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
+import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
 
@@ -15,8 +15,6 @@ export function getRepositoryBundle(): RepositoryBundle {
   return repositoryBundle;
 }
 
-// Generic helper to unwrap Result and enforce errors instead of silently failing,
-// but for our React hooks we will pass the promise.
 export const useCases = {
   auth: {
     login: (u: string, p: string) => getRepositoryBundle().authAdapter.login(u, p),
@@ -33,12 +31,9 @@ export const useCases = {
     list: (range?: { fromISO: string, toISO: string }) => getRepositoryBundle().appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
     create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
+    markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
     delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
-    sendReminder: async (id: string): Promise<Result<void, any>> => {
-      // Stub: returns success immediately
-      // Backend: would send SMS/email reminder via Supabase function
-      return { ok: true, data: undefined };
-    },
+    sendReminder: async (_id: string): Promise<Result<void, any>> => ({ ok: true, data: undefined }),
   },
   services: {
     list: () => getRepositoryBundle().serviceAdapter.list(),
@@ -50,6 +45,7 @@ export const useCases = {
     list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
+    rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),
     getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
     delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
   },
@@ -79,20 +75,62 @@ export const useCases = {
     backup: async () => getRepositoryBundle().settingsAdapter.backup(),
     exportData: async () => getRepositoryBundle().settingsAdapter.exportData(),
     restore: async (data: BackupPayload) => getRepositoryBundle().settingsAdapter.restore(data),
+    getNotificationSettings: () => getRepositoryBundle().settingsAdapter.getNotificationSettings(),
+    updateNotificationSettings: async (data: NotificationSettingsInput) => getRepositoryBundle().settingsAdapter.updateNotificationSettings(data),
+    getPaymentGatewaySettings: () => getRepositoryBundle().settingsAdapter.getPaymentGatewaySettings(),
+    updatePaymentGatewaySettings: async (data: PaymentGatewaySettingsInput) => getRepositoryBundle().settingsAdapter.updatePaymentGatewaySettings(data),
   },
   invoices: {
     checkout: async (data: CheckoutPayload) => getRepositoryBundle().invoiceAdapter.checkout(data),
     getForPrint: (id: string) => getRepositoryBundle().invoiceAdapter.getForPrint(id),
+  },
+  giftCards: {
+    list: () => getRepositoryBundle().giftCardAdapter.list(),
+    issue: (input: IssueGiftCardInput) => getRepositoryBundle().giftCardAdapter.issue(input),
+    getTransactions: (giftCardId: string) => getRepositoryBundle().giftCardAdapter.getTransactions(giftCardId),
+  },
+  servicePackages: {
+    list: () => getRepositoryBundle().servicePackageAdapter.list(),
+    create: (input: CreateServicePackageInput) => getRepositoryBundle().servicePackageAdapter.create(input),
   },
   reports: {
     getSales: (f: string, t: string) => getRepositoryBundle().reportAdapter.getSales(f, t),
     getAppointments: (f: string, t: string) => getRepositoryBundle().reportAdapter.getAppointments(f, t),
     getInventory: () => getRepositoryBundle().reportAdapter.getInventory(),
   },
+
+  customerExperience: {
+    listReviews: () => getRepositoryBundle().customerExperienceAdapter.listReviews(),
+    createReview: (input: CreateCustomerReviewInput) => getRepositoryBundle().customerExperienceAdapter.createReview(input),
+    listServiceFiles: (customerId?: string) => getRepositoryBundle().customerExperienceAdapter.listServiceFiles(customerId),
+    createServiceFile: (input: CreateServiceFileInput) => getRepositoryBundle().customerExperienceAdapter.createServiceFile(input),
+  },
+  forecasts: {
+    getInventoryForecast: () => getRepositoryBundle().forecastAdapter.getInventoryForecast(),
+    getFinancialForecast: () => getRepositoryBundle().forecastAdapter.getFinancialForecast(),
+  },
+  accounting: {
+    listJournalEntries: () => getRepositoryBundle().accountingAdapter.listJournalEntries(),
+    createJournalEntry: (input: CreateJournalEntryInput) => getRepositoryBundle().accountingAdapter.createJournalEntry(input),
+  },
+  advanced: {
+    listAiBookingLeads: () => getRepositoryBundle().advancedAdapter.listAiBookingLeads(),
+    createAiBookingLead: (input: CreateAiBookingLeadInput) => getRepositoryBundle().advancedAdapter.createAiBookingLead(input),
+  },
+
+  booking: {
+    listServices: () => getRepositoryBundle().bookingAdapter.listServices(),
+    listStaff: () => getRepositoryBundle().bookingAdapter.listStaff(),
+    getCenterInfo: () => getRepositoryBundle().bookingAdapter.getCenterInfo(),
+    getTakenSlots: (dayISO: string) => getRepositoryBundle().bookingAdapter.getTakenSlots(dayISO),
+    createBooking: (input: BookingInput) => getRepositoryBundle().bookingAdapter.createBooking(input),
+    cancelBooking: (input: { appointmentId: string; phone: string; token: string; reason?: string }) => getRepositoryBundle().bookingAdapter.cancelBooking(input),
+    rescheduleBooking: (input: { appointmentId: string; phone: string; token: string; newDateTimeISO: string; newEmployeeId?: string; reason?: string }) => getRepositoryBundle().bookingAdapter.rescheduleBooking(input),
+    clientPortalLogin: (phone: string, token: string) => getRepositoryBundle().bookingAdapter.clientPortalLogin(phone, token),
+    getClientPortalProfile: (customerId: string, phone: string, token: string) => getRepositoryBundle().bookingAdapter.getClientPortalProfile(customerId, phone, token),
+  },
   tenant: {
-    setActiveCenterId: (id: string | null) => {
-      tenantContext.activeCenterId = id;
-    },
+    setActiveCenterId: (id: string | null) => { setActiveCenter(id); },
     getActiveCenterId: () => {
       try {
         return requireConfiguredCenterId();

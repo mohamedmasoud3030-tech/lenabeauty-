@@ -1,4 +1,4 @@
-import { Outlet, useLocation, NavLink } from "react-router-dom";
+import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
 import { Menu, Bell, ChevronRight, LayoutGrid, Sparkles, Zap, Star, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
@@ -7,8 +7,10 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
+import CenterSwitcher from "./CenterSwitcher";
 
 export default function Layout() {
+  const nav = useNavigate();
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [showSidebar, setShowSidebar] = useState(false);
@@ -36,7 +38,7 @@ export default function Layout() {
   const isRtl = i18n.language === "ar";
 
   const bottomNavItems = [
-    { to: "/", labelKey: "Home", Icon: LayoutDashboard },
+    { to: "/dashboard", labelKey: "Home", Icon: LayoutDashboard },
     { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
     { to: "/pos", labelKey: "POS", Icon: Receipt },
     { to: "/customers", labelKey: "Customers", Icon: Users },
@@ -81,6 +83,7 @@ export default function Layout() {
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setShowSidebar(true)}
+                aria-label={t("Open menu")}
                 className="lg:hidden h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm active:scale-95"
               >
                 <Menu className="h-5 w-5" />
@@ -99,6 +102,7 @@ export default function Layout() {
 
             {/* Right Actions */}
             <div className="flex items-center gap-1 sm:gap-3 ml-auto">
+              <CenterSwitcher />
               <GlobalSearch />
 
               <button className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
@@ -132,7 +136,7 @@ export default function Layout() {
                         </p>
                       </div>
                       <button
-                        onClick={() => { setShowUserMenu(false); window.location.href = "/settings"; }}
+                        onClick={() => { setShowUserMenu(false); nav("/settings"); }}
                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/50 transition-all"
                       >
                         <Settings className="h-4 w-4" />
@@ -193,7 +197,7 @@ export default function Layout() {
             <NavLink
               key={to}
               to={to}
-              end={to === "/"}
+              end={to === "/dashboard"}
               className={({ isActive }) =>
                 clsx(
                   "flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-200 min-h-[44px]",

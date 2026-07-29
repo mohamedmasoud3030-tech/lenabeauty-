@@ -1,6 +1,7 @@
 import {
   Customer, Employee, Service, ServiceCategory,
-  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings
+  Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
+  NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -26,6 +27,7 @@ export interface CustomerRepository {
   getById(id: string): Promise<Result<Customer, DomainError>>;
   create(data: Partial<Customer>): Promise<Result<Customer, DomainError>>;
   update(id: string, data: Partial<Customer>): Promise<Result<Customer, DomainError>>;
+  rotatePortalToken(id: string): Promise<Result<{ customerId: string; portalAccessToken: string }, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
   getHistory(id: string): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>>;
 }
@@ -48,6 +50,7 @@ export interface AppointmentRepository {
   list(range: { fromISO: string, toISO: string }): Promise<Result<Appointment[], DomainError>>;
   create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   update(id: string, data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
+  markNoShow(id: string, input?: { chargeNoShowFee?: boolean; note?: string }): Promise<Result<{ appointment: Appointment; chargedAmount: number }, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
@@ -66,11 +69,22 @@ export interface ExpenseRepository {
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, InventoryForecastRow, FinancialForecastSummary } from "../../application/dto";
 
 export interface InvoiceRepository {
   checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number }, DomainError>>;
   getForPrint(id: string): Promise<Result<InvoicePrintData, DomainError>>;
+}
+
+export interface GiftCardRepository {
+  list(): Promise<Result<GiftCard[], DomainError>>;
+  issue(input: { code: string; initialBalance: number; customerId?: string; note?: string; expiresAtISO?: string }): Promise<Result<GiftCard, DomainError>>;
+  getTransactions(giftCardId: string): Promise<Result<GiftCardTransaction[], DomainError>>;
+}
+
+export interface ServicePackageRepository {
+  list(): Promise<Result<ServicePackage[], DomainError>>;
+  create(input: { name: string; description?: string; packagePrice: number; items: { serviceId: string; quantity: number }[] }): Promise<Result<ServicePackage, DomainError>>;
 }
 
 export interface SettingsRepository {
@@ -80,6 +94,10 @@ export interface SettingsRepository {
   backup(): Promise<Result<{ message: string }, DomainError>>;
   exportData(): Promise<Result<any, DomainError>>;
   restore(data: BackupPayload): Promise<Result<void, DomainError>>;
+  getNotificationSettings(): Promise<Result<NotificationSettingsEntity, DomainError>>;
+  updateNotificationSettings(data: Partial<NotificationSettingsEntity>): Promise<Result<NotificationSettingsEntity, DomainError>>;
+  getPaymentGatewaySettings(): Promise<Result<PaymentGatewaySettings, DomainError>>;
+  updatePaymentGatewaySettings(data: Partial<PaymentGatewaySettings>): Promise<Result<PaymentGatewaySettings, DomainError>>;
 }
 
 export interface DashboardRepository {
@@ -92,4 +110,51 @@ export interface ReportRepository {
   getSales(from: string, to: string): Promise<Result<SalesReportRow[], DomainError>>;
   getAppointments(from: string, to: string): Promise<Result<AppointmentReportRow[], DomainError>>;
   getInventory(): Promise<Result<InventoryReportRow[], DomainError>>;
+}
+
+export interface PublicService { id: string; name: string; price: number; durationMinutes: number; }
+export interface PublicStaff { id: string; name: string; }
+export interface PublicCenterInfo { name: string; currency: string; phone?: string; address?: string; }
+export interface BookingInput {
+  serviceId: string;
+  employeeId?: string;
+  customerName: string;
+  customerPhone: string;
+  dateTimeISO: string;
+  notes?: string;
+}
+
+
+export interface CustomerExperienceRepository {
+  listReviews(): Promise<Result<CustomerReview[], DomainError>>;
+  createReview(input: CreateCustomerReviewInput): Promise<Result<CustomerReview, DomainError>>;
+  listServiceFiles(customerId?: string): Promise<Result<ServiceFile[], DomainError>>;
+  createServiceFile(input: CreateServiceFileInput): Promise<Result<ServiceFile, DomainError>>;
+}
+
+export interface ForecastRepository {
+  getInventoryForecast(): Promise<Result<InventoryForecastRow[], DomainError>>;
+  getFinancialForecast(): Promise<Result<FinancialForecastSummary, DomainError>>;
+}
+
+export interface AccountingRepository {
+  listJournalEntries(): Promise<Result<AccountingJournalEntry[], DomainError>>;
+  createJournalEntry(input: CreateJournalEntryInput): Promise<Result<AccountingJournalEntry, DomainError>>;
+}
+
+export interface AdvancedRepository {
+  listAiBookingLeads(): Promise<Result<AiBookingLead[], DomainError>>;
+  createAiBookingLead(input: CreateAiBookingLeadInput): Promise<Result<AiBookingLead, DomainError>>;
+}
+
+export interface BookingRepository {
+  listServices(): Promise<Result<PublicService[], DomainError>>;
+  listStaff(): Promise<Result<PublicStaff[], DomainError>>;
+  getCenterInfo(): Promise<Result<PublicCenterInfo, DomainError>>;
+  getTakenSlots(dayISO: string): Promise<Result<{ dateTimeISO: string; employeeId?: string }[], DomainError>>;
+  createBooking(input: BookingInput): Promise<Result<{ appointmentId: string }, DomainError>>;
+  cancelBooking(input: { appointmentId: string; phone: string; token: string; reason?: string }): Promise<Result<{ appointment: Appointment }, DomainError>>;
+  rescheduleBooking(input: { appointmentId: string; phone: string; token: string; newDateTimeISO: string; newEmployeeId?: string; reason?: string }): Promise<Result<{ appointment: Appointment }, DomainError>>;
+  clientPortalLogin(phone: string, token: string): Promise<Result<ClientPortalSession, DomainError>>;
+  getClientPortalProfile(customerId: string, phone: string, token: string): Promise<Result<ClientPortalProfile, DomainError>>;
 }

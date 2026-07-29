@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LenaBeauty Desktop",
+  "version": "0.1.0",
+  "identifier": "com.lenabeauty.desktop",
+  "build": {
+    "beforeDevCommand": "npm run desktop:dev",
+    "beforeBuildCommand": "npm run desktop:build:web",
+    "devUrl": "http://127.0.0.1:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "LenaBeauty Desktop",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 1200,
+        "minHeight": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Business",
+    "shortDescription": "Desktop salon management shell for LenaBeauty",
+    "longDescription": "Offline-first Tauri desktop foundation for LenaBeauty with future SQLite sync support.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["lenabeauty"]
+      }
+    },
+    "updater": {
+      "active": false
+    }
+  }
+}

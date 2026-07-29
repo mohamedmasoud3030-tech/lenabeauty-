@@ -5,11 +5,11 @@ import {
   Terminal, ShieldCheck, Globe, Phone, MapPin, Hash, 
   Coins, CheckCircle2, XCircle, ChevronRight, Sparkles, Bell
 } from "lucide-react";
+import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { validateBackupPayload } from "../application/dto";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -43,7 +43,7 @@ export default function SettingsPage() {
   const [backupInterval, setBackupInterval] = useState(30);
 
   // center settings
-  const [s, setS] = useState<any | null>(null);
+  const [s, setS] = useState<CenterSettings | null>(null);
   const [busy, setBusy] = useState(false);
 
   // users
@@ -82,7 +82,7 @@ export default function SettingsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', t("Failed to upload logo"));
+         showToast('error', t("Error"), t("Failed to upload logo"));
       }
     } finally {
       setBusy(false);
@@ -100,7 +100,7 @@ export default function SettingsPage() {
         cr: s.cr ?? "",
         postalCode: s.postalCode ?? "",
         currency: s.currency ?? "OMR",
-        logoPath: s.logoPath ?? null,
+        logoPath: s.logoPath ?? undefined,
       }));
       setS(updated);
       showToast('success', t('Success'), t("Settings saved successfully"));
@@ -108,7 +108,7 @@ export default function SettingsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err.message ?? t("Error"));
+         showToast('error', t("Error"), err.message ?? t("Error"));
       }
     } finally {
       setBusy(false);
@@ -129,8 +129,8 @@ export default function SettingsPage() {
   }
 
   async function submitUser() {
-    if (!username.trim()) return showToast('error', 'Error', t("Username is required"));
-    if (!isEditing && !password) return showToast('error', 'Error', t("Password is required"));
+    if (!username.trim()) return showToast('error', t("Error"), t("Username is required"));
+    if (!isEditing && !password) return showToast('error', t("Error"), t("Password is required"));
 
     setUBusy(true);
     try {
@@ -146,8 +146,8 @@ export default function SettingsPage() {
       }
       await loadUsersOnly();
       resetUserForm();
-    } catch (e) {
-      showToast('error', 'Error', e?.message ?? t("Error"));
+    } catch (e: any) {
+      showToast("error", t("Error"), formatError(e));
     } finally {
       setUBusy(false);
     }
@@ -173,8 +173,8 @@ export default function SettingsPage() {
     try {
       await useCases.employees.delete(id);
       await loadUsersOnly();
-    } catch (e) {
-      showToast('error', 'Error', e?.message ?? t("Error"));
+    } catch (e: any) {
+      showToast("error", t("Error"), formatError(e));
     } finally {
       setUBusy(false);
     }
@@ -195,7 +195,7 @@ export default function SettingsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err.message || t("Failed to create backup"));
+         showToast('error', t("Error"), err.message || t("Failed to create backup"));
       }
     } finally {
       setBusy(false);
@@ -217,7 +217,7 @@ export default function SettingsPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err.message || t("Failed to export data"));
+         showToast('error', t("Error"), err.message || t("Failed to export data"));
       }
     } finally {
       setBusy(false);
@@ -256,7 +256,7 @@ export default function SettingsPage() {
           if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
              showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
           } else {
-             showToast('error', 'Error', err?.message || t("Failed to restore backup."));
+             showToast('error', t("Error"), err?.message || t("Failed to restore backup."));
              console.error(err);
           }
         } finally {
@@ -843,10 +843,10 @@ export default function SettingsPage() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <button
                     onClick={async () => {
-                      showToast('error', 'Error', t("Running Full E2E Test... Check console and Activity Log."));
+                      showToast('error', t("Error"), t("Running Full E2E Test... Check console and Activity Log."));
                       try {
                         await Promise.reject(new Error("E2E Test is not available in this build."));
-                      } catch (err: any) { showToast('error', 'Error', ((err as Error).message || String(err))); }
+                      } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
                     }}
                     className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-indigo-500 hover:border-indigo-500 hover:scale-[1.02]"
                   >
@@ -863,7 +863,7 @@ export default function SettingsPage() {
                     onClick={async () => {
                       try {
                         await Promise.reject(new Error("DB Self-Test is not available in this build."));
-                      } catch (err: any) { showToast('error', 'Error', ((err as Error).message || String(err))); }
+                      } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
                     }}
                     className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-emerald-500 hover:border-emerald-500 hover:scale-[1.02]"
                   >

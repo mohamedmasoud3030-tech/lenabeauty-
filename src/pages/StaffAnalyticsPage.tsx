@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Star, Award, Target, Users, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import DemoDataBanner from '../shared/components/DemoDataBanner';
 
 interface StaffMember {
   id: string;
@@ -113,6 +114,7 @@ const StaffAnalyticsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoDataBanner />
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center gap-2">

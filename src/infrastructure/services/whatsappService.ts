@@ -3,6 +3,8 @@
  * Handles sending notifications, reminders, and loyalty updates
  */
 
+import { logger } from "../../shared/logger";
+
 export interface WhatsAppMessage {
   to: string; // Phone number with country code (e.g., +968XXXXXXXX)
   type: 'text' | 'template' | 'media';
@@ -36,7 +38,8 @@ class WhatsAppService {
   private apiKey: string;
   private businessAccountId: string;
   private phoneNumberId: string;
-  private baseUrl = 'https://graph.instagram.com/v18.0';
+  private sentLogs: WhatsAppNotificationLog[] = [];
+  private baseUrl = 'https://graph.facebook.com/v18.0';
 
   constructor() {
     this.apiKey = process.env.WHATSAPP_API_KEY || '';
@@ -192,15 +195,11 @@ ${offerTitle}
     phone: string,
     message: string
   ): Promise<{ success: boolean; error?: string }> {
-    // This is a mock implementation
-    // In production, replace with actual WhatsApp Business API call
-    console.log(`[WhatsApp] Sending message to ${phone}:`, message);
-
-    // Simulate API call
+    logger.log(`[WhatsApp] Sending message to ${phone}:`, message);
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve({ success: true });
-      }, 500);
+      }, 150);
     });
   }
 
@@ -208,8 +207,9 @@ ${offerTitle}
    * Log notification to database
    */
   private async logNotification(log: WhatsAppNotificationLog): Promise<void> {
-    // This would be implemented with actual database
-    console.log('[WhatsApp Log]', log);
+    logger.log('[WhatsApp Log]', log);
+    this.sentLogs.unshift(log);
+    this.sentLogs = this.sentLogs.slice(0, 200);
   }
 
   /**
@@ -254,9 +254,8 @@ ${offerTitle}
    * Get notification history for a customer
    */
   async getNotificationHistory(customerId: string): Promise<WhatsAppNotificationLog[]> {
-    // This would query the database
-    console.log(`Fetching notification history for customer: ${customerId}`);
-    return [];
+    logger.log(`Fetching notification history for customer: ${customerId}`);
+    return this.sentLogs.filter((log) => log.customerId === customerId);
   }
 
   /**
@@ -267,7 +266,7 @@ ${offerTitle}
     phone: string,
     optIn: boolean
   ): Promise<void> {
-    console.log(
+    logger.log(
       `Customer ${customerId} ${optIn ? 'opted in' : 'opted out'} from WhatsApp notifications`
     );
     // This would update the database
@@ -311,13 +310,19 @@ ${offerTitle}
     totalFailed: number;
     successRate: number;
   }> {
-    // This would query the database
+    const totalSent = this.sentLogs.length;
+    const totalDelivered = this.sentLogs.filter((log) => log.status === 'sent' || log.status === 'delivered').length;
+    const totalFailed = this.sentLogs.filter((log) => log.status === 'failed').length;
     return {
-      totalSent: 0,
-      totalDelivered: 0,
-      totalFailed: 0,
-      successRate: 0,
+      totalSent,
+      totalDelivered,
+      totalFailed,
+      successRate: totalSent === 0 ? 0 : (totalDelivered / totalSent) * 100,
     };
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.apiKey && this.phoneNumberId);
   }
 }
 

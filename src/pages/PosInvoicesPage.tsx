@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { 
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
-  Scissors, Package, ChevronRight, CheckCircle2, Sparkles, 
+  Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
   Zap, Clock, TrendingUp
 } from "lucide-react";
@@ -14,17 +13,22 @@ import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
+import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData } from "../application/dto";
+import { desktopRepository } from "../desktop/repository";
+import { isDesktopShell } from "../desktop/config";
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
-  type: "service" | "product";
+  type: "service" | "product" | "package";
   cartId: string;
+  qty?: number;
   stockQuantity?: number;
   category?: string;
   brand?: string;
+  includedServices?: number;
 }
 
 type PosPrintData = InvoicePrintData;
@@ -34,6 +38,7 @@ export default function PosInvoicesPage() {
   const { t, i18n } = useTranslation();
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [packages, setPackages] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -41,10 +46,13 @@ export default function PosInvoicesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [discount, setDiscount] = useState(0);
+  const [taxRate, setTaxRate] = useState(0);
   const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftCards, setGiftCards] = useState<any[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
-  const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
+  const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS" | "PACKAGES">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -81,14 +89,20 @@ export default function PosInvoicesPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, p, e] = await Promise.all([
+      const [s, p, pkg, e, settings, gc] = await Promise.all([
         unwrap(useCases.services.list()),
         unwrap(useCases.products.list()),
+        useCases.servicePackages.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
         unwrap(useCases.employees.list()),
+        useCases.settings.get().then((r) => (r.ok ? r.data : null)).catch(() => null),
+        useCases.giftCards.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
       ]);
       setServices(s);
       setProducts(p);
+      setPackages(pkg);
       setEmployees(e);
+      setGiftCards(gc);
+      if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
     } finally {
       setLoading(false);
     }
@@ -104,9 +118,9 @@ export default function PosInvoicesPage() {
     }
   }
 
-  function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number}, type: "service" | "product") {
+  function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number, includedServices?: number}, type: "service" | "product" | "package") {
     if (type === "product" && item.stockQuantity !== undefined && item.stockQuantity <= 0) {
-      showToast('error', 'Error', t("Out of stock!"));
+      showToast('error', t("Error"), t("Out of stock!"));
       return;
     }
     setCart([...cart, { ...item, type, cartId: Math.random().toString(36).substring(2, 11) }]);
@@ -122,31 +136,51 @@ export default function PosInvoicesPage() {
     setSelectedCustomer(null);
     setDiscount(0);
     setUseLoyaltyPoints(false);
+    setGiftCardCode("");
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + Number(item.price), 0);
-  const loyaltyDiscount = useLoyaltyPoints && selectedCustomer ? Math.floor(selectedCustomer.loyaltyPoints / 100) : 0;
-  const total = Math.max(0, subtotal - discount - loyaltyDiscount);
+  const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * Number(item.qty ?? 1), 0);
+  // Mirror the server RPC (process_checkout_v1): 1 loyalty point = 1 OMR,
+  // capped at (subtotal - manual discount). Previously this used /100 which
+  // disagreed with the backend and showed the customer the wrong discount.
+  // Automatic tier discount from the customer's lifetime spend
+  // (server-authoritative; mirrored here for an accurate preview).
+  const tierInfo = selectedCustomer ? getTierBySpend(selectedCustomer.totalSpent) : null;
+  const tierPercent = tierInfo?.discountPercent ?? 0;
+  const tierDiscount = Math.round(subtotal * tierPercent / 100 * 1000) / 1000;
+  const loyaltyDiscount =
+    useLoyaltyPoints && selectedCustomer
+      ? Math.max(0, Math.min(subtotal - discount - tierDiscount, selectedCustomer.loyaltyPoints))
+      : 0;
+  const selectedGiftCard = giftCards.find((card) => card.code === giftCardCode.trim().toUpperCase());
+  const giftCardDiscount = selectedGiftCard
+    ? Math.max(0, Math.min(subtotal - discount - tierDiscount - loyaltyDiscount, selectedGiftCard.currentBalance))
+    : 0;
+  // Net (pre-tax) after discounts, then VAT from center settings, then total.
+  // Mirrors the server RPC exactly so the preview equals what is persisted.
+  const net = Math.max(0, subtotal - discount - tierDiscount - loyaltyDiscount - giftCardDiscount);
+  const tax = Math.round(net * (taxRate || 0) / 100 * 1000) / 1000;
+  const total = net + tax;
 
   async function handleCheckout() {
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
-      showToast('error', 'Error', t("Please select a customer, employee, and add items to the cart"));
+      showToast('error', t("Error"), t("Please select a customer, employee, and add items to the cart"));
       return;
     }
 
-    if (discount + loyaltyDiscount > subtotal) {
-      showToast('error', 'Error', t("Discount cannot exceed subtotal"));
+    if (discount + tierDiscount + loyaltyDiscount + giftCardDiscount > subtotal) {
+      showToast('error', t("Error"), t("Discount cannot exceed subtotal"));
       return;
     }
 
     if (!["cash", "card", "transfer"].includes(paymentMethod.toLowerCase())) {
-      showToast('error', 'Error', t("Invalid payment method"));
+      showToast('error', t("Error"), t("Invalid payment method"));
       return;
     }
 
     const hasInvalidPriceOrQty = cart.some(it => isNaN(Number(it.price)) || Number(it.price) < 0);
     if (hasInvalidPriceOrQty) {
-      showToast('error', 'Error', t("One or more items have an invalid price or quantity"));
+      showToast('error', t("Error"), t("One or more items have an invalid price or quantity"));
       return;
     }
 
@@ -157,19 +191,27 @@ export default function PosInvoicesPage() {
         paymentMethod: paymentMethod.toLowerCase() as "cash" | "card" | "transfer",
         discountAmount: discount,
         useLoyaltyPoints,
+        giftCardCode: giftCardCode.trim() ? giftCardCode.trim().toUpperCase() : undefined,
         items: cart.map(it => {
           if (it.type === "service") {
             return {
               type: "service" as const,
               serviceId: it.id,
-              qty: 1,
+              qty: Number(it.qty ?? 1),
+              price: Number(it.price)
+            };
+          } else if (it.type === "product") {
+            return {
+              type: "product" as const,
+              productId: it.id,
+              qty: Number(it.qty ?? 1),
               price: Number(it.price)
             };
           } else {
             return {
-              type: "product" as const,
-              productId: it.id,
-              qty: 1,
+              type: "package" as const,
+              packageId: it.id,
+              qty: Number(it.qty ?? 1),
               price: Number(it.price)
             };
           }
@@ -182,6 +224,10 @@ export default function PosInvoicesPage() {
         const pData = await unwrap(useCases.invoices.getForPrint(res.invoice.id));
         setPrintData(pData);
         setShowPrintModal(true);
+        if (isDesktopShell()) {
+          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${pData.invoice.totalAmount}</p></div>`;
+          await desktopRepository.printHtml(`Invoice ${pData.invoice.id}`, invoiceHtml);
+        }
       } catch (e) {
         console.error("Print failed", e);
       }
@@ -189,17 +235,15 @@ export default function PosInvoicesPage() {
       clearCart();
       showToast('success', t("Success"), t("Payment successful!"));
     } catch (err: any) {
-      showToast('error', 'Error', err.message || t("Payment failed"));
+      showToast('error', t("Error"), err.message || t("Payment failed"));
     }
   }
 
   const filteredItems = activeTab === "SERVICES"
-    ? services.filter(it => 
-        it.name.toLowerCase().includes(itemSearchQ.toLowerCase())
-      )
-    : products.filter(it => 
-        it.name.toLowerCase().includes(itemSearchQ.toLowerCase())
-      );
+    ? services.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+    : activeTab === "PRODUCTS"
+      ? products.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+      : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
 
   return (
     <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
@@ -285,6 +329,16 @@ export default function PosInvoicesPage() {
                     <Package className="h-4 w-4 shrink-0" />
                     {t("Products")}
                   </button>
+                  <button 
+                    onClick={() => setActiveTab("PACKAGES")}
+                    className={clsx(
+                      "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
+                      activeTab === "PACKAGES" ? "bg-primary text-primary-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Boxes className="h-4 w-4 shrink-0" />
+                    {t("Packages")}
+                  </button>
                 </div>
               </div>
               <div className="relative group">
@@ -315,7 +369,7 @@ export default function PosInvoicesPage() {
                         animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
                         exit={{ opacity: 0, scale: 0.9 }}
                         key={it.id} 
-                        onClick={() => addToCart(it, activeTab === "SERVICES" ? "service" : "product")}
+                        onClick={() => addToCart(it as any, activeTab === "SERVICES" ? "service" : activeTab === "PRODUCTS" ? "product" : "package")}
                         disabled={activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0}
                         className={clsx(
                           "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-3 lg:p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 flex flex-col items-start gap-3 text-start",
@@ -324,7 +378,7 @@ export default function PosInvoicesPage() {
                       >
                         <div className="flex items-start justify-between w-full gap-2">
                           <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                            {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                            {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : activeTab === "PRODUCTS" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                           </div>
                           <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">
                             <Plus className="h-4 w-4" />
@@ -339,6 +393,11 @@ export default function PosInvoicesPage() {
                               (it as Product).stockQuantity > 5 ? "text-emerald-600" : "text-rose-600"
                             )}>
                               {(it as Product).stockQuantity} {t("Stock")}
+                            </div>
+                          )}
+                          {activeTab === "PACKAGES" && (
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                              {(it as any).items?.length || 0} {t("Included Services")}
                             </div>
                           )}
                         </div>
@@ -419,12 +478,12 @@ export default function PosInvoicesPage() {
                       className="group flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:bg-muted/30 hover:shadow-inner"
                     >
                       <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors text-sm font-bold">
-                        {item.type === "service" ? <Scissors className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+                        {item.type === "service" ? <Scissors className="h-4 w-4" /> : item.type === "product" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate text-foreground leading-tight">{item.name}</p>
                         <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">
-                          {item.type === "service" ? t("Service") : t("Product")}
+                          {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")}
                         </p>
                       </div>
                       <div className="text-end space-y-1">
@@ -573,7 +632,7 @@ export default function PosInvoicesPage() {
                 </div>
 
                 {/* Loyalty Points */}
-                {selectedCustomer && selectedCustomer.loyaltyPoints >= 100 && (
+                {selectedCustomer && selectedCustomer.loyaltyPoints > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -602,6 +661,24 @@ export default function PosInvoicesPage() {
                     </button>
                   </motion.div>
                 )}
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <CreditCard className="h-3 w-3" />
+                    {t("Gift Card")}
+                  </label>
+                  <input
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                    placeholder={t("Enter gift card code")}
+                    value={giftCardCode}
+                    onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
+                  />
+                  {selectedGiftCard && (
+                    <p className="text-[9px] font-bold text-sky-600 uppercase tracking-widest">
+                      {t("Available Balance")}: {selectedGiftCard.currentBalance.toFixed(2)} {t("OMR")} · {t("Redeem for")} {giftCardDiscount.toFixed(2)} {t("OMR")}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Summary & Checkout */}
@@ -611,10 +688,28 @@ export default function PosInvoicesPage() {
                     <span>{t("Subtotal")}</span>
                     <span>{subtotal.toFixed(2)} OMR</span>
                   </div>
-                  {(discount > 0 || loyaltyDiscount > 0) && (
+                  {tierDiscount > 0 && tierInfo && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
+                      <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
+                      <span>-{tierDiscount.toFixed(2)} OMR</span>
+                    </div>
+                  )}
+                  {(discount > 0 || loyaltyDiscount > 0 || giftCardDiscount > 0) && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
                       <span>{t("Discounts")}</span>
-                      <span>-{(discount + loyaltyDiscount).toFixed(2)} OMR</span>
+                      <span>-{(discount + loyaltyDiscount + giftCardDiscount).toFixed(2)} OMR</span>
+                    </div>
+                  )}
+                  {giftCardDiscount > 0 && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-sky-600 uppercase tracking-widest">
+                      <span>{t("Gift Card Redemption")}</span>
+                      <span>-{giftCardDiscount.toFixed(2)} OMR</span>
+                    </div>
+                  )}
+                  {taxRate > 0 && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                      <span>{t("VAT")} ({taxRate}%)</span>
+                      <span>{tax.toFixed(2)} OMR</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">

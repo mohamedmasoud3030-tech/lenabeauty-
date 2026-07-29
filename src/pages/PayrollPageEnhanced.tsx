@@ -3,6 +3,7 @@ import { Download, Printer, Share2, FileText, TrendingUp, Users, DollarSign, Cal
 import { useTranslation } from 'react-i18next';
 import printService from '../infrastructure/services/printService';
 import brandingService from '../infrastructure/services/brandingService';
+import DemoDataBanner from '../shared/components/DemoDataBanner';
 
 interface PayrollData {
   employeeId: string;
@@ -182,8 +183,9 @@ export default function PayrollPageEnhanced() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+    <div className="min-h-full rounded-2xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-3 sm:p-6">
       <div className="max-w-6xl mx-auto">
+        <div className="mb-6"><DemoDataBanner /></div>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">

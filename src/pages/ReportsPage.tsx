@@ -49,7 +49,7 @@ export default function ReportsPage() {
       } else if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-        showToast('error', 'Error', err.message || t("Error"));
+        showToast('error', t("Error"), err.message || t("Error"));
       }
       setData([]);
     } finally {
@@ -193,7 +193,7 @@ export default function ReportsPage() {
                     padding: "12px 16px"
                   }}
                   labelStyle={{ fontWeight: 700, fontSize: "12px", color: "hsl(var(--muted-foreground))" }}
-                  formatter={(value) => [`${value.toFixed(2)} OMR`, t("Revenue")]}
+                  formatter={(value) => [`${Number(value ?? 0).toFixed(2)} OMR`, t("Revenue")]}
                 />
                 <Area
                   type="monotone"
@@ -326,7 +326,7 @@ export default function ReportsPage() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                   outerRadius={120}
                   fill="#8884d8"
                   dataKey="value"

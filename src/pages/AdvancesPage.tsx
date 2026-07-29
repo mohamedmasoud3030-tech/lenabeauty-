@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { DollarSign, Plus, Check, X, Clock, TrendingDown, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import DemoDataBanner from '../shared/components/DemoDataBanner';
 
 interface Advance {
   id: string;
@@ -123,6 +124,7 @@ const AdvancesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoDataBanner />
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center gap-2">

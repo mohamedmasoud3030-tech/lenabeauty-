@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, Clock, Fingerprint, Eye, Scan, Smartphone, Download, Filter, Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import DemoDataBanner from '../shared/components/DemoDataBanner';
 
 interface AttendanceRecord {
   id: string;
@@ -141,6 +142,7 @@ const AttendancePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <DemoDataBanner />
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center gap-2">

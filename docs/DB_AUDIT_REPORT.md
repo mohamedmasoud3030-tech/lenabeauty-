@@ -1,6 +1,6 @@
 # تقرير تدقيق توافق قاعدة البيانات — LenaBeauty v1.1
 **التاريخ:** 2026-06-23  
-**المصدر:** قراءة كاملة لـ repositories.ts + mappers.ts مقابل Supabase project: ktmizdznbdwvalmmfvfc
+**المصدر:** قراءة كاملة لـ repositories.ts + mappers.ts مقابل Supabase project: YOUR_PROJECT_REF
 
 ---
 
@@ -59,19 +59,19 @@ Invoice print يعمل JOIN: `services(name)` و `products(name)`
 `center_id (PK/FK), name, currency, tax_rate, logo_path, address, phone, cr, postal_code, created_at, updated_at`
 
 ### center_memberships
-`user_id (FK→auth.users), center_id (FK→centers)`  
+`profile_id (FK→profiles), center_id (FK→centers)`  
 getMyCenters يعمل: `.select('center_id, centers(name)')`
 
 ---
 
-## إعداد Auth.users Metadata  ⚠️ مهم جداً
+## إعداد Auth.users Metadata & Profiles ⚠️ مهم جداً
 
 عند إنشاء المستخدم في Supabase Auth، يجب إضافة `user_metadata`:
 
 ```json
 {
   "role": "ADMIN",
-  "name": "اسم المستخدم"
+  "name": "المدير"
 }
 ```
 
@@ -82,7 +82,8 @@ getMyCenters يعمل: `.select('center_id, centers(name)')`
 1. Supabase Dashboard → Authentication → Users → Add User
 2. أدخل email + password
 3. في `user_metadata` أضف: `{"role": "ADMIN", "name": "المدير"}`
-4. أضف صف في `center_memberships`: `(user_id, '7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d')`
+4. أضف صف في `profiles`: `(id, full_name)` حيث `id` هو الـ UUID للمستخدم.
+5. أضف صف في `center_memberships`: `(profile_id, '7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d')`
 
 ---
 

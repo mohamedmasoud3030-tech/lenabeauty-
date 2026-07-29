@@ -28,11 +28,20 @@ export function GlobalSearch() {
     { id: "services", title: t("Services"), category: t("Navigation"), path: "/services", icon: "✂️" },
     { id: "appointments", title: t("Appointments"), category: t("Navigation"), path: "/appointments", icon: "📅" },
     { id: "customers", title: t("Customers"), category: t("Navigation"), path: "/customers", icon: "👥" },
+    { id: "gift-cards", title: t("Gift Cards"), category: t("Navigation"), path: "/gift-cards", icon: "🎁" },
+    { id: "packages", title: t("Packages"), category: t("Navigation"), path: "/packages", icon: "📦" },
     { id: "employees", title: t("Employees"), category: t("Navigation"), path: "/employees", icon: "👔" },
     { id: "inventory", title: t("Inventory"), category: t("Navigation"), path: "/inventory", icon: "📦" },
     { id: "expenses", title: t("Expenses"), category: t("Navigation"), path: "/expenses", icon: "💰" },
     { id: "reports", title: t("Reports"), category: t("Navigation"), path: "/reports", icon: "📈" },
     { id: "settings", title: t("Settings"), category: t("Navigation"), path: "/settings", icon: "⚙️" },
+    { id: "notifications", title: t("Notifications"), category: t("Navigation"), path: "/notifications", icon: "🔔" },
+    { id: "payment-gateway", title: t("Payment Gateway"), category: t("Navigation"), path: "/payment-gateway", icon: "💳" },
+    { id: "client-portal", title: t("Client Portal"), category: t("Navigation"), path: "/portal", icon: "🪪" },
+    { id: "customer-experience", title: t("Customer Experience"), category: t("Navigation"), path: "/customer-experience", icon: "✨" },
+    { id: "forecasting", title: t("Forecasting"), category: t("Navigation"), path: "/forecasting", icon: "📉" },
+    { id: "accounting", title: t("Accounting"), category: t("Navigation"), path: "/accounting", icon: "📚" },
+    { id: "advanced-automation", title: t("Advanced Automation"), category: t("Navigation"), path: "/advanced-automation", icon: "🤖" },
   ];
 
   // Keyboard shortcuts
@@ -105,10 +114,11 @@ export function GlobalSearch() {
           setIsOpen(true);
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
-        className="hidden md:flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg border border-border shadow-inner group hover:bg-muted/50 transition-all"
+        aria-label={t("Search")}
+        className="flex items-center justify-center md:justify-start gap-2 h-10 w-10 md:h-auto md:w-auto bg-muted/30 md:px-3 md:py-2 rounded-lg border border-border shadow-inner group hover:bg-muted/50 transition-all"
       >
-        <Search className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-        <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+        <Search className="h-5 w-5 md:h-4 md:w-4 text-muted-foreground group-hover:text-primary" />
+        <span className="hidden md:inline text-xs text-muted-foreground group-hover:text-foreground transition-colors">
           {t("Search")}...
         </span>
         <kbd className="hidden lg:inline-flex items-center gap-1 ml-auto px-2 py-1 rounded bg-muted text-[10px] font-bold text-muted-foreground">
@@ -135,7 +145,7 @@ export function GlobalSearch() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl"
+              className="fixed top-20 sm:top-1/2 left-1/2 -translate-x-1/2 sm:-translate-y-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-2xl px-0"
             >
               <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
                 {/* Search Input */}

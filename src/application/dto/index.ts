@@ -16,13 +16,21 @@ export interface ProductCheckoutItem {
   price: number;
 }
 
-export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem;
+export interface PackageCheckoutItem {
+  type: "package";
+  packageId: string;
+  qty: number;
+  price: number;
+}
+
+export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem | PackageCheckoutItem;
 
 export interface CheckoutPayload {
   customerId: string;
   employeeId?: string; 
   discountAmount?: number;
   useLoyaltyPoints?: boolean;
+  giftCardCode?: string;
   paymentMethod: PaymentMethod;
   items: CheckoutItem[];
 }
@@ -141,4 +149,195 @@ export function validateBackupPayload(payload: any): payload is BackupPayload {
   if (typeof payload.version !== "string") return false;
   if (!payload.data || typeof payload.data !== "object") return false;
   return true;
+}
+
+
+export interface IssueGiftCardInput {
+  code: string;
+  initialBalance: number;
+  customerId?: string;
+  note?: string;
+  expiresAtISO?: string;
+}
+
+export interface CreateServicePackageInput {
+  name: string;
+  description?: string;
+  packagePrice: number;
+  items: { serviceId: string; quantity: number }[];
+}
+
+export interface NotificationSettingsInput {
+  whatsappEnabled: boolean;
+  smsEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  whatsappSenderName?: string;
+  smsSenderName?: string;
+  whatsappTemplateBooking?: string;
+  whatsappTemplateReminder?: string;
+  smsTemplateReminder?: string;
+}
+
+export interface PaymentGatewaySettingsInput {
+  provider: "manual" | "thawani" | "paytabs" | "stripe";
+  isEnabled: boolean;
+  isSandbox: boolean;
+  publicKey?: string;
+  merchantIdentifier?: string;
+  webhookSecretHint?: string;
+  bookingDepositEnabled: boolean;
+  bookingDepositType: "fixed" | "percentage";
+  bookingDepositValue: number;
+  successUrl?: string;
+  cancelUrl?: string;
+}
+
+export interface ClientPortalSession {
+  customerId: string;
+  name: string;
+  phone?: string;
+  loyaltyPoints: number;
+  totalSpent: number;
+  lastVisitISO?: string;
+  portalLastLoginAtISO?: string;
+}
+
+
+export interface PortalReviewDto {
+  id: string;
+  appointmentId?: string;
+  rating: number;
+  comment?: string;
+  isPublished: boolean;
+  createdAtISO: string;
+}
+
+export interface PortalServiceFileImageDto {
+  id: string;
+  imageKind: "BEFORE" | "AFTER" | "REFERENCE";
+  imageUrl: string;
+  sortOrder: number;
+  createdAtISO: string;
+}
+
+export interface PortalServiceFileDto {
+  id: string;
+  appointmentId?: string;
+  serviceId?: string;
+  title: string;
+  note?: string;
+  createdAtISO: string;
+  images: PortalServiceFileImageDto[];
+}
+
+export interface PortalNotificationEventDto {
+  id: string;
+  appointmentId?: string;
+  channel: string;
+  direction: string;
+  templateKey?: string;
+  messagePreview: string;
+  deliveryStatus: string;
+  sentAtISO?: string;
+  createdAtISO: string;
+}
+
+export interface PortalReferralDto {
+  code?: string;
+  pointsEarned: number;
+}
+
+export interface CreateCustomerReviewInput {
+  customerId: string;
+  appointmentId?: string;
+  rating: number;
+  comment?: string;
+  isPublished?: boolean;
+}
+
+export interface CreateServiceFileInput {
+  customerId: string;
+  appointmentId?: string;
+  serviceId?: string;
+  title: string;
+  note?: string;
+  beforeImages?: string[];
+  afterImages?: string[];
+  referenceImages?: string[];
+}
+
+export interface CreateJournalEntryInput {
+  entryDateISO?: string;
+  entryType: "SALE" | "EXPENSE" | "PAYROLL" | "ADJUSTMENT" | "TRANSFER";
+  referenceType?: string;
+  referenceId?: string;
+  description: string;
+  debitAccount: string;
+  creditAccount: string;
+  amount: number;
+  currency?: string;
+}
+
+export interface CreateAiBookingLeadInput {
+  customerName: string;
+  customerPhone?: string;
+  preferredServiceId?: string;
+  preferredDateISO?: string;
+  sourceChannel?: "WEB" | "WHATSAPP" | "INSTAGRAM" | "PHONE" | "OTHER";
+  summary?: string;
+}
+
+export interface InventoryForecastRow {
+  productId: string;
+  productName: string;
+  stockQuantity: number;
+  averageDailyUnits: number;
+  daysRemaining: number;
+  reorderAlert: boolean;
+}
+
+export interface FinancialForecastSummary {
+  projectedMonthlyRevenue: number;
+  projectedMonthlyExpenses: number;
+  projectedMonthlyProfit: number;
+  revenueRunRateDaily: number;
+}
+
+export interface ClientPortalProfile {
+  customer: {
+    id: string;
+    name: string;
+    phone?: string;
+    email?: string;
+    notes?: string;
+    loyaltyPoints: number;
+    totalSpent: number;
+    lastVisitISO?: string;
+    portalLastLoginAtISO?: string;
+  };
+  appointments: {
+    id: string;
+    dateTimeISO: string;
+    status: string;
+    notes?: string;
+    depositAmount: number;
+    noShowFeeAmount: number;
+    noShowFeeCharged: number;
+    employeeName?: string;
+    serviceName?: string;
+  }[];
+  invoices: {
+    id: string;
+    serialNumber?: string;
+    dateISO: string;
+    totalAmount: number;
+    discount: number;
+    tax: number;
+    paymentMethod: string;
+  }[];
+  reviews: PortalReviewDto[];
+  serviceFiles: PortalServiceFileDto[];
+  notificationTimeline: PortalNotificationEventDto[];
+  referral?: PortalReferralDto;
 }

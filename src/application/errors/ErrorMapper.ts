@@ -1,31 +1,52 @@
-export function mapErrorToMessage(error: any): string {
-  if (!error) return "حدث خطأ غير متوقع.";
-  
-  const code = error.code || error.message; // Fallback to message for simple inspection
-  
+/**
+ * Maps a domain/infrastructure error to a STABLE i18n key.
+ *
+ * The UI is responsible for translating the returned key via `t(...)`.
+ * Returning keys (not literal Arabic) keeps this layer framework-agnostic
+ * and lets both languages resolve correctly. The matching keys are defined
+ * in `src/i18n.ts` for both `ar` and `en`.
+ */
+export function mapErrorToMessageKey(error: any): string {
+  if (!error) return "error.unexpected";
+
+  const code = error.code || error.message; // fallback to message for simple inspection
+
   switch (code) {
     case "AUTH_NOT_CONFIGURED":
-      return "لم يتم إعداد المصادقة بعد. يرجى إعداد قاعدة البيانات أولاً.";
+      return "error.auth_not_configured";
     case "UNAUTHORIZED":
     case "UNAUTHENTICATED":
-      return "يرجى تسجيل الدخول والصلاحية مطلوبة للقيام بهذا الإجراء.";
+      return "error.unauthorized";
     case "FORBIDDEN":
-      return "ليس لديك الصلاحيات الكافية للقيام بهذا الإجراء.";
+      return "error.forbidden";
     case "NOT_FOUND":
-      return "العنصر المطلوب غير موجود.";
+      return "error.not_found";
     case "VALIDATION_ERROR":
-      return "يوجد خطأ في البيانات المدخلة. يرجى مراجعتها والمحاولة مجدداً.";
+      return "error.validation";
     case "CONFLICT":
-      return "تعارض في البيانات. العنصر ربما موجود مسبقاً.";
+      return "error.conflict";
     case "INFRASTRUCTURE_ERROR":
-      return "قاعدة البيانات غير متصلة.";
+      return "error.infrastructure";
     case "INVALID_CREDENTIALS":
-      return "بيانات الاعتماد غير صحيحة.";
+      return "error.invalid_credentials";
+    case "BACKEND_METHOD_UNSUPPORTED":
+      return "BACKEND_METHOD_UNSUPPORTED";
     case "UNEXPECTED_ERROR":
     default:
       if (error.message && error.message.includes("not configured")) {
-        return "لم يتم إعداد المصادقة بعد. يرجى إعداد قاعدة البيانات أولاً.";
+        return "error.auth_not_configured";
       }
-      return error.message || "حدث خطأ غير متوقع.";
+      // Raw message is not a key; callers should fall back to it directly.
+      return error.message || "error.unexpected";
   }
+}
+
+/**
+ * Backwards-compatible helper that resolves an error to a user-facing string
+ * using a provided translate function.
+ */
+export function mapErrorToMessage(error: any, t?: (k: string) => string): string {
+  const key = mapErrorToMessageKey(error);
+  if (t) return t(key);
+  return key;
 }

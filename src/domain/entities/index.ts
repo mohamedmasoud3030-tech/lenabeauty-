@@ -10,6 +10,9 @@ export interface Customer {
   totalSpent: number;
   loyaltyPoints: number;
   lastVisit?: Date;
+  portalAccessToken?: string;
+  portalAccessEnabled?: boolean;
+  portalLastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +65,56 @@ export interface Appointment {
   dateTime: Date;
   status: AppointmentStatus;
   notes?: string;
+  depositAmount?: number;
+  noShowFeeAmount?: number;
+  noShowFeeCharged?: number;
+  noShowMarkedAt?: Date;
+  noShowNote?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GiftCard {
+  id: string;
+  centerId: string;
+  code: string;
+  initialBalance: number;
+  currentBalance: number;
+  customerId?: string;
+  note?: string;
+  expiresAt?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GiftCardTransaction {
+  id: string;
+  giftCardId: string;
+  centerId: string;
+  kind: "ISSUED" | "REDEEMED" | "ADJUSTED";
+  amount: number;
+  invoiceId?: string;
+  note?: string;
+  createdAt: Date;
+}
+
+export interface ServicePackageItem {
+  id: string;
+  packageId: string;
+  serviceId: string;
+  quantity: number;
+  createdAt: Date;
+}
+
+export interface ServicePackage {
+  id: string;
+  centerId: string;
+  name: string;
+  description?: string;
+  packagePrice: number;
+  isActive: boolean;
+  items?: ServicePackageItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,4 +183,118 @@ export interface CenterSettings {
   phone?: string;
   cr?: string;
   postalCode?: string;
+}
+
+export interface NotificationSettingsEntity {
+  id: string;
+  centerId: string;
+  whatsappEnabled: boolean;
+  smsEnabled: boolean;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  whatsappSenderName?: string;
+  smsSenderName?: string;
+  whatsappTemplateBooking?: string;
+  whatsappTemplateReminder?: string;
+  smsTemplateReminder?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+
+export interface CustomerReview {
+  id: string;
+  centerId: string;
+  customerId: string;
+  appointmentId?: string;
+  rating: number;
+  comment?: string;
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ServiceFileImage {
+  id: string;
+  centerId: string;
+  serviceFileId: string;
+  imageKind: "BEFORE" | "AFTER" | "REFERENCE";
+  imageUrl: string;
+  sortOrder: number;
+  createdAt: Date;
+}
+
+export interface ServiceFile {
+  id: string;
+  centerId: string;
+  customerId: string;
+  appointmentId?: string;
+  serviceId?: string;
+  title: string;
+  note?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  images?: ServiceFileImage[];
+}
+
+export interface CustomerNotificationEvent {
+  id: string;
+  centerId: string;
+  customerId: string;
+  appointmentId?: string;
+  channel: "WHATSAPP" | "SMS" | "EMAIL" | "SYSTEM";
+  direction: "OUTBOUND" | "INBOUND";
+  templateKey?: string;
+  messagePreview: string;
+  deliveryStatus: "QUEUED" | "SENT" | "DELIVERED" | "FAILED" | "READ";
+  sentAt?: Date;
+  createdAt: Date;
+}
+
+export interface AccountingJournalEntry {
+  id: string;
+  centerId: string;
+  entryDate: Date;
+  entryType: "SALE" | "EXPENSE" | "PAYROLL" | "ADJUSTMENT" | "TRANSFER";
+  referenceType?: string;
+  referenceId?: string;
+  description: string;
+  debitAccount: string;
+  creditAccount: string;
+  amount: number;
+  currency: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AiBookingLead {
+  id: string;
+  centerId: string;
+  customerName: string;
+  customerPhone?: string;
+  preferredServiceId?: string;
+  preferredDate?: Date;
+  sourceChannel: "WEB" | "WHATSAPP" | "INSTAGRAM" | "PHONE" | "OTHER";
+  status: "NEW" | "QUALIFIED" | "BOOKED" | "CLOSED";
+  summary?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PaymentGatewaySettings {
+  id: string;
+  centerId: string;
+  provider: "manual" | "thawani" | "paytabs" | "stripe";
+  isEnabled: boolean;
+  isSandbox: boolean;
+  publicKey?: string;
+  merchantIdentifier?: string;
+  webhookSecretHint?: string;
+  bookingDepositEnabled: boolean;
+  bookingDepositType: "fixed" | "percentage";
+  bookingDepositValue: number;
+  successUrl?: string;
+  cancelUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

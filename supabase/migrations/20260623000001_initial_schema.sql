@@ -14,16 +14,23 @@ CREATE TABLE IF NOT EXISTS centers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 2. CENTER_MEMBERSHIPS (getMyCenters: joins centers.name)
-CREATE TABLE IF NOT EXISTS center_memberships (
-  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id   UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  center_id UUID NOT NULL REFERENCES centers(id)    ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(user_id, center_id)
+-- 2. PROFILES (Extends auth.users)
+CREATE TABLE IF NOT EXISTS profiles (
+  id        UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 3. CENTER_SETTINGS
+-- 3. CENTER_MEMBERSHIPS (getMyCenters: joins centers.name)
+CREATE TABLE IF NOT EXISTS center_memberships (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  center_id  UUID NOT NULL REFERENCES centers(id)  ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(profile_id, center_id)
+);
+
+-- 4. CENTER_SETTINGS
 CREATE TABLE IF NOT EXISTS center_settings (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id   UUID NOT NULL UNIQUE REFERENCES centers(id) ON DELETE CASCADE,
@@ -39,7 +46,7 @@ CREATE TABLE IF NOT EXISTS center_settings (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 4. CUSTOMERS
+-- 5. CUSTOMERS
 CREATE TABLE IF NOT EXISTS customers (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id      UUID NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
@@ -55,7 +62,7 @@ CREATE TABLE IF NOT EXISTS customers (
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 5. EMPLOYEES  (month_commission_total: required by Dashboard PnL query)
+-- 6. EMPLOYEES  (month_commission_total: required by Dashboard PnL query)
 CREATE TABLE IF NOT EXISTS employees (
   id                     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id              UUID NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
@@ -71,7 +78,7 @@ CREATE TABLE IF NOT EXISTS employees (
   updated_at             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 6. SERVICES
+-- 7. SERVICES
 CREATE TABLE IF NOT EXISTS services (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id        UUID NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
@@ -84,7 +91,7 @@ CREATE TABLE IF NOT EXISTS services (
   updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 7. PRODUCTS
+-- 8. PRODUCTS
 CREATE TABLE IF NOT EXISTS products (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id      UUID NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
@@ -97,7 +104,7 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 8. APPOINTMENTS (status ENUM must match domain: SCHEDULED|COMPLETED|CANCELLED|NO_SHOW)
+-- 9. APPOINTMENTS (status ENUM must match domain: SCHEDULED|COMPLETED|CANCELLED|NO_SHOW)
 DO $$ BEGIN
   CREATE TYPE appointment_status AS ENUM ('SCHEDULED','COMPLETED','CANCELLED','NO_SHOW');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -115,7 +122,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 9. EXPENSES
+-- 10. EXPENSES
 CREATE TABLE IF NOT EXISTS expenses (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id   UUID NOT NULL REFERENCES centers(id) ON DELETE CASCADE,
@@ -126,7 +133,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 10. INVOICES
+-- 11. INVOICES
 CREATE TABLE IF NOT EXISTS invoices (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id           UUID NOT NULL REFERENCES centers(id)   ON DELETE CASCADE,
@@ -141,7 +148,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 11. INVOICE_ITEMS (joined to services+products for name lookups)
+-- 12. INVOICE_ITEMS (joined to services+products for name lookups)
 CREATE TABLE IF NOT EXISTS invoice_items (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   invoice_id UUID NOT NULL REFERENCES invoices(id)  ON DELETE CASCADE,
@@ -152,12 +159,12 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- 12. STORAGE BUCKET (Settings.uploadLogo)
+-- 13. STORAGE BUCKET (Settings.uploadLogo)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('center-assets', 'center-assets', false)
 ON CONFLICT (id) DO NOTHING;
 
--- 13. INDEXES
+-- 14. INDEXES
 CREATE INDEX IF NOT EXISTS idx_customers_center    ON customers(center_id);
 CREATE INDEX IF NOT EXISTS idx_employees_center    ON employees(center_id);
 CREATE INDEX IF NOT EXISTS idx_services_center     ON services(center_id);
@@ -168,9 +175,9 @@ CREATE INDEX IF NOT EXISTS idx_appointments_dt     ON appointments(center_id, da
 CREATE INDEX IF NOT EXISTS idx_expenses_center     ON expenses(center_id, date);
 CREATE INDEX IF NOT EXISTS idx_invoices_date       ON invoices(center_id, date);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_inv   ON invoice_items(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_memberships_user    ON center_memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_profile ON center_memberships(profile_id);
 
--- 14. AUTO updated_at TRIGGER
+-- 15. AUTO updated_at TRIGGER
 CREATE OR REPLACE FUNCTION trigger_set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
@@ -200,7 +207,7 @@ DO $$ BEGIN CREATE TRIGGER set_updated_at BEFORE UPDATE ON invoices
   FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- 15. SEED: Center row (must match VITE_CENTER_ID)
+-- 16. SEED: Center row (must match VITE_CENTER_ID)
 INSERT INTO centers (id, name)
 VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'LenaBeauty')
 ON CONFLICT (id) DO NOTHING;
@@ -209,8 +216,9 @@ INSERT INTO center_settings (center_id, name, currency)
 VALUES ('7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d', 'LenaBeauty', 'OMR')
 ON CONFLICT (center_id) DO NOTHING;
 
--- 16. RLS — DISABLE FOR DEVELOPMENT (re-enable + add policies before production)
+-- 17. RLS — DISABLE FOR DEVELOPMENT (re-enable + add policies before production)
 ALTER TABLE centers            DISABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles           DISABLE ROW LEVEL SECURITY;
 ALTER TABLE center_memberships DISABLE ROW LEVEL SECURITY;
 ALTER TABLE center_settings    DISABLE ROW LEVEL SECURITY;
 ALTER TABLE customers          DISABLE ROW LEVEL SECURITY;

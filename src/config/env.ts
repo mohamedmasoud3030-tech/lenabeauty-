@@ -55,7 +55,10 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
     }
     centerId = rawCenterId;
   } else if (branchMode === "multi") {
-    throw new EnvironmentConfigurationError(`UNSUPPORTED_BRANCH_CONFIGURATION: multi-branch not yet implemented`);
+    // Multi-branch: the active center is chosen at runtime from the user's
+    // memberships (see tenantContext.activeCenterId). An optional
+    // VITE_CENTER_ID may seed a default selection but is not required.
+    centerId = rawCenterId && validateUUID(rawCenterId) ? rawCenterId : undefined;
   } else {
     throw new EnvironmentConfigurationError(`UNSUPPORTED_BRANCH_CONFIGURATION: ${backend} with ${branchMode}`);
   }

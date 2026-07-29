@@ -4,6 +4,7 @@
  * يقلل وقت التحميل الأولي بشكل كبير على الهواتف
  */
 import React, { useRef, useState, useEffect, Suspense, lazy } from "react";
+import { useTranslation } from "react-i18next";
 
 // ---- Skeleton placeholder ----
 const ChartSkeleton: React.FC<{ height?: number; className?: string }> = ({
@@ -87,6 +88,7 @@ export const MobileAwareChart: React.FC<MobileAwareChartProps> = ({
   title,
   children,
 }) => {
+  const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(false);
   const [expanded, setExpanded] = useState(priority === "high");
   const [ref, inView] = useInView("300px");
@@ -121,8 +123,8 @@ export const MobileAwareChart: React.FC<MobileAwareChartProps> = ({
           onClick={() => setExpanded(true)}
           className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-600"
         >
-          <span>{title ?? "عرض الرسم البياني"}</span>
-          <span className="text-xs text-blue-500">اضغط للعرض ▼</span>
+          <span>{title ?? t("Show chart")}</span>
+          <span className="text-xs text-blue-500">{t("Tap to view")} ▼</span>
         </button>
       </div>
     );
@@ -138,7 +140,7 @@ export const MobileAwareChart: React.FC<MobileAwareChartProps> = ({
               onClick={() => setExpanded(false)}
               className="text-xs text-gray-400"
             >
-              طي ▲
+              {t("Collapse")} ▲
             </button>
           )}
         </div>
@@ -171,6 +173,7 @@ export const AutoRefreshChart: React.FC<AutoRefreshChartProps> = ({
   children,
   className = "",
 }) => {
+  const { t, i18n } = useTranslation();
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -185,7 +188,7 @@ export const AutoRefreshChart: React.FC<AutoRefreshChartProps> = ({
     <div className={`relative ${className}`}>
       {children}
       <span className="absolute bottom-1 right-2 text-[10px] text-gray-300 select-none">
-        آخر تحديث: {lastRefresh.toLocaleTimeString("ar-OM")}
+        {t("Last updated")}: {lastRefresh.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US")}
       </span>
     </div>
   );

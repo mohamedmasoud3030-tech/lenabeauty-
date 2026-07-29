@@ -5,16 +5,16 @@ import {
   Receipt, Plus, FileText, Save, CheckCircle2, UserPlus,
   ChevronRight, MoreVertical, Mail, MapPin, Sparkles, XCircle,
   ArrowUpRight, TrendingUp, Wallet, Pencil, Trash2,
-  Download, Star, Users, Crown
+  Download, Star, Users, Crown, KeyRound, Copy
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
-import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
+import { getTierBySpend } from "../domain/loyalty";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -29,13 +29,8 @@ interface CustomerHistoryType {
   invoices: InvoiceHistoryItem[];
 }
 
-// Loyalty tier helper
-function getLoyaltyTier(points: number) {
-  if (points >= 1000) return { label: 'Platinum', color: 'text-purple-600', bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: '💎' };
-  if (points >= 500) return { label: 'Gold', color: 'text-amber-600', bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: '🥇' };
-  if (points >= 200) return { label: 'Silver', color: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/20', icon: '🥈' };
-  return { label: 'Bronze', color: 'text-orange-600', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: '🥉' };
-}
+// Loyalty tier is derived from lifetime spend via the shared domain model
+// (src/domain/loyalty.ts) — single source of truth across the app.
 
 // Export customers to CSV
 function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
@@ -45,7 +40,7 @@ function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
     c.phone ?? '',
     c.totalSpent.toFixed(3),
     c.loyaltyPoints,
-    getLoyaltyTier(c.loyaltyPoints).label
+    t(getTierBySpend(c.totalSpent).labelKey)
   ]);
   const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -116,7 +111,7 @@ export default function CustomersPage() {
       const res = await unwrap(useCases.customers.getHistory(customer.id));
       setHistory(res as CustomerHistoryType);
     } catch (e: any) {
-      showToast('error', 'Error', e?.message || "Failed to load history");
+      showToast('error', t("Error"), e?.message || "Failed to load history");
     }
   }
 
@@ -125,13 +120,13 @@ export default function CustomersPage() {
     setSavingNotes(true);
     try {
       await unwrap(useCases.customers.update(openId, { notes }));
-      showToast('error', 'Error', t("Notes saved successfully"));
+      showToast('error', t("Error"), t("Notes saved successfully"));
       await load();
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setSavingNotes(false);
@@ -139,10 +134,10 @@ export default function CustomersPage() {
   }
 
   async function handleAddCustomer() {
-    if (!newName.trim()) return showToast('error', 'Error', t("Please fill all fields"));
+    if (!newName.trim()) return showToast('error', t("Error"), t("Please fill all fields"));
     setAdding(true);
     try {
-      await unwrap(useCases.customers.create({ name: newName, phone: newPhone || null }));
+      await unwrap(useCases.customers.create({ name: newName, phone: newPhone || undefined }));
       setNewName("");
       setNewPhone("");
       setShowAddModal(false);
@@ -152,7 +147,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setAdding(false);
@@ -167,10 +162,10 @@ export default function CustomersPage() {
 
   async function handleEditCustomer() {
     if (!editId) return;
-    if (!editName.trim()) return showToast('error', 'Error', t("Please fill all fields"));
+    if (!editName.trim()) return showToast('error', t("Error"), t("Please fill all fields"));
     setAdding(true);
     try {
-      await unwrap(useCases.customers.update(editId, { name: editName, phone: editPhone || null }));
+      await unwrap(useCases.customers.update(editId, { name: editName, phone: editPhone || undefined }));
       setEditId(null);
       await load();
       showToast('success', t("Success"), t("Customer updated successfully"));
@@ -178,7 +173,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setAdding(false);
@@ -200,12 +195,24 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
 
   const [printData, setPrintData] = useState<any | null>(null);
+
+  async function handleRotatePortalToken(customer: Customer) {
+    try {
+      const res = await unwrap(useCases.customers.rotatePortalToken(customer.id));
+      const shareText = `${window.location.origin}/portal\n${t("Phone")}: ${customer.phone || ""}\n${t("Portal Code")}: ${res.portalAccessToken}`;
+      await navigator.clipboard.writeText(shareText);
+      showToast('success', t("Success"), t("Portal access copied to clipboard"));
+      await load();
+    } catch (err: any) {
+      showToast('error', t("Error"), err?.message || t("Failed to rotate portal code"));
+    }
+  }
 
   async function handleReprint(invoiceId: string) {
     try {
@@ -219,7 +226,7 @@ export default function CustomersPage() {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', 'Error', err?.message || String(err));
+         showToast('error', t("Error"), err?.message || String(err));
       }
     }
   }
@@ -397,11 +404,11 @@ export default function CustomersPage() {
                     </td>
                     <td>
                       {(() => {
-                        const tier = getLoyaltyTier(c.loyaltyPoints);
+                        const tier = getTierBySpend(c.totalSpent);
                         return (
                           <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold border shadow-sm ${tier.bg} ${tier.color} ${tier.border}`}>
                             <span>{tier.icon}</span>
-                            <span>{tier.label}</span>
+                            <span>{t(tier.labelKey)}</span>
                             <span className="opacity-60">· {c.loyaltyPoints} {t('pts')}</span>
                           </div>
                         );
@@ -415,6 +422,13 @@ export default function CustomersPage() {
                           title={t("History")}
                         >
                           <History className="h-6 w-6" />
+                        </button>
+                        <button
+                          onClick={() => handleRotatePortalToken(c)}
+                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 hover:border-emerald-500/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+                          title={t("Rotate Portal Code")}
+                        >
+                          <KeyRound className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => openEdit(c)}
@@ -497,6 +511,12 @@ export default function CustomersPage() {
                   >
                     <History className="h-5 w-5" />
                     {t("History")}
+                  </button>
+                  <button
+                    onClick={() => handleRotatePortalToken(c)}
+                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-all shadow-sm shrink-0"
+                  >
+                    <KeyRound className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => openEdit(c)}
@@ -682,7 +702,6 @@ export default function CustomersPage() {
                                 >
                                   <Receipt className="h-3 w-3" />
                                   {t("Print")}
-                                  <span className="absolute -top-2 -end-2 bg-amber-500 text-white text-[8px] px-1 rounded-full leading-tight uppercase">{t("WIP")}</span>
                                 </button>
                               </div>
                             </motion.div>

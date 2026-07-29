@@ -28,15 +28,37 @@ describe("Authorization Rules", () => {
   it("Anonymous users cannot view settings", () => {
     expect(can({ status: "anonymous" }, "settings.view")).toBe(false);
   });
+
+  it("Manager cannot access admin-only sections (must match RequireAdmin)", () => {
+    const session = {
+      status: "authenticated" as const,
+      session: {
+        user: { id: "3", username: "manager", role: UserRole.MANAGER }
+      }
+    };
+    // Admin-only sections are guarded by RequireAdmin (ADMIN only).
+    expect(can(session, "settings.view")).toBe(false);
+    expect(can(session, "settings.update")).toBe(false);
+    expect(can(session, "reports.view")).toBe(false);
+    // But managers keep operational permissions.
+    expect(can(session, "pos.checkout")).toBe(true);
+    expect(can(session, "customers.create")).toBe(true);
+  });
 });
 
 describe("Error Mapping", () => {
-  it("Maps INVALID_CREDENTIALS correctly", () => {
-    const message = mapErrorToMessage({ code: "INVALID_CREDENTIALS" });
+  it("Maps INVALID_CREDENTIALS to a stable i18n key", () => {
+    const key = mapErrorToMessage({ code: "INVALID_CREDENTIALS" });
+    expect(key).toBe("error.invalid_credentials");
+  });
+
+  it("Resolves the key via a provided translate function", () => {
+    const t = (k: string) => (k === "error.invalid_credentials" ? "بيانات الاعتماد غير صحيحة." : k);
+    const message = mapErrorToMessage({ code: "INVALID_CREDENTIALS" }, t);
     expect(message).toBe("بيانات الاعتماد غير صحيحة.");
   });
 
-  it("Falls back to generic error message", () => {
+  it("Falls back to the raw message when code is unknown", () => {
     const message = mapErrorToMessage({ code: "UNKNOWN_ERROR", message: "foo" });
     expect(message).toBe("foo");
   });

@@ -13,7 +13,7 @@
 | 2 | Missing configuration → **hard blocking error screen**, not fallback | ✅ Done |
 | 3 | **Live Supabase connection is mandatory before any version is delivered** | 🔴 Gate |
 | 4 | v1.0 = single-customer, single-center Supabase PWA | Pending QA |
-| 5 | v1.1 = checkout, print, financial reports, settings mutations, expense edit, code-split | Code-ready |
+| 5 | v1.1 = checkout, print, financial reports, settings mutations, expense edit, code-split | ✅ Implemented (2026-06-28) — checkout RPC migration shipped; needs live QA |
 | 6 | v2.0 = Windows Desktop EXE via Tauri v2 + SQLite — **documented only, not implemented** | Future |
 | 7 | Sales-ready = real auth + real CRUD + live Supabase QA verified — no fake mode | Pending |
 

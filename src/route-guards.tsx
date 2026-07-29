@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAppContext } from "./context/AppContext";
-import { can } from "./domain/entities/Session";
+import { UserRole } from "./domain/entities/Session";
 import { PageLoader } from "./shared/components/PageLoader";
 
 export function RequireAuth() {
@@ -11,7 +11,6 @@ export function RequireAuth() {
     return <PageLoader />;
   }
 
-  // If there's an error and it's auth not configured, redirect to login so it shows the message
   if (sessionState.status === "error" && sessionState.error.message.includes("not configured")) {
     return <Navigate to="/login" replace />;
   }
@@ -39,7 +38,8 @@ export function RequireAdmin() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (!can(sessionState, "admin.access")) {
+  // Only ADMIN role can access admin-guarded routes
+  if (user.role !== UserRole.ADMIN) {
     return <Navigate to="/" replace />;
   }
 
