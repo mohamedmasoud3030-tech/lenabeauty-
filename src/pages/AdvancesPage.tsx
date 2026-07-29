@@ -1,138 +1,147 @@
-import React, { useState, useMemo } from 'react';
-import { DollarSign, Plus, Check, X, Clock, TrendingDown, AlertCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import DemoDataBanner from '../shared/components/DemoDataBanner';
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useCases } from "../app/composition/useCases";
+import { unwrap } from "../shared/hooks/useApplication";
+import { useToast } from "../shared/components/Toast";
+import { useConfirm } from "../shared/components/ConfirmDialog";
+import { Plus, Trash2, Check, X, TrendingDown, XCircle, RotateCcw } from "lucide-react";
+import { EmployeeAdvance, AdvanceStatus, Employee } from "../domain/entities";
 
-interface Advance {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  amount: number;
-  requestDate: Date;
-  approvalDate?: Date;
-  status: 'pending' | 'approved' | 'rejected' | 'deducted';
-  reason: string;
-  approvedBy?: string;
-  deductionStartMonth?: string;
-  monthlyDeduction: number;
-  remainingBalance: number;
-  notes?: string;
-}
+const STATUS_LABELS: Record<AdvanceStatus, string> = {
+  PENDING: "قيد الانتظار",
+  APPROVED: "موافق عليه",
+  REJECTED: "مرفوض",
+  DEDUCTED: "تم الخصم",
+};
 
-interface AdvanceSummary {
-  totalAdvances: number;
-  totalApproved: number;
-  totalPending: number;
-  totalRejected: number;
-  totalDeducted: number;
-  pendingAmount: number;
-  approvedAmount: number;
-}
+const statusBadge: Record<AdvanceStatus, string> = {
+  PENDING: "bg-yellow-100 text-yellow-700",
+  APPROVED: "bg-blue-100 text-blue-700",
+  REJECTED: "bg-red-100 text-red-700",
+  DEDUCTED: "bg-green-100 text-green-700",
+};
 
-const MOCK_ADVANCES: Advance[] = [
-  {
-    id: 'adv_1',
-    employeeId: 'emp_1',
-    employeeName: 'فاطمة محمد',
-    amount: 200,
-    requestDate: new Date('2026-06-15'),
-    approvalDate: new Date('2026-06-16'),
-    status: 'approved',
-    reason: 'احتياجات شخصية',
-    approvedBy: 'مدير الصالون',
-    deductionStartMonth: 'يوليو 2026',
-    monthlyDeduction: 50,
-    remainingBalance: 150,
-  },
-  {
-    id: 'adv_2',
-    employeeId: 'emp_2',
-    employeeName: 'نور علي',
-    amount: 150,
-    requestDate: new Date('2026-06-20'),
-    status: 'pending',
-    reason: 'مصاريف طبية',
-    monthlyDeduction: 0,
-    remainingBalance: 150,
-  },
-  {
-    id: 'adv_3',
-    employeeId: 'emp_3',
-    employeeName: 'ليلى أحمد',
-    amount: 300,
-    requestDate: new Date('2026-05-20'),
-    approvalDate: new Date('2026-05-21'),
-    status: 'deducted',
-    reason: 'شراء معدات',
-    approvedBy: 'مدير الصالون',
-    deductionStartMonth: 'يونيو 2026',
-    monthlyDeduction: 100,
-    remainingBalance: 0,
-  },
-];
-
-const AdvancesPage: React.FC = () => {
+export default function AdvancesPage() {
   const { t } = useTranslation();
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'deducted'>('all');
-  const [expandedAdvance, setExpandedAdvance] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
-  const filteredAdvances = useMemo(() => {
-    if (filterStatus === 'all') return MOCK_ADVANCES;
-    return MOCK_ADVANCES.filter((adv) => adv.status === filterStatus);
-  }, [filterStatus]);
+  const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<"all" | AdvanceStatus>("all");
 
-  const summary: AdvanceSummary = {
-    totalAdvances: MOCK_ADVANCES.length,
-    totalApproved: MOCK_ADVANCES.filter((a) => a.status === 'approved').length,
-    totalPending: MOCK_ADVANCES.filter((a) => a.status === 'pending').length,
-    totalRejected: MOCK_ADVANCES.filter((a) => a.status === 'rejected').length,
-    totalDeducted: MOCK_ADVANCES.filter((a) => a.status === 'deducted').length,
-    pendingAmount: MOCK_ADVANCES.filter((a) => a.status === 'pending').reduce((sum, a) => sum + a.amount, 0),
-    approvedAmount: MOCK_ADVANCES.filter((a) => a.status === 'approved').reduce((sum, a) => sum + a.amount, 0),
-  };
+  const [showModal, setShowModal] = useState(false);
+  const [empId, setEmpId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [advDate, setAdvDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'approved':
-        return 'bg-blue-100 text-blue-700';
-      case 'deducted':
-        return 'bg-green-100 text-green-700';
-      case 'rejected':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
+  const employeeName = useMemo(() => {
+    const map = new Map(employees.map((e) => [e.id, e.name]));
+    return (id: string) => map.get(id) || id;
+  }, [employees]);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [advs, emps] = await Promise.all([
+        unwrap(useCases.advances.list()),
+        unwrap(useCases.employees.list()),
+      ]);
+      setAdvances(advs);
+      setEmployees(emps);
+    } catch (e) {
+      console.error(e);
+      showToast("error", t("Error"), (e as Error).message || String(e));
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'قيد الانتظار';
-      case 'approved':
-        return 'موافق عليه';
-      case 'deducted':
-        return 'تم الخصم';
-      case 'rejected':
-        return 'مرفوض';
-      default:
-        return status;
+  useEffect(() => { load(); }, []);
+
+  const filtered = useMemo(() => {
+    return filterStatus === "all" ? advances : advances.filter((a) => a.status === filterStatus);
+  }, [advances, filterStatus]);
+
+  const summary = useMemo(() => {
+    const pending = advances.filter((a) => a.status === "PENDING");
+    const approved = advances.filter((a) => a.status === "APPROVED");
+    const deducted = advances.filter((a) => a.status === "DEDUCTED");
+    return {
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((s, a) => s + a.amount, 0),
+      approvedAmount: approved.reduce((s, a) => s + a.amount, 0),
+      deductedAmount: deducted.reduce((s, a) => s + a.amount, 0),
+    };
+  }, [advances]);
+
+  function openAdd() {
+    setEmpId(employees[0]?.id || "");
+    setAmount("");
+    setReason("");
+    setAdvDate(new Date().toISOString().slice(0, 10));
+    setShowModal(true);
+  }
+
+  async function handleAdd() {
+    const amt = Number(amount);
+    if (!empId) {
+      showToast("error", t("Error"), "يرجى اختيار موظف");
+      return;
     }
-  };
+    if (isNaN(amt) || amt <= 0) {
+      showToast("error", t("Error"), "أدخل مبلغاً صحيحاً");
+      return;
+    }
+    try {
+      await unwrap(useCases.advances.create({
+        employeeId: empId,
+        amount: amt,
+        reason: reason || "سلفة",
+        advanceDate: new Date(advDate),
+        status: "PENDING",
+      }));
+      showToast("success", t("Success"), "تم تسجيل طلب السلفة");
+      setShowModal(false);
+      load();
+    } catch (e) {
+      showToast("error", t("Error"), (e as Error).message || String(e));
+    }
+  }
+
+  async function setStatus(id: string, status: AdvanceStatus) {
+    try {
+      await unwrap(useCases.advances.update(id, { status }));
+      showToast("success", t("Success"), status === "APPROVED" ? "تمت الموافقة" : "تم الرفض");
+      load();
+    } catch (e) {
+      showToast("error", t("Error"), (e as Error).message || String(e));
+    }
+  }
+
+  async function handleDelete(id: string) {
+    const ok = await confirm({ title: "حذف السلفة", message: "هل أنت متأكد؟", type: "danger" });
+    if (!ok) return;
+    try {
+      await unwrap(useCases.advances.delete(id));
+      showToast("success", t("Success"), "تم الحذف");
+      load();
+    } catch (e) {
+      showToast("error", t("Error"), (e as Error).message || String(e));
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <DemoDataBanner />
-      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <TrendingDown className="w-8 h-8 text-orange-600" />
-          {t('Employee Advances')}
+          {t("Employee Advances")}
         </h1>
         <button
-          onClick={() => setShowRequestModal(true)}
+          onClick={openAdd}
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
         >
           <Plus className="w-4 h-4" />
@@ -140,251 +149,174 @@ const AdvancesPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-gray-600 text-sm">إجمالي السلف</p>
-          <p className="text-3xl font-bold text-blue-600">{summary.totalAdvances}</p>
-          <p className="text-xs text-gray-500 mt-1">طلبات</p>
-        </div>
-
+      {/* Summary cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
           <p className="text-gray-600 text-sm">قيد الانتظار</p>
-          <p className="text-3xl font-bold text-yellow-600">{summary.totalPending}</p>
+          <p className="text-3xl font-bold text-yellow-600">{summary.pendingCount}</p>
           <p className="text-xs text-gray-500 mt-1">{summary.pendingAmount.toFixed(2)} OMR</p>
         </div>
-
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
           <p className="text-gray-600 text-sm">موافق عليها</p>
-          <p className="text-3xl font-bold text-blue-600">{summary.totalApproved}</p>
-          <p className="text-xs text-gray-500 mt-1">{summary.approvedAmount.toFixed(2)} OMR</p>
+          <p className="text-3xl font-bold text-blue-600">{summary.approvedAmount.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-1">OMR</p>
         </div>
-
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm">تم الخصم</p>
-          <p className="text-3xl font-bold text-green-600">{summary.totalDeducted}</p>
-          <p className="text-xs text-gray-500 mt-1">منتهية</p>
+          <p className="text-gray-600 text-sm">تم خصمها من الرواتب</p>
+          <p className="text-3xl font-bold text-green-600">{summary.deductedAmount.toFixed(2)}</p>
+          <p className="text-xs text-gray-500 mt-1">OMR</p>
         </div>
-
-        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-l-4 border-red-500">
-          <p className="text-gray-600 text-sm">مرفوضة</p>
-          <p className="text-3xl font-bold text-red-600">{summary.totalRejected}</p>
-          <p className="text-xs text-gray-500 mt-1">طلبات</p>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
+          <p className="text-gray-600 text-sm">إجمالي الطلبات</p>
+          <p className="text-3xl font-bold text-purple-600">{advances.length}</p>
         </div>
       </div>
 
-      {/* Filter Buttons */}
+      {/* Filter buttons */}
       <div className="flex gap-2 flex-wrap">
-        {['all', 'pending', 'approved', 'deducted'].map((status) => (
+        {(["all", "PENDING", "APPROVED", "DEDUCTED", "REJECTED"] as const).map((s) => (
           <button
-            key={status}
-            onClick={() => setFilterStatus(status as any)}
+            key={s}
+            onClick={() => setFilterStatus(s)}
             className={`px-4 py-2 rounded-lg font-bold transition ${
-              filterStatus === status
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+              filterStatus === s ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
             }`}
           >
-            {status === 'all' && 'الكل'}
-            {status === 'pending' && 'قيد الانتظار'}
-            {status === 'approved' && 'موافق عليها'}
-            {status === 'deducted' && 'تم الخصم'}
+            {s === "all" ? "الكل" : STATUS_LABELS[s]}
           </button>
         ))}
       </div>
 
-      {/* Advances List */}
+      {/* List */}
       <div className="space-y-4">
-        {filteredAdvances.map((advance) => (
-          <div key={advance.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-            {/* Main Row */}
-            <div
-              onClick={() => setExpandedAdvance(expandedAdvance === advance.id ? null : advance.id)}
-              className="p-6 cursor-pointer hover:bg-gray-50 transition border-l-4 border-orange-500"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
-                <div>
-                  <p className="text-sm text-gray-600">الموظف</p>
-                  <p className="font-bold text-gray-800">{advance.employeeName}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">المبلغ</p>
-                  <p className="font-bold text-lg text-orange-600">{advance.amount.toFixed(2)} OMR</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">تاريخ الطلب</p>
-                  <p className="font-bold text-gray-800">{advance.requestDate.toLocaleDateString('ar-SA')}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">السبب</p>
-                  <p className="font-bold text-gray-800">{advance.reason}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-600">الحالة</p>
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold inline-block ${getStatusColor(advance.status)}`}>
-                    {getStatusLabel(advance.status)}
+        {filtered.map((adv) => (
+          <div key={adv.id} className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+              <div>
+                <p className="text-sm text-gray-600">الموظف</p>
+                <p className="font-bold text-gray-800">{employeeName(adv.employeeId)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">المبلغ</p>
+                <p className="font-bold text-lg text-orange-600">{adv.amount.toFixed(2)} OMR</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">التاريخ</p>
+                <p className="font-bold text-gray-800">{new Date(adv.advanceDate).toLocaleDateString("ar-SA")}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">السبب</p>
+                <p className="font-bold text-gray-800">{adv.reason || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">الحالة</p>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold inline-block ${statusBadge[adv.status]}`}>
+                  {STATUS_LABELS[adv.status]}
+                </span>
+              </div>
+              <div className="flex justify-end gap-2">
+                {adv.status === "PENDING" && (
+                  <>
+                    <button
+                      onClick={() => setStatus(adv.id, "APPROVED")}
+                      className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                      title="موافقة"
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setStatus(adv.id, "REJECTED")}
+                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                      title="رفض"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+                {adv.status === "DEDUCTED" && (
+                  <span className="inline-flex items-center gap-1 text-green-600 text-sm font-bold">
+                    <RotateCcw className="w-4 h-4" /> خصمت في الراتب
                   </span>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  {advance.status === 'pending' && (
-                    <>
-                      <button className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-                        <Check className="w-5 h-5" />
-                      </button>
-                      <button className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">
-                        <X className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                </div>
+                )}
+                <button
+                  onClick={() => handleDelete(adv.id)}
+                  className="p-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-red-500 hover:text-white transition"
+                  title={t("Delete")}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             </div>
-
-            {/* Expanded Details */}
-            {expandedAdvance === advance.id && (
-              <div className="bg-gray-50 border-t-2 border-gray-200 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-600 font-bold">معلومات الطلب</p>
-                      <div className="mt-3 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>تاريخ الطلب:</span>
-                          <span className="font-bold">{advance.requestDate.toLocaleDateString('ar-SA')}</span>
-                        </div>
-                        {advance.approvalDate && (
-                          <div className="flex justify-between">
-                            <span>تاريخ الموافقة:</span>
-                            <span className="font-bold">{advance.approvalDate.toLocaleDateString('ar-SA')}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between">
-                          <span>السبب:</span>
-                          <span className="font-bold">{advance.reason}</span>
-                        </div>
-                        {advance.notes && (
-                          <div className="flex justify-between">
-                            <span>ملاحظات:</span>
-                            <span className="font-bold">{advance.notes}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {advance.approvedBy && (
-                      <div>
-                        <p className="text-sm text-gray-600 font-bold">الموافقة</p>
-                        <div className="mt-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>موافق من:</span>
-                            <span className="font-bold">{advance.approvedBy}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-4">
-                    <div className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
-                      <p className="text-sm text-gray-600 font-bold mb-3">تفاصيل الخصم</p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>المبلغ الكلي:</span>
-                          <span className="font-bold text-lg text-orange-600">{advance.amount.toFixed(2)} OMR</span>
-                        </div>
-                        {advance.deductionStartMonth && (
-                          <div className="flex justify-between">
-                            <span>بداية الخصم:</span>
-                            <span className="font-bold">{advance.deductionStartMonth}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between">
-                          <span>الخصم الشهري:</span>
-                          <span className="font-bold text-blue-600">{advance.monthlyDeduction.toFixed(2)} OMR</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between">
-                          <span>الرصيد المتبقي:</span>
-                          <span className={`font-bold text-lg ${advance.remainingBalance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                            {advance.remainingBalance.toFixed(2)} OMR
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {advance.status === 'pending' && (
-                      <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-lg flex gap-3">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-1" />
-                        <div>
-                          <p className="font-bold text-yellow-800">في انتظار الموافقة</p>
-                          <p className="text-sm text-yellow-700">يرجى مراجعة الطلب والموافقة أو الرفض</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         ))}
+        {filtered.length === 0 && !loading && (
+          <div className="bg-white rounded-lg shadow p-20 text-center text-gray-400">
+            لا توجد سلف بهذه الحالة
+          </div>
+        )}
       </div>
 
-      {/* Request Modal */}
-      {showRequestModal && (
+      {/* Add modal */}
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-2xl font-bold">طلب سلفة جديدة</h3>
-              <button
-                onClick={() => setShowRequestModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-6 h-6" />
+              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+                <XCircle className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
+                <label className="block text-sm font-bold mb-2">الموظف</label>
+                <select
+                  value={empId}
+                  onChange={(e) => setEmpId(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
+                >
+                  {employees.map((e) => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-bold mb-2">المبلغ (OMR)</label>
                 <input
                   type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
                   placeholder="أدخل المبلغ"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-bold mb-2">السبب</label>
-                <select className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none">
-                  <option>احتياجات شخصية</option>
-                  <option>مصاريف طبية</option>
-                  <option>شراء معدات</option>
-                  <option>مصاريف تعليم</option>
-                  <option>أخرى</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-2">ملاحظات إضافية</label>
-                <textarea
-                  placeholder="أضف أي ملاحظات"
+                <input
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="مثال: احتياجات شخصية"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                  rows={3}
-                ></textarea>
+                />
               </div>
-
+              <div>
+                <label className="block text-sm font-bold mb-2">التاريخ</label>
+                <input
+                  type="date"
+                  value={advDate}
+                  onChange={(e) => setAdvDate(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
+                />
+              </div>
               <div className="flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold">
+                <button
+                  onClick={handleAdd}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
+                >
                   إرسال الطلب
                 </button>
                 <button
-                  onClick={() => setShowRequestModal(false)}
+                  onClick={() => setShowModal(false)}
                   className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold"
                 >
                   إلغاء
@@ -396,6 +328,4 @@ const AdvancesPage: React.FC = () => {
       )}
     </div>
   );
-};
-
-export default AdvancesPage;
+}

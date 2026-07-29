@@ -1,13 +1,14 @@
-import { 
-  AuthRepository, CustomerRepository, EmployeeRepository, ServiceRepository, 
-  AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository, 
+import {
+  AuthRepository, CustomerRepository, EmployeeRepository, ServiceRepository,
+  AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository,
   SettingsRepository, DashboardRepository, ReportRepository, Result, DomainError, AuthError,
   BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository,
-  CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository
+  CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository,
+  AttendanceRepository, AdvanceRepository, PayrollRepository
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, 
-  CenterSettings
+  CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
 } from "../../domain/entities";
 import { SessionState } from "../../domain/entities/Session";
 import { 
@@ -17,9 +18,11 @@ import { getSupabaseClient } from "./client";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
   mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
-  mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead
+  mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead,
+  mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
+import { computePayrollNetSalary, sumAdvancesForMonth, parsePeriodMonth } from "../../domain/payroll";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
 
 function getCenterIdFor(operation: string): Result<string, DomainError> {
@@ -1011,7 +1014,7 @@ class SupabaseSettingsAdapter implements SettingsRepository {
     if (!centerRes.ok) return centerRes as any;
     try {
       const client = getSupabaseClient();
-      const [customers, employees, services, appointments, products, expenses, settings, invoices] = await Promise.all([
+      const [customers, employees, services, appointments, products, expenses, settings, invoices, attendance, advances, payrollRuns, payrollLines] = await Promise.all([
         client.from('customers').select('*').eq('center_id', centerRes.data),
         client.from('employees').select('*').eq('center_id', centerRes.data),
         client.from('services').select('*').eq('center_id', centerRes.data),
@@ -1019,7 +1022,11 @@ class SupabaseSettingsAdapter implements SettingsRepository {
         client.from('products').select('*').eq('center_id', centerRes.data),
         client.from('expenses').select('*').eq('center_id', centerRes.data),
         client.from('center_settings').select('*').eq('center_id', centerRes.data).maybeSingle(),
-        client.from('invoices').select('*').eq('center_id', centerRes.data)
+        client.from('invoices').select('*').eq('center_id', centerRes.data),
+        client.from('attendance_records').select('*').eq('center_id', centerRes.data),
+        client.from('employee_advances').select('*').eq('center_id', centerRes.data),
+        client.from('payroll_runs').select('*').eq('center_id', centerRes.data),
+        client.from('payroll_line_items').select('*').eq('center_id', centerRes.data)
       ]);
 
       const responses = [customers, employees, services, appointments, products, expenses, settings, invoices];
@@ -1043,7 +1050,11 @@ class SupabaseSettingsAdapter implements SettingsRepository {
             products: (products.data || []).map(mapProduct),
             expenses: (expenses.data || []).map(mapExpense),
             settings: settings.data ? mapCenterSettings(settings.data) : undefined,
-            invoices: (invoices.data || []).map(mapInvoice)
+            invoices: (invoices.data || []).map(mapInvoice),
+            attendance: (attendance.data || []).map(mapAttendanceRecord),
+            advances: (advances.data || []).map(mapEmployeeAdvance),
+            payrollRuns: (payrollRuns.data || []).map(mapPayrollRun),
+            payrollLines: (payrollLines.data || []).map(mapPayrollLineItem)
           }
         }
       };
@@ -1243,6 +1254,74 @@ class SupabaseSettingsAdapter implements SettingsRepository {
           }))
         );
         const { error } = await client.from("expenses").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Attendance records
+      if (d.attendance?.length) {
+        const rows = withCenter(
+          d.attendance.map((a) => ({
+            id: a.id,
+            employee_id: a.employeeId,
+            date: a.date instanceof Date ? toDateOnly(a.date) : a.date,
+            check_in_time: a.checkInTime || null,
+            check_out_time: a.checkOutTime || null,
+            method: a.method || 'MANUAL',
+            work_hours: a.workHours ?? 0,
+            status: a.status || 'PRESENT',
+            notes: a.notes ?? null,
+          }))
+        );
+        const { error } = await client.from("attendance_records").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Employee advances
+      if (d.advances?.length) {
+        const rows = withCenter(
+          d.advances.map((a) => ({
+            id: a.id,
+            employee_id: a.employeeId,
+            amount: a.amount ?? 0,
+            reason: a.reason ?? '',
+            advance_date: a.advanceDate instanceof Date ? a.advanceDate.toISOString() : a.advanceDate,
+            status: a.status || 'PENDING',
+            deducted_in_run_id: a.deductedInRunId || null,
+            notes: a.notes ?? null,
+          }))
+        );
+        const { error } = await client.from("employee_advances").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Payroll runs (parent) — restored before line items (child FK)
+      if (d.payrollRuns?.length) {
+        const rows = withCenter(
+          d.payrollRuns.map((r) => ({
+            id: r.id,
+            period_month: r.periodMonth,
+            run_date: r.runDate instanceof Date ? r.runDate.toISOString() : r.runDate,
+            notes: r.notes ?? null,
+          }))
+        );
+        const { error } = await client.from("payroll_runs").upsert(rows, { onConflict: "id" });
+        if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
+      }
+
+      // Payroll line items (child)
+      if (d.payrollLines?.length) {
+        const rows = withCenter(
+          d.payrollLines.map((l) => ({
+            id: l.id,
+            payroll_run_id: l.payrollRunId,
+            employee_id: l.employeeId,
+            base_salary: l.baseSalary ?? 0,
+            advances_deducted: l.advancesDeducted ?? 0,
+            net_salary: l.netSalary ?? 0,
+            notes: l.notes ?? null,
+          }))
+        );
+        const { error } = await client.from("payroll_line_items").upsert(rows, { onConflict: "id" });
         if (error) return { ok: false, error: createQueryError("Settings.restore", error.message) };
       }
 
@@ -2077,6 +2156,393 @@ class SupabaseBookingAdapter implements BookingRepository {
   }
 }
 
+class SupabaseAttendanceAdapter implements AttendanceRepository {
+  async list(range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>> {
+    const centerRes = getCenterIdFor("Attendance.list");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      let req = getSupabaseClient()
+        .from('attendance_records')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .order('date', { ascending: false });
+
+      if (range?.fromISO && range?.toISO) {
+        req = req.gte('date', toDateOnly(new Date(range.fromISO))).lte('date', toDateOnly(new Date(range.toISO)));
+      }
+
+      const { data, error } = await req;
+      if (error) return { ok: false, error: createQueryError("Attendance.list", error.message) };
+      return { ok: true, data: (data || []).map(mapAttendanceRecord) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Attendance.list", (e as Error).message) };
+    }
+  }
+
+  async listByEmployee(employeeId: string, range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>> {
+    const centerRes = getCenterIdFor("Attendance.listByEmployee");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      let req = getSupabaseClient()
+        .from('attendance_records')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .eq('employee_id', employeeId)
+        .order('date', { ascending: false });
+
+      if (range?.fromISO && range?.toISO) {
+        req = req.gte('date', toDateOnly(new Date(range.fromISO))).lte('date', toDateOnly(new Date(range.toISO)));
+      }
+
+      const { data, error } = await req;
+      if (error) return { ok: false, error: createQueryError("Attendance.listByEmployee", error.message) };
+      return { ok: true, data: (data || []).map(mapAttendanceRecord) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Attendance.listByEmployee", (e as Error).message) };
+    }
+  }
+
+  async create(data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>> {
+    const centerRes = getCenterIdFor("Attendance.create");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {
+        center_id: centerRes.data,
+        employee_id: data.employeeId,
+        date: data.date ? toDateOnly(new Date(data.date)) : toDateOnly(new Date()),
+        check_in_time: data.checkInTime || null,
+        check_out_time: data.checkOutTime || null,
+        method: data.method || 'MANUAL',
+        work_hours: data.workHours || 0,
+        status: data.status || 'PRESENT',
+        notes: data.notes || null
+      };
+      const { data: row, error } = await getSupabaseClient()
+        .from('attendance_records')
+        .insert(payload)
+        .select()
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Attendance.create", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Attendance.create", "No data returned after insert") };
+      return { ok: true, data: mapAttendanceRecord(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Attendance.create", (e as Error).message) };
+    }
+  }
+
+  async update(id: string, data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>> {
+    const centerRes = getCenterIdFor("Attendance.update");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {};
+      if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
+      if (data.date !== undefined) payload.date = toDateOnly(new Date(data.date));
+      if (data.checkInTime !== undefined) payload.check_in_time = data.checkInTime || null;
+      if (data.checkOutTime !== undefined) payload.check_out_time = data.checkOutTime || null;
+      if (data.method !== undefined) payload.method = data.method;
+      if (data.workHours !== undefined) payload.work_hours = data.workHours;
+      if (data.status !== undefined) payload.status = data.status;
+      if (data.notes !== undefined) payload.notes = data.notes || null;
+
+      delete payload.center_id;
+
+      const { data: row, error } = await getSupabaseClient()
+        .from('attendance_records')
+        .update(payload)
+        .eq('id', id)
+        .eq('center_id', centerRes.data)
+        .select()
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Attendance.update", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Attendance.update", "No data returned after update") };
+      return { ok: true, data: mapAttendanceRecord(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Attendance.update", (e as Error).message) };
+    }
+  }
+
+  async delete(id: string): Promise<Result<void, DomainError>> {
+    const centerRes = getCenterIdFor("Attendance.delete");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { error } = await getSupabaseClient()
+        .from('attendance_records')
+        .delete()
+        .eq('id', id)
+        .eq('center_id', centerRes.data);
+      if (error) return { ok: false, error: createQueryError("Attendance.delete", error.message) };
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Attendance.delete", (e as Error).message) };
+    }
+  }
+}
+
+class SupabaseAdvanceAdapter implements AdvanceRepository {
+  async list(): Promise<Result<EmployeeAdvance[], DomainError>> {
+    const centerRes = getCenterIdFor("Advance.list");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('employee_advances')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .order('advance_date', { ascending: false });
+      if (error) return { ok: false, error: createQueryError("Advance.list", error.message) };
+      return { ok: true, data: (data || []).map(mapEmployeeAdvance) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advance.list", (e as Error).message) };
+    }
+  }
+
+  async listByEmployee(employeeId: string): Promise<Result<EmployeeAdvance[], DomainError>> {
+    const centerRes = getCenterIdFor("Advance.listByEmployee");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('employee_advances')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .eq('employee_id', employeeId)
+        .order('advance_date', { ascending: false });
+      if (error) return { ok: false, error: createQueryError("Advance.listByEmployee", error.message) };
+      return { ok: true, data: (data || []).map(mapEmployeeAdvance) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advance.listByEmployee", (e as Error).message) };
+    }
+  }
+
+  async create(data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>> {
+    const centerRes = getCenterIdFor("Advance.create");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {
+        center_id: centerRes.data,
+        employee_id: data.employeeId,
+        amount: data.amount || 0,
+        reason: data.reason || '',
+        advance_date: data.advanceDate ? new Date(data.advanceDate).toISOString() : new Date().toISOString(),
+        status: data.status || 'PENDING',
+        notes: data.notes || null
+      };
+      const { data: row, error } = await getSupabaseClient()
+        .from('employee_advances')
+        .insert(payload)
+        .select()
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Advance.create", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Advance.create", "No data returned after insert") };
+      return { ok: true, data: mapEmployeeAdvance(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advance.create", (e as Error).message) };
+    }
+  }
+
+  async update(id: string, data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>> {
+    const centerRes = getCenterIdFor("Advance.update");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const payload: Record<string, unknown> = {};
+      if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
+      if (data.amount !== undefined) payload.amount = data.amount;
+      if (data.reason !== undefined) payload.reason = data.reason;
+      if (data.advanceDate !== undefined) payload.advance_date = new Date(data.advanceDate).toISOString();
+      if (data.status !== undefined) payload.status = data.status;
+      if (data.notes !== undefined) payload.notes = data.notes || null;
+
+      delete payload.center_id;
+
+      const { data: row, error } = await getSupabaseClient()
+        .from('employee_advances')
+        .update(payload)
+        .eq('id', id)
+        .eq('center_id', centerRes.data)
+        .select()
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Advance.update", error.message) };
+      if (!row) return { ok: false, error: createQueryError("Advance.update", "No data returned after update") };
+      return { ok: true, data: mapEmployeeAdvance(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advance.update", (e as Error).message) };
+    }
+  }
+
+  async delete(id: string): Promise<Result<void, DomainError>> {
+    const centerRes = getCenterIdFor("Advance.delete");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { error } = await getSupabaseClient()
+        .from('employee_advances')
+        .delete()
+        .eq('id', id)
+        .eq('center_id', centerRes.data);
+      if (error) return { ok: false, error: createQueryError("Advance.delete", error.message) };
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advance.delete", (e as Error).message) };
+    }
+  }
+}
+
+class SupabasePayrollAdapter implements PayrollRepository {
+  async listRuns(): Promise<Result<PayrollRun[], DomainError>> {
+    const centerRes = getCenterIdFor("Payroll.listRuns");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('payroll_runs')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .order('run_date', { ascending: false });
+      if (error) return { ok: false, error: createQueryError("Payroll.listRuns", error.message) };
+      return { ok: true, data: (data || []).map(mapPayrollRun) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Payroll.listRuns", (e as Error).message) };
+    }
+  }
+
+  async getRun(id: string): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>> {
+    const centerRes = getCenterIdFor("Payroll.getRun");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client = getSupabaseClient();
+      const [runRes, linesRes] = await Promise.all([
+        client.from('payroll_runs').select('*').eq('id', id).eq('center_id', centerRes.data).maybeSingle(),
+        client.from('payroll_line_items').select('*').eq('payroll_run_id', id).eq('center_id', centerRes.data).order('created_at', { ascending: true })
+      ]);
+      if (runRes.error) return { ok: false, error: createQueryError("Payroll.getRun", runRes.error.message) };
+      if (linesRes.error) return { ok: false, error: createQueryError("Payroll.getRun", linesRes.error.message) };
+      if (!runRes.data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
+      return {
+        ok: true,
+        data: {
+          run: mapPayrollRun(runRes.data),
+          lines: (linesRes.data || []).map(mapPayrollLineItem)
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Payroll.getRun", (e as Error).message) };
+    }
+  }
+
+  async createRun(input: { periodMonth: string; notes?: string }): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>> {
+    const centerRes = getCenterIdFor("Payroll.createRun");
+    if (!centerRes.ok) return centerRes as any;
+    const centerId = centerRes.data;
+    try {
+      const { year, month } = parsePeriodMonth(input.periodMonth);
+      const monthStart = new Date(Date.UTC(year, month - 1, 1));
+      const monthEnd = new Date(Date.UTC(year, month, 1));
+
+      const client = getSupabaseClient();
+
+      // Active employees for this center
+      const { data: employees, error: empErr } = await client
+        .from('employees')
+        .select('*')
+        .eq('center_id', centerId)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+      if (empErr) return { ok: false, error: createQueryError("Payroll.createRun", empErr.message) };
+
+      // APPROVED advances in the same month (candidates to deduct)
+      const { data: advances, error: advErr } = await client
+        .from('employee_advances')
+        .select('*')
+        .eq('center_id', centerId)
+        .eq('status', 'APPROVED')
+        .gte('advance_date', monthStart.toISOString())
+        .lt('advance_date', monthEnd.toISOString());
+      if (advErr) return { ok: false, error: createQueryError("Payroll.createRun", advErr.message) };
+
+      const advanceRows = (advances || []) as any[];
+
+      // Build the payroll run
+      const { data: runRow, error: runErr } = await client
+        .from('payroll_runs')
+        .insert({ center_id: centerId, period_month: input.periodMonth, notes: input.notes || null })
+        .select()
+        .maybeSingle();
+      if (runErr) {
+        const msg = runErr.code === '23505'
+          ? 'A payroll run for this month already exists.'
+          : runErr.message;
+        return { ok: false, error: createQueryError("Payroll.createRun", msg) };
+      }
+      if (!runRow) return { ok: false, error: createQueryError("Payroll.createRun", "No data returned after insert") };
+
+      const lineRows = (employees || []).map((emp: any) => {
+        const empAdvances = advanceRows.filter((a) => a.employee_id === emp.id);
+        const advancesDeducted = sumAdvancesForMonth(
+          empAdvances.map((a: any) => ({ amount: a.amount, advanceDate: a.advance_date })),
+          year,
+          month
+        );
+        const netSalary = computePayrollNetSalary(Number(emp.base_salary) || 0, advancesDeducted);
+        return {
+          center_id: centerId,
+          payroll_run_id: runRow.id,
+          employee_id: emp.id,
+          base_salary: Number(emp.base_salary) || 0,
+          advances_deducted: advancesDeducted,
+          net_salary: netSalary
+        };
+      });
+
+      const { data: insertedLines, error: lineErr } = await client
+        .from('payroll_line_items')
+        .insert(lineRows)
+        .select();
+      if (lineErr) return { ok: false, error: createQueryError("Payroll.createRun", lineErr.message) };
+
+      // Mark the deducted advances so they are not double-counted.
+      const deductedIds = advanceRows.map((a) => a.id);
+      if (deductedIds.length > 0) {
+        await client
+          .from('employee_advances')
+          .update({ status: 'DEDUCTED', deducted_in_run_id: runRow.id })
+          .eq('center_id', centerId)
+          .in('id', deductedIds);
+      }
+
+      return {
+        ok: true,
+        data: {
+          run: mapPayrollRun(runRow),
+          lines: (insertedLines || []).map(mapPayrollLineItem)
+        }
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Payroll.createRun", (e as Error).message) };
+    }
+  }
+
+  async deleteRun(id: string): Promise<Result<void, DomainError>> {
+    const centerRes = getCenterIdFor("Payroll.deleteRun");
+    if (!centerRes.ok) return centerRes as any;
+    const centerId = centerRes.data;
+    try {
+      const client = getSupabaseClient();
+      // Release the advances tied to this run so a corrected run can re-deduct them.
+      await client
+        .from('employee_advances')
+        .update({ status: 'APPROVED', deducted_in_run_id: null })
+        .eq('center_id', centerId)
+        .eq('deducted_in_run_id', id);
+
+      const { error } = await client
+        .from('payroll_runs')
+        .delete()
+        .eq('id', id)
+        .eq('center_id', centerId);
+      if (error) return { ok: false, error: createQueryError("Payroll.deleteRun", error.message) };
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Payroll.deleteRun", (e as Error).message) };
+    }
+  }
+}
+
 export {
   SupabaseAuthAdapter,
   SupabaseCustomerAdapter,
@@ -2095,5 +2561,8 @@ export {
   SupabaseForecastAdapter,
   SupabaseAccountingAdapter,
   SupabaseAdvancedAdapter,
-  SupabaseBookingAdapter
+  SupabaseBookingAdapter,
+  SupabaseAttendanceAdapter,
+  SupabaseAdvanceAdapter,
+  SupabasePayrollAdapter
 };
