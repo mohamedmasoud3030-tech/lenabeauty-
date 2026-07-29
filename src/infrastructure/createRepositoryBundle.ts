@@ -17,7 +17,10 @@ import {
   CustomerExperienceRepository,
   ForecastRepository,
   AccountingRepository,
-  AdvancedRepository
+  AdvancedRepository,
+  AttendanceRepository,
+  AdvanceRepository,
+  PayrollRepository
 } from "../domain/ports/repositories";
 import {
   SupabaseAuthAdapter,
@@ -37,7 +40,10 @@ import {
   SupabaseCustomerExperienceAdapter,
   SupabaseForecastAdapter,
   SupabaseAccountingAdapter,
-  SupabaseAdvancedAdapter
+  SupabaseAdvancedAdapter,
+  SupabaseAttendanceAdapter,
+  SupabaseAdvanceAdapter,
+  SupabasePayrollAdapter
 } from "./supabase";
 
 export interface RepositoryBundle {
@@ -59,6 +65,9 @@ export interface RepositoryBundle {
   forecastAdapter: ForecastRepository;
   accountingAdapter: AccountingRepository;
   advancedAdapter: AdvancedRepository;
+  attendanceAdapter: AttendanceRepository;
+  advanceAdapter: AdvanceRepository;
+  payrollAdapter: PayrollRepository;
 }
 
 export class InfrastructureError extends Error {
@@ -88,7 +97,10 @@ export function createRepositoryBundle(): RepositoryBundle {
       customerExperienceAdapter: new SupabaseCustomerExperienceAdapter(),
       forecastAdapter: new SupabaseForecastAdapter(),
       accountingAdapter: new SupabaseAccountingAdapter(),
-      advancedAdapter: new SupabaseAdvancedAdapter()
+      advancedAdapter: new SupabaseAdvancedAdapter(),
+      attendanceAdapter: new SupabaseAttendanceAdapter(),
+      advanceAdapter: new SupabaseAdvanceAdapter(),
+      payrollAdapter: new SupabasePayrollAdapter()
     };
   }
 

@@ -1,4 +1,4 @@
-import { Appointment, Customer, Employee, Expense, Invoice, Product, Service, CenterSettings } from "../../domain/entities";
+import { Appointment, Customer, Employee, Expense, Invoice, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem } from "../../domain/entities";
 
 export type PaymentMethod = "cash" | "card" | "transfer";
 
@@ -141,6 +141,10 @@ export interface BackupPayload {
     expenses?: Expense[];
     settings?: CenterSettings;
     invoices?: Invoice[];
+    attendance?: AttendanceRecord[];
+    advances?: EmployeeAdvance[];
+    payrollRuns?: PayrollRun[];
+    payrollLines?: PayrollLineItem[];
   };
 }
 

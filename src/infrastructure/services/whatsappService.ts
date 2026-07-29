@@ -1,12 +1,33 @@
 /**
- * WhatsApp Service - Integration with WhatsApp Business API
- * Handles sending notifications, reminders, and loyalty updates
+ * WhatsApp Service
+ * ------------------------------------------------------------
+ * SINGLE-SALON APPROACH (chosen here): wa.me deep links.
+ *   - Free, needs NO API key, NO Meta app, NO server.
+ *   - We open https://wa.me/<phone>?text=<message> in a new tab; the user's
+ *     real WhatsApp (web/app) pre-fills the message and they tap send.
+ *   - Perfect for a 1-3 person salon doing manual / semi-automated reminders
+ *     and loyalty messages directly from the dashboard.
+ *
+ * ALTERNATIVE — Official WhatsApp Business Cloud API:
+ *   - Enables fully automated, templated messages (no manual tap), delivery
+ *     receipts, and bulk campaigns.
+ *   - Requires a Meta Business account, a verified phone number + Phone Number
+ *     ID, an approved message template, and a server-side secret. It is also
+ *     subject to Meta's pricing and template policies.
+ *   - That path is overkill (and costly/complex) for a single salon, so it is
+ *     intentionally NOT wired here. To adopt it later, replace `sendMessage`
+ *     with a server call to the Graph API using WHATSAPP_PHONE_NUMBER_ID /
+ *     WHATSAPP_BUSINESS_ACCOUNT_ID / WHATSAPP_API_KEY (left as env placeholders).
+ *
+ * TRADEOFF SUMMARY: wa.me = zero cost, manual send, no PII leaves the device
+ * beyond the message the user chooses to send. Business API = automated but
+ * paid, regulated, and requires backend secrets. We ship wa.me.
  */
 
 import { logger } from "../../shared/logger";
 
 export interface WhatsAppMessage {
-  to: string; // Phone number with country code (e.g., +968XXXXXXXX)
+  to: string; // Phone number with country country code (e.g., +968XXXXXXXX)
   type: 'text' | 'template' | 'media';
   content: string;
   templateName?: string;
@@ -32,6 +53,30 @@ export interface WhatsAppNotificationLog {
   sentAt?: Date;
   deliveredAt?: Date;
   errorMessage?: string;
+}
+
+/**
+ * Normalize a phone number to wa.me format: digits only, no leading '+',
+ * with a leading '00' country prefix stripped.
+ */
+export function normalizePhone(phone: string): string {
+  let p = (phone || "").replace(/[^0-9]/g, "");
+  if (p.startsWith("00")) p = p.slice(2);
+  return p;
+}
+
+/** Build a wa.me deep link that pre-fills the given message. */
+export function buildWhatsAppLink(phone: string, message?: string): string {
+  const num = normalizePhone(phone);
+  const base = `https://wa.me/${num}`;
+  const trimmed = message?.trim();
+  return trimmed ? `${base}?text=${encodeURIComponent(trimmed)}` : base;
+}
+
+/** Open a wa.me link in a new tab (no-op outside the browser). */
+export function openWhatsApp(phone: string, message?: string): void {
+  if (typeof window === "undefined") return;
+  window.open(buildWhatsAppLink(phone, message), "_blank", "noopener,noreferrer");
 }
 
 class WhatsAppService {
@@ -166,41 +211,22 @@ ${offerTitle}
     };
 
     try {
-      // In production, this would call the actual WhatsApp API
-      // For now, we'll simulate the API call
-      const response = await this.callWhatsAppAPI(phone, message);
-
-      if (response.success) {
-        log.status = 'sent';
-        log.deliveredAt = new Date();
-      } else {
-        log.status = 'failed';
-        log.errorMessage = response.error;
-      }
+      // Single-salon path: open a wa.me deep link so the user can send the
+      // pre-filled message from their real WhatsApp. No API key required.
+      const link = buildWhatsAppLink(phone, message);
+      openWhatsApp(phone, message);
+      log.status = 'sent';
+      log.deliveredAt = new Date();
+      log.errorMessage = link; // keep the generated link for reference/audit
     } catch (error) {
       log.status = 'failed';
       log.errorMessage = error instanceof Error ? error.message : 'Unknown error';
     }
 
-    // Log the notification to database (would be implemented with actual DB)
+    // Local audit trail of messages this session (not a server-persisted log).
     await this.logNotification(log);
 
     return log;
-  }
-
-  /**
-   * Call WhatsApp API (mock implementation)
-   */
-  private async callWhatsAppAPI(
-    phone: string,
-    message: string
-  ): Promise<{ success: boolean; error?: string }> {
-    logger.log(`[WhatsApp] Sending message to ${phone}:`, message);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true });
-      }, 150);
-    });
   }
 
   /**
@@ -321,8 +347,13 @@ ${offerTitle}
     };
   }
 
+  /**
+   * With the wa.me approach there is nothing to configure — every browser can
+   * open a WhatsApp deep link. (If you later switch to the Business Cloud API,
+   * gate this on WHATSAPP_API_KEY + WHATSAPP_PHONE_NUMBER_ID instead.)
+   */
   isConfigured(): boolean {
-    return Boolean(this.apiKey && this.phoneNumberId);
+    return true;
   }
 }
 

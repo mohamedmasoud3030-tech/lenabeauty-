@@ -1,328 +1,262 @@
-import React, { useState } from 'react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { TrendingUp, Star, Award, Target, Users, Activity } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import DemoDataBanner from '../shared/components/DemoDataBanner';
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useCases } from "../app/composition/useCases";
+import { unwrap } from "../shared/hooks/useApplication";
+import { useToast } from "../shared/components/Toast";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Activity, Users, Clock, TrendingDown, DollarSign } from "lucide-react";
+import { AttendanceRecord, EmployeeAdvance, Employee, PayrollRun, PayrollLineItem } from "../domain/entities";
 
-interface StaffMember {
+interface StaffStat {
   id: string;
   name: string;
-  role: string;
-  rating: number;
-  totalSales: number;
-  servicesCompleted: number;
-  customersServed: number;
-  averageServiceTime: number;
-  customerSatisfaction: number;
-  performanceScore: number;
-  trend: 'up' | 'down' | 'stable';
-  trendPercentage: number;
+  presentDays: number;
+  lateDays: number;
+  absentDays: number;
+  halfDays: number;
+  workHours: number;
+  attendanceRate: number;
+  advancesTotal: number;
+  baseSalary: number;
+  netSalary: number | null;
 }
 
-interface PerformanceMetric {
-  name: string;
-  value: number;
-  target: number;
-  percentage: number;
-  status: 'excellent' | 'good' | 'average' | 'poor';
-}
-
-const STAFF_DATA: StaffMember[] = [
-  {
-    id: 'staff_1',
-    name: 'فاطمة محمد',
-    role: 'مصفف شعر',
-    rating: 4.8,
-    totalSales: 2500,
-    servicesCompleted: 145,
-    customersServed: 98,
-    averageServiceTime: 32,
-    customerSatisfaction: 96,
-    performanceScore: 92,
-    trend: 'up',
-    trendPercentage: 12,
-  },
-  {
-    id: 'staff_2',
-    name: 'نور علي',
-    role: 'متخصصة عناية',
-    rating: 4.6,
-    totalSales: 1800,
-    servicesCompleted: 110,
-    customersServed: 75,
-    averageServiceTime: 45,
-    customerSatisfaction: 94,
-    performanceScore: 88,
-    trend: 'up',
-    trendPercentage: 8,
-  },
-  {
-    id: 'staff_3',
-    name: 'ليلى أحمد',
-    role: 'متخصصة مساج',
-    rating: 4.9,
-    totalSales: 3200,
-    servicesCompleted: 165,
-    customersServed: 110,
-    averageServiceTime: 55,
-    customerSatisfaction: 98,
-    performanceScore: 95,
-    trend: 'up',
-    trendPercentage: 15,
-  },
-];
-
-const PERFORMANCE_CHART_DATA = [
-  { name: 'فاطمة', sales: 2500, services: 145, satisfaction: 96 },
-  { name: 'نور', sales: 1800, services: 110, satisfaction: 94 },
-  { name: 'ليلى', sales: 3200, services: 165, satisfaction: 98 },
-];
-
-const SALES_TREND_DATA = [
-  { week: 'أسبوع 1', sales: 600, target: 700 },
-  { week: 'أسبوع 2', sales: 750, target: 700 },
-  { week: 'أسبوع 3', sales: 820, target: 700 },
-  { week: 'أسبوع 4', sales: 950, target: 700 },
-];
-
-const SERVICE_DISTRIBUTION = [
-  { name: 'قص الشعر', value: 35, color: '#3b82f6' },
-  { name: 'صبغة الشعر', value: 25, color: '#10b981' },
-  { name: 'معالجة الشعر', value: 20, color: '#f59e0b' },
-  { name: 'مساج الوجه', value: 12, color: '#8b5cf6' },
-  { name: 'مساج الجسم', value: 8, color: '#ef4444' },
-];
-
-const StaffAnalyticsPage: React.FC = () => {
+export default function StaffAnalyticsPage() {
   const { t } = useTranslation();
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(STAFF_DATA[0]);
-  const [timeRange, setTimeRange] = useState('month');
+  const { showToast } = useToast();
 
-  const getStatusColor = (score: number) => {
-    if (score >= 90) return 'text-green-600 bg-green-50';
-    if (score >= 80) return 'text-blue-600 bg-blue-50';
-    if (score >= 70) return 'text-yellow-600 bg-yellow-50';
-    return 'text-red-600 bg-red-50';
-  };
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
+  const [runs, setRuns] = useState<PayrollRun[]>([]);
+  const [latestLines, setLatestLines] = useState<PayrollLineItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  const getStatusLabel = (score: number) => {
-    if (score >= 90) return 'ممتاز';
-    if (score >= 80) return 'جيد جداً';
-    if (score >= 70) return 'جيد';
-    return 'يحتاج تحسين';
-  };
+  async function load() {
+    setLoading(true);
+    try {
+      const [emps, att, adv, runList] = await Promise.all([
+        unwrap(useCases.employees.list()),
+        unwrap(useCases.attendance.list()),
+        unwrap(useCases.advances.list()),
+        unwrap(useCases.payroll.listRuns()),
+      ]);
+      setEmployees(emps);
+      setAttendance(att);
+      setAdvances(adv);
+      setRuns(runList);
+      if (runList.length > 0) {
+        const latest = [...runList].sort((a, b) => new Date(b.runDate).getTime() - new Date(a.runDate).getTime())[0];
+        const detail = await unwrap(useCases.payroll.getRun(latest.id));
+        setLatestLines(detail.lines);
+      } else {
+        setLatestLines([]);
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("error", t("Error"), (e as Error).message || String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const stats = useMemo<StaffStat[]>(() => {
+    return employees.map((emp) => {
+      const empAtt = attendance.filter(
+        (a) => a.employeeId === emp.id && new Date(a.date).toISOString().slice(0, 7) === selectedMonth
+      );
+      const present = empAtt.filter((a) => a.status === "PRESENT").length;
+      const late = empAtt.filter((a) => a.status === "LATE").length;
+      const absent = empAtt.filter((a) => a.status === "ABSENT").length;
+      const half = empAtt.filter((a) => a.status === "HALF_DAY").length;
+      const workHours = empAtt.reduce((s, a) => s + (a.workHours || 0), 0);
+      const totalDays = empAtt.length || 1;
+      const attendanceRate = Math.round(((present + late * 0.5 + half * 0.5) / totalDays) * 100);
+
+      const empAdv = advances.filter(
+        (a) => a.employeeId === emp.id &&
+          (a.status === "APPROVED" || a.status === "DEDUCTED") &&
+          new Date(a.advanceDate).toISOString().slice(0, 7) === selectedMonth
+      );
+      const advancesTotal = empAdv.reduce((s, a) => s + a.amount, 0);
+
+      const line = latestLines.find((l) => l.employeeId === emp.id);
+
+      return {
+        id: emp.id,
+        name: emp.name,
+        presentDays: present,
+        lateDays: late,
+        absentDays: absent,
+        halfDays: half,
+        workHours,
+        attendanceRate,
+        advancesTotal,
+        baseSalary: emp.baseSalary || 0,
+        netSalary: line ? line.netSalary : null,
+      };
+    });
+  }, [employees, attendance, advances, latestLines, selectedMonth]);
+
+  const overall = useMemo(() => {
+    const totalHours = stats.reduce((s, x) => s + x.workHours, 0);
+    const totalAdvances = stats.reduce((s, x) => s + x.advancesTotal, 0);
+    const totalNet = stats.reduce((s, x) => s + (x.netSalary || 0), 0);
+    const avgRate = stats.length ? Math.round(stats.reduce((s, x) => s + x.attendanceRate, 0) / stats.length) : 0;
+    return { totalHours, totalAdvances, totalNet, avgRate };
+  }, [stats]);
+
+  const workHoursData = stats.map((s) => ({ name: s.name, hours: Math.round(s.workHours * 10) / 10 }));
+  const netData = stats
+    .filter((s) => s.netSalary !== null)
+    .map((s) => ({ name: s.name, net: Math.round((s.netSalary as number) * 1000) / 1000 }));
+
+  const attendancePie = [
+    { name: "حاضر", value: stats.reduce((s, x) => s + x.presentDays, 0), color: "#10b981" },
+    { name: "متأخر", value: stats.reduce((s, x) => s + x.lateDays, 0), color: "#f59e0b" },
+    { name: "غائب", value: stats.reduce((s, x) => s + x.absentDays, 0), color: "#ef4444" },
+    { name: "نصف يوم", value: stats.reduce((s, x) => s + x.halfDays, 0), color: "#3b82f6" },
+  ].filter((d) => d.value > 0);
 
   return (
     <div className="space-y-6">
-      <DemoDataBanner />
-      {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Activity className="w-8 h-8 text-blue-600" />
-          {t('Staff Analytics & Performance')}
+          {t("Staff Analytics")}
         </h1>
-        <select
-          value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value)}
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
           className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-        >
-          <option value="week">هذا الأسبوع</option>
-          <option value="month">هذا الشهر</option>
-          <option value="quarter">هذا الربع</option>
-          <option value="year">هذا العام</option>
-        </select>
+        />
       </div>
 
-      {/* Staff Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {STAFF_DATA.map((staff) => (
-          <div
-            key={staff.id}
-            onClick={() => setSelectedStaff(staff)}
-            className={`p-6 rounded-lg cursor-pointer transition-all ${
-              selectedStaff?.id === staff.id
-                ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg scale-105'
-                : 'bg-white border-2 border-gray-200 hover:border-blue-500'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-bold text-lg">{staff.name}</h3>
-                <p className={selectedStaff?.id === staff.id ? 'text-blue-100' : 'text-gray-600'}>{staff.role}</p>
-              </div>
-              <div className={`flex items-center gap-1 ${selectedStaff?.id === staff.id ? 'text-yellow-300' : 'text-yellow-500'}`}>
-                <Star className="w-5 h-5 fill-current" />
-                <span className="font-bold">{staff.rating}</span>
-              </div>
-            </div>
+      {/* Overall summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
+          <p className="text-gray-600 text-sm">إجمالي ساعات العمل</p>
+          <p className="text-3xl font-bold text-blue-600">{overall.totalHours.toFixed(1)}</p>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
+          <p className="text-gray-600 text-sm">متوسط الحضور</p>
+          <p className="text-3xl font-bold text-green-600">{overall.avgRate}%</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
+          <p className="text-gray-600 text-sm">إجمالي السلف (الشهر)</p>
+          <p className="text-3xl font-bold text-orange-600">{overall.totalAdvances.toFixed(2)}</p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
+          <p className="text-gray-600 text-sm">إجمالي الرواتب الصافية</p>
+          <p className="text-3xl font-bold text-purple-600">{overall.totalNet.toFixed(2)}</p>
+        </div>
+      </div>
 
-            <div className={`grid grid-cols-2 gap-3 text-sm ${selectedStaff?.id === staff.id ? 'text-blue-100' : 'text-gray-600'}`}>
+      {/* Per-employee cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {stats.map((s) => (
+          <div key={s.id} className="bg-white rounded-lg shadow-lg p-5 border-l-4 border-blue-500">
+            <h3 className="font-bold text-lg text-gray-800 mb-3">{s.name}</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="opacity-75">المبيعات</p>
-                <p className="font-bold text-lg">{staff.totalSales.toLocaleString()} OMR</p>
+                <p className="text-gray-600">أيام الحضور</p>
+                <p className="font-bold text-lg text-green-600">{s.presentDays}</p>
               </div>
               <div>
-                <p className="opacity-75">الخدمات</p>
-                <p className="font-bold text-lg">{staff.servicesCompleted}</p>
+                <p className="text-gray-600">أيام التأخير</p>
+                <p className="font-bold text-lg text-yellow-600">{s.lateDays}</p>
               </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-2">
-              <div className="flex-1 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full"
-                  style={{ width: `${staff.performanceScore}%` }}
-                ></div>
+              <div>
+                <p className="text-gray-600">ساعات العمل</p>
+                <p className="font-bold text-lg text-blue-600">{s.workHours.toFixed(1)}</p>
               </div>
-              <span className={`font-bold text-sm ${selectedStaff?.id === staff.id ? 'text-white' : 'text-gray-700'}`}>
-                {staff.performanceScore}%
-              </span>
+              <div>
+                <p className="text-gray-600">نسبة الحضور</p>
+                <p className="font-bold text-lg text-purple-600">{s.attendanceRate}%</p>
+              </div>
+              <div>
+                <p className="text-gray-600">السلف</p>
+                <p className="font-bold text-lg text-orange-600">{s.advancesTotal.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">الصافي (آخر راتب)</p>
+                <p className="font-bold text-lg text-gray-800">{s.netSalary !== null ? s.netSalary.toFixed(2) : "-"}</p>
+              </div>
             </div>
           </div>
         ))}
+        {stats.length === 0 && !loading && (
+          <div className="col-span-full bg-white rounded-lg shadow p-20 text-center text-gray-400">
+            لا يوجد موظفون لعرض التحليلات
+          </div>
+        )}
       </div>
 
-      {/* Selected Staff Details */}
-      {selectedStaff && (
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold mb-6">{selectedStaff.name} - التفاصيل الشاملة</h2>
+          <h2 className="text-xl font-bold mb-4">ساعات العمل لكل موظف</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={workHoursData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="hours" fill="#3b82f6" name="ساعات" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-              <p className="text-gray-600 text-sm">إجمالي المبيعات</p>
-              <p className="text-3xl font-bold text-blue-600">{selectedStaff.totalSales.toLocaleString()} OMR</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {selectedStaff.trend === 'up' ? '↑' : selectedStaff.trend === 'down' ? '↓' : '→'}{' '}
-                {selectedStaff.trendPercentage}% من الشهر الماضي
-              </p>
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-bold mb-4">الراتب الصافي لكل موظف</h2>
+          {netData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={netData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="net" fill="#8b5cf6" name="الصافي (OMR)" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">
+              لا يوجد كشف رواتب بعد — أنشئ كشفاً لعرض المقارنة
             </div>
+          )}
+        </div>
+      </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-              <p className="text-gray-600 text-sm">الخدمات المنجزة</p>
-              <p className="text-3xl font-bold text-green-600">{selectedStaff.servicesCompleted}</p>
-              <p className="text-xs text-gray-500 mt-1">في هذا الشهر</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-              <p className="text-gray-600 text-sm">رضا العملاء</p>
-              <p className="text-3xl font-bold text-purple-600">{selectedStaff.customerSatisfaction}%</p>
-              <p className="text-xs text-gray-500 mt-1">متوسط التقييمات</p>
-            </div>
-
-            <div className={`rounded-lg p-4 border-l-4 ${getStatusColor(selectedStaff.performanceScore)}`}>
-              <p className="text-gray-600 text-sm">درجة الأداء</p>
-              <p className="text-3xl font-bold">{selectedStaff.performanceScore}</p>
-              <p className="text-xs mt-1">{getStatusLabel(selectedStaff.performanceScore)}</p>
-            </div>
-          </div>
-
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Sales Trend */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-bold text-lg mb-4">اتجاه المبيعات الأسبوعي</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={SALES_TREND_DATA}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="sales" stroke="#3b82f6" name="المبيعات الفعلية" strokeWidth={2} />
-                  <Line type="monotone" dataKey="target" stroke="#10b981" name="الهدف" strokeWidth={2} strokeDasharray="5 5" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Service Distribution */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-bold text-lg mb-4">توزيع الخدمات</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={SERVICE_DISTRIBUTION} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name} (${value}%)`} outerRadius={80} fill="#8884d8" dataKey="value">
-                    {SERVICE_DISTRIBUTION.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Detailed Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-bold text-gray-800 mb-3">متوسط وقت الخدمة</h4>
-              <p className="text-3xl font-bold text-blue-600">{selectedStaff.averageServiceTime} دقيقة</p>
-              <p className="text-sm text-gray-600 mt-2">متوسط المدة لكل خدمة</p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-bold text-gray-800 mb-3">عدد العملاء</h4>
-              <p className="text-3xl font-bold text-green-600">{selectedStaff.customersServed}</p>
-              <p className="text-sm text-gray-600 mt-2">عملاء فريدين في هذا الشهر</p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-bold text-gray-800 mb-3">متوسط الفاتورة</h4>
-              <p className="text-3xl font-bold text-purple-600">{(selectedStaff.totalSales / selectedStaff.servicesCompleted).toFixed(2)} OMR</p>
-              <p className="text-sm text-gray-600 mt-2">متوسط قيمة الخدمة</p>
-            </div>
-          </div>
+      {attendancePie.length > 0 && (
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-bold mb-4">توزيع الحضور (الشهر)</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie
+                data={attendancePie}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value }) => `${name} (${value})`}
+                outerRadius={90}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {attendancePie.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       )}
-
-      {/* Performance Comparison Chart */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-6">مقارنة الأداء بين الموظفين</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={PERFORMANCE_CHART_DATA}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="sales" fill="#3b82f6" name="المبيعات (OMR)" />
-            <Bar dataKey="services" fill="#10b981" name="الخدمات المنجزة" />
-            <Bar dataKey="satisfaction" fill="#f59e0b" name="رضا العملاء (%)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Performance Insights */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6" />
-          الرؤى والتوصيات
-        </h2>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <Award className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-gray-800">أفضل أداء</p>
-              <p className="text-gray-600">ليلى أحمد تتصدر بأعلى درجة أداء (95%) وأعلى رضا عملاء (98%)</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Target className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-gray-800">فرص التحسين</p>
-              <p className="text-gray-600">نور علي يمكنها تحسين سرعة الخدمة بمتوسط 45 دقيقة (أعلى من المتوسط)</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Users className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-gray-800">توصيات</p>
-              <p className="text-gray-600">تقديم تدريب متقدم لفاطمة محمد لتحسين متوسط قيمة الفاتورة من 17.24 OMR</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
-};
-
-export default StaffAnalyticsPage;
+}

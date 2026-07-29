@@ -298,3 +298,64 @@ export interface PaymentGatewaySettings {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ===== Staff operations (Phase 1) =====
+
+export type AttendanceMethod = "MANUAL" | "BIOMETRIC" | "MOBILE";
+export type AttendanceStatus = "PRESENT" | "LATE" | "ABSENT" | "HALF_DAY";
+export type AdvanceStatus = "PENDING" | "APPROVED" | "REJECTED" | "DEDUCTED";
+
+export interface AttendanceRecord {
+  id: string;
+  centerId: string;
+  employeeId: string;
+  employeeName?: string;
+  date: Date;
+  checkInTime?: string; // "HH:MM"
+  checkOutTime?: string; // "HH:MM"
+  method: AttendanceMethod;
+  workHours: number;
+  status: AttendanceStatus;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EmployeeAdvance {
+  id: string;
+  centerId: string;
+  employeeId: string;
+  employeeName?: string;
+  amount: number;
+  reason: string;
+  advanceDate: Date;
+  status: AdvanceStatus;
+  deductedInRunId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PayrollRun {
+  id: string;
+  centerId: string;
+  periodMonth: string; // "YYYY-MM"
+  runDate: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PayrollLineItem {
+  id: string;
+  centerId: string;
+  payrollRunId: string;
+  employeeId: string;
+  employeeName?: string;
+  baseSalary: number;
+  advancesDeducted: number;
+  netSalary: number;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

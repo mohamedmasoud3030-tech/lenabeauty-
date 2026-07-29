@@ -1,7 +1,8 @@
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, InvoiceItem, CenterSettings,
   AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
-  NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead
+  NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
+  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
 } from "../../domain/entities";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
@@ -485,5 +486,98 @@ export function mapAiBookingLead(row: unknown): AiBookingLead {
     summary: typeof row.summary === "string" ? row.summary : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapAiBookingLead"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapAiBookingLead"),
+  };
+}
+
+// ===== Staff operations (Phase 1) =====
+
+export function mapAttendanceRecord(row: unknown): AttendanceRecord {
+  assertRowObject(row, "mapAttendanceRecord");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.employee_id !== "string") {
+    throw createMappingError("mapAttendanceRecord", "Missing or invalid required fields (id, center_id, employee_id)");
+  }
+  const rawStatus = typeof row.status === "string" ? row.status.toUpperCase() : "PRESENT";
+  if (!["PRESENT", "LATE", "ABSENT", "HALF_DAY"].includes(rawStatus)) {
+    throw createMappingError("mapAttendanceRecord", `Invalid attendance status (${rawStatus})`);
+  }
+  const rawMethod = typeof row.method === "string" ? row.method.toUpperCase() : "MANUAL";
+  const method: AttendanceMethod = ["MANUAL", "BIOMETRIC", "MOBILE"].includes(rawMethod)
+    ? (rawMethod as AttendanceMethod)
+    : "MANUAL";
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    employeeId: row.employee_id,
+    employeeName: typeof row.employee_name === "string" ? row.employee_name : undefined,
+    date: parseDate(row.date, "date", "mapAttendanceRecord"),
+    checkInTime: typeof row.check_in_time === "string" ? row.check_in_time : undefined,
+    checkOutTime: typeof row.check_out_time === "string" ? row.check_out_time : undefined,
+    method,
+    workHours: Number(row.work_hours) || 0,
+    status: rawStatus as AttendanceStatus,
+    notes: typeof row.notes === "string" ? row.notes : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapAttendanceRecord"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapAttendanceRecord"),
+  };
+}
+
+export function mapEmployeeAdvance(row: unknown): EmployeeAdvance {
+  assertRowObject(row, "mapEmployeeAdvance");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.employee_id !== "string") {
+    throw createMappingError("mapEmployeeAdvance", "Missing or invalid required fields (id, center_id, employee_id)");
+  }
+  const rawStatus = typeof row.status === "string" ? row.status.toUpperCase() : "PENDING";
+  if (!["PENDING", "APPROVED", "REJECTED", "DEDUCTED"].includes(rawStatus)) {
+    throw createMappingError("mapEmployeeAdvance", `Invalid advance status (${rawStatus})`);
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    employeeId: row.employee_id,
+    employeeName: typeof row.employee_name === "string" ? row.employee_name : undefined,
+    amount: Number(row.amount) || 0,
+    reason: typeof row.reason === "string" ? row.reason : "",
+    advanceDate: parseDate(row.advance_date || row.created_at, "advance_date", "mapEmployeeAdvance"),
+    status: rawStatus as AdvanceStatus,
+    deductedInRunId: typeof row.deducted_in_run_id === "string" ? row.deducted_in_run_id : undefined,
+    notes: typeof row.notes === "string" ? row.notes : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapEmployeeAdvance"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapEmployeeAdvance"),
+  };
+}
+
+export function mapPayrollRun(row: unknown): PayrollRun {
+  assertRowObject(row, "mapPayrollRun");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.period_month !== "string") {
+    throw createMappingError("mapPayrollRun", "Missing or invalid required fields (id, center_id, period_month)");
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    periodMonth: row.period_month,
+    runDate: parseDate(row.run_date || row.created_at, "run_date", "mapPayrollRun"),
+    notes: typeof row.notes === "string" ? row.notes : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapPayrollRun"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapPayrollRun"),
+  };
+}
+
+export function mapPayrollLineItem(row: unknown): PayrollLineItem {
+  assertRowObject(row, "mapPayrollLineItem");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.payroll_run_id !== "string" || typeof row.employee_id !== "string") {
+    throw createMappingError("mapPayrollLineItem", "Missing or invalid required fields (id, center_id, payroll_run_id, employee_id)");
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    payrollRunId: row.payroll_run_id,
+    employeeId: row.employee_id,
+    employeeName: typeof row.employee_name === "string" ? row.employee_name : undefined,
+    baseSalary: Number(row.base_salary) || 0,
+    advancesDeducted: Number(row.advances_deducted) || 0,
+    netSalary: Number(row.net_salary) || 0,
+    notes: typeof row.notes === "string" ? row.notes : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapPayrollLineItem"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapPayrollLineItem"),
   };
 }

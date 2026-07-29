@@ -1,6 +1,6 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
 import { Result, BookingInput } from "../../domain/ports/repositories";
-import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings } from "../../domain/entities";
+import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance } from "../../domain/entities";
 import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
@@ -116,6 +116,29 @@ export const useCases = {
   advanced: {
     listAiBookingLeads: () => getRepositoryBundle().advancedAdapter.listAiBookingLeads(),
     createAiBookingLead: (input: CreateAiBookingLeadInput) => getRepositoryBundle().advancedAdapter.createAiBookingLead(input),
+  },
+
+  attendance: {
+    list: (range?: { fromISO: string; toISO: string }) => getRepositoryBundle().attendanceAdapter.list(range),
+    listByEmployee: (employeeId: string, range?: { fromISO: string; toISO: string }) => getRepositoryBundle().attendanceAdapter.listByEmployee(employeeId, range),
+    create: async (data: Partial<AttendanceRecord>) => getRepositoryBundle().attendanceAdapter.create(data),
+    update: async (id: string, data: Partial<AttendanceRecord>) => getRepositoryBundle().attendanceAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().attendanceAdapter.delete(id),
+  },
+
+  advances: {
+    list: () => getRepositoryBundle().advanceAdapter.list(),
+    listByEmployee: (employeeId: string) => getRepositoryBundle().advanceAdapter.listByEmployee(employeeId),
+    create: async (data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.create(data),
+    update: async (id: string, data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.update(id, data),
+    delete: async (id: string) => getRepositoryBundle().advanceAdapter.delete(id),
+  },
+
+  payroll: {
+    listRuns: () => getRepositoryBundle().payrollAdapter.listRuns(),
+    getRun: (id: string) => getRepositoryBundle().payrollAdapter.getRun(id),
+    createRun: async (input: { periodMonth: string; notes?: string }) => getRepositoryBundle().payrollAdapter.createRun(input),
+    deleteRun: async (id: string) => getRepositoryBundle().payrollAdapter.deleteRun(id),
   },
 
   booking: {

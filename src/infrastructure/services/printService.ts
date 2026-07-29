@@ -293,37 +293,42 @@ class PrintService {
   }
 
   /**
-   * Export document as PDF (requires external library)
-   * This is a placeholder - actual implementation depends on html2pdf or similar
+   * Export document as a PDF.
+   *
+   * Two paths, both dependency-free at the app level:
+   *   1. If an `html2pdf` build is present on `window` (bundled/loaded by the
+   *      host), generate a real .pdf file directly.
+   *   2. Otherwise (the common case for a single salon), open a dedicated print
+   *      window with the rendered document and trigger the browser's print
+   *      dialog — from which "Save as PDF" produces a proper PDF with the
+   *      chosen filename. This is reliable, free, and needs no third-party
+   *      service or API key.
    */
   async exportToPDF(htmlContent: string, filename: string = 'document.pdf', options: PrintOptions = {}): Promise<void> {
-    try {
-      // Check if html2pdf is available
-      if (typeof (window as any).html2pdf === 'undefined') {
-        console.warn('html2pdf library not loaded. Please include it in your HTML.');
-        // Fallback to print dialog
-        this.printDocument(htmlContent, options);
+    // Optional: a real client-side PDF library, if the host bundle provides it.
+    if (typeof (window as any).html2pdf !== 'undefined') {
+      try {
+        const printHTML = this.generatePrintHTML(htmlContent, { ...options, filename });
+        const element = document.createElement('div');
+        element.innerHTML = printHTML;
+
+        const opt = {
+          margin: [10, 10, 10, 10],
+          filename: filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: options.orientation || 'portrait', unit: 'mm', format: options.paperSize || 'a4' },
+        };
+
+        await (window as any).html2pdf().set(opt).from(element).save();
         return;
+      } catch (error) {
+        console.warn('html2pdf export failed, falling back to print dialog', error);
       }
-
-      const printHTML = this.generatePrintHTML(htmlContent, options);
-      const element = document.createElement('div');
-      element.innerHTML = printHTML;
-
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { orientation: options.orientation || 'portrait', unit: 'mm', format: options.paperSize || 'a4' },
-      };
-
-      (window as any).html2pdf().set(opt).from(element).save();
-    } catch (error) {
-      console.error('Error exporting to PDF:', error);
-      // Fallback to print
-      this.printDocument(htmlContent, options);
     }
+
+    // Practical, dependency-free path: print dialog → Save as PDF.
+    this.printDocument(htmlContent, { ...options, filename });
   }
 
   /**

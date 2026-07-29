@@ -1,7 +1,8 @@
 import {
   Customer, Employee, Service, ServiceCategory,
   Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
-  NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead
+  NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead,
+  AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -157,4 +158,29 @@ export interface BookingRepository {
   rescheduleBooking(input: { appointmentId: string; phone: string; token: string; newDateTimeISO: string; newEmployeeId?: string; reason?: string }): Promise<Result<{ appointment: Appointment }, DomainError>>;
   clientPortalLogin(phone: string, token: string): Promise<Result<ClientPortalSession, DomainError>>;
   getClientPortalProfile(customerId: string, phone: string, token: string): Promise<Result<ClientPortalProfile, DomainError>>;
+}
+
+// ===== Staff operations (Phase 1) =====
+
+export interface AttendanceRepository {
+  list(range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>>;
+  listByEmployee(employeeId: string, range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>>;
+  create(data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>>;
+  update(id: string, data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>>;
+  delete(id: string): Promise<Result<void, DomainError>>;
+}
+
+export interface AdvanceRepository {
+  list(): Promise<Result<EmployeeAdvance[], DomainError>>;
+  listByEmployee(employeeId: string): Promise<Result<EmployeeAdvance[], DomainError>>;
+  create(data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>>;
+  update(id: string, data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>>;
+  delete(id: string): Promise<Result<void, DomainError>>;
+}
+
+export interface PayrollRepository {
+  listRuns(): Promise<Result<PayrollRun[], DomainError>>;
+  getRun(id: string): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>>;
+  createRun(input: { periodMonth: string; notes?: string }): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>>;
+  deleteRun(id: string): Promise<Result<void, DomainError>>;
 }
