@@ -11,6 +11,13 @@ export function mapErrorToMessageKey(error: any): string {
 
   const code = error.code || error.message; // fallback to message for simple inspection
 
+  // Structured validation failures carry per-field i18n keys — surface the
+  // first one so the user gets a specific, localized message instead of a
+  // generic "invalid input" string.
+  if (code === "VALIDATION_ERROR" && Array.isArray(error.issues) && error.issues.length > 0) {
+    return error.issues[0].key || "error.validation";
+  }
+
   switch (code) {
     case "AUTH_NOT_CONFIGURED":
       return "error.auth_not_configured";
