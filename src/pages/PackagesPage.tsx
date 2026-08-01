@@ -5,6 +5,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { Service } from "../domain/entities";
+import { requiredText, nonNegativeNumber, collectIssues, issuesToMap } from "../domain/validation";
 
 export default function PackagesPage() {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export default function PackagesPage() {
   const [description, setDescription] = useState("");
   const [packagePrice, setPackagePrice] = useState("0");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function load() {
     setLoading(true);
@@ -40,16 +42,26 @@ export default function PackagesPage() {
   }, []);
 
   async function handleCreate() {
-    if (!name.trim() || selectedServiceIds.length === 0) {
-      showToast("error", t("Error"), t("Package name and at least one service are required"));
+    const nameR = requiredText(name);
+    const priceR = nonNegativeNumber(packagePrice);
+    const issues = collectIssues([
+      { field: "name", result: nameR },
+      { field: "packagePrice", result: priceR },
+    ]);
+    if (selectedServiceIds.length === 0) {
+      issues.push({ field: "services", key: "validation.required_select" });
+    }
+    if (issues.length > 0) {
+      setErrors(issuesToMap(issues));
       return;
     }
+    setErrors({});
     setSaving(true);
     try {
       await unwrap(useCases.servicePackages.create({
-        name: name.trim(),
+        name: (nameR as { ok: true; value: string }).value,
         description: description.trim() || undefined,
-        packagePrice: Number(packagePrice),
+        packagePrice: (priceR as { ok: true; value: number }).value,
         items: selectedServiceIds.map((serviceId) => ({ serviceId, quantity: 1 })),
       }));
       setName("");
@@ -81,9 +93,11 @@ export default function PackagesPage() {
       <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
         <div className="rounded-3xl border bg-card p-5 space-y-4">
           <div className="flex items-center gap-2"><Plus className="h-4 w-4" /> <h2 className="font-semibold">{t("Create Package")}</h2></div>
-          <input className="w-full rounded-xl border px-3 py-2" placeholder={t("Package Name")} value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="w-full rounded-xl border px-3 py-2" placeholder={t("Package Name")} value={name} onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }} />
+          {errors.name && <div className="text-xs font-bold text-rose-500">{t(errors.name)}</div>}
           <textarea className="w-full rounded-xl border px-3 py-2 min-h-24" placeholder={t("Package Description")} value={description} onChange={(e) => setDescription(e.target.value)} />
-          <input className="w-full rounded-xl border px-3 py-2" type="number" min="0" step="0.001" placeholder={t("Package Price")} value={packagePrice} onChange={(e) => setPackagePrice(e.target.value)} />
+          <input className="w-full rounded-xl border px-3 py-2" type="number" min="0" step="0.001" placeholder={t("Package Price")} value={packagePrice} onChange={(e) => { setPackagePrice(e.target.value); if (errors.packagePrice) setErrors((p) => ({ ...p, packagePrice: "" })); }} />
+          {errors.packagePrice && <div className="text-xs font-bold text-rose-500">{t(errors.packagePrice)}</div>}
           <div className="space-y-2 max-h-56 overflow-auto rounded-xl border p-3">
             {services.map((service) => (
               <label key={service.id} className="flex items-center gap-2 text-sm">

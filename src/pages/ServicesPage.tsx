@@ -14,6 +14,9 @@ import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 
 import { Service } from "../domain/entities";
+import {
+  requiredText, nonNegativeNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
+} from "../domain/validation";
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -22,6 +25,7 @@ export default function ServicesPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -57,17 +61,32 @@ export default function ServicesPage() {
     setCategory("");
     setPrice("0");
     setDurationMins("30");
+    setErrors({});
   }
 
   async function onSubmit() {
-    const payload = {
-      name,
-      categoryId: category,
-      price: Number(price),
-      durationMinutes: Math.max(1, Math.floor(Number(durationMins))),
-    };
+    const nameR = requiredText(name);
+    const categoryR = requiredText(category);
+    const priceR = nonNegativeNumber(price);
+    const durationR = positiveInteger(durationMins);
+    const issues = collectIssues([
+      { field: "name", result: nameR },
+      { field: "category", result: categoryR },
+      { field: "price", result: priceR },
+      { field: "duration", result: durationR },
+    ]);
+    if (issues.length > 0) {
+      setErrors(issuesToMap(issues));
+      return;
+    }
+    setErrors({});
 
-    if (!payload.name.trim() || !payload.categoryId.trim()) return;
+    const payload = {
+      name: (nameR as FieldResult<string> & { ok: true }).value,
+      categoryId: (categoryR as FieldResult<string> & { ok: true }).value,
+      price: (priceR as FieldResult<number> & { ok: true }).value,
+      durationMinutes: (durationR as FieldResult<number> & { ok: true }).value,
+    };
 
     try {
       if (isEditing && editingId) {
@@ -183,9 +202,10 @@ export default function ServicesPage() {
                 <input
                   className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
                   placeholder={t("e.g. Swedish Massage")}
                 />
+                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.name)}</div>}
               </div>
             </div>
 
@@ -196,9 +216,10 @@ export default function ServicesPage() {
                 <input
                   className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => { setCategory(e.target.value); if (errors.category) setErrors((p) => ({ ...p, category: "" })); }}
                   placeholder={t("e.g. Massage / Nails / Hair")}
                 />
+                {errors.category && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.category)}</div>}
               </div>
             </div>
 
@@ -211,8 +232,9 @@ export default function ServicesPage() {
                     className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                     inputMode="decimal"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
                   />
+                  {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.price)}</div>}
                 </div>
               </div>
 
@@ -224,8 +246,9 @@ export default function ServicesPage() {
                     className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                     inputMode="numeric"
                     value={durationMins}
-                    onChange={(e) => setDurationMins(e.target.value)}
+                    onChange={(e) => { setDurationMins(e.target.value); if (errors.duration) setErrors((p) => ({ ...p, duration: "" })); }}
                   />
+                  {errors.duration && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.duration)}</div>}
                 </div>
               </div>
             </div>

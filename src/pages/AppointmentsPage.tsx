@@ -249,6 +249,8 @@ export default function AppointmentsPage() {
     if (!customerId) return showToast('error', t("Error"), t("Please select a customer"));
     if (!serviceId) return showToast('error', t("Error"), t("Please select a service"));
     if (!employeeId) return showToast('error', t("Error"), t("Please select an employee"));
+    if (isNaN(Number(depositAmount)) || Number(depositAmount) < 0) return showToast('error', t("Error"), t("Deposit cannot be negative"));
+    if (isNaN(Number(noShowFeeAmount)) || Number(noShowFeeAmount) < 0) return showToast('error', t("Error"), t("No-show fee cannot be negative"));
 
     setBusy(true);
     try {

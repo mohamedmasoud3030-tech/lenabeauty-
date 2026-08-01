@@ -15,8 +15,11 @@ import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  requiredText, nonNegativeNumber, nonNegativeInteger, collectIssues, issuesToMap
+} from "../domain/validation";
 
-type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number };
+type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number };
 
 // Export products to CSV
 function exportToCSV(products: Product[], t: (k: string) => string) {
@@ -51,8 +54,10 @@ export default function InventoryPage() {
   const [lowStockThreshold] = useState(5);
   const [name, setName] = useState("");
   const [stockQuantity, setStockQuantity] = useState("0");
+  const [reorderLevel, setReorderLevel] = useState("0");
   const [cost, setCost] = useState("0");
   const [price, setPrice] = useState("0");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditing = !!editingId;
 
@@ -74,13 +79,13 @@ export default function InventoryPage() {
     let result = rows;
     const text = q.trim().toLowerCase();
     if (text) result = result.filter((p) => p.name.toLowerCase().includes(text));
-    if (showLowStockOnly) result = result.filter((p) => p.stockQuantity < lowStockThreshold);
+    if (showLowStockOnly) result = result.filter((p) => p.stockQuantity < (p.reorderLevel ?? lowStockThreshold));
     return result;
   }, [rows, q, showLowStockOnly, lowStockThreshold]);
 
   const stats = useMemo(() => {
     const totalItems = rows.length;
-    const lowStock = rows.filter(p => p.stockQuantity < 5).length;
+    const lowStock = rows.filter(p => p.stockQuantity < (p.reorderLevel ?? 5)).length;
     const totalValue = rows.reduce((acc, p) => acc + (p.stockQuantity * p.cost), 0);
     return { totalItems, lowStock, totalValue };
   }, [rows]);
@@ -89,29 +94,38 @@ export default function InventoryPage() {
     setEditingId(null);
     setName("");
     setStockQuantity("0");
+    setReorderLevel("0");
     setCost("0");
     setPrice("0");
+    setErrors({});
   }
 
   async function submit() {
+    const nameR = requiredText(name);
+    const stockR = nonNegativeInteger(stockQuantity);
+    const reorderR = nonNegativeInteger(reorderLevel);
+    const costR = nonNegativeNumber(cost);
+    const priceR = nonNegativeNumber(price);
+    const issues = collectIssues([
+      { field: "name", result: nameR },
+      { field: "stockQuantity", result: stockR },
+      { field: "reorderLevel", result: reorderR },
+      { field: "cost", result: costR },
+      { field: "price", result: priceR },
+    ]);
+    if (issues.length > 0) {
+      setErrors(issuesToMap(issues));
+      return;
+    }
+    setErrors({});
+
     const payload = {
-      name,
-      stockQuantity: Math.max(0, Math.floor(Number(stockQuantity) || 0)),
-      cost: Number(cost) || 0,
-      price: Number(price) || 0,
+      name: (nameR as { ok: true; value: string }).value,
+      stockQuantity: (stockR as { ok: true; value: number }).value,
+      reorderLevel: (reorderR as { ok: true; value: number }).value,
+      cost: (costR as { ok: true; value: number }).value,
+      price: (priceR as { ok: true; value: number }).value,
     };
-    if (!payload.name.trim()) {
-      showToast('error', t('Error'), t('Please enter a product name'));
-      return;
-    }
-    if (payload.price < 0 || payload.cost < 0) {
-      showToast('error', t('Error'), t('Price and cost cannot be negative'));
-      return;
-    }
-    if (payload.stockQuantity < 0) {
-      showToast('error', t('Error'), t('Stock quantity cannot be negative'));
-      return;
-    }
 
     try {
       if (isEditing && editingId) {
@@ -130,8 +144,10 @@ export default function InventoryPage() {
     setEditingId(p.id);
     setName(p.name);
     setStockQuantity(String(p.stockQuantity));
+    setReorderLevel(String(p.reorderLevel ?? 0));
     setCost(String(p.cost));
     setPrice(String(p.price));
+    setErrors({});
   }
 
   async function onDelete(id: string) {
@@ -284,9 +300,10 @@ export default function InventoryPage() {
                 <input
                   className="w-full rounded-2xl border border-border bg-muted/30 ps-14 pe-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
                   placeholder={t("e.g. Luxury Shampoo")}
                 />
+                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.name)}</div>}
               </div>
             </div>
 
@@ -299,10 +316,27 @@ export default function InventoryPage() {
                     className="w-full rounded-2xl border border-border bg-muted/30 py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                     inputMode="numeric"
                     value={stockQuantity}
-                    onChange={(e) => setStockQuantity(e.target.value)}
+                    onChange={(e) => { setStockQuantity(e.target.value); if (errors.stockQuantity) setErrors((p) => ({ ...p, stockQuantity: "" })); }}
                   />
                 </div>
+                {errors.stockQuantity && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.stockQuantity)}</div>}
               </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Reorder Level")}</label>
+                <div className="relative group">
+                  <Package className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input
+                    className="w-full rounded-2xl border border-border bg-muted/30 py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
+                    inputMode="numeric"
+                    value={reorderLevel}
+                    onChange={(e) => { setReorderLevel(e.target.value); if (errors.reorderLevel) setErrors((p) => ({ ...p, reorderLevel: "" })); }}
+                  />
+                </div>
+                {errors.reorderLevel && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.reorderLevel)}</div>}
+              </div>
+            </div>
+
+            <div className="grid gap-8 sm:grid-cols-2">
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Cost Price")}</label>
                 <div className="relative group">
@@ -311,22 +345,23 @@ export default function InventoryPage() {
                     className="w-full rounded-2xl border border-border bg-muted/30 py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                     inputMode="decimal"
                     value={cost}
-                    onChange={(e) => setCost(e.target.value)}
+                    onChange={(e) => { setCost(e.target.value); if (errors.cost) setErrors((p) => ({ ...p, cost: "" })); }}
                   />
                 </div>
+                {errors.cost && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.cost)}</div>}
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Selling Price")}</label>
-              <div className="relative group">
-                <DollarSign className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <input
-                  className="w-full rounded-2xl border border-border bg-muted/30 py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                  inputMode="decimal"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Selling Price")}</label>
+                <div className="relative group">
+                  <DollarSign className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input
+                    className="w-full rounded-2xl border border-border bg-muted/30 py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
+                  />
+                </div>
+                {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.price)}</div>}
               </div>
             </div>
 
