@@ -108,6 +108,7 @@ export function mapProduct(row: unknown): Product {
         name: row.name,
         barcode: typeof row.barcode === "string" ? row.barcode : undefined,
         stockQuantity: Number(row.stock_quantity) || 0,
+        reorderLevel: row.reorder_level !== undefined && row.reorder_level !== null ? Number(row.reorder_level) : undefined,
         price: Number(row.price),
         cost: Number(row.cost),
         createdAt: parseDate(row.created_at, "created_at", "mapProduct"),
@@ -175,7 +176,18 @@ export function mapCenterSettings(row: unknown): CenterSettings {
         address: typeof row.address === "string" ? row.address : undefined,
         phone: typeof row.phone === "string" ? row.phone : undefined,
         cr: typeof row.cr === "string" ? row.cr : undefined,
-        postalCode: typeof row.postal_code === "string" ? row.postal_code : undefined
+        postalCode: typeof row.postal_code === "string" ? row.postal_code : undefined,
+        displayName: typeof row.display_name === "string" ? row.display_name : undefined,
+        displayNameAr: typeof row.display_name_ar === "string" ? row.display_name_ar : undefined,
+        brandEmail: typeof row.brand_email === "string" ? row.brand_email : undefined,
+        brandTaxNumber: typeof row.brand_tax_number === "string" ? row.brand_tax_number : undefined,
+        brandRegistrationNumber: typeof row.brand_registration_number === "string" ? row.brand_registration_number : undefined,
+        brandPrimaryColor: typeof row.brand_primary_color === "string" ? row.brand_primary_color : undefined,
+        brandSecondaryColor: typeof row.brand_secondary_color === "string" ? row.brand_secondary_color : undefined,
+        brandAccentColor: typeof row.brand_accent_color === "string" ? row.brand_accent_color : undefined,
+        brandFooterText: typeof row.brand_footer_text === "string" ? row.brand_footer_text : undefined,
+        brandFooterTextAr: typeof row.brand_footer_text_ar === "string" ? row.brand_footer_text_ar : undefined,
+        brandLogoBase64: typeof row.brand_logo_base64 === "string" ? row.brand_logo_base64 : undefined
     };
 }
 
