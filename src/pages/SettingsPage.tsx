@@ -11,6 +11,7 @@ import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { validateBackupPayload } from "../application/dto";
+import { requiredText, percentField, collectIssues, issuesToMap } from "../domain/validation";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,9 @@ export default function SettingsPage() {
   // center settings
   const [s, setS] = useState<CenterSettings | null>(null);
   const [busy, setBusy] = useState(false);
+  const [centerErrors, setCenterErrors] = useState<Record<string, string>>({});
+  // VAT is kept as text so empty/invalid input is an error, never a silent 0.
+  const [vatText, setVatText] = useState("0");
 
   // users
   const [users, setUsers] = useState<any[]>([]);
@@ -61,6 +65,7 @@ export default function SettingsPage() {
     try {
       const [x, us] = await Promise.all([unwrap(useCases.settings.get()), unwrap(useCases.employees.list())]);
       setS(x);
+      setVatText(String(x.taxRate ?? 0));
       setUsers(us);
     } catch (e) {
       console.error("Failed to load settings or users", e);
@@ -91,17 +96,30 @@ export default function SettingsPage() {
 
   async function saveCenter() {
     if (!s) return;
+    const nameR = requiredText(s.name);
+    const taxR = percentField(vatText);
+    const issues = collectIssues([
+      { field: "name", result: nameR },
+      { field: "taxRate", result: taxR },
+    ]);
+    if (issues.length > 0) {
+      setCenterErrors(issuesToMap(issues));
+      return;
+    }
+    setCenterErrors({});
     setBusy(true);
     try {
       const updated = await unwrap(useCases.settings.update({
-        name: s.name,
+        name: (nameR as { ok: true; value: string }).value,
         address: s.address ?? "",
         phone: s.phone ?? "",
         cr: s.cr ?? "",
         postalCode: s.postalCode ?? "",
         currency: s.currency ?? "OMR",
         logoPath: s.logoPath ?? undefined,
+        taxRate: (taxR as { ok: true; value: number }).value,
       }));
+      setVatText(String((taxR as { ok: true; value: number }).value));
       setS(updated);
       showToast('success', t('Success'), t("Settings saved successfully"));
     } catch (err: any) {
@@ -369,9 +387,10 @@ export default function SettingsPage() {
                         <input
                           className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                           value={s.name}
-                          onChange={(e) => setS({ ...s, name: e.target.value })}
+                          onChange={(e) => { setS({ ...s, name: e.target.value }); if (centerErrors.name) setCenterErrors((p) => ({ ...p, name: "" })); }}
                           placeholder={t("Enter business name")}
                         />
+                        {centerErrors.name && <div className="text-xs font-bold text-rose-500">{t(centerErrors.name)}</div>}
                       </div>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
@@ -436,6 +455,22 @@ export default function SettingsPage() {
                           onChange={(e) => setS({ ...s, currency: e.target.value })}
                           placeholder="OMR"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                          <Coins className="h-3 w-3" />
+                          {t("VAT Rate")}
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          value={vatText}
+                          onChange={(e) => { setVatText(e.target.value); if (centerErrors.taxRate) setCenterErrors((p) => ({ ...p, taxRate: "" })); }}
+                          placeholder="0"
+                        />
+                        {centerErrors.taxRate && <div className="text-xs font-bold text-rose-500">{t(centerErrors.taxRate)}</div>}
+                        <p className="text-xs text-muted-foreground">{t("VAT")} (%)</p>
                       </div>
                     </div>
 
