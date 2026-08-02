@@ -46,7 +46,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await authenticate(username, password);
-      nav("/", { replace: true });
+      nav("/dashboard", { replace: true });
     } catch (err) {
       const e = err as { code?: string; message?: string };
       if (e.code === "AUTH_NOT_CONFIGURED") {

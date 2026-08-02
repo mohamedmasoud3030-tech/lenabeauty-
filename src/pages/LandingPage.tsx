@@ -5,10 +5,14 @@ import {
   ArrowRight, Check, Star, Zap, Users, Shield, Clock,
   Smartphone, BarChart3, Sparkles, Play, Globe, Monitor, CalendarDays, CreditCard, MessageSquareHeart
 } from "lucide-react";
+import { useAppContext } from "../context/AppContext";
 
 export default function LandingPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAppContext();
+
+  const goToApp = () => navigate(user ? "/dashboard" : "/login");
 
   const toggleLanguage = () => {
     const nextLang = i18n.language === "ar" ? "en" : "ar";
@@ -122,7 +126,7 @@ export default function LandingPage() {
             <button onClick={() => navigate("/book")} className="px-4 sm:px-6 py-2.5 rounded-lg border border-primary/30 text-primary font-bold text-sm uppercase tracking-widest hover:bg-primary/10 transition-all">
               {t("Book Now")}
             </button>
-            <button onClick={() => navigate("/login")} className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl">
+            <button onClick={goToApp} className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest hover:bg-primary/90 transition-all shadow-lg hover:shadow-xl">
               {t("Open App")}
             </button>
           </div>
@@ -150,7 +154,7 @@ export default function LandingPage() {
             </motion.p>
 
             <motion.div variants={item} className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <button onClick={() => navigate("/login")} className="group relative px-8 h-14 rounded-xl bg-primary text-primary-foreground font-bold text-base uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
+              <button onClick={goToApp} className="group relative px-8 h-14 rounded-xl bg-primary text-primary-foreground font-bold text-base uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                 <span className="relative z-10">{t("Open Dashboard")}</span>
                 <ArrowRight className="h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
@@ -243,7 +247,7 @@ export default function LandingPage() {
             <h2 className="text-4xl sm:text-5xl font-bold text-foreground">{t("Ready to Explore LenaBeauty?")}</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t("Open the app, try online booking, or enter the client portal to see how the experience fits together.")}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button onClick={() => navigate("/login")} className="group relative px-8 h-14 rounded-xl bg-primary text-primary-foreground font-bold text-base uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden mx-auto sm:mx-0">
+              <button onClick={goToApp} className="group relative px-8 h-14 rounded-xl bg-primary text-primary-foreground font-bold text-base uppercase tracking-widest shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden mx-auto sm:mx-0">
                 <span className="relative z-10">{t("Open App")}</span>
                 <ArrowRight className="h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
               </button>
