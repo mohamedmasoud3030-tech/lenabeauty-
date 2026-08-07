@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, Save, Eye, Download, Share2, Printer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCases } from '../app/composition/useCases';
+import { unwrap } from '../shared/hooks/useApplication';
+import { useToast } from '../shared/components/Toast';
 
 interface BrandingSettings {
   salonName: string;
@@ -20,39 +23,77 @@ interface BrandingSettings {
   footerTextAr: string;
 }
 
+const DEFAULT_SETTINGS: BrandingSettings = {
+  salonName: 'LenaBeauty',
+  salonNameAr: 'لينا بيوتي',
+  address: 'Muscat, Oman',
+  addressAr: 'مسقط، عمان',
+  phone: '+968 9414 1330',
+  email: 'info@lenabeauty.om',
+  taxNumber: 'OM123456789',
+  registrationNumber: 'CR/2024/123456',
+  logo: null,
+  primaryColor: '#8B5CF6',
+  secondaryColor: '#EC4899',
+  accentColor: '#06B6D4',
+  footerText: 'Powered by LenaBeauty',
+  footerTextAr: 'مدعوم بواسطة لينا بيوتي',
+};
+
+/** Map the persisted CenterSettings branding fields onto the form shape. */
+function fromCenterSettings(cs: any): BrandingSettings {
+  return {
+    salonName: cs?.displayName ?? DEFAULT_SETTINGS.salonName,
+    salonNameAr: cs?.displayNameAr ?? DEFAULT_SETTINGS.salonNameAr,
+    address: cs?.address ?? DEFAULT_SETTINGS.address,
+    addressAr: DEFAULT_SETTINGS.addressAr,
+    phone: cs?.phone ?? DEFAULT_SETTINGS.phone,
+    email: cs?.brandEmail ?? DEFAULT_SETTINGS.email,
+    taxNumber: cs?.brandTaxNumber ?? DEFAULT_SETTINGS.taxNumber,
+    registrationNumber: cs?.brandRegistrationNumber ?? DEFAULT_SETTINGS.registrationNumber,
+    logo: cs?.brandLogoBase64 ?? null,
+    primaryColor: cs?.brandPrimaryColor ?? DEFAULT_SETTINGS.primaryColor,
+    secondaryColor: cs?.brandSecondaryColor ?? DEFAULT_SETTINGS.secondaryColor,
+    accentColor: cs?.brandAccentColor ?? DEFAULT_SETTINGS.accentColor,
+    footerText: cs?.brandFooterText ?? DEFAULT_SETTINGS.footerText,
+    footerTextAr: cs?.brandFooterTextAr ?? DEFAULT_SETTINGS.footerTextAr,
+  };
+}
+
 export default function BrandingSettingsPage() {
   const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
   const isArabic = i18n.language === 'ar';
-  const [settings, setSettings] = useState<BrandingSettings>({
-    salonName: 'LenaBeauty',
-    salonNameAr: 'لينا بيوتي',
-    address: 'Muscat, Oman',
-    addressAr: 'مسقط، عمان',
-    phone: '+968 9414 1330',
-    email: 'info@lenabeauty.om',
-    taxNumber: 'OM123456789',
-    registrationNumber: 'CR/2024/123456',
-    logo: null,
-    primaryColor: '#8B5CF6',
-    secondaryColor: '#EC4899',
-    accentColor: '#06B6D4',
-    footerText: 'Powered by LenaBeauty',
-    footerTextAr: 'مدعوم بواسطة لينا بيوتي',
-  });
-
+  const [settings, setSettings] = useState<BrandingSettings>(DEFAULT_SETTINGS);
   const [preview, setPreview] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const saved = localStorage.getItem('lenabeauty_branding');
-    if (saved) {
-      setSettings(JSON.parse(saved));
-      const logoData = localStorage.getItem('lenabeauty_logo');
-      if (logoData) {
-        setPreview(logoData);
+    // Supabase is the source of truth; localStorage is only a cache/fallback.
+    (async () => {
+      try {
+        const res = await useCases.settings.get();
+        if (res.ok) {
+          const next = fromCenterSettings(res.data);
+          setSettings(next);
+          if (next.logo) setPreview(next.logo);
+          return;
+        }
+      } catch {
+        // fall through to localStorage
       }
-    }
+      const savedLocal = localStorage.getItem('lenabeauty_branding');
+      if (savedLocal) {
+        try {
+          setSettings(JSON.parse(savedLocal));
+          const logoData = localStorage.getItem('lenabeauty_logo');
+          if (logoData) setPreview(logoData);
+        } catch {
+          /* ignore malformed cache */
+        }
+      }
+    })();
   }, []);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +104,6 @@ export default function BrandingSettingsPage() {
         const base64 = event.target?.result as string;
         setPreview(base64);
         setSettings(prev => ({ ...prev, logo: base64, logoFile: file }));
-        localStorage.setItem('lenabeauty_logo', base64);
       };
       reader.readAsDataURL(file);
     }
@@ -77,10 +117,35 @@ export default function BrandingSettingsPage() {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await unwrap(useCases.settings.update({
+        displayName: settings.salonName,
+        displayNameAr: settings.salonNameAr,
+        brandEmail: settings.email,
+        brandTaxNumber: settings.taxNumber,
+        brandRegistrationNumber: settings.registrationNumber,
+        brandPrimaryColor: settings.primaryColor,
+        brandSecondaryColor: settings.secondaryColor,
+        brandAccentColor: settings.accentColor,
+        brandFooterText: settings.footerText,
+        brandFooterTextAr: settings.footerTextAr,
+        phone: settings.phone,
+        address: settings.address,
+        brandLogoBase64: settings.logo ?? undefined,
+      }));
+      // localStorage remains a backward-compat cache; remote is authoritative.
+      localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
+      if (settings.logo) localStorage.setItem('lenabeauty_logo', settings.logo);
+      setSaved(true);
+      showToast('success', t('Success'), t('Branding settings saved successfully'));
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      showToast('error', t('Error'), err?.message || t('Failed to load branding'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleExportSettings = () => {

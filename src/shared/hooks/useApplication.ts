@@ -14,5 +14,10 @@ export function formatError(err: any): string {
   if (err && err.code === "BACKEND_METHOD_UNSUPPORTED") {
     return "BACKEND_METHOD_UNSUPPORTED"; // Key for translation
   }
+  // Structured validation errors carry per-field i18n keys — return the first
+  // key so callers can translate it to a specific, localized message.
+  if (err && err.code === "VALIDATION_ERROR" && Array.isArray(err.issues) && err.issues.length > 0) {
+    return err.issues[0].key;
+  }
   return err?.message || String(err) || "An unexpected error occurred";
 }

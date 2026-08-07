@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Employee } from "../domain/entities";
+import { requiredText, nonNegativeNumber, percentField, collectIssues, issuesToMap } from "../domain/validation";
 
 export default function EmployeesPage() {
   const { showToast } = useToast();
@@ -25,6 +26,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<any>(null); // null = hidden, {} = create, {id...} = edit
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function load() {
     setLoading(true);
@@ -55,11 +57,25 @@ export default function EmployeesPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    const nameR = requiredText(form?.name);
+    const salaryR = nonNegativeNumber(form?.baseSalary);
+    const commissionR = percentField(form?.commissionPercentage);
+    const issues = collectIssues([
+      { field: "name", result: nameR },
+      { field: "baseSalary", result: salaryR },
+      { field: "commission", result: commissionR },
+    ]);
+    if (issues.length > 0) {
+      setErrors(issuesToMap(issues));
+      return;
+    }
+    setErrors({});
     try {
       const payload = {
         ...form,
-        baseSalary: Number(form.baseSalary) || 0,
-        commissionPercentage: Number(form.commissionPercentage) || 0,
+        name: (nameR as { ok: true; value: string }).value,
+        baseSalary: (salaryR as { ok: true; value: number }).value,
+        commissionPercentage: (commissionR as { ok: true; value: number }).value,
       };
       if (form.id) {
         await unwrap(useCases.employees.update(form.id, payload));
@@ -67,6 +83,7 @@ export default function EmployeesPage() {
         await unwrap(useCases.employees.create(payload));
       }
       setForm(null);
+      setErrors({});
       load();
     } catch (err: any) {
       showToast('error', t("Error"), ((err as Error).message || String(err)));
@@ -88,7 +105,7 @@ export default function EmployeesPage() {
         
         {isAdmin && (
           <button
-            onClick={() => setForm({ name: "", role: "STYLIST", baseSalary: 0, commissionPercentage: 0 })}
+            onClick={() => { setForm({ name: "", role: "STYLIST", baseSalary: 0, commissionPercentage: 0 }); setErrors({}); }}
             className="h-14 w-full sm:w-auto px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
             <UserPlus className="h-6 w-6" />
@@ -141,10 +158,11 @@ export default function EmployeesPage() {
                         required
                         className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                         value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        onChange={(e) => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
                         placeholder={t("Employee Name")}
                       />
                     </div>
+                    {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.name)}</div>}
                   </div>
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Role")}</label>
@@ -172,11 +190,13 @@ export default function EmployeesPage() {
                           <Wallet className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <input
                             type="number"
+                            min={0}
                             className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                             value={form.baseSalary}
-                            onChange={(e) => setForm({ ...form, baseSalary: e.target.value })}
+                            onChange={(e) => { setForm({ ...form, baseSalary: e.target.value }); if (errors.baseSalary) setErrors((p) => ({ ...p, baseSalary: "" })); }}
                           />
                         </div>
+                        {errors.baseSalary && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.baseSalary)}</div>}
                       </div>
                       <div className="space-y-3">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Commission (%)")}</label>
@@ -184,11 +204,14 @@ export default function EmployeesPage() {
                           <Percent className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                           <input
                             type="number"
+                            min={0}
+                            max={100}
                             className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                             value={form.commissionPercentage}
-                            onChange={(e) => setForm({ ...form, commissionPercentage: e.target.value })}
+                            onChange={(e) => { setForm({ ...form, commissionPercentage: e.target.value }); if (errors.commission) setErrors((p) => ({ ...p, commission: "" })); }}
                           />
                         </div>
+                        {errors.commission && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.commission)}</div>}
                       </div>
                     </>
                   )}
@@ -297,7 +320,7 @@ export default function EmployeesPage() {
                         <td>
                           <div className="flex items-center gap-3">
                             <button 
-                              onClick={() => setForm(emp)} 
+                              onClick={() => { setForm(emp); setErrors({}); }} 
                               className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
                               title={t("Edit")}
                             >
@@ -380,7 +403,7 @@ export default function EmployeesPage() {
                   {isAdmin && (
                     <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                       <button
-                        onClick={() => setForm(emp)}
+                        onClick={() => { setForm(emp); setErrors({}); }}
                         className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
                       >
                         <Edit className="h-4 w-4" />

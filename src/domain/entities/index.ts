@@ -124,6 +124,7 @@ export interface Product {
   name: string;
   barcode?: string;
   stockQuantity: number;
+  reorderLevel?: number;
   price: number;
   cost: number;
   createdAt: Date;
@@ -183,6 +184,18 @@ export interface CenterSettings {
   phone?: string;
   cr?: string;
   postalCode?: string;
+  // Center-scoped branding (persisted in Supabase, see branding migration).
+  displayName?: string;
+  displayNameAr?: string;
+  brandEmail?: string;
+  brandTaxNumber?: string;
+  brandRegistrationNumber?: string;
+  brandPrimaryColor?: string;
+  brandSecondaryColor?: string;
+  brandAccentColor?: string;
+  brandFooterText?: string;
+  brandFooterTextAr?: string;
+  brandLogoBase64?: string;
 }
 
 export interface NotificationSettingsEntity {

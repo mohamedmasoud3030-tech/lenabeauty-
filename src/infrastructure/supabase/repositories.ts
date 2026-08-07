@@ -23,7 +23,33 @@ import {
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
 import { computePayrollNetSalary, sumAdvancesForMonth, parsePeriodMonth } from "../../domain/payroll";
+import {
+  requiredText, optionalText, nonNegativeNumber, positiveNumber, positiveInteger, nonNegativeInteger,
+  percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField,
+  DomainValidationError, ValidationIssue, FieldResult,
+} from "../../domain/validation";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
+
+/**
+ * Repository-boundary validation helper. Validates a payload's fields with the
+ * shared domain validators and returns a structured VALIDATION_ERROR result if
+ * any field is invalid — BEFORE anything reaches Supabase. This is the second
+ * line of defense behind the UI forms and works even when the UI is bypassed.
+ */
+function validatePayload(
+  fields: { field: string; result: FieldResult<unknown> }[]
+): { ok: true; issues: ValidationIssue[] } | { ok: false; error: DomainError } {
+  const issues = collectIssues(fields);
+  if (issues.length > 0) {
+    return { ok: false, error: new DomainValidationError(issues) };
+  }
+  return { ok: true, issues: [] };
+}
+
+/** Assert a validated field result and return its normalized value. */
+function okValue<T>(r: FieldResult<T> | null): T {
+  return (r as FieldResult<T> & { ok: true }).value;
+}
 
 function getCenterIdFor(operation: string): Result<string, DomainError> {
   try {
@@ -179,13 +205,24 @@ class SupabaseCustomerAdapter implements CustomerRepository {
   async create(data: Partial<Customer>): Promise<Result<Customer, DomainError>> {
     const centerRes = getCenterIdFor("Customer.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(data.name);
+    const phoneR = phoneField(data.phone);
+    const emailR = emailField(data.email);
+    const boundary = validatePayload([
+      { field: "name", result: nameR },
+      { field: "phone", result: phoneR },
+      { field: "email", result: emailR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        name: data.name,
+        name: okValue(nameR),
         category: data.category,
-        phone: data.phone,
-        email: data.email,
+        phone: okValue(phoneR),
+        email: okValue(emailR),
         notes: data.notes,
         total_spent: data.totalSpent,
         loyalty_points: data.loyaltyPoints,
@@ -208,12 +245,23 @@ class SupabaseCustomerAdapter implements CustomerRepository {
   async update(id: string, data: Partial<Customer>): Promise<Result<Customer, DomainError>> {
     const centerRes = getCenterIdFor("Customer.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = data.name !== undefined ? requiredText(data.name) : null;
+    const phoneR = data.phone !== undefined ? phoneField(data.phone) : null;
+    const emailR = data.email !== undefined ? emailField(data.email) : null;
+    const boundary = validatePayload([
+      ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(phoneR ? [{ field: "phone", result: phoneR }] : []),
+      ...(emailR ? [{ field: "email", result: emailR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.name !== undefined) payload.name = data.name;
+      if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.category !== undefined) payload.category = data.category;
-      if (data.phone !== undefined) payload.phone = data.phone;
-      if (data.email !== undefined) payload.email = data.email;
+      if (data.phone !== undefined) payload.phone = okValue(phoneR);
+      if (data.email !== undefined) payload.email = okValue(emailR);
       if (data.notes !== undefined) payload.notes = data.notes;
       if (data.totalSpent !== undefined) payload.total_spent = data.totalSpent;
       if (data.loyaltyPoints !== undefined) payload.loyalty_points = data.loyaltyPoints;
@@ -325,15 +373,26 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
   async create(data: Partial<Employee>): Promise<Result<Employee, DomainError>> {
     const centerRes = getCenterIdFor("Employee.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(data.name);
+    const salaryR = nonNegativeNumber(data.salary ?? data.baseSalary);
+    const commissionR = percentField(data.commissionPercentage);
+    const boundary = validatePayload([
+      { field: "name", result: nameR },
+      { field: "salary", result: salaryR },
+      { field: "commission", result: commissionR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        name: data.name,
+        name: okValue(nameR),
         phone: data.phone,
         role: data.role,
-        salary: data.salary,
-        base_salary: data.baseSalary,
-        commission_percentage: data.commissionPercentage,
+        salary: okValue(salaryR),
+        base_salary: okValue(salaryR),
+        commission_percentage: okValue(commissionR),
         is_active: data.isActive !== undefined ? data.isActive : true
       };
       const { data: row, error } = await getSupabaseClient()
@@ -353,14 +412,27 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
   async update(id: string, data: Partial<Employee>): Promise<Result<Employee, DomainError>> {
     const centerRes = getCenterIdFor("Employee.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = data.name !== undefined ? requiredText(data.name) : null;
+    const salaryR = data.salary !== undefined ? nonNegativeNumber(data.salary) : null;
+    const baseSalaryR = data.baseSalary !== undefined ? nonNegativeNumber(data.baseSalary) : null;
+    const commissionR = data.commissionPercentage !== undefined ? percentField(data.commissionPercentage) : null;
+    const boundary = validatePayload([
+      ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(salaryR ? [{ field: "salary", result: salaryR }] : []),
+      ...(baseSalaryR ? [{ field: "baseSalary", result: baseSalaryR }] : []),
+      ...(commissionR ? [{ field: "commission", result: commissionR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.name !== undefined) payload.name = data.name;
+      if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.phone !== undefined) payload.phone = data.phone;
       if (data.role !== undefined) payload.role = data.role;
-      if (data.salary !== undefined) payload.salary = data.salary;
-      if (data.baseSalary !== undefined) payload.base_salary = data.baseSalary;
-      if (data.commissionPercentage !== undefined) payload.commission_percentage = data.commissionPercentage;
+      if (data.salary !== undefined) payload.salary = okValue(salaryR);
+      if (data.baseSalary !== undefined) payload.base_salary = okValue(baseSalaryR);
+      if (data.commissionPercentage !== undefined) payload.commission_percentage = okValue(commissionR);
       if (data.isActive !== undefined) payload.is_active = data.isActive;
 
       delete payload.center_id;
@@ -420,13 +492,24 @@ class SupabaseServiceAdapter implements ServiceRepository {
   async create(data: Partial<Service>): Promise<Result<Service, DomainError>> {
     const centerRes = getCenterIdFor("Service.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(data.name);
+    const priceR = nonNegativeNumber(data.price);
+    const durationR = positiveInteger(data.durationMinutes ?? data.durationMins);
+    const boundary = validatePayload([
+      { field: "name", result: nameR },
+      { field: "price", result: priceR },
+      { field: "duration", result: durationR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        name: data.name,
+        name: okValue(nameR),
         category_id: data.categoryId || null,
-        price: data.price,
-        duration_minutes: data.durationMinutes,
+        price: okValue(priceR),
+        duration_minutes: okValue(durationR),
         is_active: data.isActive !== undefined ? data.isActive : true
       };
 
@@ -447,12 +530,23 @@ class SupabaseServiceAdapter implements ServiceRepository {
   async update(id: string, data: Partial<Service>): Promise<Result<Service, DomainError>> {
     const centerRes = getCenterIdFor("Service.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = data.name !== undefined ? requiredText(data.name) : null;
+    const priceR = data.price !== undefined ? nonNegativeNumber(data.price) : null;
+    const durationR = data.durationMinutes !== undefined ? positiveInteger(data.durationMinutes) : null;
+    const boundary = validatePayload([
+      ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(priceR ? [{ field: "price", result: priceR }] : []),
+      ...(durationR ? [{ field: "duration", result: durationR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.name !== undefined) payload.name = data.name;
+      if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
-      if (data.price !== undefined) payload.price = data.price;
-      if (data.durationMinutes !== undefined) payload.duration_minutes = data.durationMinutes;
+      if (data.price !== undefined) payload.price = okValue(priceR);
+      if (data.durationMinutes !== undefined) payload.duration_minutes = okValue(durationR);
       if (data.isActive !== undefined) payload.is_active = data.isActive;
 
       delete payload.center_id;
@@ -515,18 +609,32 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
   async create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>> {
     const centerRes = getCenterIdFor("Appointment.create");
     if (!centerRes.ok) return centerRes as any;
-    
+
+    const customerR = requiredText(data.customerId);
+    // dateTime is validated when provided (valid date); the "not in the past"
+    // rule is enforced by the public-booking RPC for end-user bookings.
+    const dateR = data.dateTime ? dateField(data.dateTime.toISOString(), { required: true }) : null;
+    const depositR = nonNegativeNumber(data.depositAmount ?? 0);
+    const noShowFeeR = nonNegativeNumber(data.noShowFeeAmount ?? 0);
+    const boundary = validatePayload([
+      { field: "customer", result: customerR },
+      ...(dateR ? [{ field: "dateTime", result: dateR }] : []),
+      { field: "depositAmount", result: depositR },
+      { field: "noShowFeeAmount", result: noShowFeeR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        customer_id: data.customerId,
+        customer_id: okValue(customerR),
         employee_id: data.employeeId,
         service_id: data.serviceId,
-        date_time: data.dateTime?.toISOString(),
+        date_time: dateR ? (okValue(dateR) as Date).toISOString() : (data.dateTime ? data.dateTime.toISOString() : new Date().toISOString()),
         status: data.status || 'SCHEDULED', // Map AppointmentStatus
         notes: data.notes,
-        deposit_amount: data.depositAmount ?? 0,
-        no_show_fee_amount: data.noShowFeeAmount ?? 0,
+        deposit_amount: okValue(depositR),
+        no_show_fee_amount: okValue(noShowFeeR),
         no_show_note: data.noShowNote
       };
 
@@ -547,16 +655,29 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
   async update(id: string, data: Partial<Appointment>): Promise<Result<Appointment, DomainError>> {
     const centerRes = getCenterIdFor("Appointment.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const customerR = data.customerId !== undefined ? requiredText(data.customerId) : null;
+    const dateR = data.dateTime !== undefined ? dateField(data.dateTime.toISOString(), { required: true }) : null;
+    const depositR = data.depositAmount !== undefined ? nonNegativeNumber(data.depositAmount) : null;
+    const noShowFeeR = data.noShowFeeAmount !== undefined ? nonNegativeNumber(data.noShowFeeAmount) : null;
+    const boundary = validatePayload([
+      ...(customerR ? [{ field: "customer", result: customerR }] : []),
+      ...(dateR ? [{ field: "dateTime", result: dateR }] : []),
+      ...(depositR ? [{ field: "depositAmount", result: depositR }] : []),
+      ...(noShowFeeR ? [{ field: "noShowFeeAmount", result: noShowFeeR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.customerId !== undefined) payload.customer_id = data.customerId;
+      if (data.customerId !== undefined) payload.customer_id = okValue(customerR);
       if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
       if (data.serviceId !== undefined) payload.service_id = data.serviceId;
-      if (data.dateTime !== undefined) payload.date_time = data.dateTime.toISOString();
+      if (data.dateTime !== undefined) payload.date_time = (okValue(dateR) as Date).toISOString();
       if (data.status !== undefined) payload.status = data.status;
       if (data.notes !== undefined) payload.notes = data.notes;
-      if (data.depositAmount !== undefined) payload.deposit_amount = data.depositAmount;
-      if (data.noShowFeeAmount !== undefined) payload.no_show_fee_amount = data.noShowFeeAmount;
+      if (data.depositAmount !== undefined) payload.deposit_amount = okValue(depositR);
+      if (data.noShowFeeAmount !== undefined) payload.no_show_fee_amount = okValue(noShowFeeR);
       if (data.noShowFeeCharged !== undefined) payload.no_show_fee_charged = data.noShowFeeCharged;
       if (data.noShowMarkedAt !== undefined) payload.no_show_marked_at = data.noShowMarkedAt?.toISOString();
       if (data.noShowNote !== undefined) payload.no_show_note = data.noShowNote;
@@ -652,14 +773,30 @@ class SupabaseProductAdapter implements ProductRepository {
   async create(data: Partial<Product>): Promise<Result<Product, DomainError>> {
     const centerRes = getCenterIdFor("Product.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(data.name);
+    const priceR = nonNegativeNumber(data.price);
+    const costR = nonNegativeNumber(data.cost);
+    const stockR = nonNegativeInteger(data.stockQuantity ?? 0);
+    const reorderR = nonNegativeInteger(data.reorderLevel ?? 0);
+    const boundary = validatePayload([
+      { field: "name", result: nameR },
+      { field: "price", result: priceR },
+      { field: "cost", result: costR },
+      { field: "stockQuantity", result: stockR },
+      { field: "reorderLevel", result: reorderR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        name: data.name,
+        name: okValue(nameR),
         barcode: data.barcode,
-        stock_quantity: data.stockQuantity || 0,
-        price: data.price || 0,
-        cost: data.cost || 0
+        stock_quantity: okValue(stockR),
+        reorder_level: okValue(reorderR),
+        price: okValue(priceR),
+        cost: okValue(costR)
       };
 
       const { data: row, error } = await getSupabaseClient()
@@ -679,13 +816,29 @@ class SupabaseProductAdapter implements ProductRepository {
   async update(id: string, data: Partial<Product>): Promise<Result<Product, DomainError>> {
     const centerRes = getCenterIdFor("Product.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = data.name !== undefined ? requiredText(data.name) : null;
+    const priceR = data.price !== undefined ? nonNegativeNumber(data.price) : null;
+    const costR = data.cost !== undefined ? nonNegativeNumber(data.cost) : null;
+    const stockR = data.stockQuantity !== undefined ? nonNegativeInteger(data.stockQuantity) : null;
+    const reorderR = data.reorderLevel !== undefined ? nonNegativeInteger(data.reorderLevel) : null;
+    const boundary = validatePayload([
+      ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(priceR ? [{ field: "price", result: priceR }] : []),
+      ...(costR ? [{ field: "cost", result: costR }] : []),
+      ...(stockR ? [{ field: "stockQuantity", result: stockR }] : []),
+      ...(reorderR ? [{ field: "reorderLevel", result: reorderR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.name !== undefined) payload.name = data.name;
+      if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.barcode !== undefined) payload.barcode = data.barcode;
-      if (data.stockQuantity !== undefined) payload.stock_quantity = data.stockQuantity;
-      if (data.price !== undefined) payload.price = data.price;
-      if (data.cost !== undefined) payload.cost = data.cost;
+      if (data.stockQuantity !== undefined) payload.stock_quantity = okValue(stockR);
+      if (data.reorderLevel !== undefined) payload.reorder_level = okValue(reorderR);
+      if (data.price !== undefined) payload.price = okValue(priceR);
+      if (data.cost !== undefined) payload.cost = okValue(costR);
 
       delete payload.center_id;
 
@@ -744,13 +897,22 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
   async create(data: Partial<Expense>): Promise<Result<Expense, DomainError>> {
     const centerRes = getCenterIdFor("Expense.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const amountR = positiveNumber(data.amount);
+    const categoryR = requiredText(data.category);
+    const boundary = validatePayload([
+      { field: "amount", result: amountR },
+      { field: "category", result: categoryR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        amount: data.amount || 0,
-        category: data.category,
+        amount: okValue(amountR),
+        category: okValue(categoryR),
         description: data.description,
-        date: data.date?.toISOString() || new Date().toISOString()
+        date: data.date ? new Date(data.date).toISOString() : new Date().toISOString()
       };
 
       const { data: row, error } = await getSupabaseClient()
@@ -770,10 +932,19 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
   async update(id: string, data: Partial<Expense>): Promise<Result<Expense, DomainError>> {
     const centerRes = getCenterIdFor("Expense.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const amountR = data.amount !== undefined ? positiveNumber(data.amount) : null;
+    const categoryR = data.category !== undefined ? requiredText(data.category) : null;
+    const boundary = validatePayload([
+      ...(amountR ? [{ field: "amount", result: amountR }] : []),
+      ...(categoryR ? [{ field: "category", result: categoryR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.amount !== undefined) payload.amount = data.amount;
-      if (data.category !== undefined) payload.category = data.category;
+      if (data.amount !== undefined) payload.amount = okValue(amountR);
+      if (data.category !== undefined) payload.category = okValue(categoryR);
       if (data.description !== undefined) payload.description = data.description;
       if (data.date !== undefined) payload.date = data.date.toISOString();
 
@@ -960,16 +1131,36 @@ class SupabaseSettingsAdapter implements SettingsRepository {
   async update(data: Partial<CenterSettings>): Promise<Result<CenterSettings, DomainError>> {
     const centerRes = getCenterIdFor("Settings.update");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = data.name !== undefined ? requiredText(data.name) : null;
+    const taxR = data.taxRate !== undefined ? percentField(data.taxRate) : null;
+    const boundary = validatePayload([
+      ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(taxR ? [{ field: "taxRate", result: taxR }] : []),
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {};
-      if (data.name !== undefined) payload.name = data.name;
+      if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.currency !== undefined) payload.currency = data.currency;
-      if (data.taxRate !== undefined) payload.tax_rate = data.taxRate;
+      if (data.taxRate !== undefined) payload.tax_rate = okValue(taxR);
       if (data.logoPath !== undefined) payload.logo_path = data.logoPath;
       if (data.address !== undefined) payload.address = data.address;
       if (data.phone !== undefined) payload.phone = data.phone;
       if (data.cr !== undefined) payload.cr = data.cr;
       if (data.postalCode !== undefined) payload.postal_code = data.postalCode;
+      if (data.displayName !== undefined) payload.display_name = data.displayName;
+      if (data.displayNameAr !== undefined) payload.display_name_ar = data.displayNameAr;
+      if (data.brandEmail !== undefined) payload.brand_email = data.brandEmail;
+      if (data.brandTaxNumber !== undefined) payload.brand_tax_number = data.brandTaxNumber;
+      if (data.brandRegistrationNumber !== undefined) payload.brand_registration_number = data.brandRegistrationNumber;
+      if (data.brandPrimaryColor !== undefined) payload.brand_primary_color = data.brandPrimaryColor;
+      if (data.brandSecondaryColor !== undefined) payload.brand_secondary_color = data.brandSecondaryColor;
+      if (data.brandAccentColor !== undefined) payload.brand_accent_color = data.brandAccentColor;
+      if (data.brandFooterText !== undefined) payload.brand_footer_text = data.brandFooterText;
+      if (data.brandFooterTextAr !== undefined) payload.brand_footer_text_ar = data.brandFooterTextAr;
+      if (data.brandLogoBase64 !== undefined) payload.brand_logo_base64 = data.brandLogoBase64;
 
       delete payload.center_id;
 
@@ -1682,13 +1873,27 @@ class SupabaseServicePackageAdapter implements ServicePackageRepository {
   async create(input: { name: string; description?: string; packagePrice: number; items: { serviceId: string; quantity: number }[] }): Promise<Result<any, DomainError>> {
     const centerRes = getCenterIdFor("ServicePackage.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(input.name);
+    const priceR = nonNegativeNumber(input.packagePrice);
+    const itemsOk = Array.isArray(input.items) && input.items.length > 0 &&
+      input.items.every((it) => requiredText(it.serviceId).ok && positiveInteger(it.quantity).ok);
+    if (!nameR.ok || !priceR.ok || !itemsOk) {
+      const issues = [
+        ...(nameR.ok ? [] : [{ field: "name", key: nameR.key }]),
+        ...(priceR.ok ? [] : [{ field: "packagePrice", key: priceR.key }]),
+        ...(!itemsOk ? [{ field: "items", key: "validation.required_select" as const }] : []),
+      ];
+      return { ok: false, error: new DomainValidationError(issues) };
+    }
+
     try {
       const { data, error } = await getSupabaseClient().rpc('create_service_package_v1', {
         p_center_id: centerRes.data,
-        p_name: input.name,
+        p_name: okValue(nameR),
         p_description: input.description || null,
-        p_package_price: input.packagePrice,
-        p_items: input.items.map((item) => ({ serviceId: item.serviceId, quantity: item.quantity })),
+        p_package_price: okValue(priceR),
+        p_items: input.items.map((item) => ({ serviceId: item.serviceId, quantity: okValue(positiveInteger(item.quantity)) })),
       });
       if (error) {
         if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
@@ -1722,12 +1927,21 @@ class SupabaseCustomerExperienceAdapter implements CustomerExperienceRepository 
   async createReview(input: any): Promise<Result<any, DomainError>> {
     const centerRes = getCenterIdFor("CustomerExperience.createReview");
     if (!centerRes.ok) return centerRes as any;
+
+    const customerR = requiredText(input.customerId);
+    const ratingR = numberField(input.rating, { min: 1, max: 5, integer: true, allowZero: false });
+    const boundary = validatePayload([
+      { field: "customer", result: customerR },
+      { field: "rating", result: ratingR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const { data, error } = await getSupabaseClient().rpc('create_customer_review_v1', {
         p_center_id: centerRes.data,
-        p_customer_id: input.customerId,
+        p_customer_id: okValue(customerR),
         p_appointment_id: input.appointmentId || null,
-        p_rating: input.rating,
+        p_rating: okValue(ratingR),
         p_comment: input.comment || null,
         p_is_published: Boolean(input.isPublished),
       });
@@ -1842,6 +2056,15 @@ class SupabaseAccountingAdapter implements AccountingRepository {
   async createJournalEntry(input: any): Promise<Result<any, DomainError>> {
     const centerRes = getCenterIdFor("Accounting.createJournalEntry");
     if (!centerRes.ok) return centerRes as any;
+
+    const descR = requiredText(input.description);
+    const amountR = nonNegativeNumber(input.amount);
+    const boundary = validatePayload([
+      { field: "description", result: descR },
+      { field: "amount", result: amountR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const { data, error } = await getSupabaseClient().rpc('create_accounting_journal_entry_v1', {
         p_center_id: centerRes.data,
@@ -1849,10 +2072,10 @@ class SupabaseAccountingAdapter implements AccountingRepository {
         p_entry_type: input.entryType,
         p_reference_type: input.referenceType || null,
         p_reference_id: input.referenceId || null,
-        p_description: input.description,
+        p_description: okValue(descR),
         p_debit_account: input.debitAccount,
         p_credit_account: input.creditAccount,
-        p_amount: input.amount,
+        p_amount: okValue(amountR),
         p_currency: input.currency || 'OMR',
       });
       if (error) {
@@ -1883,11 +2106,20 @@ class SupabaseAdvancedAdapter implements AdvancedRepository {
   async createAiBookingLead(input: any): Promise<Result<any, DomainError>> {
     const centerRes = getCenterIdFor("Advanced.createAiBookingLead");
     if (!centerRes.ok) return centerRes as any;
+
+    const nameR = requiredText(input.customerName);
+    const phoneR = phoneField(input.customerPhone);
+    const boundary = validatePayload([
+      { field: "customerName", result: nameR },
+      { field: "customerPhone", result: phoneR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const { data, error } = await getSupabaseClient().rpc('create_ai_booking_lead_v1', {
         p_center_id: centerRes.data,
-        p_customer_name: input.customerName,
-        p_customer_phone: input.customerPhone || null,
+        p_customer_name: okValue(nameR),
+        p_customer_phone: okValue(phoneR) || null,
         p_preferred_service_id: input.preferredServiceId || null,
         p_preferred_date: input.preferredDateISO || null,
         p_source_channel: input.sourceChannel || 'WEB',
@@ -2205,15 +2437,38 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
   async create(data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>> {
     const centerRes = getCenterIdFor("Attendance.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const employeeR = requiredText(data.employeeId);
+    const dateR = dateField(data.date ? new Date(data.date).toISOString() : new Date().toISOString(), { required: true });
+    const workHoursR = nonNegativeNumber(data.workHours ?? 0);
+    const boundary = validatePayload([
+      { field: "employee", result: employeeR },
+      { field: "date", result: dateR },
+      { field: "workHours", result: workHoursR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
+    // Check-out must be strictly after check-in when both are provided.
+    if (data.checkInTime && data.checkOutTime) {
+      const inT = new Date(data.checkInTime).getTime();
+      const outT = new Date(data.checkOutTime).getTime();
+      if (Number.isFinite(inT) && Number.isFinite(outT) && outT <= inT) {
+        return {
+          ok: false,
+          error: new DomainValidationError([{ field: "checkOut", key: "validation.checkout_after_checkin" }]),
+        };
+      }
+    }
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        employee_id: data.employeeId,
-        date: data.date ? toDateOnly(new Date(data.date)) : toDateOnly(new Date()),
+        employee_id: okValue(employeeR),
+        date: toDateOnly((okValue(dateR) as Date)),
         check_in_time: data.checkInTime || null,
         check_out_time: data.checkOutTime || null,
         method: data.method || 'MANUAL',
-        work_hours: data.workHours || 0,
+        work_hours: okValue(workHoursR),
         status: data.status || 'PRESENT',
         notes: data.notes || null
       };
@@ -2315,11 +2570,20 @@ class SupabaseAdvanceAdapter implements AdvanceRepository {
   async create(data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>> {
     const centerRes = getCenterIdFor("Advance.create");
     if (!centerRes.ok) return centerRes as any;
+
+    const employeeR = requiredText(data.employeeId);
+    const amountR = positiveNumber(data.amount);
+    const boundary = validatePayload([
+      { field: "employee", result: employeeR },
+      { field: "amount", result: amountR },
+    ]);
+    if (!boundary.ok) return { ok: false, error: boundary.error };
+
     try {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
-        employee_id: data.employeeId,
-        amount: data.amount || 0,
+        employee_id: okValue(employeeR),
+        amount: okValue(amountR),
         reason: data.reason || '',
         advance_date: data.advanceDate ? new Date(data.advanceDate).toISOString() : new Date().toISOString(),
         status: data.status || 'PENDING',
