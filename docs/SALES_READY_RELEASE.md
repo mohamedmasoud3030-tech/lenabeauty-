@@ -1,11 +1,12 @@
 # SALES-READY RELEASE — Definition & Criteria
+**Updated:** 2026-08-09
 **Rule:** The product is not delivered to any customer — paid or pilot — until a live Supabase connection is established and QA-verified.
 
 ---
 
 ## DEFINITION
 
-> Sales-ready means: a live Supabase project is connected, a real admin user can log in, all implemented CRUD operations persist real data, no fake mode is reachable, and the customer has a deployment guide they can follow independently.
+> Sales-ready means: a live Supabase project is connected with the canonical migration chain applied, a real admin user can log in, all implemented CRUD and POS operations persist real data, no anonymous/fake mode is reachable, and the customer has a deployment guide they can follow.
 
 ---
 
@@ -15,23 +16,24 @@
 
 | Why | Detail |
 |---|---|
-| Preview Mode is removed | There is no fallback mode — the app requires a real Supabase connection to function |
+| No fallback mode | The app requires a real Supabase connection to function |
 | Trust | A customer who sees fake or empty data cannot evaluate the product honestly |
 | Data safety | Untested RLS in a live environment is a data breach risk |
-| Support | Delivering a product without a verified connection creates unresolvable support tickets |
+| Support | Delivering without a verified connection creates unresolvable support tickets |
 
 ---
 
-## CRITERION 1 — No Fake Operating Mode ✅ ACHIEVED
+## CRITERION 1 — No Fake / Anonymous Operating Mode ✅ ACHIEVED
 
 | Check | Verified |
 |---|---|
-| `BackendMode = "supabase"` only | ✅ `env.ts` line 8 |
+| `BackendMode = "supabase"` only | ✅ `env.ts` |
 | Missing env → `EnvironmentConfigurationError` | ✅ `parseEnv()` throws |
 | `UserRole.PREVIEW` absent | ✅ `Session.ts` |
 | "Enter Preview Mode" button absent | ✅ `LoginPage.tsx` |
 | `src/infrastructure/preview/` deleted | ✅ |
-| Preview banner absent from route guards | ✅ `route-guards.tsx` |
+| Public `/book` + `/portal` routes removed | ✅ `routes.tsx` (staff-only release) |
+| Anonymous RPC EXECUTE revoked | ✅ `20260809000001_delivery_security_hardening.sql` |
 
 ---
 
@@ -42,14 +44,13 @@
 | Check | Status |
 |---|---|
 | Supabase project created | ❌ |
-| Base schema applied (`SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql`) | ❌ |
-| Admin user created and linked to center | ❌ |
-| `.env` configured with real credentials | ❌ |
+| 18 canonical migrations applied in order | ❌ |
+| Admin user created and linked via `admin_bootstrap.sql` | ❌ |
+| `.env` configured (Vercel dashboard) | ❌ |
 | `npm run preflight:supabase` passes | ❌ |
-| App boots without config errors | ❌ |
 | Login succeeds with real credentials | ❌ |
 
-See `CURRENT_VERSION_CLOSURE.md` — Mandatory Gate section for exact steps.
+See `docs/DELIVERY-GUIDE.md` for the exact steps.
 
 ---
 
@@ -59,15 +60,13 @@ All operations must complete against real Supabase and survive page reload.
 
 | Module | Create | Read | Update | Delete |
 |---|---|---|---|---|
-| Customers | ❌ | ❌ | ❌ | ❌ |
-| Appointments | ❌ | ❌ | ❌ | ❌ |
-| Services | ❌ | ❌ | ❌ | ❌ |
-| Employees | ❌ | ❌ | ❌ | ❌ |
-| Products | ❌ | ❌ | ❌ | ❌ |
-| Expenses | ❌ | ❌ | N/A (v1.1) | ❌ |
-| Dashboard counts | — | ❌ | — | — |
-| Appointment report | — | ❌ | — | — |
-| Inventory report | — | ❌ | — | — |
+| Customers / Appointments / Services / Employees / Products | ❌ | ❌ | ❌ | ❌ |
+| Expenses | ❌ | ❌ | ❌ (v1.0 has edit) | ❌ |
+| POS checkout (invoice + stock + loyalty + gift card) | ❌ | — | — | — |
+| Packages sell | ❌ | — | — | — |
+| Attendance / Advances / Payroll | ❌ | ❌ | ❌ | — |
+| Dashboard counts / Reports / Financial metrics | — | ❌ | — | — |
+| Backup export / restore | — | ❌ | — | — |
 
 ---
 
@@ -77,29 +76,28 @@ All operations must complete against real Supabase and survive page reload.
 |---|---|
 | ADMIN login works | ❌ |
 | STAFF login works | ❌ |
-| STAFF blocked from `/reports` and `/settings` | ❌ |
+| STAFF blocked from `/reports`, `/settings`, `/accounting`, `/branding` | ❌ |
 | Session persists on page refresh | ❌ |
 | Wrong credentials → error (not crash) | ❌ |
 
 ---
 
-## CRITERION 5 — Blocked Features Disclosed Before Sale ⚠️
+## CRITERION 5 — Feature Scope Disclosed Before Sale ⚠️
 
-The buyer must know what v1.0 does and does not include before purchasing.
+The buyer must know what the release includes and excludes.
 
-| Feature | v1.0 | v1.1 |
-|---|---|---|
-| Customer, Appointment, Service, Employee, Product management | ✅ | ✅ |
-| Expense tracking (create/delete) | ✅ | ✅ |
-| Operational dashboard (counts) | ✅ | ✅ |
-| Appointment + Inventory reports | ✅ | ✅ |
-| **POS Checkout / Billing** | ❌ | ✅ |
-| **Invoice printing** | ❌ | ✅ |
-| **Financial dashboard (P&L, revenue)** | ❌ | ✅ |
-| **Sales reports** | ❌ | ✅ |
-| **Customer visit history** | ❌ | ✅ |
-| **Settings mutations (logo, name, backup)** | ❌ | ✅ |
-| **Expense editing** | ❌ | ✅ |
+| Feature | Release |
+|---|---|
+| Customer / Appointment / Service / Employee / Product management | ✅ |
+| Expense tracking (create/edit/delete) | ✅ |
+| Operational dashboard + reports (appointment, inventory, sales, financial) | ✅ |
+| POS checkout + invoice printing | ✅ |
+| Gift cards (issue/redeem) + service packages (create/sell) | ✅ |
+| Attendance, advances, payroll | ✅ |
+| Backup export/restore + settings (logo, name) | ✅ |
+| **Public online booking** | ❌ staff-only release |
+| **Customer portal (phone+code login)** | ❌ staff-only release |
+| **Staff self-service account creation** | ❌ provisioned by developer |
 
 ---
 
@@ -107,17 +105,15 @@ The buyer must know what v1.0 does and does not include before purchasing.
 
 | Check | Status |
 |---|---|
-| RLS policies in schema | ✅ Defined in `SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` |
+| RLS policies in migrations (18-file chain) | ✅ Defined |
 | `center_id` mismatch → `UNAUTHORIZED_CENTER_MEMBERSHIP` | ✅ Implemented in `AppContext.tsx` |
 | Cross-center read blocked (live test) | ❌ Not yet tested |
 
 ---
 
-## CRITERION 7 — Deployment Path Documented ❌ PENDING
+## CRITERION 7 — Deployment Path Documented ✅ ACHIEVED
 
-`docs/CUSTOMER_DEPLOYMENT_GUIDE.md` does not yet exist.
-
-A customer must be able to deploy the app independently, without requiring developer involvement.
+`docs/DELIVERY-GUIDE.md` covers: Supabase project creation, applying the 18 canonical migrations, admin bootstrap, Vercel env vars, preflight, and the owner install guide (PWA install on iOS/Android/desktop).
 
 ---
 
@@ -125,8 +121,7 @@ A customer must be able to deploy the app independently, without requiring devel
 
 | Check | Status |
 |---|---|
-| Layout correct on Android (Chrome) | ❌ |
-| Layout correct on iOS (Safari) | ❌ |
+| Layout correct on Android (Chrome) / iOS (Safari) | ❌ |
 | No text overflow or cut-off | ❌ |
 | Forms and modals work in RTL | ❌ |
 
@@ -138,20 +133,21 @@ A customer must be able to deploy the app independently, without requiring devel
 
 ```
 Technical:
-[x] Preview Mode removed from source
+[x] No fake/anonymous operating mode
 [x] tsc --noEmit → 0 errors
-[x] vitest run → 74/74
+[x] vitest run → 245/245
 [x] npm run build → clean PWA
-[ ] Supabase project live + schema applied     ← PRIMARY BLOCKER
+[ ] Supabase project live + 18 migrations applied     ← PRIMARY BLOCKER
 [ ] npm run preflight:supabase passes
 [ ] Login works with real credentials
 [ ] Full live QA (SUPABASE_LIVE_QA_RUNBOOK.md) signed off
 [ ] RLS cross-center isolation tested
+[ ] Leaked publishable key rotated (git history)
 
 Documentation:
-[ ] CUSTOMER_DEPLOYMENT_GUIDE.md written
+[x] DELIVERY-GUIDE.md written and current
 [ ] MANUAL_PRE_SALE_ACCEPTANCE_CHECKLIST.md signed
-[ ] v1.0 feature scope communicated to buyer
+[x] Feature scope communicated to buyer
 
 Quality:
 [ ] Arabic RTL tested on Android + iOS
@@ -161,13 +157,11 @@ Quality:
 
 ---
 
-## V1.0 POSITIONING
+## RELEASE POSITIONING
 
-**What v1.0 is:** The operational backbone of a salon — scheduling, staffing, catalog, and inventory. Every core management feature is real and data-persisted.
+**What the release is:** The staff-only operational backbone of a salon — scheduling, catalog, inventory, POS billing, gift cards, packages, attendance/payroll, and reporting. All core management features are real and data-persisted.
 
-**What v1.0 is not:** A billing system. POS checkout, invoices, and financial reporting are v1.1 features.
-
-**How to sell v1.0:** "Start managing your salon today. Billing features arrive shortly in v1.1 — typically within 4–6 weeks."
+**What the release is not:** A public-facing booking/customer-portal product, or a self-service account-management product. Those are future releases.
 
 ---
 

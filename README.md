@@ -64,7 +64,7 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260628000016_validation_constraints.sql` in filename order.
+5. Continue through `20260809000001_delivery_security_hardening.sql` in filename order (staff-only closure; revokes anonymous EXECUTE on all privileged routines).
 
 Before a release, run `npm run preflight:supabase` with the normal client
 variables and a temporary local `SUPABASE_SERVICE_ROLE_KEY`. The script verifies

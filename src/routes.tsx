@@ -5,8 +5,6 @@ import { RequireAdmin, RequireAuth } from "./route-guards";
 import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
-const BookingPage = lazy(() => import("./pages/BookingPage"));
-const ClientPortalPage = lazy(() => import("./pages/ClientPortalPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const PosInvoicesPage = lazy(() => import("./pages/PosInvoicesPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
@@ -40,8 +38,6 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
-      <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
-      <Route path="/portal" element={<Suspense fallback={<PageLoader />}><ClientPortalPage /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>

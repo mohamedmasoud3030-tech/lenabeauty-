@@ -14,18 +14,33 @@
 4. احفظ كلمة السر — لن تظهر مجدداً
 5. انتظر دقيقتين لاكتمال الإنشاء
 
-### الخطوة 2 — تطبيق مخطط قاعدة البيانات
+### الخطوة 2 — تطبيق مخطط قاعدة البيانات (المسار الرسمي)
 
-في **Supabase → SQL Editor**، شغّل هذا الملف بالكامل:
+في **Supabase → SQL Editor**، شغّل ملفات `supabase/migrations/` بالترتيب (كل ملف = استعلام منفصل):
 
 ```
-docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql
+20260623000001_initial_schema.sql
+20260623000002_enable_rls_and_policies.sql
+20260628000001_enable_rls.sql
+20260628000002_admin_bootstrap.sql
+20260628000003_checkout_rpc.sql
+20260628000004_vat_support.sql
+20260628000005_tier_discount.sql
+20260628000006_public_booking.sql
+20260628000007_gift_cards.sql
+20260628000008_packages_bundles.sql
+20260628000009_no_show_protection.sql
+20260628000010_notifications_payment_gateway.sql
+20260628000011_client_portal.sql
+20260628000012_customer_experience_forecasting_accounting_advanced.sql
+20260628000013_booking_reschedule_cancel.sql
+20260628000014_client_portal_lockout.sql
+20260628000015_attendance_advances_payroll.sql
+20260628000016_validation_constraints.sql
+20260809000001_delivery_security_hardening.sql
 ```
 
-ثم شغّل:
-```
-docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql
-```
+> ⚠️ **لا تستخدم** `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` أو `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` — تم أرشفتهما في `docs/archive/` وهما نسخ قديمة غير مكتملة.
 
 تحقق: يجب أن تظهر الجداول التالية في **Table Editor**:
 - `centers` ✓
@@ -39,41 +54,19 @@ docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql
 - `expenses` ✓
 - `invoices` ✓
 - `invoice_items` ✓
+- `gift_cards` ✓
+- `service_packages` ✓
+- `attendance_records` ✓
+- `payroll_runs` ✓
 
-### الخطوة 3 — إنشاء Center وAdmin User
+### الخطوة 3 — إنشاء مستخدم Admin وربطه بالمركز المُهيّأ
 
-في **SQL Editor**، شغّل:
+1. في **Authentication → Users → Add user**: أنشئ حساب المالك (البريد + كلمة مرور قوية)
+2. انسخ UUID المستخدم الجديد
+3. في **SQL Editor** افتح `supabase/migrations/20260628000002_admin_bootstrap.sql`، استبدل قيمة `v_admin_uid` بـ UUID المستخدم الجديد، ثم شغّله
+4. هذا الملف يربط المستخدم بالمركز المُهيّأ (seed) ويضبط دور `ADMIN` تلقائياً
 
-```sql
--- 1. إنشاء المركز
-INSERT INTO centers (id, name)
-VALUES (gen_random_uuid(), 'اسم صالون العميل')
-RETURNING id; -- احفظ هذا الـ UUID
-
--- 2. إعداد إعدادات المركز الافتراضية
-INSERT INTO center_settings (center_id, name, currency)
-VALUES ('[CENTER_ID من الخطوة السابقة]', 'اسم صالون العميل', 'OMR');
-```
-
-في **Authentication → Users → Invite User**:
-- Email: `admin@[اسم-الصالون].com` أو أي إيميل
-- بعد الإنشاء، في **SQL Editor**:
-
-```sql
--- ربط المستخدم بالمركز وإعطاءه دور ADMIN
--- 1. Create a profile for the user (important: links auth.users to public tables)
-INSERT INTO profiles (id, full_name)
-VALUES ('[USER_ID من Auth]', 'المدير');
-
--- 2. Link profile to center
-INSERT INTO center_memberships (profile_id, center_id)
-VALUES ('[USER_ID من Auth]', '[CENTER_ID]');
-
--- تعيين الدور في user_metadata
-UPDATE auth.users
-SET raw_user_meta_data = raw_user_meta_data || '{"role": "ADMIN"}'::jsonb
-WHERE id = '[USER_ID]';
-```
+> المركز المُهيّأ (seed) في migrations هو: `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d` — يجب أن يطابق `VITE_CENTER_ID` في الخطوة التالية.
 
 ### الخطوة 4 — Vercel Deployment
 
@@ -89,9 +82,9 @@ cd lenabeauty-[client]
 |----------|--------|
 | `VITE_DATA_BACKEND` | `supabase` |
 | `VITE_SUPABASE_URL` | من Supabase → Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `anon` key من Supabase → Settings → API |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `publishable` key من Supabase → Settings → API |
 | `VITE_BRANCH_MODE` | `single` |
-| `VITE_CENTER_ID` | UUID المركز من الخطوة 3 |
+| `VITE_CENTER_ID` | `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d` (مركز seed في migrations) |
 
 ```bash
 # Deploy (لو أول مرة)

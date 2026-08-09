@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ImagePlus, MessageSquareHeart, RefreshCcw, Share2, Star } from "lucide-react";
+import { ImagePlus, MessageSquareHeart, Star } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -83,34 +83,19 @@ export default function CustomerExperiencePage() {
     <div className="space-y-6 pb-10">
       <div>
         <h1 className="text-2xl font-bold">{t("Customer Experience")}</h1>
-        <p className="text-sm text-muted-foreground">{t("Manage reviews, before/after gallery, service files, and referral sharing")}</p>
+        <p className="text-sm text-muted-foreground">{t("Manage reviews, before/after gallery, and service files")}</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-4">
-          <div className="flex items-center gap-2 mb-3"><Share2 className="h-4 w-4 text-primary" /><h2 className="font-bold">{t("Customer Portal & Referral")}</h2></div>
-          <select value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2 text-sm">
+      <div className="rounded-2xl border bg-card p-4">
+        <div className="flex items-center gap-2 mb-3"><MessageSquareHeart className="h-4 w-4 text-primary" /><h2 className="font-bold">{t("Add Review")}</h2></div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <select value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} className="w-full rounded-xl border bg-background px-3 py-2 text-sm md:col-span-3">
             {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
           </select>
-          {selectedCustomer && (
-            <div className="mt-4 space-y-2 text-sm">
-              <div><span className="font-semibold">{t("Phone")}: </span>{selectedCustomer.phone || "—"}</div>
-              <div><span className="font-semibold">{t("Portal")}: </span>{window.location.origin}/portal</div>
-              <button onClick={() => useCases.customers.rotatePortalToken(selectedCustomer.id)} className="mt-2 inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
-                <RefreshCcw className="h-4 w-4" /> {t("Rotate Portal Code")}
-              </button>
-            </div>
-          )}
+          <input value={rating} onChange={(e) => setRating(Number(e.target.value))} type="number" min={1} max={5} className="rounded-xl border bg-background px-3 py-2 text-sm" />
+          <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("Customer feedback") as string} className="rounded-xl border bg-background px-3 py-2 text-sm md:col-span-2" />
         </div>
-
-        <div className="rounded-2xl border bg-card p-4 md:col-span-2">
-          <div className="flex items-center gap-2 mb-3"><MessageSquareHeart className="h-4 w-4 text-primary" /><h2 className="font-bold">{t("Add Review")}</h2></div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <input value={rating} onChange={(e) => setRating(Number(e.target.value))} type="number" min={1} max={5} className="rounded-xl border bg-background px-3 py-2 text-sm" />
-            <input value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("Customer feedback") as string} className="rounded-xl border bg-background px-3 py-2 text-sm md:col-span-2" />
-          </div>
-          <button onClick={addReview} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"><Star className="h-4 w-4" />{t("Save Review")}</button>
-        </div>
+        <button onClick={addReview} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"><Star className="h-4 w-4" />{t("Save Review")}</button>
       </div>
 
       <div className="rounded-2xl border bg-card p-4">

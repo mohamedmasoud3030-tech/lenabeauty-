@@ -26,13 +26,11 @@ the current, actively-relevant docs.
 - [`DB_AUDIT_REPORT.md`](./DB_AUDIT_REPORT.md)
 
 ### SQL (apply order)
-> Canonical migrations live in [`../supabase/migrations/`](../supabase/migrations).
-> The SQL files here are references/bootstraps for specific phases.
-- `SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` — full base schema bootstrap (reference).
-- `SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` — `process_checkout_v1` RPC.
+> Canonical migrations live in [`../supabase/migrations/`](../supabase/migrations) — apply them in filename order for any new deployment. The SQL files below are phase references/snapshots, not the deployment path.
 - `supabase-phase-2.14-single-branch-rls.sql` — single-branch RLS reference.
 - `SUPABASE_STAGING_SEED_10A5.sql` — staging seed data.
 - `TAURI_V2.0_SQLITE_SCHEMA.sql` — future desktop (Tauri) schema.
+> Archived legacy bootstraps: `SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` and `SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` now live in [`archive/`](./archive) — do not use them for new deployments.
 
 ## 🏛️ Architecture
 - [`architecture/frontend-architecture.md`](./architecture/frontend-architecture.md)
