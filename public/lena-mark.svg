@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Lena Beauty</title>
+  <desc id="desc">A refined feminine profile drawn with flowing gold lines.</desc>
+  <defs>
+    <radialGradient id="background" cx="34%" cy="22%" r="91%">
+      <stop stop-color="#7D285D"/>
+      <stop offset=".56" stop-color="#57143E"/>
+      <stop offset="1" stop-color="#2A0A20"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="138" y1="104" x2="369" y2="425" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF2B8"/>
+      <stop offset=".43" stop-color="#F2CF77"/>
+      <stop offset="1" stop-color="#C68A36"/>
+    </linearGradient>
+    <path id="hair" d="M173 412C138 385 119 346 117 301c-4-72 25-133 78-171 44-32 101-40 150-19 44 19 74 58 81 105 8 55-12 105-55 141-30 25-44 50-42 72"/>
+    <path id="profile" d="M318 148c13 28 12 58-3 84-7 12-6 21 5 27l25 13c8 4 8 12 0 17l-19 10c12 4 15 12 7 19l-14 11c2 18-8 34-24 44-20 12-46 8-63-8-9-9-15-19-17-31m17 31c-2 29-20 48-54 59m117-51c-5 28 13 45 50 57"/>
+  </defs>
+
+  <rect width="512" height="512" rx="124" fill="url(#background)"/>
+  <rect x="13" y="13" width="486" height="486" rx="112" fill="none" stroke="#F7D98B" stroke-width="2" opacity=".13"/>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#17030F" opacity=".24">
+      <use href="#hair" stroke-width="19"/>
+      <use href="#profile" stroke-width="19"/>
+    </g>
+    <g stroke="url(#gold)">
+      <use href="#hair" stroke-width="10"/>
+      <use href="#profile" stroke-width="10"/>
+      <path d="M206 178c27-31 74-45 113-29" stroke-width="7" opacity=".72"/>
+      <path d="M270 239c14-9 31-9 44 0" stroke-width="7"/>
+      <path d="M274 257c10 7 23 7 33 0" stroke-width="6" opacity=".88"/>
+      <path d="M176 412c43-17 82-11 118 17 30 23 58 25 88 8" stroke-width="9" opacity=".8"/>
+    </g>
+  </g>
+
+  <g fill="#F8D986">
+    <path d="M171 166l4 11 11 4-11 4-4 11-4-11-11-4 11-4z"/>
+    <circle cx="195" cy="153" r="4" opacity=".72"/>
+  </g>
+</svg>

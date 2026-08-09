@@ -139,9 +139,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           ) : (
             <motion.div
               whileHover={{ rotate: 15, scale: 1.1 }}
-              className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xl shadow-pink-500/30 flex-shrink-0"
+              className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0"
             >
-              L
+              <img src="/lena-mark.svg" alt="Lena Beauty" className="h-full w-full" />
             </motion.div>
           )}
           <div className="flex flex-col min-w-0">

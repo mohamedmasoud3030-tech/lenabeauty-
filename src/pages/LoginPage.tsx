@@ -186,13 +186,12 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center pt-10 pb-6 px-8">
             <motion.div
-              className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-5 shadow-lg text-3xl font-bold text-white"
-              style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}
+              className="w-20 h-20 mx-auto mb-5"
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
             >
-              L
+              <img src="/lena-mark.svg" alt="Lena Beauty" className="h-full w-full" />
             </motion.div>
 
             <motion.h1
