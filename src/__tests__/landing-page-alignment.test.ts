@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 
-describe('landing page product alignment', () => {
-  const landing = fs.readFileSync('src/pages/LandingPage.tsx', 'utf8');
+describe('operational entry route', () => {
+  const routes = fs.readFileSync('src/routes.tsx', 'utf8');
 
-  it('mentions booking, portal and desktop value', () => {
-    expect(landing).toContain('Client Portal');
-    expect(landing).toContain('Desktop-Ready');
-    expect(landing).toContain('Book online');
+  it('sends the public root straight to staff sign-in without loading a landing page', () => {
+    expect(routes).toContain('<Route path="/" element={<Navigate to="/login" replace />} />');
+    expect(routes).not.toContain('LandingPage');
   });
 });

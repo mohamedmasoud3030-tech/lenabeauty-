@@ -1,7 +1,7 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, ChevronRight, LayoutGrid, Sparkles, Zap, Star, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
+import { Menu, Bell, ChevronRight, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
@@ -72,12 +72,6 @@ export default function Layout() {
         </div>
 
         <div className="flex min-w-0 flex-col relative">
-          {/* Immersive Background Elements */}
-          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden print:hidden">
-            <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full" />
-            <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full" />
-          </div>
-
           {/* Header */}
           <header className="sticky top-0 z-30 flex h-14 sm:h-16 lg:h-20 items-center justify-between border-b border-border bg-card/60 px-3 sm:px-6 lg:px-10 backdrop-blur-3xl shadow-sm print:hidden gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -171,22 +165,6 @@ export default function Layout() {
             </AnimatePresence>
           </main>
 
-          {/* Footer - Desktop Only */}
-          <footer className="h-auto py-4 sm:py-6 border-t border-border/50 hidden sm:flex flex-col sm:flex-row items-center justify-between gap-3 px-6 sm:px-10 bg-card/20 backdrop-blur-sm print:hidden">
-            <div className="flex items-center gap-4 text-[10px]">
-              <div className="flex items-center gap-1.5 font-bold text-muted-foreground uppercase tracking-widest opacity-50">
-                <Zap className="h-3 w-3" />
-                {t("System Online")}
-              </div>
-              <div className="flex items-center gap-1.5 font-bold text-muted-foreground uppercase tracking-widest opacity-50">
-                <Star className="h-3 w-3" />
-                {t("Premium Build")}
-              </div>
-            </div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] opacity-30">
-              &copy; {new Date().getFullYear()} LenaBeauty &bull; {t("All Rights Reserved")}
-            </div>
-          </footer>
         </div>
       </div>
 

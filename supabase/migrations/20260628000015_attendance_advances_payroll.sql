@@ -62,7 +62,9 @@ CREATE TABLE IF NOT EXISTS public.employee_advances (
   advance_date TIMESTAMPTZ NOT NULL DEFAULT now(),
   status     TEXT NOT NULL DEFAULT 'PENDING'
                CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'DEDUCTED')),
-  deducted_in_run_id UUID REFERENCES public.payroll_runs(id) ON DELETE SET NULL,
+  -- The payroll table is created below.  Add its foreign key only after the
+  -- table exists so this migration bootstraps cleanly on an empty database.
+  deducted_in_run_id UUID,
   notes      TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -91,6 +93,13 @@ CREATE TABLE IF NOT EXISTS public.payroll_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_payroll_runs_center ON public.payroll_runs(center_id);
+
+DO $$ BEGIN
+  ALTER TABLE public.employee_advances
+    ADD CONSTRAINT employee_advances_deducted_in_run_id_fkey
+    FOREIGN KEY (deducted_in_run_id)
+    REFERENCES public.payroll_runs(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.payroll_runs
   FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at();

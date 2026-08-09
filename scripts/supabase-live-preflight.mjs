@@ -3,9 +3,7 @@ import { resolve } from "node:path";
 
 const root = process.cwd();
 const envFiles = [".env.local", ".env"];
-const schemaPath = resolve(root, "docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql");
-const seedPath = resolve(root, "docs/SUPABASE_STAGING_SEED_10A5.sql");
-const checkoutActivationPath = resolve(root, "docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql");
+const migrationsDir = resolve(root, "supabase/migrations");
 
 const requiredEnv = [
   "VITE_DATA_BACKEND",
@@ -22,27 +20,32 @@ const requiredTables = [
   "center_settings",
   "customers",
   "appointments",
-  "service_categories",
   "services",
   "employees",
   "products",
   "expenses",
 ];
 
-const forbiddenCheckoutArtifacts = [
-  "process_checkout_v1",
-  "CREATE TABLE public.invoices",
-  "CREATE TABLE public.invoice_items",
-  "CREATE TABLE public.payments",
-];
-
-const requiredCheckoutArtifacts = [
-  "CREATE TABLE IF NOT EXISTS public.invoices",
-  "CREATE TABLE IF NOT EXISTS public.invoice_items",
-  "CREATE OR REPLACE FUNCTION public.process_checkout_v1",
-  "ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY",
-  "ALTER TABLE public.invoice_items ENABLE ROW LEVEL SECURITY",
-  "GRANT EXECUTE ON FUNCTION public.process_checkout_v1",
+const canonicalMigrations = [
+  "20260623000001_initial_schema.sql",
+  "20260623000002_enable_rls_and_policies.sql",
+  "20260628000001_enable_rls.sql",
+  "20260628000002_admin_bootstrap.sql",
+  "20260628000003_checkout_rpc.sql",
+  "20260628000004_vat_support.sql",
+  "20260628000005_tier_discount.sql",
+  "20260628000006_public_booking.sql",
+  "20260628000007_gift_cards.sql",
+  "20260628000008_packages_bundles.sql",
+  "20260628000009_no_show_protection.sql",
+  "20260628000010_notifications_payment_gateway.sql",
+  "20260628000011_client_portal.sql",
+  "20260628000012_customer_experience_forecasting_accounting_advanced.sql",
+  "20260628000013_booking_reschedule_cancel.sql",
+  "20260628000014_client_portal_lockout.sql",
+  "20260628000015_attendance_advances_payroll.sql",
+  "20260628000016_validation_constraints.sql",
+  "20260809000001_delivery_security_hardening.sql",
 ];
 
 function parseEnvFile(path) {
@@ -126,67 +129,84 @@ if (env.VITE_CENTER_ID && !validateUuid(env.VITE_CENTER_ID)) {
   fail("VITE_CENTER_ID must be a UUID");
 }
 
-if (!existsSync(schemaPath)) {
-  fail("docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql is missing");
-} else {
-  pass("docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql exists");
-  const schema = readFileSync(schemaPath, "utf8");
+for (const migration of canonicalMigrations) {
+  const path = resolve(migrationsDir, migration);
+  if (!existsSync(path)) fail(`canonical migration is missing: ${migration}`);
+  else pass(`canonical migration exists: ${migration}`);
+}
 
-  for (const table of requiredTables) {
-    if (!schema.includes(`CREATE TABLE public.${table}`)) {
-      fail(`bootstrap schema missing public.${table}`);
-    } else {
-      pass(`bootstrap schema includes public.${table}`);
-    }
-  }
-
-  for (const artifact of forbiddenCheckoutArtifacts) {
-    if (schema.includes(artifact)) {
-      fail(`bootstrap schema must not include checkout artifact: ${artifact}`);
-    }
+const legacyRlsPath = resolve(migrationsDir, "20260623000002_enable_rls_and_policies.sql");
+if (existsSync(legacyRlsPath)) {
+  const legacyRls = readFileSync(legacyRlsPath, "utf8");
+  if (legacyRls.includes("WHERE user_id = auth.uid()")) {
+    fail("retired legacy RLS migration still references nonexistent center_memberships.user_id");
+  } else {
+    pass("retired legacy RLS migration cannot block the canonical chain");
   }
 }
 
-if (!existsSync(seedPath)) {
-  fail("docs/SUPABASE_STAGING_SEED_10A5.sql is missing");
-} else {
-  pass("docs/SUPABASE_STAGING_SEED_10A5.sql exists");
-  const seed = readFileSync(seedPath, "utf8");
-
-  for (const requiredSeedFragment of [
-    "INSERT INTO public.centers",
-    "INSERT INTO public.profiles",
-    "INSERT INTO public.center_memberships",
-    'SELECT center_id AS "VITE_CENTER_ID"',
-  ]) {
-    if (!seed.includes(requiredSeedFragment)) {
-      fail(`staging seed missing required fragment: ${requiredSeedFragment}`);
-    } else {
-      pass(`staging seed includes ${requiredSeedFragment}`);
-    }
-  }
-
-  for (const artifact of forbiddenCheckoutArtifacts) {
-    if (seed.includes(artifact)) {
-      fail(`staging seed must not include checkout artifact: ${artifact}`);
-    }
+const initialSchema = readFileSync(resolve(migrationsDir, canonicalMigrations[0]), "utf8");
+for (const table of requiredTables) {
+  if (!initialSchema.includes(`CREATE TABLE IF NOT EXISTS ${table}`)) {
+    fail(`initial schema missing ${table}`);
+  } else {
+    pass(`initial schema includes ${table}`);
   }
 }
 
-if (!existsSync(checkoutActivationPath)) {
-  fail("docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql is missing");
-} else {
-  pass("docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql exists");
-  const checkoutActivation = readFileSync(checkoutActivationPath, "utf8");
+const rls = readFileSync(resolve(migrationsDir, "20260628000001_enable_rls.sql"), "utf8");
+if (!rls.includes("WHERE profile_id = auth.uid()")) fail("canonical RLS must use center_memberships.profile_id");
+else pass("canonical RLS uses center_memberships.profile_id");
 
-  for (const artifact of requiredCheckoutArtifacts) {
-    if (!checkoutActivation.includes(artifact)) {
-      fail(`checkout activation missing required artifact: ${artifact}`);
+const checkout = readFileSync(resolve(migrationsDir, "20260628000008_packages_bundles.sql"), "utf8");
+if (!checkout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_v1")) fail("final checkout RPC is missing");
+else pass("final checkout RPC exists");
+
+async function verifyRemoteSchema() {
+  // The browser-safe publishable key is enough to confirm that each table is
+  // present in PostgREST's schema cache. A service key is intentionally not
+  // required for this release gate and must never be put in a VITE_ variable.
+  const apiKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim() || env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!apiKey || !env.VITE_SUPABASE_URL) {
+    fail("remote schema verification requires a Supabase URL and publishable key");
+    return;
+  }
+
+  const tableChecks = requiredTables.map(async (table) => {
+    const url = new URL(`/rest/v1/${table}`, env.VITE_SUPABASE_URL);
+    url.searchParams.set("select", "id");
+    url.searchParams.set("limit", "1");
+    const response = await fetch(url, {
+      headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      fail(`remote table check failed for ${table}: HTTP ${response.status}`);
     } else {
-      pass(`checkout activation includes ${artifact}`);
+      pass(`remote table is reachable: ${table}`);
     }
+  });
+
+  await Promise.all(tableChecks);
+
+  if (env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    const centerUrl = new URL("/rest/v1/centers", env.VITE_SUPABASE_URL);
+    centerUrl.searchParams.set("id", `eq.${env.VITE_CENTER_ID}`);
+    centerUrl.searchParams.set("select", "id");
+    const centerResponse = await fetch(centerUrl, {
+      headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
+    });
+    const centers = centerResponse.ok ? await centerResponse.json() : [];
+    if (!centerResponse.ok || !Array.isArray(centers) || centers.length !== 1) {
+      fail("configured VITE_CENTER_ID is not present in the remote database");
+    } else {
+      pass("configured VITE_CENTER_ID exists remotely");
+    }
+  } else {
+    console.log("INFO center seed verification requires a server-only key; table availability was checked with the publishable key.");
   }
 }
+
+await verifyRemoteSchema();
 
 if (process.exitCode) {
   console.error("Supabase live preflight failed.");

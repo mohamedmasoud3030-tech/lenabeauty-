@@ -19,21 +19,13 @@ import {
   LogOut,
   ChevronRight,
   ShieldCheck,
-  Zap,
-  Star,
   Clock,
   Wallet,
   BarChart3,
   Palette,
-  Bell,
   CreditCard,
   ChevronDown,
-  Sparkles,
   Gift,
-  Bot,
-  GalleryVerticalEnd,
-  TrendingUp,
-  BookOpenCheck,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "../../auth";
@@ -46,7 +38,6 @@ type NavItem = {
   labelKey: string;
   Icon: React.ComponentType<{ className?: string }>;
   adminOnly?: boolean;
-  demo?: boolean;
 };
 
 type NavGroup = {
@@ -65,8 +56,6 @@ const navGroups: NavGroup[] = [
       { to: "/customers", labelKey: "Customers", Icon: Users },
       { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
       { to: "/packages", labelKey: "Packages", Icon: Boxes },
-      { to: "/customer-experience", labelKey: "Customer Experience", Icon: GalleryVerticalEnd },
-      { to: "/forecasting", labelKey: "Forecasting", Icon: TrendingUp },
     ],
   },
   {
@@ -82,10 +71,10 @@ const navGroups: NavGroup[] = [
     collapsible: true,
     items: [
       { to: "/employees", labelKey: "Employees", Icon: UserCog, adminOnly: true },
-      { to: "/attendance", labelKey: "Attendance", Icon: Clock, adminOnly: true, demo: true },
-      { to: "/advances", labelKey: "Advances", Icon: Wallet, adminOnly: true, demo: true },
-      { to: "/payroll", labelKey: "Payroll", Icon: CreditCard, adminOnly: true, demo: true },
-      { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: BarChart3, adminOnly: true, demo: true },
+      { to: "/attendance", labelKey: "Attendance", Icon: Clock, adminOnly: true },
+      { to: "/advances", labelKey: "Advances", Icon: Wallet, adminOnly: true },
+      { to: "/payroll", labelKey: "Payroll", Icon: CreditCard, adminOnly: true },
+      { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: BarChart3, adminOnly: true },
     ],
   },
   {
@@ -94,10 +83,6 @@ const navGroups: NavGroup[] = [
     items: [
       { to: "/reports", labelKey: "Reports", Icon: FileBarChart, adminOnly: true },
       { to: "/branding", labelKey: "Branding", Icon: Palette, adminOnly: true },
-      { to: "/notifications", labelKey: "Notifications", Icon: Bell, adminOnly: true },
-      { to: "/payment-gateway", labelKey: "Payment Gateway", Icon: CreditCard, adminOnly: true },
-      { to: "/accounting", labelKey: "Accounting", Icon: BookOpenCheck, adminOnly: true },
-      { to: "/advanced-automation", labelKey: "Advanced Automation", Icon: Bot, adminOnly: true },
       { to: "/settings", labelKey: "Settings", Icon: Settings, adminOnly: true },
     ],
   },
@@ -156,7 +141,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               whileHover={{ rotate: 15, scale: 1.1 }}
               className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow-xl shadow-pink-500/30 flex-shrink-0"
             >
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
+              L
             </motion.div>
           )}
           <div className="flex flex-col min-w-0">
@@ -164,7 +149,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               LenaBeauty
             </span>
             <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.25em] text-primary font-bold mt-1">
-              {t("Premium Center")}
+              {t("Salon operations")}
             </span>
           </div>
         </div>
@@ -243,7 +228,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden space-y-1"
                   >
-                    {visibleItems.map(({ to, labelKey, Icon, demo }, idx) => (
+                    {visibleItems.map(({ to, labelKey, Icon }, idx) => (
                       <motion.li
                         initial={{ opacity: 0, x: 12 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -265,11 +250,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                           <div className="flex items-center gap-3 min-w-0">
                             <Icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                             <span className="truncate">{t(labelKey)}</span>
-                            {demo && (
-                              <span className="ms-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700 flex-shrink-0">
-                                {t("Demo preview")}
-                              </span>
-                            )}
                           </div>
                           <ChevronRight
                             className={clsx(
@@ -319,14 +299,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           {t("Sign Out")}
         </button>
 
-        {/* Version */}
-        <div className="hidden sm:flex items-center justify-center gap-3 opacity-20">
-          <Star className="h-2.5 w-2.5" />
-          <div className="h-px w-6 bg-muted-foreground" />
-          <span className="text-[8px] font-bold uppercase tracking-[0.3em]">v2.0.0</span>
-          <div className="h-px w-6 bg-muted-foreground" />
-          <Zap className="h-2.5 w-2.5" />
-        </div>
       </div>
     </aside>
   );

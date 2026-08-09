@@ -22,6 +22,11 @@
 -- HOW TO RUN: Supabase SQL Editor, AFTER the schema + RLS migrations.
 -- ============================================================
 
+-- Checkout records the staff member who served the customer.  The original
+-- base schema predates that field, so add it before defining the RPC.
+ALTER TABLE public.invoices
+  ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES public.employees(id) ON DELETE SET NULL;
+
 -- Safety: function relies on app_private.is_center_member (RLS migration).
 CREATE OR REPLACE FUNCTION public.process_checkout_v1(
     p_center_id          UUID,

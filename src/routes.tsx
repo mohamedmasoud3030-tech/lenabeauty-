@@ -4,7 +4,6 @@ import Layout from "./ui/layout/Layout";
 import { RequireAdmin, RequireAuth } from "./route-guards";
 import { PageLoader } from "./shared/components/PageLoader";
 
-const LandingPage = lazy(() => import("./pages/LandingPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const BookingPage = lazy(() => import("./pages/BookingPage"));
 const ClientPortalPage = lazy(() => import("./pages/ClientPortalPage"));
@@ -39,7 +38,7 @@ const BrandingSettingsPage = lazy(() => import("./pages/BrandingSettingsPage"));
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Suspense fallback={<PageLoader />}><LandingPage /></Suspense>} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
       <Route path="/book" element={<Suspense fallback={<PageLoader />}><BookingPage /></Suspense>} />
       <Route path="/portal" element={<Suspense fallback={<PageLoader />}><ClientPortalPage /></Suspense>} />
@@ -78,7 +77,7 @@ export function AppRoutes() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useTranslation } from "react-i18next";
-import { Lock, User, Eye, EyeOff, Sparkles, Sun, Moon, Globe } from "lucide-react";
+import { Lock, User, Eye, EyeOff, Sun, Moon, Globe } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "motion/react";
@@ -186,13 +186,13 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center pt-10 pb-6 px-8">
             <motion.div
-              className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-5 shadow-lg"
+              className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center mb-5 shadow-lg text-3xl font-bold text-white"
               style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
             >
-              <Sparkles className="w-9 h-9 text-white" />
+              L
             </motion.div>
 
             <motion.h1
@@ -202,7 +202,7 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
             >
-              {t("Welcome Back")}
+              LenaBeauty
             </motion.h1>
             <motion.p
               className="mt-1 text-sm"
@@ -211,7 +211,7 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.45 }}
             >
-              {t("Enter credentials to continue")}
+              {t("Salon operations")}
             </motion.p>
           </div>
 
@@ -367,7 +367,7 @@ export default function LoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }}
             >
-              LenaBeauty &bull; {t("Beauty Center")}
+              {t("Staff sign in")}
             </motion.p>
           </div>
         </div>

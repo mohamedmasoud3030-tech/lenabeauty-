@@ -54,21 +54,23 @@ See `.env.example`. Locally these live in `.env`; in production set them in the
 
 ## Supabase setup
 
-Run the migrations in order in the Supabase SQL Editor:
+Apply the complete, lexically ordered files in `supabase/migrations/` to a new
+**staging** Supabase project. Do not use the old SQL files under `docs/`; they
+are historical reference material, not the deployment source.
 
-1. `supabase/migrations/20260623000001_initial_schema.sql` — tables, indexes,
-   triggers, seed center.
-2. `supabase/migrations/20260628000001_enable_rls.sql` — enables Row Level
-   Security and tenant-isolation policies. **Required before production.**
-3. `supabase/migrations/20260628000002_admin_bootstrap.sql` — links the admin
-   auth user to the center and sets their role (edit the UUID first).
-4. `supabase/migrations/20260628000003_checkout_rpc.sql` — the POS checkout
-   transaction (`process_checkout_v1`). **Required for POS to work.**
-5. `supabase/migrations/20260628000004_vat_support.sql` — adds VAT/tax to
-   invoices + checkout (GCC compliance). Tax rate is set in Settings.
+The deployment-critical steps are:
 
-> Note: `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` is a superseded draft
-> (it assumes schema that doesn't exist) — use migration 4 instead.
+1. `20260623000001_initial_schema.sql` — base tables, indexes, triggers, and seed center.
+2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
+3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
+4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
+5. Continue through `20260628000016_validation_constraints.sql` in filename order.
+
+Before a release, run `npm run preflight:supabase` with the normal client
+variables and a temporary local `SUPABASE_SERVICE_ROLE_KEY`. The script verifies
+the canonical chain and, when that key is present, confirms every core table and
+the configured center exist remotely. Never place that service-role key in Vercel
+or any `VITE_*` variable.
 
 ## Scripts
 

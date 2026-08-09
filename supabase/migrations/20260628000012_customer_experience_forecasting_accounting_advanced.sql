@@ -12,6 +12,12 @@ WHERE referral_code IS NULL;
 ALTER TABLE public.customers
   ALTER COLUMN referral_code SET NOT NULL;
 
+-- New customers are created by the operational UI without a referral code.
+-- Generate it at the data boundary so the non-null/unique contract never
+-- breaks the ordinary customer-creation flow.
+ALTER TABLE public.customers
+  ALTER COLUMN referral_code SET DEFAULT UPPER(SUBSTRING(REPLACE(gen_random_uuid()::TEXT, '-', '') FROM 1 FOR 8));
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_center_referral_code
   ON public.customers(center_id, referral_code);
 

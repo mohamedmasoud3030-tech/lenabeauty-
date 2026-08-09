@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { 
   SupabaseInvoiceAdapter, SupabaseReportAdapter, 
   SupabaseDashboardAdapter, SupabaseSettingsAdapter,
@@ -6,6 +6,20 @@ import {
 } from "../infrastructure/supabase/repositories";
 
 describe("Phase 3: Supabase Adapter Contract Hardening", () => {
+    beforeEach(() => {
+        // Adapter contract tests must stay offline even when a developer has a
+        // real .env.local configured. Individual integration tests cover live
+        // Supabase separately.
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+            JSON.stringify({ message: "offline test transport" }),
+            { status: 503, headers: { "content-type": "application/json" } }
+        )));
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
     it("Invoice.checkout throws UnsupportedBackendMethodError or Query Error depending on mock state", async () => {
         const adapter: any = new SupabaseInvoiceAdapter();
         const result = await adapter.checkout({});

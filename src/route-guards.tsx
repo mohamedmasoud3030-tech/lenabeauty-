@@ -40,7 +40,7 @@ export function RequireAdmin() {
 
   // Only ADMIN role can access admin-guarded routes
   if (user.role !== UserRole.ADMIN) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
