@@ -8,6 +8,12 @@ export class EnvironmentConfigurationError extends Error {
 export type BackendMode = "supabase" | "tauri";
 export type BranchMode = "single" | "multi";
 
+// LenaBeauty is a single-center product. These are deliberately public
+// Supabase client credentials (not a service-role secret) and ensure a stale
+// Vercel project variable cannot ship a broken login screen.
+const LENA_PRODUCTION_SUPABASE_URL = "https://ktmizdznbdwvalmmfvfc.supabase.co";
+const LENA_PRODUCTION_PUBLISHABLE_KEY = "sb_publishable_YNpS0CW0IFIant4FOby1dA_w-REjZFr";
+
 function validateUrl(url: string | undefined): boolean {
   if (!url) return false;
   try {
@@ -33,8 +39,13 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
   }
 
   const backend: BackendMode = backendRaw as BackendMode;
-  const url = getEnv("VITE_SUPABASE_URL")?.trim() || undefined;
-  const key = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY")?.trim() || undefined;
+  const useCanonicalProductionConnection = !customEnv && import.meta.env.PROD;
+  const url = useCanonicalProductionConnection
+    ? LENA_PRODUCTION_SUPABASE_URL
+    : getEnv("VITE_SUPABASE_URL")?.trim() || undefined;
+  const key = useCanonicalProductionConnection
+    ? LENA_PRODUCTION_PUBLISHABLE_KEY
+    : getEnv("VITE_SUPABASE_PUBLISHABLE_KEY")?.trim() || undefined;
   
   const branchModeRaw = (getEnv("VITE_BRANCH_MODE")?.trim().toLowerCase()) || "single";
   if (branchModeRaw !== "single" && branchModeRaw !== "multi") {
