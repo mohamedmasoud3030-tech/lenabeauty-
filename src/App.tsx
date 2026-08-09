@@ -7,7 +7,6 @@ import { ToastProvider } from "./shared/components/Toast";
 import { ConfirmProvider } from "./shared/components/ConfirmDialog";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
 import { NetworkStatus } from "./shared/components/NetworkStatus";
-import { DesktopShellBanner } from "./shared/components/DesktopShellBanner";
 
 export default function App() {
   return (
@@ -18,9 +17,6 @@ export default function App() {
           <AuthProvider>
             <ToastProvider>
               <ConfirmProvider>
-                <div className="p-3 sm:p-4">
-                  <DesktopShellBanner />
-                </div>
                 <HashRouter>
                   <AppRoutes />
                 </HashRouter>
