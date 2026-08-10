@@ -5,7 +5,7 @@ import i18n from "../i18n";
 
 // A child that always throws during render with a sensitive-looking message
 // that must NEVER reach the user-facing DOM.
-function Bomb() {
+function Bomb(): never {
   throw new Error("SECRET_internal_db_row_42 username is undefined");
 }
 

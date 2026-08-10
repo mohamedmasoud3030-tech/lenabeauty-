@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getDisplayName, getInitials } from "../shared/displayName";
+import {
+  getDisplayName,
+  getInitials,
+  type DisplayablePerson,
+} from "../shared/displayName";
 
 describe("getDisplayName", () => {
   it("returns the name when present", () => {
@@ -39,8 +43,10 @@ describe("getDisplayName", () => {
   });
 
   it("handles an incomplete relation object (appointment.customer)", () => {
-    // Joined relations can arrive partially loaded.
-    expect(getDisplayName({ id: "c1" }, "Unnamed")).toBe("Unnamed");
+    // Joined relations can arrive partially loaded; only the known name-like
+    // fields are read, extra runtime keys (e.g. id) are ignored.
+    const incomplete = { id: "c1" } as unknown as DisplayablePerson;
+    expect(getDisplayName(incomplete, "Unnamed")).toBe("Unnamed");
     expect(getDisplayName({ name: "Fatima" }, "Unnamed")).toBe("Fatima");
   });
 });

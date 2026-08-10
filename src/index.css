@@ -82,6 +82,16 @@
   --ring: 258 90% 66%;
 
   --radius: 0.75rem;
+
+  /* Z-index layer system — one source of truth so overlays always sit above
+     the app header, sidebar, bottom navigation and floating buttons. */
+  --z-base: 0;
+  --z-content: 10;
+  --z-header: 30;
+  --z-bottom-nav: 40;
+  --z-sidebar: 50;
+  --z-overlay: 100;
+  --z-overlay-top: 110;
 }
 
 .dark {

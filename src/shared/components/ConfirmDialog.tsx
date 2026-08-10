@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { AlertTriangle, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -71,9 +72,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
-      <AnimatePresence>
-        {state && state.open && (
-          <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4">
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {state && state.open && (
+            <div className="fixed inset-0 z-[var(--z-overlay-top)] flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -151,7 +153,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+        document.body
+      )}
     </ConfirmContext.Provider>
   );
 }
