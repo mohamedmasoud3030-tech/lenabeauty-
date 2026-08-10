@@ -160,8 +160,8 @@ export default function AppointmentsPage() {
         unwrap(useCases.employees.list()),
         unwrap(useCases.appointments.list({ fromISO: range.from.toISOString(), toISO: range.to.toISOString() })),
       ]);
-      setServices(sv.map(mapService));
-      setEmployees(em.map(mapEmployee));
+      setServices(sv.filter((service) => service.isActive !== false).map(mapService));
+      setEmployees(em.filter((employee) => employee.isActive !== false).map(mapEmployee));
       setAppts(a.map(mapAppt));
       if (sv.length && !serviceId) setServiceId(sv[0].id);
       if (em.length && !employeeId) setEmployeeId(em[0].id);
@@ -218,6 +218,10 @@ export default function AppointmentsPage() {
 
   /** Quick status action from the edit dialog (explicit Arabic actions). */
   async function setApptStatus(appt: Appt, next: AppointmentStatus) {
+    if (appt.status !== AppointmentStatus.SCHEDULED || next === AppointmentStatus.SCHEDULED) {
+      showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+      return;
+    }
     setBusy(true);
     try {
       await unwrap(useCases.appointments.update(appt.id, { status: next }));
@@ -281,6 +285,11 @@ export default function AppointmentsPage() {
   }
 
   async function deleteAppt(id: string) {
+    const appointment = appts.find((entry) => entry.id === id);
+    if (appointment && appointment.status !== AppointmentStatus.SCHEDULED) {
+      showToast('error', t("Error"), t("Terminal appointments cannot be deleted"));
+      return;
+    }
     const ok = await confirm({
       title: t("Confirm"),
       message: t("Are you sure you want to delete this appointment?"),
@@ -303,6 +312,10 @@ export default function AppointmentsPage() {
 
   async function submitBooking() {
     if (!slotDate) return;
+    const existingAppointment = editApptId ? appts.find((entry) => entry.id === editApptId) : undefined;
+    if (existingAppointment && existingAppointment.status !== AppointmentStatus.SCHEDULED) {
+      return showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+    }
     if (!customerId) return showToast('error', t("Error"), t("Please select a customer"));
     if (!serviceId) return showToast('error', t("Error"), t("Please select a service"));
     if (!employeeId) return showToast('error', t("Error"), t("Please select an employee"));
@@ -347,14 +360,6 @@ export default function AppointmentsPage() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function cycleStatus(appt: Appt) {
-    const order: AppointmentStatus[] = [AppointmentStatus.SCHEDULED, AppointmentStatus.COMPLETED, AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW];
-    const idx = order.indexOf(appt.status);
-    const next = order[(idx + 1) % order.length];
-    await unwrap(useCases.appointments.update(appt.id, { status: next }));
-    await load();
   }
 
   async function sendReminder(appt: Appt) {
@@ -953,26 +958,14 @@ export default function AppointmentsPage() {
                 {editApptId && (
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Status")}</label>
-                    <div className="relative">
-                      <Clock className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <select 
-                        className="w-full appearance-none rounded-[1.5rem] border border-border bg-card py-4.5 ps-14 pe-12 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer" 
-                        value={status} 
-                        onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
-                      >
-                        <option value={AppointmentStatus.SCHEDULED}>{t("SCHEDULED")}</option>
-                        <option value="CONFIRMED">{t("CONFIRMED")}</option>
-                        <option value={AppointmentStatus.COMPLETED}>{t("COMPLETED")}</option>
-                        <option value={AppointmentStatus.CANCELLED}>{t("CANCELLED")}</option>
-                        <option value={AppointmentStatus.NO_SHOW}>{t("NO_SHOW")}</option>
-                      </select>
-                      <ChevronRight className="absolute end-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
+                    <div className={clsx("rounded-[1.5rem] border px-6 py-4 text-sm font-bold", statusClass(status))}>
+                      {t(status)}
                     </div>
                   </div>
                 )}
 
                 <div className="flex flex-col gap-4">
-                  {editApptId && status !== AppointmentStatus.NO_SHOW && (
+                  {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <div className="rounded-[1.5rem] border border-orange-500/20 bg-orange-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <p className="text-sm font-bold text-orange-700">{t("Mark as No-Show")}</p>
@@ -1013,7 +1006,7 @@ export default function AppointmentsPage() {
                     </div>
                   )}
 
-                  {editApptId && (
+                  {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.COMPLETED); }}
@@ -1035,7 +1028,7 @@ export default function AppointmentsPage() {
                   )}
 
                   <div className="flex gap-4">
-                    {editApptId && (
+                    {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <button
                       onClick={() => void deleteAppt(editApptId)}
                       className="w-16 h-16 shrink-0 rounded-[2rem] bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center flex-col gap-1 border border-rose-500/20 active:scale-95"
@@ -1045,7 +1038,7 @@ export default function AppointmentsPage() {
                     </button>
                   )}
                   <button
-                    disabled={busy || !customerId}
+                    disabled={busy || !customerId || (!!editApptId && status !== AppointmentStatus.SCHEDULED)}
                     onClick={submitBooking}
                     className="group relative flex-1 h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden"
                   >

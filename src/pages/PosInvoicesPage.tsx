@@ -17,6 +17,7 @@ import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData } from "../application/dto";
+import { calculateCheckoutTotals } from "../domain/commerce";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 
@@ -28,6 +29,9 @@ interface CartItem {
   cartId: string;
   qty?: number;
   stockQuantity?: number;
+  isActive?: boolean;
+  trackInventory?: boolean;
+  pricingMode?: "FIXED" | "STARTING_FROM";
   category?: string;
   brand?: string;
   includedServices?: number;
@@ -104,13 +108,17 @@ export default function PosInvoicesPage() {
         useCases.settings.get().then((r) => (r.ok ? r.data : null)).catch(() => null),
         useCases.giftCards.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
       ]);
-      setServices(s);
-      setProducts(p);
+      // Disabled or zero-priced catalog entries remain manageable in their
+      // admin screens but are never exposed as sellable POS lines.
+      setServices(s.filter((service) => service.isActive !== false && Number.isFinite(service.price) && service.price > 0));
+      setProducts(p.filter((product) => product.isActive !== false && Number.isFinite(product.price) && product.price > 0));
       // Packages arrive with packagePrice (domain field) — expose it as `price`
       // so the cart, totals, and checkout payload work for package lines too.
-      setPackages((pkg as any[]).map((p) => ({ ...p, price: Number(p.packagePrice) || 0 })));
-      setEmployees(e);
-      setGiftCards(gc);
+      setPackages((pkg as any[])
+        .filter((entry) => entry.isActive !== false && Number.isFinite(Number(entry.packagePrice)) && Number(entry.packagePrice) > 0)
+        .map((entry) => ({ ...entry, price: Number(entry.packagePrice) })));
+      setEmployees(e.filter((employee) => employee.isActive !== false));
+      setGiftCards(gc.filter((card: any) => card.isActive !== false));
       if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
     } finally {
       setLoading(false);
@@ -150,12 +158,42 @@ export default function PosInvoicesPage() {
     }
   }
 
-  function addToCart(item: {id:string, name:string, price:number, qty?:number, target?:string, stockQuantity?: number, includedServices?: number}, type: "service" | "product" | "package") {
-    if (type === "product" && item.stockQuantity !== undefined && item.stockQuantity <= 0) {
+  function addToCart(item: {
+    id: string;
+    name: string;
+    price: number;
+    qty?: number;
+    target?: string;
+    stockQuantity?: number;
+    includedServices?: number;
+    isActive?: boolean;
+    trackInventory?: boolean;
+    pricingMode?: "FIXED" | "STARTING_FROM";
+  }, type: "service" | "product" | "package") {
+    if (item.isActive === false || !Number.isFinite(item.price) || item.price <= 0) {
+      showToast('error', t("Error"), t("This item is not available for sale"));
+      return;
+    }
+    if (type === "product" && item.trackInventory !== false && item.stockQuantity !== undefined && item.stockQuantity <= 0) {
       showToast('error', t("Error"), t("Out of stock!"));
       return;
     }
-    setCart([...cart, { ...item, type, cartId: Math.random().toString(36).substring(2, 11) }]);
+
+    let finalPrice = item.price;
+    if (type === "service" && item.pricingMode === "STARTING_FROM") {
+      const entered = window.prompt(
+        t("Enter the final selling price for this service"),
+        item.price.toFixed(3),
+      );
+      if (entered === null) return;
+      finalPrice = Number(entered);
+      if (!Number.isFinite(finalPrice) || finalPrice < item.price || finalPrice <= 0) {
+        showToast('error', t("Error"), t("Final price must be at least the starting price"));
+        return;
+      }
+    }
+
+    setCart([...cart, { ...item, price: finalPrice, type, cartId: globalThis.crypto.randomUUID() }]);
     showToast('success', t("Added"), `${item.name} ${t("added to cart")}`);
   }
 
@@ -171,28 +209,24 @@ export default function PosInvoicesPage() {
     setGiftCardCode("");
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * Number(item.qty ?? 1), 0);
-  // Mirror the server RPC (process_checkout_v1): 1 loyalty point = 1 OMR,
-  // capped at (subtotal - manual discount). Previously this used /100 which
-  // disagreed with the backend and showed the customer the wrong discount.
-  // Automatic tier discount from the customer's lifetime spend
-  // (server-authoritative; mirrored here for an accurate preview).
   const tierInfo = selectedCustomer ? getTierBySpend(selectedCustomer.totalSpent) : null;
   const tierPercent = tierInfo?.discountPercent ?? 0;
-  const tierDiscount = Math.round(subtotal * tierPercent / 100 * 1000) / 1000;
-  const loyaltyDiscount =
-    useLoyaltyPoints && selectedCustomer
-      ? Math.max(0, Math.min(subtotal - discount - tierDiscount, selectedCustomer.loyaltyPoints))
-      : 0;
-  const selectedGiftCard = giftCards.find((card) => card.code === giftCardCode.trim().toUpperCase());
-  const giftCardDiscount = selectedGiftCard
-    ? Math.max(0, Math.min(subtotal - discount - tierDiscount - loyaltyDiscount, selectedGiftCard.currentBalance))
-    : 0;
-  // Net (pre-tax) after discounts, then VAT from center settings, then total.
-  // Mirrors the server RPC exactly so the preview equals what is persisted.
-  const net = Math.max(0, subtotal - discount - tierDiscount - loyaltyDiscount - giftCardDiscount);
-  const tax = Math.round(net * (taxRate || 0) / 100 * 1000) / 1000;
-  const total = net + tax;
+  const selectedGiftCard = giftCards.find((card) => {
+    if (card.code !== giftCardCode.trim().toUpperCase() || !card.isActive) return false;
+    return !card.expiresAt || new Date(card.expiresAt).getTime() >= Date.now();
+  });
+  // The shared pure calculator mirrors the authoritative RPC at OMR's
+  // three-decimal precision. The RPC still re-resolves every catalog price.
+  const checkoutTotals = calculateCheckoutTotals({
+    items: cart.map((item) => ({ price: Number(item.price), qty: Number(item.qty ?? 1) })),
+    manualDiscount: Number.isFinite(discount) ? discount : 0,
+    tierPercent,
+    loyaltyPoints: selectedCustomer?.loyaltyPoints ?? 0,
+    useLoyaltyPoints,
+    giftCardBalance: selectedGiftCard?.currentBalance ?? 0,
+    taxRate,
+  });
+  const { subtotal, tierDiscount, loyaltyDiscount, giftCardDiscount, tax, total } = checkoutTotals;
 
   async function handleCheckout() {
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
@@ -200,7 +234,7 @@ export default function PosInvoicesPage() {
       return;
     }
 
-    if (discount + tierDiscount + loyaltyDiscount + giftCardDiscount > subtotal) {
+    if (!Number.isFinite(discount) || discount < 0 || discount + tierDiscount > subtotal) {
       showToast('error', t("Error"), t("Discount cannot exceed subtotal"));
       return;
     }
@@ -210,7 +244,11 @@ export default function PosInvoicesPage() {
       return;
     }
 
-    const hasInvalidPriceOrQty = cart.some(it => isNaN(Number(it.price)) || Number(it.price) < 0);
+    const hasInvalidPriceOrQty = cart.some((it) => {
+      const price = Number(it.price);
+      const qty = Number(it.qty ?? 1);
+      return !Number.isFinite(price) || price <= 0 || !Number.isInteger(qty) || qty <= 0;
+    });
     if (hasInvalidPriceOrQty) {
       showToast('error', t("Error"), t("One or more items have an invalid price or quantity"));
       return;
@@ -219,7 +257,7 @@ export default function PosInvoicesPage() {
     try {
       const payload = {
         customerId: selectedCustomer.id,
-        employeeId: selectedEmployee || undefined,
+        employeeId: selectedEmployee,
         paymentMethod: paymentMethod.toLowerCase() as "cash" | "card" | "transfer",
         discountAmount: discount,
         useLoyaltyPoints,
@@ -402,10 +440,10 @@ export default function PosInvoicesPage() {
                         exit={{ opacity: 0, scale: 0.9 }}
                         key={it.id} 
                         onClick={() => addToCart(it as any, activeTab === "SERVICES" ? "service" : activeTab === "PRODUCTS" ? "product" : "package")}
-                        disabled={activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0}
+                        disabled={activeTab === "PRODUCTS" && (it as Product).trackInventory && (it as Product).stockQuantity <= 0}
                         className={clsx(
                           "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-3 lg:p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 flex flex-col items-start gap-3 text-start",
-                          activeTab === "PRODUCTS" && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
+                          activeTab === "PRODUCTS" && (it as Product).trackInventory && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
                         )}
                       >
                         <div className="flex items-start justify-between w-full gap-2">
@@ -436,7 +474,9 @@ export default function PosInvoicesPage() {
 
                         <div className="w-full pt-2 border-t border-border/50 flex items-baseline justify-between">
                           <span className="text-base lg:text-lg font-bold text-foreground">{it.price}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                            {activeTab === "SERVICES" && (it as Service).pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                          </span>
                         </div>
                       </motion.button>
                     ))}
@@ -764,10 +804,10 @@ export default function PosInvoicesPage() {
                       <span>-{tierDiscount.toFixed(2)} OMR</span>
                     </div>
                   )}
-                  {(discount > 0 || loyaltyDiscount > 0 || giftCardDiscount > 0) && (
+                  {(discount > 0 || loyaltyDiscount > 0) && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
                       <span>{t("Discounts")}</span>
-                      <span>-{(discount + loyaltyDiscount + giftCardDiscount).toFixed(2)} OMR</span>
+                      <span>-{(discount + loyaltyDiscount).toFixed(2)} OMR</span>
                     </div>
                   )}
                   {giftCardDiscount > 0 && (

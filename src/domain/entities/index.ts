@@ -33,11 +33,18 @@ export interface Employee {
   monthCommissionTotal?: number;
 }
 
+export type ServicePricingMode = "FIXED" | "STARTING_FROM";
+
 export interface Service {
   id: string;
   name: string;
+  /** Actual service_categories.id. */
   categoryId: string;
+  /** Human-readable category snapshot returned by the category relation. */
+  categoryName?: string;
+  /** Fixed selling price, or the minimum allowed final price for STARTING_FROM. */
   price: number;
+  pricingMode: ServicePricingMode;
   durationMins?: number;
   durationMinutes: number;
   isActive: boolean;
@@ -127,6 +134,10 @@ export interface Product {
   reorderLevel?: number;
   price: number;
   cost: number;
+  /** Disabled products remain in history but cannot be sold. */
+  isActive: boolean;
+  /** Only inventory-tracked products decrement stock at checkout. */
+  trackInventory: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -142,13 +153,25 @@ export interface InvoiceItem {
   createdAt: Date;
 }
 
+export type InvoiceStatus = "PAID" | "VOID";
+
 export interface Invoice {
   id: string;
   serialNumber?: string;
   date: Date;
+  /** Sum of persisted invoice lines before discounts and tax. */
+  subtotalAmount: number;
   totalAmount: number;
+  /** Compatibility aggregate: manual + tier + gift-card discounts. */
   discount: number;
+  manualDiscount: number;
+  tierDiscount: number;
+  loyaltyDiscount: number;
+  giftCardDiscount: number;
   tax?: number;
+  taxRate?: number;
+  amountPaid: number;
+  status: InvoiceStatus;
   loyaltyPointsUsed: number;
   paymentMethod: string;
   customerId: string;

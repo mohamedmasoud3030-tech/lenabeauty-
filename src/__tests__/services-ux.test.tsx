@@ -56,8 +56,8 @@ describe("Services catalog UX", () => {
 
     renderPage();
 
-    const toggle = await screen.findByTitle(i18n.t("Disable"));
-    fireEvent.click(toggle);
+    const toggles = await screen.findAllByTitle(i18n.t("Disable"));
+    fireEvent.click(toggles[0]);
 
     // Confirmation dialog appears with the Arabic explanation
     expect(await screen.findByText(i18n.t("Disable Service"))).toBeInTheDocument();

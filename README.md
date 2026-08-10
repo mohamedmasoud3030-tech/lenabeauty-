@@ -64,7 +64,9 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260809000001_delivery_security_hardening.sql` in filename order (staff-only closure; revokes anonymous EXECUTE on all privileged routines).
+5. Continue through `20260810000002_operational_data_integrity.sql` in filename order. The final step installs the canonical checkout/payment/inventory and appointment-state contracts. Apply to staging first; no migration or seed is applied remotely by this repository checkout.
+
+The optional Arabic service catalog lives under `supabase/seeds/` and is explicitly gated to demo/staging. It is not part of the production migration chain. See `docs/OPERATIONAL_DATA_CONTRACT.md` and the paired rollback runbook under `supabase/rollbacks/`.
 
 Before a release, run `npm run preflight:supabase` with the normal client
 variables and a temporary local `SUPABASE_SERVICE_ROLE_KEY`. The script verifies

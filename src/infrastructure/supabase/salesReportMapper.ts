@@ -53,13 +53,19 @@ function mapItemRow(itemRow: unknown): SalesReportRow["items"][number] | null {
     return null;
   }
   const type = resolveItemType(item);
+  const price = toSafeNumber(item.price, 0);
+  const qty = toSafeNumber(item.quantity, 0);
+  // Zero/negative lines are not legitimate sales. Legacy malformed package
+  // expansion rows are excluded rather than presented as real transactions.
+  if (price <= 0 || !Number.isInteger(qty) || qty <= 0) return null;
   const joinedName = joinedNameFor(row, type);
+  const snapshotName = typeof row.item_name === "string" ? row.item_name : undefined;
   return {
     id: item.id,
-    name: typeof joinedName === "string" && joinedName.trim().length > 0 ? joinedName : FALLBACK_NAMES[type],
+    name: snapshotName?.trim() || (typeof joinedName === "string" && joinedName.trim().length > 0 ? joinedName : FALLBACK_NAMES[type]),
     type,
-    price: toSafeNumber(item.price, 0),
-    qty: toSafeNumber(item.quantity, 1),
+    price,
+    qty,
   };
 }
 

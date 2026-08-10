@@ -18,7 +18,7 @@ function renderPage() {
 }
 
 function priceInput() {
-  return screen.getByDisplayValue("0");
+  return document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
 }
 
 describe("Services form validation", () => {
@@ -28,7 +28,7 @@ describe("Services form validation", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] });
     vi.spyOn(useCases.services, "create").mockResolvedValue({
       ok: true,
-      data: { id: "1", name: "Cut", categoryId: "Hair", price: 10, durationMinutes: 30, isActive: true, createdAt: new Date(), updatedAt: new Date() },
+      data: { id: "1", name: "Cut", categoryId: "cat-1", categoryName: "Hair", price: 10, pricingMode: "FIXED", durationMinutes: 30, isActive: true, createdAt: new Date(), updatedAt: new Date() },
     });
   });
 
@@ -74,15 +74,16 @@ describe("Services form validation", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("allows a valid zero price (free service is a supported business rule)", async () => {
+  it("rejects a zero price so checkout can never create a zero-valued line", async () => {
     const create = vi.spyOn(useCases.services, "create");
     renderPage();
     await screen.findByText(/Total Services/i);
     fireEvent.change(screen.getByPlaceholderText(/Swedish Massage/i), { target: { value: "Consultation" } });
     fireEvent.change(screen.getByPlaceholderText(/Massage \/ Nails \/ Hair/i), { target: { value: "Hair" } });
+    fireEvent.change(priceInput(), { target: { value: "0" } });
     fireEvent.click(screen.getByRole("button", { name: /Add Service/i }));
-    await waitFor(() => expect(create).toHaveBeenCalled());
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ price: 0, name: "Consultation" }));
+    expect(screen.getByText("Value must be greater than zero.")).toBeInTheDocument();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("submits a valid service successfully", async () => {

@@ -27,7 +27,8 @@ export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem | PackageCh
 
 export interface CheckoutPayload {
   customerId: string;
-  employeeId?: string; 
+  /** Required by the operational checkout contract for traceability. */
+  employeeId: string;
   discountAmount?: number;
   useLoyaltyPoints?: boolean;
   giftCardCode?: string;
@@ -102,28 +103,39 @@ export interface InventoryReportRow {
 
 export function validateCheckoutPayload(payload: any): string[] {
   const errors: string[] = [];
-  if (!payload) {
-    errors.push("Payload is required");
-    return errors;
-  }
-  if (!payload.customerId) {
+  if (!payload || typeof payload !== "object") return ["Payload is required"];
+  if (typeof payload.customerId !== "string" || !payload.customerId.trim()) {
     errors.push("Customer details are missing");
   }
-  if (!payload.items || !Array.isArray(payload.items) || payload.items.length === 0) {
+  if (typeof payload.employeeId !== "string" || !payload.employeeId.trim()) {
+    errors.push("Employee details are missing");
+  }
+  if (!["cash", "card", "transfer"].includes(payload.paymentMethod)) {
+    errors.push("Unsupported payment method");
+  }
+  if (payload.discountAmount !== undefined &&
+      (typeof payload.discountAmount !== "number" || !Number.isFinite(payload.discountAmount) || payload.discountAmount < 0)) {
+    errors.push("Discount must be a non-negative finite amount");
+  }
+  if (!Array.isArray(payload.items) || payload.items.length === 0) {
     errors.push("Cart must not be empty");
     return errors;
   }
   payload.items.forEach((item: any, idx: number) => {
-    if (!item.type) {
-      errors.push(`Item at slot ${idx + 1} has no type`);
-    } else if (item.type === "service") {
-      if (!item.serviceId) errors.push(`Service item at slot ${idx + 1} is missing serviceId`);
-      if (typeof item.qty !== "number" || item.qty <= 0) errors.push(`Service item at slot ${idx + 1} must have a positive quantity`);
-    } else if (item.type === "product") {
-      if (!item.productId) errors.push(`Product item at slot ${idx + 1} is missing productId`);
-      if (typeof item.qty !== "number" || item.qty <= 0) errors.push(`Product item at slot ${idx + 1} must have a positive quantity`);
-    } else {
-      errors.push(`Item at slot ${idx + 1} has invalid type`);
+    const slot = idx + 1;
+    if (!item || !["service", "product", "package"].includes(item.type)) {
+      errors.push(`Item at slot ${slot} has invalid type`);
+      return;
+    }
+    const reference = item.type === "service" ? item.serviceId : item.type === "product" ? item.productId : item.packageId;
+    if (typeof reference !== "string" || !reference.trim()) {
+      errors.push(`Item at slot ${slot} is missing its catalog reference`);
+    }
+    if (!Number.isInteger(item.qty) || item.qty <= 0) {
+      errors.push(`Item at slot ${slot} must have a positive whole quantity`);
+    }
+    if (typeof item.price !== "number" || !Number.isFinite(item.price) || item.price <= 0) {
+      errors.push(`Item at slot ${slot} must have a positive finite price`);
     }
   });
   return errors;

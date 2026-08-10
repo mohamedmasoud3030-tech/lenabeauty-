@@ -85,11 +85,21 @@ export function mapService(row: unknown): Service {
   if (typeof row.id !== "string" || typeof row.name !== "string" || row.price === undefined || row.duration_minutes === undefined) {
       throw createMappingError("mapService", "Missing or invalid required fields (id, name, price, duration_minutes)");
   }
+  const categoryRelation = Array.isArray(row.service_categories)
+    ? row.service_categories[0]
+    : row.service_categories;
+  const categoryName = categoryRelation && typeof categoryRelation === "object" &&
+    typeof (categoryRelation as Record<string, unknown>).name === "string"
+      ? (categoryRelation as Record<string, unknown>).name as string
+      : undefined;
+  const pricingMode = row.pricing_mode === "STARTING_FROM" ? "STARTING_FROM" : "FIXED";
   return {
     id: row.id,
     name: row.name,
     categoryId: typeof row.category_id === "string" ? row.category_id : "",
+    categoryName,
     price: Number(row.price),
+    pricingMode,
     durationMinutes: Number(row.duration_minutes),
     durationMins: Number(row.duration_minutes),
     isActive: typeof row.is_active === "boolean" ? row.is_active : true,
@@ -111,6 +121,8 @@ export function mapProduct(row: unknown): Product {
         reorderLevel: row.reorder_level !== undefined && row.reorder_level !== null ? Number(row.reorder_level) : undefined,
         price: Number(row.price),
         cost: Number(row.cost),
+        isActive: typeof row.is_active === "boolean" ? row.is_active : true,
+        trackInventory: typeof row.track_inventory === "boolean" ? row.track_inventory : true,
         createdAt: parseDate(row.created_at, "created_at", "mapProduct"),
         updatedAt: parseDate(row.updated_at, "updated_at", "mapProduct")
     };
@@ -213,16 +225,35 @@ export function mapInvoice(row: unknown): Invoice {
   if (typeof row.id !== "string" || typeof row.customer_id !== "string" || row.total_amount === undefined || typeof row.payment_method !== "string") {
       throw createMappingError("mapInvoice", "Missing or invalid required fields (id, customer_id, total_amount, payment_method)");
   }
+  const employeeRelation = Array.isArray(row.employees) ? row.employees[0] : row.employees;
+  const staffName = employeeRelation && typeof employeeRelation === "object" &&
+    typeof (employeeRelation as Record<string, unknown>).name === "string"
+      ? (employeeRelation as Record<string, unknown>).name as string
+      : undefined;
+  // Additive financial columns are zero for pre-phase-3 rows. Detect that
+  // shape so historical receipts preserve their original aggregate discount
+  // and paid amount while all new invoices use the detailed breakdown.
+  const isLegacyFinancialRow = Number(row.subtotal_amount ?? 0) === 0 && Number(row.total_amount) > 0;
   return {
     id: row.id,
     serialNumber: typeof row.serial_number === "string" ? row.serial_number : undefined,
     date: parseDate(row.date || row.created_at, "date or created_at", "mapInvoice"),
+    subtotalAmount: Number(row.subtotal_amount ?? 0),
     totalAmount: Number(row.total_amount),
     discount: Number(row.discount || 0),
+    manualDiscount: isLegacyFinancialRow ? Number(row.discount ?? 0) : Number(row.manual_discount ?? 0),
+    tierDiscount: Number(row.tier_discount ?? 0),
+    loyaltyDiscount: isLegacyFinancialRow ? Number(row.loyalty_points_used ?? 0) : Number(row.loyalty_discount ?? 0),
+    giftCardDiscount: Number(row.gift_card_discount ?? 0),
     tax: row.tax !== undefined && row.tax !== null ? Number(row.tax) : undefined,
+    taxRate: row.tax_rate !== undefined && row.tax_rate !== null ? Number(row.tax_rate) : undefined,
+    amountPaid: isLegacyFinancialRow ? Number(row.total_amount) : Number(row.amount_paid ?? row.total_amount ?? 0),
+    status: row.status === "VOID" ? "VOID" : "PAID",
     loyaltyPointsUsed: Number(row.loyalty_points_used || 0),
     paymentMethod: row.payment_method,
     customerId: row.customer_id,
+    employeeId: typeof row.employee_id === "string" ? row.employee_id : undefined,
+    staffName,
     createdAt: parseDate(row.created_at, "created_at", "mapInvoice"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapInvoice")
   };

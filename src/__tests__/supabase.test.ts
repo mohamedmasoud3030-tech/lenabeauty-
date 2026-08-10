@@ -240,10 +240,13 @@ describe("Supabase Repository Tests", () => {
                 })
             });
             const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
-            mockFrom.mockReturnValue({ insert: mockInsert });
+            const categoryMaybeSingle = vi.fn().mockResolvedValue({ data: { id: "category-1" }, error: null });
+            mockFrom.mockImplementation((table: string) => table === "service_categories"
+              ? { upsert: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ maybeSingle: categoryMaybeSingle }) }) }
+              : { insert: mockInsert });
 
             const bundle = createRepositoryBundle();
-            const res = await bundle.serviceAdapter.create({ name: "Haircut", price: 20, durationMinutes: 30 });
+            const res = await bundle.serviceAdapter.create({ name: "Haircut", categoryName: "Hair", price: 20, durationMinutes: 30 });
             expect(res.ok).toBe(true);
             expect(mockFrom).toHaveBeenCalledWith("services");
             expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ name: "Haircut", price: 20, duration_minutes: 30, center_id: "test-center-123" }));
@@ -349,7 +352,7 @@ describe("Supabase Repository Tests", () => {
         await bundle.serviceAdapter.list();
 
         expect(mockFrom).toHaveBeenCalledWith("services");
-        expect(mockSelect).toHaveBeenCalledWith("*");
+        expect(mockSelect).toHaveBeenCalledWith("*, service_categories(name)");
         expect(mockEq).toHaveBeenCalledWith("center_id", "test-center-123");
         expect(mockOrder).toHaveBeenCalledWith("name", { ascending: true });
     });
@@ -375,7 +378,12 @@ describe("Supabase Repository Tests", () => {
             mockFrom.mockReturnValue({ insert: mockInsert });
 
             const bundle = createRepositoryBundle();
-            const res = await bundle.appointmentAdapter.create({ customerId: "c1" });
+            const res = await bundle.appointmentAdapter.create({
+                customerId: "c1",
+                employeeId: "e1",
+                serviceId: "s1",
+                dateTime: new Date("2026-08-11T10:00:00Z"),
+            });
             expect(res.ok).toBe(true);
             expect(mockFrom).toHaveBeenCalledWith("appointments");
             expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ customer_id: "c1", center_id: "test-center-123" }));

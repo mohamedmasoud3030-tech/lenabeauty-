@@ -83,18 +83,20 @@ describe("Checkout Payload Validation", () => {
   it("Should reject service items without serviceId", () => {
     const errors = validateCheckoutPayload({
       customerId: "cust-1",
+      employeeId: "emp-1",
       paymentMethod: "cash",
       items: [{ type: "service", qty: 1, price: 5.0 }]
     });
-    expect(errors.some(e => e.includes("is missing serviceId"))).toBe(true);
+    expect(errors.some(e => e.includes("catalog reference"))).toBe(true);
   });
 
   it("Should reject product items without productId", () => {
     const errors = validateCheckoutPayload({
       customerId: "cust-1",
+      employeeId: "emp-1",
       paymentMethod: "cash",
       items: [{ type: "product", qty: 1, price: 8.0 }]
     });
-    expect(errors.some(e => e.includes("is missing productId"))).toBe(true);
+    expect(errors.some(e => e.includes("catalog reference"))).toBe(true);
   });
 });

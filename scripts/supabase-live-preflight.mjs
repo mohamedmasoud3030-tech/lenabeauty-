@@ -47,6 +47,7 @@ const canonicalMigrations = [
   "20260628000016_validation_constraints.sql",
   "20260809000001_delivery_security_hardening.sql",
   "20260810000001_fix_invoice_items_packages.sql",
+  "20260810000002_operational_data_integrity.sql",
 ];
 
 function parseEnvFile(path) {
@@ -159,9 +160,11 @@ const rls = readFileSync(resolve(migrationsDir, "20260628000001_enable_rls.sql")
 if (!rls.includes("WHERE profile_id = auth.uid()")) fail("canonical RLS must use center_memberships.profile_id");
 else pass("canonical RLS uses center_memberships.profile_id");
 
-const checkout = readFileSync(resolve(migrationsDir, "20260628000008_packages_bundles.sql"), "utf8");
+const checkout = readFileSync(resolve(migrationsDir, "20260810000002_operational_data_integrity.sql"), "utf8");
 if (!checkout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_v1")) fail("final checkout RPC is missing");
 else pass("final checkout RPC exists");
+if (!checkout.includes("CREATE TABLE IF NOT EXISTS public.payments")) fail("canonical payments ledger is missing");
+else pass("canonical payments ledger exists");
 
 async function verifyRemoteSchema() {
   // The browser-safe publishable key is enough to confirm that each table is

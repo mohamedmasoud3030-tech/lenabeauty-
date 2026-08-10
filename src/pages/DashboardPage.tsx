@@ -117,7 +117,7 @@ export default function DashboardPage() {
     try {
       const productsRes = await useCases.products.list();
       const low = (productsRes.ok ? productsRes.data : [])
-        .filter((p) => p.stockQuantity <= (p.reorderLevel ?? 5))
+        .filter((p) => p.isActive && p.trackInventory && p.stockQuantity <= (p.reorderLevel ?? 5))
         .sort((a, b) => a.stockQuantity - b.stockQuantity)
         .slice(0, 5)
         .map((p) => ({ id: p.id, name: p.name, stock: p.stockQuantity }));
