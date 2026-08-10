@@ -38,6 +38,9 @@
 20260628000015_attendance_advances_payroll.sql
 20260628000016_validation_constraints.sql
 20260809000001_delivery_security_hardening.sql
+20260810000001_fix_invoice_items_packages.sql
+20260810000002_operational_data_integrity.sql
+20260810000003_appointment_overlap_integrity.sql
 ```
 
 > ⚠️ **لا تستخدم** `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` أو `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` — تم أرشفتهما في `docs/archive/` وهما نسخ قديمة غير مكتملة.

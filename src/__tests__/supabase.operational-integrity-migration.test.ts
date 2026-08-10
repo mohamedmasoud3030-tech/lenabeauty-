@@ -81,7 +81,14 @@ describe("gated Arabic catalog and rollback", () => {
     expect(seed).not.toMatch(/INSERT INTO public\.(products|service_packages|customers|appointments|invoices|payments)/);
   });
 
-  it("contains Arabic categories and both fixed and starts-from services", () => {
+  it("contains exactly the approved 6 categories and 31 services", () => {
+    const categoryBlock = seed.slice(seed.indexOf("FROM (VALUES"), seed.indexOf(") AS categories"));
+    const categories = categoryBlock.match(/^\s*\('[^']+'\),?\s*$/gm) ?? [];
+    const catalogBlock = seed.slice(seed.indexOf("WITH catalog"), seed.indexOf(")\nINSERT INTO public.services"));
+    const services = catalogBlock.match(/^\s*\('[A-Z0-9-]+'\s*,/gm) ?? [];
+
+    expect(categories).toHaveLength(6);
+    expect(services).toHaveLength(31);
     for (const category of ["الشعر", "الأظافر", "العناية بالوجه", "إزالة الشعر", "المكياج", "الحناء"]) {
       expect(seed).toContain(category);
     }
