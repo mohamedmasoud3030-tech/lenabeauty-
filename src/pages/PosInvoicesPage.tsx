@@ -193,7 +193,7 @@ export default function PosInvoicesPage() {
       }
     }
 
-    setCart([...cart, { ...item, price: finalPrice, type, cartId: Math.random().toString(36).substring(2, 11) }]);
+    setCart([...cart, { ...item, price: finalPrice, type, cartId: globalThis.crypto.randomUUID() }]);
     showToast('success', t("Added"), `${item.name} ${t("added to cart")}`);
   }
 
