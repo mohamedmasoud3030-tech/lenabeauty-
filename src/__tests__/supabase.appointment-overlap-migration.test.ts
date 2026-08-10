@@ -24,7 +24,7 @@ describe("duration-aware appointment overlap migration", () => {
   });
 
   it("uses a concurrent-safe half-open exclusion constraint for scheduled staff ranges", () => {
-    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist");
+    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions");
     expect(migration).toContain("appointments_no_scheduled_staff_overlap");
     expect(migration).toContain("EXCLUDE USING gist");
     expect(migration).toContain("employee_id WITH =");
