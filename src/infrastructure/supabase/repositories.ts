@@ -127,7 +127,10 @@ class SupabaseAuthAdapter implements AuthRepository {
       }
       const sessionState = mapAuthSession(data.session);
       if (sessionState.status === "error") {
-          return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", sessionState.error.message) };
+        // A cached access token can predate a server-side role change. Clear
+        // this unusable local session so the login form remains available.
+        await getSupabaseClient().auth.signOut({ scope: "local" });
+        return { ok: true, data: { status: "anonymous" } };
       }
       return { ok: true, data: sessionState };
     } catch (e: unknown) {
