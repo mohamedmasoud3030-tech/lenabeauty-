@@ -150,9 +150,9 @@ BEGIN
       EXCLUDE USING gist (
         center_id WITH =,
         employee_id WITH =,
-        tstzrange(
-          date_time,
-          date_time + duration_minutes_snapshot * INTERVAL '1 minute',
+        tsrange(
+          date_time AT TIME ZONE 'UTC',
+          (date_time AT TIME ZONE 'UTC') + duration_minutes_snapshot * INTERVAL '1 minute',
           '[)'
         ) WITH &&
       )
