@@ -15,7 +15,7 @@ const fallbackTemplates = {
   smsReminder: "Reminder: your appointment is tomorrow at {appointment_time}."
 };
 
-export default function NotificationsSettingsPage() {
+export default function NotificationsSettingsPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -104,21 +104,23 @@ export default function NotificationsSettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-          <Bell className="h-7 w-7" />
+    <div className="space-y-6 sm:space-y-8">
+      {!embedded && (
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <Bell className="h-5 w-5 sm:h-7 sm:w-7" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t("Notifications")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Configure WhatsApp and SMS reminders for appointments and campaigns")}</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("Notifications")}</h1>
-          <p className="text-sm text-muted-foreground">{t("Configure WhatsApp and SMS reminders for appointments and campaigns")}</p>
-        </div>
-      </div>
+      )}
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("WhatsApp Status")}</p><div className="mt-2 flex items-center gap-2 text-lg font-bold text-foreground">{whatsAppConnected ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Bell className="h-5 w-5 text-amber-600" />}{whatsAppConnected ? t("Connected") : t("Sandbox / Mock Mode")}</div></CardContent></PremiumCard>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("WhatsApp Status")}</p><div className="mt-2 flex items-center gap-2 text-lg font-bold text-foreground">{whatsAppConnected ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Bell className="h-5 w-5 text-warning" />}{whatsAppConnected ? t("Connected") : t("Sandbox / Mock Mode")}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Messages Sent")}</p><div className="mt-2 text-2xl font-bold text-foreground">{stats.totalSent}</div></CardContent></PremiumCard>
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Delivery Rate")}</p><div className="mt-2 text-2xl font-bold text-emerald-600">{stats.successRate.toFixed(1)}%</div></CardContent></PremiumCard>
+        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Delivery Rate")}</p><div className="mt-2 text-2xl font-bold text-success">{stats.successRate.toFixed(1)}%</div></CardContent></PremiumCard>
       </div>
 
       <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-6">
@@ -192,7 +194,7 @@ export default function NotificationsSettingsPage() {
         <div className="space-y-6">
           <QuickNotificationSender onSend={handleSendMessage} loading={sending} />
           <PremiumCard variant="glass">
-            <CardHeader><div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-green-600" /><h2 className="font-bold text-foreground">{t("Provider Notes")}</h2></div></CardHeader>
+            <CardHeader><div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-success" /><h2 className="font-bold text-foreground">{t("Provider Notes")}</h2></div></CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>{t("WhatsApp automation is ready in the app layer. To go live, connect a WhatsApp Business API token outside the repository.")}</p>
               <p>{t("SMS automation follows the same settings model, but still needs your chosen SMS provider credentials.")}</p>

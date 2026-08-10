@@ -123,7 +123,7 @@ export default function Layout() {
               <CenterSwitcher />
               <GlobalSearch />
 
-              <button className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
+              <button onClick={() => nav("/settings?tab=notifications")} className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
                 <Bell className="h-5 w-5 group-hover:rotate-12 transition-transform" />
                 <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-primary border-2 border-card shadow-sm" />
               </button>

@@ -7,7 +7,7 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
 
-export default function PaymentGatewaySettingsPage() {
+export default function PaymentGatewaySettingsPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -70,16 +70,18 @@ export default function PaymentGatewaySettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4">
-        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><CreditCard className="h-7 w-7" /></div>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">{t("Payment Gateway")}</h1>
-          <p className="text-sm text-muted-foreground">{t("Configure online deposit collection for booking confirmations")}</p>
+    <div className="space-y-6 sm:space-y-8">
+      {!embedded && (
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><CreditCard className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t("Payment Gateway")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Configure online deposit collection for booking confirmations")}</p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Provider")}</p><div className="mt-2 text-xl font-bold text-foreground uppercase">{form.provider}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Environment")}</p><div className="mt-2 text-xl font-bold text-foreground">{form.isSandbox ? t("Sandbox") : t("Live")}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Booking Deposit")}</p><div className="mt-2 text-xl font-bold text-foreground">{form.bookingDepositEnabled ? `${form.bookingDepositValue}${form.bookingDepositType === "percentage" ? "%" : ` ${t("OMR")}`}` : t("Disabled")}</div></CardContent></PremiumCard>
@@ -122,7 +124,7 @@ export default function PaymentGatewaySettingsPage() {
 
         <div className="space-y-6">
           <PremiumCard variant="glass">
-            <CardHeader><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-600" /><h2 className="font-bold text-foreground">{t("Security Checklist")}</h2></div></CardHeader>
+            <CardHeader><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success" /><h2 className="font-bold text-foreground">{t("Security Checklist")}</h2></div></CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>{t("Never store real gateway secret keys in the repository or browser code.")}</p>
               <p>{t("Use sandbox mode until your merchant account is fully verified.")}</p>

@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { 
-  ImagePlus, Save, Plus, Trash2, Pencil, Download, Upload, 
-  AlertTriangle, BarChart, Building2, Users, Database, 
-  Terminal, ShieldCheck, Globe, Phone, MapPin, Hash, 
-  Coins, CheckCircle2, XCircle, ChevronRight, Sparkles, Bell
+import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+  ImagePlus, Save, Plus, Trash2, Pencil, Download, Upload,
+  AlertTriangle, BarChart, Building2, Users, Database,
+  ShieldCheck, Globe, Phone, MapPin, Hash,
+  Coins, CheckCircle2, XCircle, ChevronRight, Bell, Palette, CreditCard
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
@@ -15,6 +15,19 @@ import { requiredText, percentField, collectIssues, issuesToMap } from "../domai
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
+import { PageLoader } from "../shared/components/PageLoader";
+
+const BrandingSettingsSection = lazy(() => import("./BrandingSettingsPage"));
+const NotificationsSettingsSection = lazy(() => import("./NotificationsSettingsPage"));
+const PaymentGatewaySettingsSection = lazy(() => import("./PaymentGatewaySettingsPage"));
+
+type SettingsTab = "center" | "users" | "backup" | "branding" | "notifications" | "payments";
+const SETTINGS_TABS = new Set<SettingsTab>(["center", "users", "backup", "branding", "notifications", "payments"]);
+
+function readSettingsTab(value: string | null): SettingsTab {
+  return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
+}
 
 type Settings = {
   id: string;
@@ -39,7 +52,13 @@ export default function SettingsPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const { t } = useTranslation();
-  const [tab, setTab] = useState<"center" | "users" | "backup" | "notifications" | "devtools">("center");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<SettingsTab>(() => readSettingsTab(searchParams.get("tab")));
+
+  function selectTab(next: SettingsTab) {
+    setTab(next);
+    setSearchParams(next === "center" ? {} : { tab: next }, { replace: true });
+  }
   const [autoBackup, setAutoBackup] = useState(false);
   const [backupInterval, setBackupInterval] = useState(30);
 
@@ -75,6 +94,10 @@ export default function SettingsPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setTab(readSettingsTab(searchParams.get("tab")));
+  }, [searchParams]);
 
   async function pickLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -177,7 +200,7 @@ export default function SettingsPage() {
     setRole(u.role);
     setIsActive(u.isActive);
     setPassword("");
-    setTab("users");
+    selectTab("users");
   }
 
   async function onDelete(id: string) {
@@ -295,35 +318,37 @@ export default function SettingsPage() {
     </div>
   );
 
-  const navItems = [
+  const navItems: { id: SettingsTab; label: string; icon: typeof Building2; desc: string }[] = [
     { id: "center", label: t("Center Profile"), icon: Building2, desc: t("Manage your business details") },
     { id: "users", label: t("User Management"), icon: Users, desc: t("Control access and permissions") },
     { id: "backup", label: t("Data & Backup"), icon: Database, desc: t("Secure your business data") },
-    { id: "devtools", label: t("Developer Tools"), icon: Terminal, desc: t("System diagnostics and tests") },
+    { id: "branding", label: t("Branding"), icon: Palette, desc: t("Manage salon visual identity") },
+    { id: "notifications", label: t("Notifications"), icon: Bell, desc: t("Appointment reminders and messages") },
+    { id: "payments", label: t("Payment Gateway"), icon: CreditCard, desc: t("Booking deposit configuration") },
   ];
 
   return (
     <div className="flex flex-col gap-6 pb-10">
 
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Navigation */}
-      <aside className="lg:w-80 shrink-0">
-        <div className="sticky top-24 space-y-6">
+      <div className="flex flex-col lg:flex-row gap-5 lg:gap-8">
+        {/* Settings section navigation */}
+      <aside className="lg:w-72 shrink-0">
+        <div className="lg:sticky lg:top-24 space-y-4 lg:space-y-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">{t("Settings")}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{t("Settings")}</h1>
             <p className="text-sm text-muted-foreground">{t("Configure and manage your application preferences.")}</p>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:block lg:space-y-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setTab(item.id as "center" | "users" | "backup" | "devtools")}
+                onClick={() => selectTab(item.id)}
                 className={clsx(
-                  "group w-full flex items-start gap-4 rounded-2xl p-4 text-start transition-all",
-                  tab === item.id 
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
+                  "group min-h-11 min-w-[145px] flex items-center gap-2 rounded-xl p-3 text-start transition-colors lg:w-full lg:min-w-0 lg:items-start lg:gap-4 lg:rounded-2xl lg:p-4",
+                  tab === item.id
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                     : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -336,8 +361,8 @@ export default function SettingsPage() {
                 <div className="flex-1 text-start">
                   <div className="text-sm font-bold">{item.label}</div>
                   <div className={clsx(
-                    "text-[10px] font-medium leading-tight mt-0.5",
-                    tab === item.id ? "text-white/70" : "text-muted-foreground"
+                    "hidden lg:block text-[10px] font-medium leading-tight mt-0.5",
+                    tab === item.id ? "text-primary-foreground/70" : "text-muted-foreground"
                   )}>
                     {item.desc}
                   </div>
@@ -563,7 +588,7 @@ export default function SettingsPage() {
 
                       <div className="space-y-2">
                         <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("Status")}</label>
-                        <button 
+                        <button
                           onClick={() => setIsActive(!isActive)}
                           className={clsx(
                             "w-full flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-bold transition-all",
@@ -736,6 +761,24 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {tab === "branding" && (
+              <Suspense fallback={<PageLoader />}>
+                <BrandingSettingsSection embedded />
+              </Suspense>
+            )}
+
+            {tab === "notifications" && (
+              <Suspense fallback={<PageLoader />}>
+                <NotificationsSettingsSection embedded />
+              </Suspense>
+            )}
+
+            {tab === "payments" && (
+              <Suspense fallback={<PageLoader />}>
+                <PaymentGatewaySettingsSection embedded />
+              </Suspense>
+            )}
+
             {tab === "backup" && (
               <div className="grid gap-8 lg:grid-cols-2">
                 <div className="rounded-[2.5rem] border border-border bg-card p-10 shadow-sm space-y-8">
@@ -800,7 +843,7 @@ export default function SettingsPage() {
                           <p className="text-sm text-muted-foreground">{t("Automate your data protection.")}</p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => setAutoBackup(!autoBackup)}
                         className={clsx(
                           "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
@@ -842,7 +885,7 @@ export default function SettingsPage() {
                         <p className="text-sm text-destructive/70">{t("Restore from a previous backup file.")}</p>
                       </div>
                     </div>
-                    
+
                     <div className="rounded-2xl bg-destructive/10 p-4 flex items-start gap-3">
                       <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                       <p className="text-xs font-bold text-destructive leading-relaxed uppercase tracking-wider">
@@ -863,56 +906,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {tab === "devtools" && (
-              <div className="rounded-[2.5rem] border border-border bg-card p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-10">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                    <Terminal className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold">{t("System Diagnostics")}</h2>
-                    <p className="text-sm text-muted-foreground">{t("Advanced tools for system health and testing.")}</p>
-                  </div>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <button
-                    onClick={async () => {
-                      showToast('error', t("Error"), t("Running Full E2E Test... Check console and Activity Log."));
-                      try {
-                        await Promise.reject(new Error("E2E Test is not available in this build."));
-                      } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
-                    }}
-                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-primary hover:border-primary hover:scale-[1.02]"
-                  >
-                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-primary shadow-sm group-hover:scale-110 transition-transform">
-                      <Sparkles className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-foreground group-hover:text-white">{t("Run E2E Test")}</div>
-                      <div className="text-xs text-muted-foreground mt-1 group-hover:text-white/70">{t("Simulate full user workflow")}</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      try {
-                        await Promise.reject(new Error("DB Self-Test is not available in this build."));
-                      } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
-                    }}
-                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-success hover:border-success hover:scale-[1.02]"
-                  >
-                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-success shadow-sm group-hover:scale-110 transition-transform">
-                      <Database className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-foreground group-hover:text-white">{t("DB Self-Test")}</div>
-                      <div className="text-xs text-muted-foreground mt-1 group-hover:text-white/70">{t("Verify database integrity")}</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
           </motion.div>
         </AnimatePresence>
       </main>
