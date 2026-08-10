@@ -293,7 +293,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
       </div>
 
       {/* Print Preview Info */}
-      <div className="print:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 text-center">
+      <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
         <p className="font-bold mb-1">💡 {t("Print Tips")}</p>
         <p>
           {t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}

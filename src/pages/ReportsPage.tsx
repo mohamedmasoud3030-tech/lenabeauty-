@@ -170,7 +170,7 @@ export default function ReportsPage() {
     return (
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
         {/* KPI Cards */}
-        <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-4">
           <KPICard
             variants={item}
             title={t("Total Revenue")}
@@ -330,12 +330,12 @@ export default function ReportsPage() {
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden space-y-2">
+          <div className="md:hidden grid grid-cols-2 gap-2">
             {salesData.slice(0, 15).map((sale) => (
               <button
                 key={sale.id}
                 onClick={() => setSelectedSale(sale)}
-                className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-start hover:border-primary/30 transition-colors"
+                className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-start min-w-0 hover:border-primary/30 transition-colors"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground truncate">{sale.customer ?? t("Walk-in")}</p>
@@ -353,10 +353,10 @@ export default function ReportsPage() {
         </motion.div>
 
         {/* Insights Grid — computed from real sales data only */}
-        <div className="grid gap-4 md:gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3 md:gap-6">
           <motion.div variants={item} className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm p-6 sm:p-8 shadow-xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600">
+              <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center text-warning">
                 <Target className="h-5 w-5" />
               </div>
               <h4 className="font-bold text-foreground">{t("Performance Metrics")}</h4>
@@ -371,7 +371,7 @@ export default function ReportsPage() {
 
           <motion.div variants={item} className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm p-6 sm:p-8 shadow-xl">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center text-success">
                 <Award className="h-5 w-5" />
               </div>
               <h4 className="font-bold text-foreground">{t("Top Insights")}</h4>
@@ -406,10 +406,10 @@ export default function ReportsPage() {
     }, {});
 
     const pieData = [
-      { name: t("Completed"), value: statusCounts["COMPLETED"] || 0, color: "#10b981" },
-      { name: t("Scheduled"), value: statusCounts["SCHEDULED"] || 0, color: "#f59e0b" },
-      { name: t("Canceled"), value: statusCounts["CANCELLED"] || 0, color: "#ef4444" },
-      { name: t("No-show"), value: statusCounts["NO_SHOW"] || 0, color: "#8b5cf6" },
+      { name: t("Completed"), value: statusCounts["COMPLETED"] || 0, color: "hsl(var(--success))" },
+      { name: t("Scheduled"), value: statusCounts["SCHEDULED"] || 0, color: "hsl(var(--warning))" },
+      { name: t("Canceled"), value: statusCounts["CANCELLED"] || 0, color: "hsl(var(--destructive))" },
+      { name: t("No-show"), value: statusCounts["NO_SHOW"] || 0, color: "hsl(var(--primary))" },
     ].filter(d => d.value > 0);
 
     const container = {
@@ -424,7 +424,7 @@ export default function ReportsPage() {
 
     return (
       <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-        <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-4">
           {[
             { label: t("Total"), value: data.length, color: "blue", icon: Activity },
             { label: t("Completed"), value: statusCounts["COMPLETED"] || 0, color: "emerald", icon: CheckCircle2 },
@@ -445,10 +445,10 @@ export default function ReportsPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className={clsx(
                   "h-10 w-10 rounded-lg flex items-center justify-center shadow-inner",
-                  stat.color === "blue" && "bg-blue-500/10 text-blue-600",
-                  stat.color === "emerald" && "bg-emerald-500/10 text-emerald-600",
-                  stat.color === "amber" && "bg-amber-500/10 text-amber-600",
-                  stat.color === "rose" && "bg-rose-500/10 text-rose-600",
+                  stat.color === "blue" && "bg-info/10 text-info",
+                  stat.color === "emerald" && "bg-success/10 text-success",
+                  stat.color === "amber" && "bg-warning/10 text-warning",
+                  stat.color === "rose" && "bg-destructive/10 text-destructive",
                 )}>
                   <stat.icon className="h-5 w-5" />
                 </div>
@@ -480,7 +480,7 @@ export default function ReportsPage() {
                     labelLine={false}
                     label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
                     outerRadius={120}
-                    fill="#8884d8"
+                    fill="hsl(var(--primary))"
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
@@ -550,7 +550,7 @@ export default function ReportsPage() {
                       <td className="py-4 px-4">
                         <span className={clsx(
                           "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold",
-                          inStock ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                          inStock ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                         )}>
                           {inStock ? `✓ ${t("In Stock")}` : `⚠ ${t("Low Stock")}`}
                         </span>
@@ -740,7 +740,7 @@ export default function ReportsPage() {
                   {selectedSale.discount > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground font-medium">{t("Discount")}</span>
-                      <span className="font-bold text-rose-500">-{formatOMRAmount(selectedSale.discount)}</span>
+                      <span className="font-bold text-destructive">-{formatOMRAmount(selectedSale.discount)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-1">
@@ -759,16 +759,16 @@ export default function ReportsPage() {
 
 function KPICard({ variants, title, value, currency, icon, trend, trendUp = true, color = "blue" }: any) {
   const colorClasses: Record<string, string> = {
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    blue: "bg-blue-500/10 text-blue-600",
-    rose: "bg-rose-500/10 text-rose-600",
-    purple: "bg-purple-500/10 text-purple-600",
+    emerald: "bg-success/10 text-success",
+    blue: "bg-info/10 text-info",
+    rose: "bg-secondary/10 text-secondary",
+    purple: "bg-primary/10 text-primary",
   };
 
   return (
     <motion.div
       variants={variants}
-      className="group relative rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+      className="group relative rounded-2xl border border-border bg-card p-3 sm:p-6 shadow-sm hover:shadow-md transition-all overflow-hidden"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       <div className="relative z-10">
@@ -779,7 +779,7 @@ function KPICard({ variants, title, value, currency, icon, trend, trendUp = true
           {trend && (
             <div className={clsx(
               "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold",
-              trendUp ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+              trendUp ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
             )}>
               {trendUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
               {trend}
@@ -807,9 +807,9 @@ function InsightRow({ label, value }: { label: string; value: string }) {
 
 function InsightBadge({ icon, text, color }: { icon: React.ReactNode; text: string; color: string }) {
   const colorClasses: Record<string, string> = {
-    rose: "bg-rose-500/10 text-rose-600",
-    pink: "bg-pink-500/10 text-pink-600",
-    amber: "bg-amber-500/10 text-amber-600",
+    rose: "bg-primary/10 text-primary",
+    pink: "bg-secondary/10 text-secondary",
+    amber: "bg-accent text-accent-foreground",
   };
 
   return (

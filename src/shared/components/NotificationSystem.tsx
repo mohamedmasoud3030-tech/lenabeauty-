@@ -64,10 +64,10 @@ function NotificationDisplay({ notification, onClose }: NotificationDisplayProps
   };
 
   const colors = {
-    success: "bg-emerald-500/10 text-emerald-600 border-emerald-200/50",
-    error: "bg-rose-500/10 text-rose-600 border-rose-200/50",
-    info: "bg-blue-500/10 text-blue-600 border-blue-200/50",
-    warning: "bg-amber-500/10 text-amber-600 border-amber-200/50",
+    success: "bg-success/10 text-success border-success/50",
+    error: "bg-destructive/10 text-destructive border-destructive/50",
+    info: "bg-info/10 text-info border-info/50",
+    warning: "bg-warning/10 text-warning border-warning/50",
   };
 
   return (
@@ -184,10 +184,10 @@ export function NotificationSettings({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               {template.type === "whatsapp" && (
-                <MessageCircle className="h-5 w-5 text-green-600" />
+                <MessageCircle className="h-5 w-5 text-success" />
               )}
               {template.type === "sms" && (
-                <Phone className="h-5 w-5 text-blue-600" />
+                <Phone className="h-5 w-5 text-info" />
               )}
               <div>
                 <h3 className="font-bold text-foreground">{template.name}</h3>

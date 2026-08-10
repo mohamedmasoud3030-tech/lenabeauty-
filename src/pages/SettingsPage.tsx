@@ -390,7 +390,7 @@ export default function SettingsPage() {
                           onChange={(e) => { setS({ ...s, name: e.target.value }); if (centerErrors.name) setCenterErrors((p) => ({ ...p, name: "" })); }}
                           placeholder={t("Enter business name")}
                         />
-                        {centerErrors.name && <div className="text-xs font-bold text-rose-500">{t(centerErrors.name)}</div>}
+                        {centerErrors.name && <div className="text-xs font-bold text-destructive">{t(centerErrors.name)}</div>}
                       </div>
                       <div className="space-y-2">
                         <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
@@ -469,7 +469,7 @@ export default function SettingsPage() {
                           onChange={(e) => { setVatText(e.target.value); if (centerErrors.taxRate) setCenterErrors((p) => ({ ...p, taxRate: "" })); }}
                           placeholder="0"
                         />
-                        {centerErrors.taxRate && <div className="text-xs font-bold text-rose-500">{t(centerErrors.taxRate)}</div>}
+                        {centerErrors.taxRate && <div className="text-xs font-bold text-destructive">{t(centerErrors.taxRate)}</div>}
                         <p className="text-xs text-muted-foreground">{t("VAT")} (%)</p>
                       </div>
                     </div>
@@ -513,7 +513,7 @@ export default function SettingsPage() {
                     >
                       <Save className="h-4 w-4" />
                       {t("Save Changes")}
-                      <span className="absolute -top-3 -end-3 bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[8px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest pointer-events-none">{t("Backend Required")}</span>
+                      <span className="absolute -top-3 -end-3 bg-warning/10 text-warning border border-warning/20 text-[8px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest pointer-events-none">{t("Backend Required")}</span>
                       {busy && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center rounded-2xl"><div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
                     </button>
                   </div>
@@ -567,7 +567,7 @@ export default function SettingsPage() {
                           onClick={() => setIsActive(!isActive)}
                           className={clsx(
                             "w-full flex items-center justify-center gap-2 rounded-2xl border px-5 py-3 text-sm font-bold transition-all",
-                            isActive ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "bg-rose-500/10 border-rose-500/20 text-rose-600"
+                            isActive ? "bg-success/10 border-success/20 text-success" : "bg-destructive/10 border-destructive/20 text-destructive"
                           )}
                         >
                           {isActive ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
@@ -635,14 +635,14 @@ export default function SettingsPage() {
                             <td>
                               <span className={clsx(
                                 "inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider",
-                                u.role === "ADMIN" ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"
+                                u.role === "ADMIN" ? "bg-primary/10 text-primary" : "bg-info/10 text-info"
                               )}>
                                 {u.role === "ADMIN" ? t("Admin") : t("Staff")}
                               </span>
                             </td>
                             <td>
                               <div className="flex items-center gap-2">
-                                <div className={clsx("h-2 w-2 rounded-full", u.isActive ? "bg-emerald-500" : "bg-rose-500")} />
+                                <div className={clsx("h-2 w-2 rounded-full", u.isActive ? "bg-success" : "bg-destructive")} />
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                                   {u.isActive ? t("Active") : t("Inactive")}
                                 </span>
@@ -658,7 +658,7 @@ export default function SettingsPage() {
                                 </button>
                                 <button
                                   onClick={() => onDelete(u.id)}
-                                  className="h-9 w-9 flex items-center justify-center rounded-xl bg-background border border-border text-muted-foreground hover:text-rose-500 hover:border-rose-500 transition-all"
+                                  className="h-9 w-9 flex items-center justify-center rounded-xl bg-background border border-border text-muted-foreground hover:text-destructive hover:border-destructive transition-all"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </button>
@@ -692,14 +692,14 @@ export default function SettingsPage() {
                                 <span className="font-bold text-foreground text-base">{u.username}</span>
                                 <span className={clsx(
                                   "inline-flex items-center rounded-full mt-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider w-fit",
-                                  u.role === "ADMIN" ? "bg-purple-500/10 text-purple-600" : "bg-blue-500/10 text-blue-600"
+                                  u.role === "ADMIN" ? "bg-primary/10 text-primary" : "bg-info/10 text-info"
                                 )}>
                                   {u.role === "ADMIN" ? t("Admin") : t("Staff")}
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className={clsx("h-2 w-2 rounded-full", u.isActive ? "bg-emerald-500" : "bg-rose-500")} />
+                              <div className={clsx("h-2 w-2 rounded-full", u.isActive ? "bg-success" : "bg-destructive")} />
                               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 {u.isActive ? t("Active") : t("Inactive")}
                               </span>
@@ -716,7 +716,7 @@ export default function SettingsPage() {
                             </button>
                             <button
                               onClick={() => void onDelete(u.id)}
-                              className="h-10 flex-1 flex items-center justify-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs font-bold text-rose-600 hover:bg-rose-500 hover:text-white transition-all"
+                              className="h-10 flex-1 flex items-center justify-center gap-2 rounded-xl bg-destructive/10 border border-destructive/20 text-xs font-bold text-destructive hover:bg-destructive hover:text-white transition-all"
                             >
                               <Trash2 className="h-4 w-4" />
                               {t("Delete")}
@@ -775,7 +775,7 @@ export default function SettingsPage() {
                       className="group w-full flex items-center justify-between rounded-2xl bg-muted p-6 transition-all hover:bg-primary/5 hover:scale-[1.02]"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center text-emerald-500 shadow-sm">
+                        <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center text-success shadow-sm">
                           <BarChart className="h-5 w-5" />
                         </div>
                         <div className="text-start">
@@ -792,7 +792,7 @@ export default function SettingsPage() {
                   <div className="rounded-[2.5rem] border border-border bg-card p-10 shadow-sm space-y-8">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                        <div className="h-12 w-12 rounded-2xl bg-info/10 flex items-center justify-center text-info">
                           <ShieldCheck className="h-6 w-6" />
                         </div>
                         <div>
@@ -830,22 +830,22 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-[2.5rem] border-2 border-dashed border-rose-500/20 bg-rose-500/5 p-10 space-y-8">
+                  <div className="rounded-[2.5rem] border-2 border-dashed border-destructive/20 bg-destructive/5 p-10 space-y-8">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-600">
+                      <div className="h-12 w-12 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive">
                         <Upload className="h-6 w-6" />
                       </div>
                       <div>
                         <div className="flex items-center gap-3">
-                          <h2 className="text-xl font-bold text-rose-900">{t("Restore Data")}</h2>
+                          <h2 className="text-xl font-bold text-destructive">{t("Restore Data")}</h2>
                         </div>
-                        <p className="text-sm text-rose-700/70">{t("Restore from a previous backup file.")}</p>
+                        <p className="text-sm text-destructive/70">{t("Restore from a previous backup file.")}</p>
                       </div>
                     </div>
                     
-                    <div className="rounded-2xl bg-rose-500/10 p-4 flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                      <p className="text-xs font-bold text-rose-700 leading-relaxed uppercase tracking-wider">
+                    <div className="rounded-2xl bg-destructive/10 p-4 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                      <p className="text-xs font-bold text-destructive leading-relaxed uppercase tracking-wider">
                         {t("Warning: This will overwrite all current data. This action cannot be undone.")}
                       </p>
                     </div>
@@ -853,7 +853,7 @@ export default function SettingsPage() {
                     <button
                       disabled={busy}
                       onClick={handleRestore}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-6 py-4 text-sm font-bold text-white shadow-xl shadow-rose-600/20 hover:bg-rose-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-destructive px-6 py-4 text-sm font-bold text-white shadow-xl shadow-destructive/20 hover:bg-destructive transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
                     >
                       <Upload className="h-4 w-4" />
                       {t("Restore Backup Now")}
@@ -866,7 +866,7 @@ export default function SettingsPage() {
             {tab === "devtools" && (
               <div className="rounded-[2.5rem] border border-border bg-card p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-10">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                     <Terminal className="h-6 w-6" />
                   </div>
                   <div>
@@ -883,9 +883,9 @@ export default function SettingsPage() {
                         await Promise.reject(new Error("E2E Test is not available in this build."));
                       } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
                     }}
-                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-indigo-500 hover:border-indigo-500 hover:scale-[1.02]"
+                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-primary hover:border-primary hover:scale-[1.02]"
                   >
-                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-indigo-600 shadow-sm group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-primary shadow-sm group-hover:scale-110 transition-transform">
                       <Sparkles className="h-6 w-6" />
                     </div>
                     <div>
@@ -900,9 +900,9 @@ export default function SettingsPage() {
                         await Promise.reject(new Error("DB Self-Test is not available in this build."));
                       } catch (err: any) { showToast('error', t("Error"), ((err as Error).message || String(err))); }
                     }}
-                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-emerald-500 hover:border-emerald-500 hover:scale-[1.02]"
+                    className="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-muted/30 p-8 text-start transition-all hover:bg-success hover:border-success hover:scale-[1.02]"
                   >
-                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-emerald-600 shadow-sm group-hover:scale-110 transition-transform">
+                    <div className="h-12 w-12 rounded-2xl bg-background flex items-center justify-center text-success shadow-sm group-hover:scale-110 transition-transform">
                       <Database className="h-6 w-6" />
                     </div>
                     <div>

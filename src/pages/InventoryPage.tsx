@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  AlertTriangle, Plus, Pencil, Trash2, Boxes, 
-  Package, DollarSign, BarChart, Search, Save, 
-  X, CheckCircle2, TrendingUp, Wallet, 
+import {
+  AlertTriangle, Plus, Pencil, Trash2, Boxes,
+  Package, DollarSign, BarChart, Search, Save,
+  X, CheckCircle2, TrendingUp, Wallet,
   AlertCircle, ArrowUpRight, ArrowDownRight,
   LayoutGrid, List, Filter, RefreshCw, Sparkles,
   ChevronRight, MoreVertical, Tag, Layers,
@@ -185,7 +185,7 @@ export default function InventoryPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 px-5 py-4 text-rose-600"
+          className="flex items-center gap-4 rounded-2xl bg-destructive/10 border border-destructive/20 px-5 py-4 text-destructive"
         >
           <Bell className="h-5 w-5 flex-shrink-0 animate-pulse" />
           <p className="text-sm font-bold">
@@ -200,17 +200,17 @@ export default function InventoryPage() {
         </motion.div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
-            <Boxes className="h-8 w-8 transition-transform group-hover:rotate-12" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="h-11 w-11 sm:h-16 sm:w-16 rounded-xl sm:rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 group transition-all hover:scale-105">
+            <Boxes className="h-5 w-5 sm:h-8 sm:w-8 transition-transform group-hover:rotate-12" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">{t("Inventory")}</h1>
+            <h1 className="text-2xl sm:text-2xl sm:text-4xl font-bold text-foreground tracking-tight">{t("Inventory")}</h1>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Manage your products and stock levels")}</p>
           </div>
         </div>
-        
+
         <div className="relative w-full max-w-md group">
           <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
@@ -222,51 +222,51 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <motion.div 
+      <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3">
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden"
+          className="group rounded-2xl sm:rounded-[2.5rem] border border-border bg-card p-3 sm:p-8 shadow-sm sm:shadow-xl hover:shadow-2xl transition-all relative overflow-hidden"
         >
           <div className="absolute top-0 end-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
             <Layers className="h-20 w-20 -rotate-12" />
           </div>
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
               <Package className="h-6 w-6" />
             </div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Total Products")}</span>
           </div>
-          <div className="text-4xl font-bold text-foreground">{stats.totalItems}</div>
+          <div className="text-2xl sm:text-4xl font-bold text-foreground">{stats.totalItems}</div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden"
+          className="group rounded-2xl sm:rounded-[2.5rem] border border-border bg-card p-3 sm:p-8 shadow-sm sm:shadow-xl hover:shadow-2xl transition-all relative overflow-hidden"
         >
           <div className="absolute top-0 end-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
             <Wallet className="h-20 w-20 rotate-12" />
           </div>
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
               <Wallet className="h-6 w-6" />
             </div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Inventory Value")}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-foreground">{formatOMRAmount(stats.totalValue)}</span>
+            <span className="text-2xl sm:text-4xl font-bold text-foreground">{formatOMRAmount(stats.totalValue)}</span>
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className={clsx(
-            "group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl border-l-[10px] hover:shadow-2xl transition-all relative overflow-hidden",
+            "group rounded-2xl sm:rounded-[2.5rem] border border-border bg-card p-3 sm:p-8 shadow-sm sm:shadow-xl border-l-[10px] hover:shadow-2xl transition-all relative overflow-hidden",
             stats.lowStock > 0 ? "border-l-rose-500" : "border-l-emerald-500"
           )}
         >
@@ -275,33 +275,33 @@ export default function InventoryPage() {
           </div>
           <div className="flex items-center gap-4 mb-6">
             <div className={clsx(
-              "h-12 w-12 rounded-2xl flex items-center justify-center shadow-inner",
-              stats.lowStock > 0 ? "bg-rose-500/10 text-rose-600" : "bg-emerald-500/10 text-emerald-600"
+              "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner",
+              stats.lowStock > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
             )}>
               <AlertCircle className="h-6 w-6" />
             </div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Low Stock Items")}</span>
           </div>
-          <div className="text-4xl font-bold text-foreground">{stats.lowStock}</div>
+          <div className="text-2xl sm:text-4xl font-bold text-foreground">{stats.lowStock}</div>
         </motion.div>
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-[450px_1fr]">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-4 sm:p-6 lg:p-10 shadow-2xl h-fit space-y-4 sm:space-y-6 lg:space-y-10 sticky top-10"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                 {isEditing ? <Pencil className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
               </div>
               <h2 className="text-2xl font-bold text-foreground tracking-tight">{isEditing ? t("Edit Product") : t("New Product")}</h2>
             </div>
             {isEditing && (
-              <button 
-                onClick={resetForm} 
+              <button
+                onClick={resetForm}
                 className="h-10 w-10 rounded-xl hover:bg-muted flex items-center justify-center transition-all text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
@@ -320,7 +320,7 @@ export default function InventoryPage() {
                   onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
                   placeholder={t("e.g. Luxury Shampoo")}
                 />
-                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.name)}</div>}
+                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.name)}</div>}
               </div>
             </div>
 
@@ -336,7 +336,7 @@ export default function InventoryPage() {
                     onChange={(e) => { setStockQuantity(e.target.value); if (errors.stockQuantity) setErrors((p) => ({ ...p, stockQuantity: "" })); }}
                   />
                 </div>
-                {errors.stockQuantity && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.stockQuantity)}</div>}
+                {errors.stockQuantity && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.stockQuantity)}</div>}
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Reorder Level")}</label>
@@ -349,7 +349,7 @@ export default function InventoryPage() {
                     onChange={(e) => { setReorderLevel(e.target.value); if (errors.reorderLevel) setErrors((p) => ({ ...p, reorderLevel: "" })); }}
                   />
                 </div>
-                {errors.reorderLevel && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.reorderLevel)}</div>}
+                {errors.reorderLevel && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.reorderLevel)}</div>}
               </div>
             </div>
 
@@ -365,7 +365,7 @@ export default function InventoryPage() {
                     onChange={(e) => { setCost(e.target.value); if (errors.cost) setErrors((p) => ({ ...p, cost: "" })); }}
                   />
                 </div>
-                {errors.cost && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.cost)}</div>}
+                {errors.cost && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.cost)}</div>}
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Selling Price")}</label>
@@ -378,7 +378,7 @@ export default function InventoryPage() {
                     onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
                   />
                 </div>
-                {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.price)}</div>}
+                {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.price)}</div>}
               </div>
             </div>
 
@@ -401,7 +401,7 @@ export default function InventoryPage() {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
@@ -419,8 +419,8 @@ export default function InventoryPage() {
                 className={clsx(
                   "h-10 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-sm",
                   showLowStockOnly
-                    ? "bg-rose-500 text-white border-rose-500"
-                    : "border-border bg-card text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600"
+                    ? "bg-destructive text-white border-destructive"
+                    : "border-border bg-card text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 )}
               >
                 <AlertTriangle className="h-4 w-4" />
@@ -454,30 +454,30 @@ export default function InventoryPage() {
                   {filtered.map((p, idx) => {
                     const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
                     return (
-                      <motion.tr 
+                      <motion.tr
                         layout
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        key={p.id} 
+                        key={p.id}
                         className="group hover:bg-muted/30 transition-all [&>td]:px-5 sm:[&>td]:px-10 [&>td]:py-4 sm:[&>td]:py-8 [&>td]:text-start"
                       >
                         <td>
                           <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
+                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
                               {p.name[0]}
                             </div>
                             <div>
                               <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{p.name}</div>
-                              {!p.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
+                              {!p.isActive && <span className="text-[10px] font-bold text-destructive">{t("Disabled")}</span>}
                             </div>
                           </div>
                         </td>
                         <td>
                           <div className={clsx(
                             "inline-flex items-center gap-2.5 rounded-2xl px-5 py-2.5 text-xs font-bold border shadow-sm transition-all",
-                            low 
-                              ? "bg-rose-500/10 text-rose-600 border-rose-200 animate-pulse" 
+                            low
+                              ? "bg-destructive/10 text-destructive border-destructive animate-pulse"
                               : "bg-muted text-foreground border-border"
                           )}>
                             {p.stockQuantity}
@@ -505,21 +505,21 @@ export default function InventoryPage() {
                               onClick={() => void onToggleActive(p)}
                               className={clsx(
                                 "h-11 w-11 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110",
-                                p.isActive ? "border-border text-muted-foreground hover:text-amber-600" : "border-emerald-500/30 text-emerald-600"
+                                p.isActive ? "border-border text-muted-foreground hover:text-warning" : "border-success/30 text-success"
                               )}
                               title={p.isActive ? t("Disable") : t("Enable")}
                             >
                               <CheckCircle2 className="h-5 w-5" />
                             </button>
-                            <button 
-                              onClick={() => onEdit(p)} 
+                            <button
+                              onClick={() => onEdit(p)}
                               className="h-11 w-11 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110"
                             >
                               <Pencil className="h-5 w-5" />
                             </button>
-                            <button 
-                              onClick={() => onDelete(p.id)} 
-                              className="h-11 w-11 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-rose-500/10 hover:text-rose-600 hover:border-rose-500/20 transition-all shadow-sm hover:scale-110"
+                            <button
+                              onClick={() => onDelete(p.id)}
+                              className="h-11 w-11 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all shadow-sm hover:scale-110"
                             >
                               <Trash2 className="h-5 w-5" />
                             </button>
@@ -535,84 +535,72 @@ export default function InventoryPage() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+          <div className="lg:hidden grid grid-cols-2 gap-3 p-3">
             <AnimatePresence mode="popLayout">
               {filtered.map((p, idx) => {
                 const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
                 return (
                   <motion.div
                     layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     key={`m-${p.id}`}
-                    className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                    className="min-w-0 rounded-2xl border border-border bg-card p-3 shadow-sm flex flex-col gap-3"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
-                        {p.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col items-start">
-                        <span className="font-bold text-foreground text-lg truncate w-full">{p.name}</span>
-                        {!p.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
-                        <div className={clsx(
-                          "inline-flex items-center gap-1.5 rounded-xl px-2 py-1 mt-1 text-[10px] font-bold border shrink-0",
-                          low ? "bg-rose-500/10 text-rose-600 border-rose-200 animate-pulse" : "bg-muted text-foreground border-border"
-                        )}>
-                          {p.stockQuantity} {t("In Stock")}
-                          {low && <AlertTriangle className="h-3 w-3" />}
-                        </div>
+                    <div className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-foreground">{p.name}</span>
+                      {!p.isActive && <span className="text-[9px] font-bold text-destructive">{t("Disabled")}</span>}
+                      <div className={clsx(
+                        "mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold border",
+                        low ? "status-danger" : "border-border bg-muted text-foreground",
+                      )}>
+                        {p.stockQuantity} {t("In Stock")}
+                        {low && <AlertTriangle className="h-3 w-3" />}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Cost")}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-foreground text-base">{formatOMRAmount(p.cost)}</span>
-                          <span className="text-[8px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
-                        </div>
+                    <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border pt-2">
+                      <div className="min-w-0">
+                        <div className="text-[9px] font-bold text-muted-foreground">{t("Cost")}</div>
+                        <div className="truncate text-xs font-bold text-foreground">{formatOMRAmount(p.cost)}</div>
                       </div>
-                      <div className="flex flex-col text-end">
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("Price")}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-primary text-xl">{formatOMRAmount(p.price)}</span>
-                          <span className="text-[8px] font-bold text-primary uppercase">{t("OMR")}</span>
-                        </div>
-                        <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
-                          {t("Profit")}: {((p.price - p.cost) / (p.price || 1) * 100).toFixed(0)}%
-                        </div>
+                      <div className="min-w-0 text-end">
+                        <div className="text-[9px] font-bold text-primary">{t("Price")}</div>
+                        <div className="truncate text-sm font-bold text-primary">{formatOMRAmount(p.price)}</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => void onToggleActive(p)}
-                        className="h-12 rounded-2xl border border-border px-3 flex items-center justify-center text-muted-foreground"
+                        className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
                         title={p.isActive ? t("Disable") : t("Enable")}
                       >
-                        <CheckCircle2 className="h-5 w-5" />
+                        <CheckCircle2 className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => onEdit(p)}
-                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                        className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
+                        title={t("Edit")}
                       >
-                        <Pencil className="h-5 w-5" />
-                        {t("Edit")}
+                        <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => void onDelete(p.id)}
-                        className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shadow-sm"
+                        className="h-11 min-w-0 flex-1 rounded-xl border border-border text-destructive flex items-center justify-center"
+                        title={t("Delete")}
                       >
-                        <Trash2 className="h-5 w-5" />
-                        {t("Delete")}
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </motion.div>
                 );
               })}
             </AnimatePresence>
-            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading products...")} errorTitle={t("Failed to load products")} emptyTitle={t("No Products Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first product to start selling")} emptyIcon={<Boxes className="h-6 w-6" />} compact />
+            <div className="col-span-2">
+              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading products...")} errorTitle={t("Failed to load products")} emptyTitle={t("No Products Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first product to start selling")} emptyIcon={<Boxes className="h-6 w-6" />} compact />
+            </div>
           </div>
         </motion.div>
       </div>

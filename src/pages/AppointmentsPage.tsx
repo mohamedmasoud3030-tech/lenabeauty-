@@ -98,10 +98,10 @@ function fmtTime(d: Date) {
 
 function statusClass(s: AppointmentStatus | string) {
   switch (s) {
-    case AppointmentStatus.SCHEDULED: return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-    case "CONFIRMED": return "bg-blue-500/10 text-blue-600 border-blue-500/20";
-    case AppointmentStatus.COMPLETED: return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-    case AppointmentStatus.CANCELLED: return "bg-rose-500/10 text-rose-600 border-rose-500/20";
+    case AppointmentStatus.SCHEDULED: return "bg-warning/10 text-warning border-warning/20";
+    case "CONFIRMED": return "bg-info/10 text-info border-info/20";
+    case AppointmentStatus.COMPLETED: return "bg-success/10 text-success border-success/20";
+    case AppointmentStatus.CANCELLED: return "bg-destructive/10 text-destructive border-destructive/20";
     default: return "bg-muted text-muted-foreground border-border";
   }
 }
@@ -491,21 +491,21 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {[
           { label: t('Total'), value: apptStats.total, color: 'text-primary', bg: 'bg-primary/10', icon: CalendarDays },
-          { label: t('Scheduled'), value: apptStats.scheduled, color: 'text-amber-600', bg: 'bg-amber-500/10', icon: Clock },
-          { label: t('Completed'), value: apptStats.completed, color: 'text-emerald-600', bg: 'bg-emerald-500/10', icon: CheckCircle2 },
-          { label: t('No-Show'), value: apptStats.noShow, color: 'text-orange-600', bg: 'bg-orange-500/10', icon: Bell },
-          { label: t('Protected Appointments'), value: apptStats.protected, color: 'text-sky-600', bg: 'bg-sky-500/10', icon: Sparkles },
-          { label: t('Cancelled'), value: apptStats.cancelled, color: 'text-rose-600', bg: 'bg-rose-500/10', icon: XCircle },
+          { label: t('Scheduled'), value: apptStats.scheduled, color: 'text-warning', bg: 'bg-warning/10', icon: Clock },
+          { label: t('Completed'), value: apptStats.completed, color: 'text-success', bg: 'bg-success/10', icon: CheckCircle2 },
+          { label: t('No-Show'), value: apptStats.noShow, color: 'text-warning', bg: 'bg-warning/10', icon: Bell },
+          { label: t('Protected Appointments'), value: apptStats.protected, color: 'text-info', bg: 'bg-info/10', icon: Sparkles },
+          { label: t('Cancelled'), value: apptStats.cancelled, color: 'text-destructive', bg: 'bg-destructive/10', icon: XCircle },
         ].map(({ label, value, color, bg, icon: Icon }, i) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-sm hover:shadow-md transition-all"
+            className="rounded-2xl border border-border bg-card p-3 sm:p-5 shadow-sm hover:shadow-md transition-all"
           >
             <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
               <Icon className={`h-4 w-4 ${color}`} />
@@ -700,7 +700,7 @@ export default function AppointmentsPage() {
                       <p className="text-xs font-bold text-muted-foreground">{t("No appointments for this day")}</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       {dayAppts.map(a => {
                         const dt = new Date(a.dateTime);
                         return (
@@ -709,7 +709,7 @@ export default function AppointmentsPage() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             onClick={() => openEditBooking(a)}
-                            className="bg-card border border-border rounded-[1.5rem] p-4 sm:p-5 shadow-xl flex flex-col gap-3 relative overflow-hidden cursor-pointer"
+                            className="min-w-0 bg-card border border-border rounded-2xl p-3 sm:p-5 shadow-sm flex flex-col gap-2 relative overflow-hidden cursor-pointer"
                           >
                             <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).split(" ")[0])} />
                             
@@ -726,13 +726,13 @@ export default function AppointmentsPage() {
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-3 border-t border-border pt-3 text-xs font-bold text-muted-foreground">
-                              <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
-                                <Clock className="h-4 w-4 text-primary" />
+                            <div className="grid grid-cols-2 gap-1 border-t border-border pt-2 text-[10px] font-bold text-muted-foreground">
+                              <div className="flex items-center gap-1 bg-muted/50 px-2 py-2 rounded-lg min-w-0">
+                                <Clock className="h-3 w-3 text-primary shrink-0" />
                                 {fmtTime(dt)}
                               </div>
-                              <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl flex-1 min-w-0">
-                                <User className="h-4 w-4 text-primary shrink-0" />
+                              <div className="flex items-center gap-1 bg-muted/50 px-2 py-2 rounded-lg min-w-0">
+                                <User className="h-3 w-3 text-primary shrink-0" />
                                 <span className="truncate">{a.employee?.name || "—"}</span>
                               </div>
                             </div>
@@ -887,7 +887,7 @@ export default function AppointmentsPage() {
                         <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                         <span className="text-sm font-bold text-foreground truncate">{customerQ}</span>
                       </div>
-                      <button onClick={() => { setCustomerId(""); setCustomerQ(""); }} className="text-xs font-bold text-rose-500 hover:underline shrink-0 ms-2">{t("Remove")}</button>
+                      <button onClick={() => { setCustomerId(""); setCustomerQ(""); }} className="text-xs font-bold text-destructive hover:underline shrink-0 ms-2">{t("Remove")}</button>
                     </motion.div>
                   )}
                 </div>
@@ -970,9 +970,9 @@ export default function AppointmentsPage() {
 
                 <div className="flex flex-col gap-4">
                   {editApptId && status === AppointmentStatus.SCHEDULED && (
-                    <div className="rounded-[1.5rem] border border-orange-500/20 bg-orange-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="rounded-[1.5rem] border border-warning/20 bg-warning/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
-                        <p className="text-sm font-bold text-orange-700">{t("Mark as No-Show")}</p>
+                        <p className="text-sm font-bold text-warning">{t("Mark as No-Show")}</p>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                           {t("Charge on no-show")}: {Math.max(depositAmount, noShowFeeAmount).toFixed(2)} {t("OMR")}
                         </p>
@@ -1001,7 +1001,7 @@ export default function AppointmentsPage() {
                               setBusy(false);
                             }
                           }}
-                          className="h-12 px-5 rounded-2xl bg-orange-500 text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50"
+                          className="h-12 px-5 rounded-2xl bg-warning text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50"
                           disabled={busy}
                         >
                           {t("Mark as No-Show")}
@@ -1015,7 +1015,7 @@ export default function AppointmentsPage() {
                       <button
                         onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.COMPLETED); }}
                         disabled={busy}
-                        className="h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-emerald-500 hover:text-white transition-all active:scale-95"
+                        className="h-12 rounded-2xl bg-success/10 text-success border border-success/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-success hover:text-white transition-all active:scale-95"
                       >
                         <CheckCircle2 className="h-4 w-4" />
                         {t("Complete Appointment")}
@@ -1023,7 +1023,7 @@ export default function AppointmentsPage() {
                       <button
                         onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.CANCELLED); }}
                         disabled={busy}
-                        className="h-12 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                        className="h-12 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-destructive hover:text-white transition-all active:scale-95"
                       >
                         <XCircle className="h-4 w-4" />
                         {t("Cancel Appointment")}
@@ -1035,7 +1035,7 @@ export default function AppointmentsPage() {
                     {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <button
                       onClick={() => void deleteAppt(editApptId)}
-                      className="w-16 h-16 shrink-0 rounded-[2rem] bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center flex-col gap-1 border border-rose-500/20 active:scale-95"
+                      className="w-16 h-16 shrink-0 rounded-[2rem] bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center flex-col gap-1 border border-destructive/20 active:scale-95"
                       title={t("Delete")}
                     >
                       <XCircle className="h-6 w-6" />

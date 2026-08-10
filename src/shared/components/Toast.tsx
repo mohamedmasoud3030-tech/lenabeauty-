@@ -51,19 +51,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
               className={`flex items-start gap-3 p-4 rounded-lg shadow-lg pointer-events-auto w-[calc(100vw-2rem)] max-w-sm sm:min-w-[300px] border ${
                 t.type === "error"
-                  ? "bg-red-50 border-red-200 text-red-800"
+                  ? "bg-card border-destructive/30 text-destructive"
                   : t.type === "success"
-                  ? "bg-green-50 border-green-200 text-green-800"
+                  ? "bg-card border-success/30 text-success"
                   : t.type === "warning"
-                  ? "bg-amber-50 border-amber-200 text-amber-800"
-                  : "bg-blue-50 border-blue-200 text-blue-800"
+                  ? "bg-card border-warning/30 text-warning"
+                  : "bg-card border-info/30 text-info"
               }`}
             >
               <div className="shrink-0 mt-0.5">
-                {t.type === "error" && <XCircle className="w-5 h-5 text-red-500" />}
-                {t.type === "success" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                {t.type === "warning" && <AlertTriangle className="w-5 h-5 text-amber-500" />}
-                {t.type === "info" && <Info className="w-5 h-5 text-blue-500" />}
+                {t.type === "error" && <XCircle className="w-5 h-5 text-destructive" />}
+                {t.type === "success" && <CheckCircle2 className="w-5 h-5 text-success" />}
+                {t.type === "warning" && <AlertTriangle className="w-5 h-5 text-warning" />}
+                {t.type === "info" && <Info className="w-5 h-5 text-info" />}
               </div>
               <div className="flex-1">
                 <h4 className="font-semibold text-sm">{t.title}</h4>

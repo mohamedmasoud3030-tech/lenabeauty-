@@ -376,7 +376,7 @@ export default function PosInvoicesPage() {
           >
             {t("Cart")}
             {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
                 {cart.length}
               </span>
             )}
@@ -486,13 +486,13 @@ export default function PosInvoicesPage() {
                           {activeTab === "PRODUCTS" && (
                             <div className={clsx(
                               "mt-1 text-[10px] font-bold uppercase tracking-wider",
-                              (it as Product).stockQuantity > 5 ? "text-emerald-600" : "text-rose-600"
+                              (it as Product).stockQuantity > 5 ? "text-success" : "text-destructive"
                             )}>
                               {(it as Product).stockQuantity} {t("Stock")}
                             </div>
                           )}
                           {activeTab === "PACKAGES" && (
-                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-info">
                               {(it as any).items?.length || 0} {t("Included Services")}
                             </div>
                           )}
@@ -545,7 +545,7 @@ export default function PosInvoicesPage() {
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
                   onClick={clearCart}
-                  className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                  className="h-8 w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center"
                   title={t("Clear cart")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -587,7 +587,7 @@ export default function PosInvoicesPage() {
                         <p className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
                         <button 
                           onClick={() => removeFromCart(item.cartId)} 
-                          className="h-6 w-6 flex items-center justify-center rounded-md text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                          className="h-6 w-6 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -627,7 +627,7 @@ export default function PosInvoicesPage() {
                         </div>
                         <button 
                           onClick={() => setSelectedCustomer(null)} 
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-rose-500 hover:bg-rose-500/10 transition-all shrink-0"
+                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-destructive hover:bg-destructive/10 transition-all shrink-0"
                         >
                           <XCircle className="h-4 w-4" />
                         </button>
@@ -772,14 +772,14 @@ export default function PosInvoicesPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 shadow-inner"
+                    className="flex items-center justify-between rounded-lg border border-success/20 bg-success/5 p-3 shadow-inner"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-success/20 flex items-center justify-center text-success shrink-0">
                         <Sparkles className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
+                        <p className="text-[9px] font-bold text-success uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
                         <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatOMRAmount(loyaltyDiscount)} {t("OMR Discount")}</p>
                       </div>
                     </div>
@@ -787,7 +787,7 @@ export default function PosInvoicesPage() {
                       onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
                       className={clsx(
                         "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shadow-inner shrink-0",
-                        useLoyaltyPoints ? "bg-emerald-500" : "bg-muted"
+                        useLoyaltyPoints ? "bg-success" : "bg-muted"
                       )}
                     >
                       <span className={clsx(
@@ -810,7 +810,7 @@ export default function PosInvoicesPage() {
                     onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                   />
                   {selectedGiftCard && (
-                    <p className="text-[9px] font-bold text-sky-600 uppercase tracking-widest">
+                    <p className="text-[9px] font-bold text-info uppercase tracking-widest">
                       {t("Available Balance")}: {formatOMRAmount(selectedGiftCard.currentBalance)} {t("OMR")} · {t("Redeem for")} {formatOMRAmount(giftCardDiscount)} {t("OMR")}
                     </p>
                   )}
@@ -825,19 +825,19 @@ export default function PosInvoicesPage() {
                     <span>{formatOMRAmount(subtotal)} OMR</span>
                   </div>
                   {tierDiscount > 0 && tierInfo && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-success uppercase tracking-widest">
                       <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
                       <span>-{formatOMRAmount(tierDiscount)} OMR</span>
                     </div>
                   )}
                   {(discount > 0 || loyaltyDiscount > 0) && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-destructive uppercase tracking-widest">
                       <span>{t("Discounts")}</span>
                       <span>-{formatOMRAmount(discount + loyaltyDiscount)} OMR</span>
                     </div>
                   )}
                   {giftCardDiscount > 0 && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-sky-600 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-info uppercase tracking-widest">
                       <span>{t("Gift Card Redemption")}</span>
                       <span>-{formatOMRAmount(giftCardDiscount)} OMR</span>
                     </div>

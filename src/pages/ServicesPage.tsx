@@ -239,7 +239,7 @@ export default function ServicesPage() {
                   onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
                   placeholder={t("e.g. Swedish Massage")}
                 />
-                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.name)}</div>}
+                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.name)}</div>}
               </div>
             </div>
 
@@ -253,7 +253,7 @@ export default function ServicesPage() {
                   onChange={(e) => { setCategory(e.target.value); if (errors.category) setErrors((p) => ({ ...p, category: "" })); }}
                   placeholder={t("e.g. Massage / Nails / Hair")}
                 />
-                {errors.category && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.category)}</div>}
+                {errors.category && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.category)}</div>}
               </div>
             </div>
 
@@ -283,7 +283,7 @@ export default function ServicesPage() {
                     value={price}
                     onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
                   />
-                  {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.price)}</div>}
+                  {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.price)}</div>}
                 </div>
               </div>
 
@@ -297,7 +297,7 @@ export default function ServicesPage() {
                     value={durationMins}
                     onChange={(e) => { setDurationMins(e.target.value); if (errors.duration) setErrors((p) => ({ ...p, duration: "" })); }}
                   />
-                  {errors.duration && <div className="mt-1 ms-2 text-xs font-bold text-rose-500">{t(errors.duration)}</div>}
+                  {errors.duration && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.duration)}</div>}
                 </div>
               </div>
             </div>
@@ -386,7 +386,7 @@ export default function ServicesPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-foreground text-xl">{formatOMRAmount(s.price)}</span>
-                            <TrendingUp className="h-4 w-4 text-emerald-500" />
+                            <TrendingUp className="h-4 w-4 text-success" />
                           </div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                             {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
@@ -406,8 +406,8 @@ export default function ServicesPage() {
                             className={clsx(
                               "h-12 w-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110 active:scale-95",
                               s.isActive === false
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white"
-                                : "border-border bg-card text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/20"
+                                ? "border-success/30 bg-success/10 text-success hover:bg-success hover:text-white"
+                                : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning hover:border-warning/20"
                             )}
                             title={s.isActive === false ? t("Enable") : t("Disable")}
                           >

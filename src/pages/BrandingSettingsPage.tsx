@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCases } from '../app/composition/useCases';
 import { unwrap } from '../shared/hooks/useApplication';
 import { useToast } from '../shared/components/Toast';
+import { LENA_BRAND_PALETTE } from '../shared/theme/brandPalette';
 
 interface BrandingSettings {
   salonName: string;
@@ -33,9 +34,9 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   taxNumber: 'OM123456789',
   registrationNumber: 'CR/2024/123456',
   logo: null,
-  primaryColor: '#8B5CF6',
-  secondaryColor: '#EC4899',
-  accentColor: '#06B6D4',
+  primaryColor: LENA_BRAND_PALETTE.primary,
+  secondaryColor: LENA_BRAND_PALETTE.secondary,
+  accentColor: LENA_BRAND_PALETTE.surfaceAccent,
   footerText: 'Powered by LenaBeauty',
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };

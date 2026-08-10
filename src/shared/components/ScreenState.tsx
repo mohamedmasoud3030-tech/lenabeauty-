@@ -81,7 +81,7 @@ export function ScreenState({
           "flex items-center justify-center rounded-2xl border",
           compact ? "h-12 w-12" : "h-16 w-16",
           state === "error"
-            ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
+            ? "bg-destructive/10 text-destructive border-destructive/20"
             : "bg-primary/10 text-primary border-primary/10"
         )}
       >
