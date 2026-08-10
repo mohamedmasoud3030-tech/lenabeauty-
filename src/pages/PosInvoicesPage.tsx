@@ -110,15 +110,15 @@ export default function PosInvoicesPage() {
       ]);
       // Disabled or zero-priced catalog entries remain manageable in their
       // admin screens but are never exposed as sellable POS lines.
-      setServices(s.filter((service) => service.isActive && Number.isFinite(service.price) && service.price > 0));
-      setProducts(p.filter((product) => product.isActive && Number.isFinite(product.price) && product.price > 0));
+      setServices(s.filter((service) => service.isActive !== false && Number.isFinite(service.price) && service.price > 0));
+      setProducts(p.filter((product) => product.isActive !== false && Number.isFinite(product.price) && product.price > 0));
       // Packages arrive with packagePrice (domain field) — expose it as `price`
       // so the cart, totals, and checkout payload work for package lines too.
       setPackages((pkg as any[])
-        .filter((entry) => entry.isActive && Number.isFinite(Number(entry.packagePrice)) && Number(entry.packagePrice) > 0)
+        .filter((entry) => entry.isActive !== false && Number.isFinite(Number(entry.packagePrice)) && Number(entry.packagePrice) > 0)
         .map((entry) => ({ ...entry, price: Number(entry.packagePrice) })));
-      setEmployees(e.filter((employee) => employee.isActive));
-      setGiftCards(gc.filter((card: any) => card.isActive));
+      setEmployees(e.filter((employee) => employee.isActive !== false));
+      setGiftCards(gc.filter((card: any) => card.isActive !== false));
       if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
     } finally {
       setLoading(false);
@@ -257,7 +257,7 @@ export default function PosInvoicesPage() {
     try {
       const payload = {
         customerId: selectedCustomer.id,
-        employeeId: selectedEmployee || undefined,
+        employeeId: selectedEmployee,
         paymentMethod: paymentMethod.toLowerCase() as "cash" | "card" | "transfer",
         discountAmount: discount,
         useLoyaltyPoints,

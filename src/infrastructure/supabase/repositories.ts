@@ -1060,9 +1060,6 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
 
 class SupabaseInvoiceAdapter implements InvoiceRepository {
   async checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number }, DomainError>> {
-    const centerRes = getCenterIdFor("Invoice.checkout");
-    if (!centerRes.ok) return centerRes as any;
-
     const contractErrors = validateCheckoutContract(payload);
     if (contractErrors.length > 0) {
       return {
@@ -1073,6 +1070,9 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
         ),
       };
     }
+
+    const centerRes = getCenterIdFor("Invoice.checkout");
+    if (!centerRes.ok) return centerRes as any;
 
     try {
       const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {

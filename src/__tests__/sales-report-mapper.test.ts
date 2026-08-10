@@ -177,6 +177,26 @@ describe("mapSalesReportRows (resilience)", () => {
     });
   });
 
+  it("excludes legacy zero-priced expansion rows from operational sales items", () => {
+    const rows = [{
+      id: "inv-1",
+      customer_id: "c-1",
+      total_amount: 50,
+      discount: 0,
+      payment_method: "cash",
+      date: "2026-08-06T10:00:00Z",
+      created_at: "2026-08-06T10:00:00Z",
+      updated_at: "2026-08-06T10:00:00Z",
+      invoice_items: [
+        { id: "legacy-zero", invoice_id: "inv-1", service_id: "s-1", price: 0, quantity: 1, services: { name: "خدمة باقة قديمة" } },
+        { id: "real", invoice_id: "inv-1", package_id: "pkg-1", item_name: "باقة", price: 50, quantity: 1 },
+      ],
+    }];
+
+    const result = mapSalesReportRows(rows);
+    expect(result[0].items).toEqual([{ id: "real", name: "باقة", type: "package", price: 50, qty: 1 }]);
+  });
+
   it("falls back to a safe type/name for legacy rows with no references", () => {
     const rows = [
       {

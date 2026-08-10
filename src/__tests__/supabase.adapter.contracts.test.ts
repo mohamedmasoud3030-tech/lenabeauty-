@@ -20,12 +20,12 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         vi.unstubAllGlobals();
     });
 
-    it("Invoice.checkout throws UnsupportedBackendMethodError or Query Error depending on mock state", async () => {
+    it("Invoice.checkout rejects an invalid contract before infrastructure", async () => {
         const adapter: any = new SupabaseInvoiceAdapter();
         const result = await adapter.checkout({});
         expect(result.ok).toBe(false);
         if (!result.ok) {
-            expect((result as any).error.code).toMatch(/BACKEND_METHOD_UNSUPPORTED|INFRASTRUCTURE_ERROR/);
+            expect((result as any).error.code).toBe("VALIDATION_ERROR");
         }
     });
 

@@ -24,6 +24,7 @@ describe("gift card calculations", () => {
   it("checkout payload accepts optional gift card code", () => {
     const errors = validateCheckoutPayload({
       customerId: "c1",
+      employeeId: "e1",
       giftCardCode: "GC-100",
       paymentMethod: "cash",
       items: [{ type: "service", serviceId: "s1", qty: 1, price: 10 }],

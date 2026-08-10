@@ -160,8 +160,8 @@ export default function AppointmentsPage() {
         unwrap(useCases.employees.list()),
         unwrap(useCases.appointments.list({ fromISO: range.from.toISOString(), toISO: range.to.toISOString() })),
       ]);
-      setServices(sv.filter((service) => service.isActive).map(mapService));
-      setEmployees(em.filter((employee) => employee.isActive).map(mapEmployee));
+      setServices(sv.filter((service) => service.isActive !== false).map(mapService));
+      setEmployees(em.filter((employee) => employee.isActive !== false).map(mapEmployee));
       setAppts(a.map(mapAppt));
       if (sv.length && !serviceId) setServiceId(sv[0].id);
       if (em.length && !employeeId) setEmployeeId(em[0].id);

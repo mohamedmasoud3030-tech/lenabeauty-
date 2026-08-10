@@ -273,6 +273,7 @@ export default function ServicesPage() {
                   <input
                     className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                     inputMode="decimal"
+                    aria-label={t("Price")}
                     value={price}
                     onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
                   />
@@ -440,6 +441,7 @@ export default function ServicesPage() {
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col">
                       <span className="font-bold text-foreground text-lg truncate">{s.name}</span>
+                      {!s.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
                       <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0 truncate">
                         <Tag className="h-3 w-3" />
                         {s.categoryName ?? s.categoryId}
@@ -464,6 +466,16 @@ export default function ServicesPage() {
                   </div>
 
                   <div className="flex items-center gap-2 pt-2">
+                    <button
+                      onClick={() => void onToggleActive(s)}
+                      className={clsx(
+                        "h-12 rounded-2xl border px-3 flex items-center justify-center transition-all shadow-sm",
+                        s.isActive ? "border-border text-muted-foreground" : "border-emerald-500/30 text-emerald-600"
+                      )}
+                      title={s.isActive ? t("Disable") : t("Enable")}
+                    >
+                      {s.isActive ? <XCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                    </button>
                     <button
                       onClick={() => onEdit(s)}
                       className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"

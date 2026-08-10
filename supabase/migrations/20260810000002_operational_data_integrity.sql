@@ -167,6 +167,9 @@ DO $$ BEGIN
     ) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_invoices_id_center_unique
+  ON public.invoices(id, center_id);
+
 CREATE TABLE IF NOT EXISTS public.payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   center_id UUID NOT NULL REFERENCES public.centers(id) ON DELETE RESTRICT,
@@ -180,6 +183,13 @@ CREATE TABLE IF NOT EXISTS public.payments (
   CONSTRAINT payments_method_valid CHECK (method IN ('cash', 'card', 'transfer')),
   CONSTRAINT payments_status_valid CHECK (status IN ('SUCCEEDED', 'FAILED', 'REFUNDED'))
 );
+
+DO $$ BEGIN
+  ALTER TABLE public.payments
+    ADD CONSTRAINT payments_invoice_center_fk
+    FOREIGN KEY (invoice_id, center_id)
+    REFERENCES public.invoices(id, center_id) ON DELETE RESTRICT NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE INDEX IF NOT EXISTS idx_payments_center_created
   ON public.payments(center_id, created_at DESC);
@@ -385,7 +395,8 @@ BEGIN
       RAISE EXCEPTION 'checkout_employee_required' USING ERRCODE = '23502';
     END IF;
     PERFORM 1 FROM public.employees e
-    WHERE e.id = p_employee_id AND e.center_id = p_center_id AND e.is_active = true;
+    WHERE e.id = p_employee_id AND e.center_id = p_center_id AND e.is_active = true
+    FOR SHARE;
     IF NOT FOUND THEN
       RAISE EXCEPTION 'checkout_employee_not_available' USING ERRCODE = '23503';
     END IF;
@@ -420,7 +431,8 @@ BEGIN
           RAISE EXCEPTION 'invalid_service_reference' USING ERRCODE = '22023';
         END;
         SELECT * INTO v_service FROM public.services s
-        WHERE s.id = v_service_id AND s.center_id = p_center_id AND s.is_active = true;
+        WHERE s.id = v_service_id AND s.center_id = p_center_id AND s.is_active = true
+        FOR SHARE;
         IF NOT FOUND OR v_service.price <= 0 THEN
           RAISE EXCEPTION 'service_not_available' USING ERRCODE = '23503';
         END IF;
@@ -461,7 +473,8 @@ BEGIN
           RAISE EXCEPTION 'invalid_package_reference' USING ERRCODE = '22023';
         END;
         SELECT * INTO v_package FROM public.service_packages p
-        WHERE p.id = v_package_id AND p.center_id = p_center_id AND p.is_active = true;
+        WHERE p.id = v_package_id AND p.center_id = p_center_id AND p.is_active = true
+        FOR SHARE;
         IF NOT FOUND OR v_package.package_price <= 0 THEN
           RAISE EXCEPTION 'package_not_available' USING ERRCODE = '23503';
         END IF;
@@ -475,6 +488,13 @@ BEGIN
         ) THEN
           RAISE EXCEPTION 'package_contains_unavailable_service' USING ERRCODE = '23503';
         END IF;
+        -- Hold component rows stable until the sale commits so a service
+        -- cannot be disabled between package validation and invoice creation.
+        PERFORM s.id
+        FROM public.service_package_items spi
+        JOIN public.services s ON s.id = spi.service_id
+        WHERE spi.package_id = v_package.id
+        FOR SHARE OF s;
         v_item_name := v_package.name;
         v_item_price := round(v_package.package_price, 3);
       END IF;

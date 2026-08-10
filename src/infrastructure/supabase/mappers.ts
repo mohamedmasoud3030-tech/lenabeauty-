@@ -230,6 +230,10 @@ export function mapInvoice(row: unknown): Invoice {
     typeof (employeeRelation as Record<string, unknown>).name === "string"
       ? (employeeRelation as Record<string, unknown>).name as string
       : undefined;
+  // Additive financial columns are zero for pre-phase-3 rows. Detect that
+  // shape so historical receipts preserve their original aggregate discount
+  // and paid amount while all new invoices use the detailed breakdown.
+  const isLegacyFinancialRow = Number(row.subtotal_amount ?? 0) === 0 && Number(row.total_amount) > 0;
   return {
     id: row.id,
     serialNumber: typeof row.serial_number === "string" ? row.serial_number : undefined,
@@ -237,13 +241,13 @@ export function mapInvoice(row: unknown): Invoice {
     subtotalAmount: Number(row.subtotal_amount ?? 0),
     totalAmount: Number(row.total_amount),
     discount: Number(row.discount || 0),
-    manualDiscount: Number(row.manual_discount ?? row.discount ?? 0),
+    manualDiscount: isLegacyFinancialRow ? Number(row.discount ?? 0) : Number(row.manual_discount ?? 0),
     tierDiscount: Number(row.tier_discount ?? 0),
-    loyaltyDiscount: Number(row.loyalty_discount ?? row.loyalty_points_used ?? 0),
+    loyaltyDiscount: isLegacyFinancialRow ? Number(row.loyalty_points_used ?? 0) : Number(row.loyalty_discount ?? 0),
     giftCardDiscount: Number(row.gift_card_discount ?? 0),
     tax: row.tax !== undefined && row.tax !== null ? Number(row.tax) : undefined,
     taxRate: row.tax_rate !== undefined && row.tax_rate !== null ? Number(row.tax_rate) : undefined,
-    amountPaid: Number(row.amount_paid ?? row.total_amount ?? 0),
+    amountPaid: isLegacyFinancialRow ? Number(row.total_amount) : Number(row.amount_paid ?? row.total_amount ?? 0),
     status: row.status === "VOID" ? "VOID" : "PAID",
     loyaltyPointsUsed: Number(row.loyalty_points_used || 0),
     paymentMethod: row.payment_method,
