@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { 
-  Plus, Pencil, Trash2, RefreshCw, Scissors, Search, 
-  Save, X, CheckCircle2, Clock, Tag, DollarSign,
-  Layers, Sparkles, Zap, ChevronRight, MoreVertical,
-  TrendingUp, Star, LayoutGrid, XCircle
+import {
+  Plus, Pencil, Trash2, RefreshCw, Scissors, Search,
+  Save, CheckCircle2, Clock, Tag, DollarSign,
+  Sparkles, XCircle, LayoutGrid,
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { Modal } from "../shared/components/Modal";
 import { getDisplayName, getInitials } from "../shared/displayName";
+import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -19,7 +20,6 @@ import {
   requiredText, positiveNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
 } from "../domain/validation";
 import { PageHeader } from "../shared/components/PageHeader";
-import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 import { formatOMRAmount } from "../shared/money";
 import {
@@ -39,6 +39,8 @@ export default function ServicesPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
@@ -46,6 +48,7 @@ export default function ServicesPage() {
   const [durationMins, setDurationMins] = useState("30");
 
   const isEditing = !!editingId;
+  const formDirty = name.trim().length > 0 || category.trim().length > 0 || price.trim().length > 0;
 
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -56,7 +59,7 @@ export default function ServicesPage() {
       const res = await unwrap(useCases.services.list());
       setItems(res);
     } catch (e: any) {
-      setLoadError(e?.message || String(e));
+      setLoadError(mapErrorToMessage(e, t));
     } finally {
       setLoading(false);
     }
@@ -97,6 +100,7 @@ export default function ServicesPage() {
       return;
     }
     setErrors({});
+    setSaving(true);
 
     const payload = {
       name: (nameR as FieldResult<string> & { ok: true }).value,
@@ -112,17 +116,29 @@ export default function ServicesPage() {
       } else {
         await unwrap(useCases.services.create(payload));
       }
-
       await reload();
       resetForm();
+      setFormOpen(false);
       showToast('success', t("Success"), t("Service saved successfully"));
     } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      if (err?.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', t("Error"), err?.message || String(err));
+        showToast('error', t("Error"), mapErrorToMessage(err, t));
       }
+    } finally {
+      setSaving(false);
     }
+  }
+
+  function openCreate() {
+    resetForm();
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    setFormOpen(false);
+    resetForm();
   }
 
   async function onEdit(s: Service) {
@@ -132,6 +148,8 @@ export default function ServicesPage() {
     setPrice(String(s.price));
     setPricingMode(s.pricingMode);
     setDurationMins(String(s.durationMinutes));
+    setErrors({});
+    setFormOpen(true);
   }
 
   async function onDelete(id: string) {
@@ -146,10 +164,10 @@ export default function ServicesPage() {
       await reload();
       showToast('success', t("Success"), t("Service deleted successfully"));
     } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      if (err?.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
-         showToast('error', t("Error"), err?.message || String(err));
+        showToast('error', t("Error"), mapErrorToMessage(err, t));
       }
     }
   }
@@ -170,340 +188,366 @@ export default function ServicesPage() {
       await reload();
       showToast('success', t("Success"), next ? t("Service enabled") : t("Service disabled"));
     } catch (err: any) {
-      showToast('error', t("Error"), err?.message || String(err));
+      showToast('error', t("Error"), mapErrorToMessage(err, t));
     }
   }
 
   return (
-    <div className="space-y-6 sm:space-y-10 pb-10">
+    <div className="space-y-4 sm:space-y-6 pb-10">
       <PageHeader
-        icon={<Scissors className="h-7 w-7 sm:h-8 sm:w-8" />}
+        icon={<Scissors className="h-5 w-5" />}
         title={t("Services")}
         subtitle={t("Manage your spa service catalog")}
         actions={
           <>
-            <div className="relative w-full sm:w-72 group">
-              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <div className="relative w-full sm:w-56 group">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
-                className="w-full rounded-[1.5rem] border border-border bg-card py-3.5 ps-11 pe-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+                className="w-full rounded-lg border border-border bg-card py-2.5 ps-9 pe-3 text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                 placeholder={t("Search services...")}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
             <button
+              onClick={openCreate}
+              className="h-11 shrink-0 inline-flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="whitespace-nowrap">{t("Add Service")}</span>
+            </button>
+            <button
               onClick={reload}
-              className="h-12 w-12 rounded-[1.5rem] border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+              className="h-11 w-11 shrink-0 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+              aria-label={t("Refresh")}
               title={t("Refresh")}
             >
-              <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} />
+              <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
             </button>
           </>
         }
       />
 
-      <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-[450px_1fr]">
-        {/* Form Section */}
-        <motion.div 
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="order-2 lg:order-1 rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-4 sm:p-6 lg:p-10 shadow-2xl h-fit space-y-4 sm:space-y-6 lg:space-y-10 lg:sticky lg:top-10"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                {isEditing ? <Pencil className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
-              </div>
-              <div className="space-y-0.5">
-                <h2 className="text-2xl font-bold text-foreground">{isEditing ? t("Edit Service") : t("New Service")}</h2>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Service Details")}</p>
-              </div>
-            </div>
-            {isEditing && (
-              <button 
-                onClick={resetForm} 
-                className="h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"
+      <div className="overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm">
+        <div className="border-b border-border bg-muted/30 px-3 sm:px-5 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <LayoutGrid className="h-4 w-4 text-primary shrink-0" />
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider truncate">{t("Service Catalog")}</h3>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-background border border-border">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("Total Services")}:</span>
+            <span className="text-xs font-bold text-primary">{items.length}</span>
+          </div>
+        </div>
+        <div className="border-b border-border px-2.5 py-2.5 sm:px-4">
+          <ServiceCategoryFilters
+            services={items}
+            selectedCategory={selectedCategory}
+            onSelect={setSelectedCategory}
+            allLabel={t("All")}
+          />
+        </div>
+        <div className="hidden lg:block overflow-x-auto scrollbar-hide">
+          <table className="w-full min-w-[700px] text-sm">
+            <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+              <tr className="[&>th]:px-5 [&>th]:py-3 [&>th]:text-start">
+                <th>{t("Service")}</th>
+                <th>{t("Category")}</th>
+                <th>{t("Price")}</th>
+                <th>{t("Duration")}</th>
+                <th className="w-[150px]">{t("Actions")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((s, idx) => (
+                  <motion.tr
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.02 } }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    key={s.id}
+                    className="group hover:bg-muted/30 transition-all [&>td]:px-5 [&>td]:py-3 [&>td]:text-start"
+                  >
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
+                          {getInitials(s.name, "·")}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors truncate">{getDisplayName(s.name, t("Unnamed"))}</div>
+                          {s.isActive === false && (
+                            <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {t("Disabled")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="inline-flex items-center gap-1.5 rounded-lg bg-primary/5 px-2.5 py-1 text-[11px] font-bold text-primary border border-primary/10">
+                        <Tag className="h-3 w-3" />
+                        {s.categoryName ?? s.categoryId}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-foreground text-base">{formatOMRAmount(s.price)}</span>
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                          {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="inline-flex items-center gap-1.5 text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-lg">
+                        <Clock className="h-3.5 w-3.5 text-primary" />
+                        <span className="font-bold text-foreground text-xs">{s.durationMinutes} {t("min")}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => onToggleActive(s)}
+                          className={clsx(
+                            "h-9 w-9 rounded-lg border flex items-center justify-center transition-all",
+                            s.isActive === false
+                              ? "border-success/30 bg-success/10 text-success hover:bg-success hover:text-white"
+                              : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning"
+                          )}
+                          title={s.isActive === false ? t("Enable") : t("Disable")}
+                          aria-label={s.isActive === false ? t("Enable") : t("Disable")}
+                        >
+                          {s.isActive === false ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                        </button>
+                        <button
+                          onClick={() => onEdit(s)}
+                          className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                          aria-label={t("Edit")}
+                          title={t("Edit")}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(s.id)}
+                          className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                          aria-label={t("Delete")}
+                          title={t("Delete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+              <ListState
+                loading={loading && filtered.length === 0}
+                error={loadError}
+                empty={filtered.length === 0}
+                onRetry={reload}
+                loadingTitle={t("Loading services...")}
+                errorTitle={t("Failed to load services")}
+                emptyTitle={t("No Services Found")}
+                emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")}
+                emptyIcon={<Scissors className="h-5 w-5" />}
+                emptyActionLabel={q ? undefined : t("Add Service")}
+                onEmptyAction={q ? undefined : openCreate}
+                colSpan={5}
+                compact
+              />
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Cards — compact two-column */}
+        <div className="lg:hidden grid grid-cols-2 gap-2.5 p-2.5">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((s, idx) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={s.id}
+                className="min-w-0 rounded-xl border border-border bg-card p-2.5 shadow-sm flex flex-col gap-2"
               >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Service Name")}</label>
-              <div className="relative">
-                <Sparkles className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                  value={name}
-                  onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
-                  placeholder={t("e.g. Swedish Massage")}
-                />
-                {errors.name && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.name)}</div>}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Category")}</label>
-              <div className="relative">
-                <Tag className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                  value={category}
-                  onChange={(e) => { setCategory(e.target.value); if (errors.category) setErrors((p) => ({ ...p, category: "" })); }}
-                  placeholder={t("e.g. Massage / Nails / Hair")}
-                />
-                {errors.category && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.category)}</div>}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Pricing method")}</label>
-              <select
-                className="w-full rounded-[1.5rem] border border-border bg-muted/30 px-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                value={pricingMode}
-                onChange={(e) => setPricingMode(e.target.value as "FIXED" | "STARTING_FROM")}
-              >
-                <option value="FIXED">{t("Fixed price")}</option>
-                <option value="STARTING_FROM">{t("Starts from")}</option>
-              </select>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-2">
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">
-                  {pricingMode === "STARTING_FROM" ? t("Minimum price") : t("Price")}
-                </label>
-                <div className="relative">
-                   <DollarSign className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                    inputMode="decimal"
-                    aria-label={t("Price")}
-                    value={price}
-                    onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
-                  />
-                  {errors.price && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.price)}</div>}
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-1.5">
+                    <span className="font-bold text-foreground text-xs leading-snug line-clamp-2 break-words">{s.name}</span>
+                    {!s.isActive && <span className="text-[9px] font-bold text-destructive shrink-0">{t("Disabled")}</span>}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-primary min-w-0">
+                    <Tag className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{s.categoryName ?? s.categoryId}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Duration (min)")}</label>
-                <div className="relative">
-                  <Clock className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                    inputMode="numeric"
-                    value={durationMins}
-                    onChange={(e) => { setDurationMins(e.target.value); if (errors.duration) setErrors((p) => ({ ...p, duration: "" })); }}
-                  />
-                  {errors.duration && <div className="mt-1 ms-2 text-xs font-bold text-destructive">{t(errors.duration)}</div>}
+                <div className="mt-auto border-t border-border pt-1.5 space-y-0.5">
+                  <div className="font-bold text-foreground text-sm leading-none">{formatOMRAmount(s.price)}</div>
+                  <div className="text-[9px] font-bold text-muted-foreground">
+                    {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                    <Clock className="h-3 w-3 text-primary" />
+                    {s.durationMinutes} {t("min")}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <button
-              onClick={onSubmit}
-              className="group relative w-full h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              {isEditing ? <Save className="h-6 w-6 relative z-10" /> : <CheckCircle2 className="h-6 w-6 relative z-10" />}
-              <span className="text-lg relative z-10">{isEditing ? t("Save Changes") : t("Add Service")}</span>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Catalog Section */}
-        <motion.div 
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="order-1 lg:order-2 overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
-        >
-          <div className="border-b border-border bg-muted/30 px-6 sm:px-10 py-5 sm:py-8 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <LayoutGrid className="h-5 w-5" />
-              </div>
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-[0.2em]">{t("Service Catalog")}</h3>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-background border border-border shadow-sm">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Total Services")}:</span>
-              <span className="text-xs font-bold text-primary">{items.length}</span>
-            </div>
-          </div>
-          <div className="border-b border-border px-3 py-3 sm:px-6">
-            <ServiceCategoryFilters
-              services={items}
-              selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
-              allLabel={t("All")}
+                <div className="flex items-center gap-1 pt-0.5">
+                  <button
+                    onClick={() => void onToggleActive(s)}
+                    className={clsx(
+                      "h-9 min-w-0 flex-1 rounded-lg flex items-center justify-center transition-colors",
+                      s.isActive ? "text-muted-foreground hover:bg-warning/10 hover:text-warning" : "text-success hover:bg-success/10"
+                    )}
+                    title={s.isActive ? t("Disable") : t("Enable")}
+                    aria-label={s.isActive ? t("Disable") : t("Enable")}
+                  >
+                    {s.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => onEdit(s)}
+                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
+                    aria-label={t("Edit")}
+                    title={t("Edit")}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => void onDelete(s.id)}
+                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
+                    aria-label={t("Delete")}
+                    title={t("Delete")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div className="col-span-2">
+            <ListState
+              loading={loading && filtered.length === 0}
+              error={loadError}
+              empty={filtered.length === 0}
+              onRetry={reload}
+              loadingTitle={t("Loading services...")}
+              errorTitle={t("Failed to load services")}
+              emptyTitle={t("No Services Found")}
+              emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")}
+              emptyIcon={<Scissors className="h-5 w-5" />}
+              emptyActionLabel={q ? undefined : t("Add Service")}
+              onEmptyAction={q ? undefined : openCreate}
+              compact
             />
           </div>
-          <div className="hidden lg:block overflow-x-auto scrollbar-hide">
-            <table className="w-full min-w-[700px] text-sm md:min-w-full">
-              <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
-                  <th>{t("Service")}</th>
-                  <th>{t("Category")}</th>
-                  <th>{t("Price")}</th>
-                  <th>{t("Duration")}</th>
-                  <th className="w-[150px]">{t("Actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/50">
-                <AnimatePresence mode="popLayout">
-                  {filtered.map((s, idx) => (
-                    <motion.tr 
-                      layout
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.02 } }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      key={s.id} 
-                      className="group hover:bg-muted/30 transition-all [&>td]:px-5 sm:[&>td]:px-10 [&>td]:py-4 sm:[&>td]:py-8 [&>td]:text-start"
-                    >
-                      <td>
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
-                            {getInitials(s.name, "·")}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors truncate">{getDisplayName(s.name, t("Unnamed"))}</div>
-                            {s.isActive === false && (
-                              <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                                {t("Disabled")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="inline-flex items-center gap-2.5 rounded-2xl bg-primary/5 px-4 py-2 text-xs font-bold text-primary border border-primary/10 shadow-sm">
-                          <Tag className="h-3.5 w-3.5" />
-                          {s.categoryName ?? s.categoryId}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground text-xl">{formatOMRAmount(s.price)}</span>
-                            <TrendingUp className="h-4 w-4 text-success" />
-                          </div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                            {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-3 text-muted-foreground font-medium bg-muted/50 px-4 py-2 rounded-xl w-fit">
-                          <Clock className="h-4 w-4 text-primary" />
-                          <span className="font-bold text-foreground">{s.durationMinutes} {t("min")}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <button 
-                            onClick={() => onToggleActive(s)} 
-                            className={clsx(
-                              "h-12 w-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110 active:scale-95",
-                              s.isActive === false
-                                ? "border-success/30 bg-success/10 text-success hover:bg-success hover:text-white"
-                                : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning hover:border-warning/20"
-                            )}
-                            title={s.isActive === false ? t("Enable") : t("Disable")}
-                          >
-                            {s.isActive === false ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                          </button>
-                          <button 
-                            onClick={() => onEdit(s)} 
-                            className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
-                            title={t("Edit")}
-                          >
-                            <Pencil className="h-5 w-5" />
-                          </button>
-                          <button 
-                            onClick={() => onDelete(s.id)} 
-                            className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all shadow-sm hover:scale-110 active:scale-95"
-                            title={t("Delete")}
-                          >
-                            <Trash2 className="h-5 w-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </AnimatePresence>
-                <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} colSpan={5} compact />
-              </tbody>
-            </table>
+        </div>
+      </div>
+
+      {/* Create / Edit service — closed by default, opens in a shared overlay */}
+      <Modal
+        isOpen={formOpen}
+        onClose={closeForm}
+        title={isEditing ? t("Edit Service") : t("New Service")}
+        description={t("Service Details")}
+        size="md"
+        confirmCloseMessage={formDirty ? t("Discard unsaved changes?") : undefined}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeForm}
+              className="h-11 px-4 rounded-lg border border-border bg-card font-bold text-foreground hover:bg-muted transition-all"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={saving}
+              className="h-11 px-4 rounded-lg bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="h-4 w-4" />
+              {t("Save Changes")}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-muted-foreground">{t("Service Name")}</label>
+            <div className="relative">
+              <Sparkles className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                className="w-full rounded-lg border border-border bg-muted/30 ps-9 pe-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                value={name}
+                onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((p) => ({ ...p, name: "" })); }}
+                placeholder={t("e.g. Swedish Massage")}
+              />
+            </div>
+            {errors.name && <div className="text-xs font-bold text-destructive">{t(errors.name)}</div>}
           </div>
 
-          {/* Mobile Cards */}
-          <div className="lg:hidden grid grid-cols-2 gap-3 p-3">
-            <AnimatePresence mode="popLayout">
-              {filtered.map((s, idx) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  key={s.id}
-                  className="min-w-0 rounded-2xl border border-border bg-card p-3 shadow-sm flex flex-col gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-bold text-foreground text-sm leading-snug line-clamp-2">{s.name}</span>
-                      {!s.isActive && <span className="text-[9px] font-bold text-destructive shrink-0">{t("Disabled")}</span>}
-                    </div>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-primary min-w-0">
-                      <Tag className="h-3 w-3 shrink-0" />
-                      <span className="truncate">{s.categoryName ?? s.categoryId}</span>
-                    </div>
-                  </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-muted-foreground">{t("Category")}</label>
+            <div className="relative">
+              <Tag className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                className="w-full rounded-lg border border-border bg-muted/30 ps-9 pe-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); if (errors.category) setErrors((p) => ({ ...p, category: "" })); }}
+                placeholder={t("e.g. Massage / Nails / Hair")}
+              />
+            </div>
+            {errors.category && <div className="text-xs font-bold text-destructive">{t(errors.category)}</div>}
+          </div>
 
-                  <div className="mt-auto border-t border-border pt-2 space-y-1">
-                    <div className="font-bold text-foreground text-base leading-none">{formatOMRAmount(s.price)}</div>
-                    <div className="text-[9px] font-bold text-muted-foreground">
-                      {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
-                      <Clock className="h-3 w-3 text-primary" />
-                      {s.durationMinutes} {t("min")}
-                    </div>
-                  </div>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-muted-foreground">{t("Pricing method")}</label>
+            <select
+              className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+              value={pricingMode}
+              onChange={(e) => setPricingMode(e.target.value as "FIXED" | "STARTING_FROM")}
+            >
+              <option value="FIXED">{t("Fixed price")}</option>
+              <option value="STARTING_FROM">{t("Starts from")}</option>
+            </select>
+          </div>
 
-                  <div className="flex items-center gap-1 pt-1">
-                    <button
-                      onClick={() => void onToggleActive(s)}
-                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
-                      title={s.isActive ? t("Disable") : t("Enable")}
-                    >
-                      {s.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
-                    </button>
-                    <button
-                      onClick={() => onEdit(s)}
-                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
-                      title={t("Edit")}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => void onDelete(s.id)}
-                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-destructive flex items-center justify-center"
-                      title={t("Delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            <div className="col-span-2">
-              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} compact />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-muted-foreground">
+                {pricingMode === "STARTING_FROM" ? t("Minimum price") : t("Price")}
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  className="w-full rounded-lg border border-border bg-muted/30 ps-9 pe-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  inputMode="decimal"
+                  aria-label={t("Price")}
+                  value={price}
+                  onChange={(e) => { setPrice(e.target.value); if (errors.price) setErrors((p) => ({ ...p, price: "" })); }}
+                />
+              </div>
+              {errors.price && <div className="text-xs font-bold text-destructive">{t(errors.price)}</div>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-muted-foreground">{t("Duration (min)")}</label>
+              <div className="relative">
+                <Clock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  className="w-full rounded-lg border border-border bg-muted/30 ps-9 pe-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  inputMode="numeric"
+                  value={durationMins}
+                  onChange={(e) => { setDurationMins(e.target.value); if (errors.duration) setErrors((p) => ({ ...p, duration: "" })); }}
+                />
+              </div>
+              {errors.duration && <div className="text-xs font-bold text-destructive">{t(errors.duration)}</div>}
             </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -15,6 +15,8 @@ const product = (over: Partial<Record<string, unknown>> = {}) => ({
   reorderLevel: 5,
   isActive: true,
   trackInventory: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
   ...over,
 });
 
