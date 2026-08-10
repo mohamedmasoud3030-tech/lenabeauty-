@@ -77,7 +77,13 @@ describe("thermal invoice print layout", () => {
 
   it("reuses the same receipt from customer sales history", () => {
     const customers = readFileSync(resolve(process.cwd(), "src/pages/CustomersPage.tsx"), "utf8");
-    expect(customers).toContain("<InvoicePrintLayout data={printData}");
+    const pos = readFileSync(resolve(process.cwd(), "src/pages/PosInvoicesPage.tsx"), "utf8");
+    // Both POS checkout and customer/sales-history reprint go through the
+    // shared ReceiptPreviewModal, which wraps the same 80mm InvoicePrintLayout
+    // — one receipt implementation, no separate A4/print-area design.
+    expect(customers).toContain("ReceiptPreviewModal");
+    expect(pos).toContain("ReceiptPreviewModal");
     expect(customers).not.toContain('id="print-area"');
+    expect(pos).not.toContain('id="print-area"');
   });
 });
