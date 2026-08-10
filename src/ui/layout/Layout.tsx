@@ -30,9 +30,33 @@ export default function Layout() {
   }, [location.pathname]);
 
   const pageTitle = useMemo(() => {
-    const path = location.pathname.substring(1);
-    if (!path) return t("Dashboard");
-    return t(path.charAt(0).toUpperCase() + path.slice(1));
+    const path = location.pathname;
+    const map: Record<string, string> = {
+      "/dashboard": "Dashboard",
+      "/pos": "POS",
+      "/appointments": "Appointments",
+      "/customers": "Customers",
+      "/gift-cards": "Gift Cards",
+      "/customer-experience": "Customer Experience",
+      "/services": "Services",
+      "/inventory": "Inventory",
+      "/packages": "Packages",
+      "/employees": "Employees",
+      "/attendance": "Attendance",
+      "/advances": "Advances",
+      "/payroll": "Payroll",
+      "/staff-analytics": "Staff Analytics",
+      "/reports": "Reports",
+      "/expenses": "Expenses",
+      "/branding": "Branding",
+      "/settings": "Settings",
+      "/notifications": "Notifications",
+      "/payment-gateway": "Payment Gateway",
+      "/accounting": "Accounting",
+      "/advanced-automation": "Advanced Automation",
+    };
+    const key = map[path];
+    return key ? t(key) : t("Dashboard");
   }, [location.pathname, t]);
 
   const isRtl = i18n.language === "ar";

@@ -3,6 +3,15 @@ import { useAppContext } from "./context/AppContext";
 import { UserRole } from "./domain/entities/Session";
 import { PageLoader } from "./shared/components/PageLoader";
 
+/**
+ * Route guards.
+ *
+ * Fail-safe behavior: ANY session problem (loading, stale/invalid role,
+ * failed center-membership verification, environment misconfiguration)
+ * resolves to the Login screen — never to a broken half-initialized app.
+ * Unauthenticated / error states carry the attempted location so the user
+ * can be returned there after a successful login.
+ */
 export function RequireAuth() {
   const { isInitialized, sessionState, user } = useAppContext();
   const location = useLocation();
@@ -11,11 +20,9 @@ export function RequireAuth() {
     return <PageLoader />;
   }
 
-  if (sessionState.status === "error" && sessionState.error.message.includes("not configured")) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (sessionState.status === "anonymous" || !user) {
+  if (sessionState.status !== "authenticated" || !user) {
+    // Covers: anonymous, stale sessions, invalid roles, membership failures,
+    // and any other bootstrap error — all exit safely to Login.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -30,11 +37,7 @@ export function RequireAdmin() {
     return <PageLoader />;
   }
 
-  if (sessionState.status === "error" && sessionState.error.message.includes("not configured")) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (sessionState.status === "anonymous" || !user) {
+  if (sessionState.status !== "authenticated" || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -29,6 +29,7 @@ import {
   DomainValidationError, ValidationIssue, FieldResult,
 } from "../../domain/validation";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
+import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 
 /**
  * Repository-boundary validation helper. Validates a payload's fields with the
@@ -79,6 +80,31 @@ function isMissingBackendFeature(error: { code?: string; message?: string } | nu
 
 function toDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Local-timezone date helpers.
+ *
+ * Root cause this fixes: the dashboard bucketed revenue by UTC date while the
+ * salon operates in a local timezone (e.g. OMR/Gulf, UTC+4). Sales made in the
+ * early local morning landed on the previous day's bucket, and the "today"
+ * filter silently dropped the first hours of the day. All bucketing/filtering
+ * now happens in the user's LOCAL calendar day, converted to UTC instants only
+ * for the database comparison.
+ */
+function toLocalDateOnly(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function localDayStartISO(date: Date): string {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
+}
+
+function localDayEndISO(date: Date): string {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).toISOString();
 }
 
 class SupabaseAuthAdapter implements AuthRepository {
@@ -1049,7 +1075,8 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
           .select(`
             *,
             services (name),
-            products (name)
+            products (name),
+            service_packages (name)
           `)
           .eq('invoice_id', id)
           .order('created_at', { ascending: true }),
@@ -1084,18 +1111,9 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
         customer = customerRes.data ? mapCustomer(customerRes.data) : undefined;
       }
 
-      const items = (itemRes.data || []).map((row: any) => {
-        const item = mapInvoiceItem(row);
-        const type: "service" | "product" = item.serviceId ? "service" : "product";
-        const joinedName = item.serviceId ? row.services?.name : row.products?.name;
-        return {
-          id: item.id,
-          type,
-          name: typeof joinedName === "string" ? joinedName : type === "service" ? "Service" : "Product",
-          price: item.price,
-          qty: item.quantity
-        };
-      });
+      // Defensive: a broken item row (missing join, legacy package row) is
+      // skipped instead of failing the whole invoice print.
+      const items = mapInvoicePrintItems(itemRes.data || []);
 
       return {
         ok: true,
@@ -1557,11 +1575,13 @@ class SupabaseDashboardAdapter implements DashboardRepository {
     try {
       const client = getSupabaseClient();
       
-      const [custRes, apptRes, prodRes, invoiceRes] = await Promise.all([
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const [custRes, apptRes, prodRes, newCustRes, invoiceRes] = await Promise.all([
         client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
         client.from('appointments').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
         client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).lte('stock_quantity', 5),
-        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', toDateOnly(new Date()))
+        client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).gte('created_at', monthStart),
+        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', localDayStartISO(new Date())).lt('date', localDayEndISO(new Date()))
       ]);
 
       if (custRes.error) throw new Error(custRes.error.message);
@@ -1575,6 +1595,7 @@ class SupabaseDashboardAdapter implements DashboardRepository {
         revenue: 0,
         canViewRevenue: false,
         lowStockCount: prodRes.count || 0,
+        newCustomersThisMonth: newCustRes.error ? 0 : newCustRes.count || 0,
       };
 
       if (!invoiceRes.error) {
@@ -1636,14 +1657,16 @@ class SupabaseDashboardAdapter implements DashboardRepository {
     const centerRes = getCenterIdFor("Dashboard.getRevenueLast7Days");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const fromDate = new Date();
-      fromDate.setDate(fromDate.getDate() - 6);
-      fromDate.setHours(0, 0, 0, 0);
+      // Local calendar days (the salon's timezone), converted to UTC instants
+      // for the comparison so early-morning sales stay on the right day.
+      const today = new Date();
+      const fromDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
       const { data, error } = await getSupabaseClient()
         .from('invoices')
         .select('date, total_amount')
         .eq('center_id', centerRes.data)
-        .gte('date', fromDate.toISOString())
+        .gte('date', localDayStartISO(fromDate))
+        .lt('date', localDayEndISO(today))
         .order('date', { ascending: true });
 
       if (error) {
@@ -1653,12 +1676,14 @@ class SupabaseDashboardAdapter implements DashboardRepository {
 
       const buckets = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
-        const day = new Date(fromDate);
-        day.setDate(fromDate.getDate() + i);
-        buckets.set(toDateOnly(day), 0);
+        const day = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate() + i);
+        buckets.set(toLocalDateOnly(day), 0);
       }
       for (const row of data || []) {
-        const key = toDateOnly(new Date((row as any).date));
+        const date = new Date((row as any).date);
+        if (isNaN(date.getTime())) continue;
+        const key = toLocalDateOnly(date);
+        if (!buckets.has(key)) continue; // ignore rows outside the window
         buckets.set(key, (buckets.get(key) || 0) + Number((row as any).total_amount || 0));
       }
 
@@ -1682,12 +1707,16 @@ class SupabaseReportAdapter implements ReportRepository {
           customers (name),
           invoice_items (
             id,
+            invoice_id,
             service_id,
             product_id,
+            package_id,
             price,
             quantity,
+            created_at,
             services (name),
-            products (name)
+            products (name),
+            service_packages (name)
           )
         `)
         .eq('center_id', centerRes.data)
@@ -1700,27 +1729,9 @@ class SupabaseReportAdapter implements ReportRepository {
         return { ok: false, error: createQueryError("Report.getSales", error.message) };
       }
 
-      const rows: SalesReportRow[] = (data || []).map((row: any) => {
-        const invoice = mapInvoice(row);
-        return {
-          id: invoice.id,
-          date: invoice.date.toISOString(),
-          totalAmount: invoice.totalAmount,
-          discount: invoice.discount,
-          customer: typeof row.customers?.name === "string" ? row.customers.name : undefined,
-          items: (row.invoice_items || []).map((itemRow: any) => {
-            const item = mapInvoiceItem(itemRow);
-            const type: "service" | "product" = item.serviceId ? "service" : "product";
-            return {
-              id: item.id,
-              name: typeof itemRow.services?.name === "string" ? itemRow.services.name : typeof itemRow.products?.name === "string" ? itemRow.products.name : type,
-              type,
-              price: item.price,
-              qty: item.quantity
-            };
-          })
-        };
-      });
+      // Defensive mapping: missing/invalid invoice or item rows are skipped
+      // individually — the report must never crash on incomplete data.
+      const rows: SalesReportRow[] = mapSalesReportRows(data || []);
 
       return { ok: true, data: rows };
     } catch (e: unknown) {
@@ -1747,16 +1758,25 @@ class SupabaseReportAdapter implements ReportRepository {
         .lte('date_time', toStr)
         .order('date_time', { ascending: false });
 
-      if (error) return { ok: false, error: createQueryError("Report.getAppointments", error.message) };
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Report.getAppointments") };
+        return { ok: false, error: createQueryError("Report.getAppointments", error.message) };
+      }
 
-      const rows: AppointmentReportRow[] = data.map((d: any) => ({
-        id: d.id,
-        dateTime: d.date_time,
-        status: d.status,
-        customer: d.customers ? { name: d.customers.name } : undefined,
-        employee: d.employees ? { name: d.employees.name } : undefined,
-        service: d.services ? { name: d.services.name } : undefined
-      }));
+      // Defensive: a malformed row is skipped rather than crashing the report.
+      const rows: AppointmentReportRow[] = [];
+      for (const raw of data || []) {
+        const d = raw as any;
+        if (!d || typeof d.id !== "string" || typeof d.date_time !== "string") continue;
+        rows.push({
+          id: d.id,
+          dateTime: d.date_time,
+          status: typeof d.status === "string" ? d.status : "SCHEDULED",
+          customer: d.customers && typeof d.customers.name === "string" ? { name: d.customers.name } : undefined,
+          employee: d.employees && typeof d.employees.name === "string" ? { name: d.employees.name } : undefined,
+          service: d.services && typeof d.services.name === "string" ? { name: d.services.name } : undefined
+        });
+      }
 
       return { ok: true, data: rows };
     } catch (e: unknown) {

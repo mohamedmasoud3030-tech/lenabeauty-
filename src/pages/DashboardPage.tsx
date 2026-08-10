@@ -6,7 +6,7 @@ import {
   Receipt, Sparkles, ArrowRight, Plus, 
   ShoppingBag, Calendar, UserPlus, FileText,
   Activity, Zap, Clock, ChevronRight, MoreVertical,
-  LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown
+  LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown, CheckCircle2
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -22,6 +22,7 @@ import {
 import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components/LazyChart";
 import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
+import { ScreenState } from "../shared/components/ScreenState";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -34,6 +35,9 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<{id: string, type: string, message: string, createdAt: string, user?: {username?: string}}[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  // تشغيلية حقيقية: مواعيد اليوم القادمة + تنبيهات المخزون
+  const [todayAppts, setTodayAppts] = useState<{ id: string; time: string; customerName: string; serviceName?: string; status: string }[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<{ id: string; name: string; stock: number }[]>([]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -52,6 +56,7 @@ export default function DashboardPage() {
       setSummary(s);
 
       void loadActivity(s);
+      void loadTodayOps();
 
       if (s && s.canViewRevenue) {
         try {
@@ -75,6 +80,50 @@ export default function DashboardPage() {
       showToast('error', t("Error"), err.message || t("Failed to load dashboard"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  /** مواعيد اليوم القادمة + تنبيهات المخزون — بيانات حقيقية فقط. */
+  async function loadTodayOps() {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    try {
+      const [apptsRes, customersRes, servicesRes] = await Promise.all([
+        useCases.appointments.list({ fromISO: todayStart.toISOString(), toISO: todayEnd.toISOString() }),
+        useCases.customers.list(),
+        useCases.services.list(),
+      ]);
+      const customerNames = new Map((customersRes.ok ? customersRes.data : []).map((c) => [c.id, c.name]));
+      const serviceNames = new Map((servicesRes.ok ? servicesRes.data : []).map((s) => [s.id, s.name]));
+      const upcoming = (apptsRes.ok ? apptsRes.data : [])
+        .filter((a) => a.status === "SCHEDULED")
+        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+        .slice(0, 5)
+        .map((a) => ({
+          id: a.id,
+          time: a.dateTime.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+          customerName: a.customerId ? (customerNames.get(a.customerId) ?? "—") : "—",
+          serviceName: a.serviceId ? serviceNames.get(a.serviceId) : undefined,
+          status: a.status,
+        }));
+      setTodayAppts(upcoming);
+    } catch {
+      setTodayAppts([]);
+    }
+
+    try {
+      const productsRes = await useCases.products.list();
+      const low = (productsRes.ok ? productsRes.data : [])
+        .filter((p) => p.stockQuantity <= (p.reorderLevel ?? 5))
+        .sort((a, b) => a.stockQuantity - b.stockQuantity)
+        .slice(0, 5)
+        .map((p) => ({ id: p.id, name: p.name, stock: p.stockQuantity }));
+      setLowStockItems(low);
+    } catch {
+      setLowStockItems([]);
     }
   }
 
@@ -158,13 +207,17 @@ export default function DashboardPage() {
     show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
-  const chartData = useMemo(() => last7Days.length > 0 ? last7Days : [
-    { date: "Mon", revenue: 0 }, { date: "Tue", revenue: 0 }, { date: "Wed", revenue: 0 }, 
-    { date: "Thu", revenue: 0 }, { date: "Fri", revenue: 0 }, { date: "Sat", revenue: 0 }, { date: "Sun", revenue: 0 }
-  ], [last7Days]);
+  // Real data only — never fall back to fabricated day labels. When the query
+  // returns nothing (no sales), the chart area renders a clear empty state.
+  const chartData = useMemo(() => (Array.isArray(last7Days) ? last7Days : []), [last7Days]);
 
   const totalRevenue7Days = useMemo(() => chartData.reduce((sum, d) => sum + (d.revenue || 0), 0), [chartData]);
-  const avgRevenue7Days = useMemo(() => totalRevenue7Days / chartData.length, [totalRevenue7Days, chartData]);
+
+  function formatChartDay(dateStr: string): string {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { day: "numeric", month: "short" });
+  }
 
   return (
     <motion.div 
@@ -248,6 +301,102 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* تشغيل اليوم: مواعيد قادمة + تنبيهات — معلومة تؤدي إلى فعل */}
+      <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
+        <motion.div variants={item} className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              {t("Today's Appointments")}
+            </h2>
+            <button
+              onClick={() => nav("/appointments")}
+              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+            >
+              {t("View All")}
+            </button>
+          </div>
+          <div className="p-4 sm:p-6">
+            {todayAppts.length === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<CalendarDays className="h-6 w-6" />}
+                title={t("No upcoming appointments today")}
+                description={t("Book an appointment to get started")}
+                actionLabel="New Appointment"
+                onAction={() => nav("/appointments")}
+              />
+            ) : (
+              <div className="space-y-2">
+                {todayAppts.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => nav("/appointments")}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-primary/30 transition-all"
+                  >
+                    <div className="h-10 w-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                      {a.time}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground truncate">{a.customerName}</p>
+                      {a.serviceName && (
+                        <p className="text-[10px] font-bold text-muted-foreground truncate">{a.serviceName}</p>
+                      )}
+                    </div>
+                    <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", i18n.language === "ar" && "rotate-180")} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              {t("Operational Alerts")}
+            </h2>
+            <button
+              onClick={() => nav("/inventory")}
+              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+            >
+              {t("View All")}
+            </button>
+          </div>
+          <div className="p-4 sm:p-6">
+            {lowStockItems.length === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<CheckCircle2 className="h-6 w-6" />}
+                title={t("No low stock alerts")}
+                description={t("Inventory levels are healthy")}
+              />
+            ) : (
+              <div className="space-y-2">
+                {lowStockItems.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => nav("/inventory")}
+                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-amber-500/40 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground">{t("Low Stock")}</p>
+                    </div>
+                    <span className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-xs font-bold shrink-0">
+                      {p.stock}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
       {/* Main Content Grid */}
       <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
         
@@ -268,60 +417,73 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          <div className="p-4 sm:p-6 flex-1 min-h-[300px] flex items-center justify-center">
+          {/* Block-level wrapper (NOT flex) — ResponsiveContainer needs a
+              definite width to measure on iOS Safari; flex centering on the
+              direct parent made the chart collapse to 0px on iPhones. */}
+          <div className="p-4 sm:p-6 flex-1 min-h-[300px] w-full">
             {loading ? (
-              <div className="flex flex-col items-center justify-center gap-4 opacity-40">
-                <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Chart...")}</p>
-              </div>
-            ) : chartData.length === 0 || totalRevenue7Days === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-4 opacity-30 text-center">
-                <BarChart3 className="h-12 w-12" />
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest">{t("No Revenue Data")}</p>
-                  <p className="text-[9px] text-muted-foreground mt-1">{t("Start selling to see trends")}</p>
+              <div className="w-full h-full min-h-[260px] flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-4">
+                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Chart...")}</p>
                 </div>
               </div>
+            ) : chartData.length === 0 || totalRevenue7Days === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<BarChart3 className="h-6 w-6" />}
+                title={t("No Revenue Data")}
+                description={t("Start selling to see trends")}
+                actionLabel="New Invoice"
+                onAction={() => nav("/pos")}
+              />
             ) : (
               <LazyChart height={isMobile ? 180 : 260}>
-              <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
-                <AreaChart data={chartData} margin={{ top: 10, right: isMobile ? 10 : 30, left: isMobile ? -20 : 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="var(--muted-foreground)" 
-                    style={{ fontSize: '12px', fontWeight: 600 }}
-                  />
-                  <YAxis 
-                    stroke="var(--muted-foreground)"
-                    style={{ fontSize: '12px', fontWeight: 600 }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                    }}
-                    labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
-                    formatter={(value) => [`${value} ${summary?.currency}`, t("Revenue")]}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: isMobile ? 6 : 24, left: isMobile ? -16 : 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="date"
+                      stroke="var(--muted-foreground)"
+                      style={{ fontSize: '10px', fontWeight: 600 }}
+                      tickFormatter={formatChartDay}
+                      minTickGap={16}
+                      tickMargin={6}
+                    />
+                    <YAxis
+                      stroke="var(--muted-foreground)"
+                      style={{ fontSize: '10px', fontWeight: 600 }}
+                      width={isMobile ? 36 : 48}
+                      tickFormatter={(v) => (Number(v) >= 1000 ? `${(Number(v) / 1000).toFixed(1)}k` : String(v))}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                      }}
+                      labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+                      labelFormatter={(label) => formatChartDay(String(label))}
+                      formatter={(value) => [`${Number(value ?? 0).toFixed(2)} ${summary?.currency}`, t("Revenue")]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </LazyChart>
             )}
           </div>
@@ -345,13 +507,15 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-bold uppercase tracking-widest">{t("Processing...")}</p>
               </div>
             ) : !pnl ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 opacity-30">
-                <Coins className="h-12 w-12" />
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest">{t("No Financial Data")}</p>
-                  <p className="text-[9px] text-muted-foreground mt-1">{t("Complete transactions to see data")}</p>
-                </div>
-              </div>
+              <ScreenState
+                state="empty"
+                compact
+                icon={<Coins className="h-6 w-6" />}
+                title={t("No Financial Data")}
+                description={t("Complete transactions to see data")}
+                actionLabel="New Invoice"
+                onAction={() => nav("/pos")}
+              />
             ) : (
               <div className="space-y-4 flex-1 flex flex-col">
                 {/* Net Profit - Highlighted */}
@@ -435,16 +599,13 @@ export default function DashboardPage() {
           <div className="p-4 sm:p-6 space-y-2 max-h-[400px] overflow-auto scrollbar-hide">
             <AnimatePresence mode="popLayout">
               {activity.length === 0 && !loading && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-muted-foreground text-center py-12 flex flex-col items-center gap-4 opacity-30"
-                >
-                  <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                    <List className="h-6 w-6" />
-                  </div>
-                  <p className="font-bold uppercase tracking-[0.3em]">{t("No Activity Yet")}</p>
-                </motion.div>
+                <ScreenState
+                  state="empty"
+                  compact
+                  icon={<List className="h-6 w-6" />}
+                  title={t("No Activity Yet")}
+                  description={t("Recent updates will appear here")}
+                />
               )}
               {activity.map((x, idx) => (
                 <motion.div 

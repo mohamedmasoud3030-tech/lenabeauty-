@@ -136,6 +136,7 @@ export interface InvoiceItem {
   invoiceId: string;
   serviceId?: string;
   productId?: string;
+  packageId?: string;
   price: number;
   quantity: number;
   createdAt: Date;

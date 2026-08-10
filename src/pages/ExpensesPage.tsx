@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
+import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 export default function ExpensesPage() {
   const { showToast } = useToast();
@@ -37,6 +39,7 @@ export default function ExpensesPage() {
   // Filters
   const [q, setQ] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const categories = ["Rent", "Supplies", "Utilities", "Marketing", "Salaries", "Other"];
 
@@ -44,11 +47,12 @@ export default function ExpensesPage() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await unwrap(useCases.expenses.list());
       setExpenses(res);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setLoadError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -310,16 +314,7 @@ export default function ExpensesPage() {
                   </motion.tr>
                 ))}
               </AnimatePresence>
-              {filtered.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={5} className="px-10 py-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-6 opacity-20">
-                      <Receipt className="h-20 w-20" />
-                      <p className="text-xl font-bold uppercase tracking-[0.3em]">{t("No Expenses Found")}</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
+              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading expenses...")} errorTitle={t("Failed to load expenses")} emptyTitle={t("No Expenses Found")} emptyDescription={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")} emptyIcon={<Receipt className="h-6 w-6" />} colSpan={5} compact />
             </tbody>
           </table>
         </div>
@@ -382,12 +377,7 @@ export default function ExpensesPage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          {filtered.length === 0 && !loading && (
-            <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-              <Receipt className="h-16 w-16" />
-              <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Expenses Found")}</p>
-            </div>
-          )}
+          <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading expenses...")} errorTitle={t("Failed to load expenses")} emptyTitle={t("No Expenses Found")} emptyDescription={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")} emptyIcon={<Receipt className="h-6 w-6" />} compact />
         </div>
       </motion.div>
 
@@ -396,7 +386,7 @@ export default function ExpensesPage() {
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/60 backdrop-blur-xl" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl">
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Plus className="h-7 w-7" /></div>
@@ -456,7 +446,7 @@ export default function ExpensesPage() {
         {showEditModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeEdit} className="absolute inset-0 bg-black/60 backdrop-blur-xl" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl">
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner"><Pencil className="h-7 w-7" /></div>

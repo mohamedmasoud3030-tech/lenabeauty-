@@ -26,6 +26,7 @@ import {
   CreditCard,
   ChevronDown,
   Gift,
+  Sparkles,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "../../auth";
@@ -48,22 +49,28 @@ type NavGroup = {
 
 const navGroups: NavGroup[] = [
   {
-    titleKey: "Main",
+    // التشغيل اليومي — ما تحتاجه موظفة الاستقبال كل يوم
+    titleKey: "Daily Operations",
     items: [
       { to: "/dashboard", labelKey: "Dashboard", Icon: LayoutDashboard },
-      { to: "/pos", labelKey: "Sales & Invoices", Icon: Receipt },
       { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
-      { to: "/customers", labelKey: "Customers", Icon: Users },
-      { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
-      { to: "/packages", labelKey: "Packages", Icon: Boxes },
+      { to: "/pos", labelKey: "POS", Icon: Receipt },
     ],
   },
   {
-    titleKey: "Operations",
+    titleKey: "Customers",
+    items: [
+      { to: "/customers", labelKey: "Customers", Icon: Users },
+      { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
+      { to: "/customer-experience", labelKey: "Customer Experience", Icon: Sparkles },
+    ],
+  },
+  {
+    titleKey: "Catalog",
     items: [
       { to: "/services", labelKey: "Services", Icon: Scissors },
       { to: "/inventory", labelKey: "Inventory", Icon: Boxes },
-      { to: "/expenses", labelKey: "Expenses", Icon: CreditCard, adminOnly: true },
+      { to: "/packages", labelKey: "Packages", Icon: Boxes },
     ],
   },
   {
@@ -78,10 +85,11 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    titleKey: "Reports & Settings",
+    titleKey: "Management",
     collapsible: true,
     items: [
       { to: "/reports", labelKey: "Reports", Icon: FileBarChart, adminOnly: true },
+      { to: "/expenses", labelKey: "Expenses", Icon: CreditCard, adminOnly: true },
       { to: "/branding", labelKey: "Branding", Icon: Palette, adminOnly: true },
       { to: "/settings", labelKey: "Settings", Icon: Settings, adminOnly: true },
     ],

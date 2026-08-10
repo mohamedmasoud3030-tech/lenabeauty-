@@ -39,7 +39,7 @@ export interface InvoicePrintData {
   invoice: Invoice;
   items: {
     id: string;
-    type: "service" | "product";
+    type: "service" | "product" | "package";
     name: string;
     price: number;
     qty: number;
@@ -80,7 +80,7 @@ export interface SalesReportRow {
   totalAmount: number;
   discount: number;
   customer?: string;
-  items: { id: string, name: string, type: "service" | "product", price: number, qty: number }[];
+  items: { id: string, name: string, type: "service" | "product" | "package", price: number, qty: number }[];
 }
 
 export interface AppointmentReportRow {

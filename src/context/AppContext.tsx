@@ -19,6 +19,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [user, setUser] = useState<User | null>(null);
 
+  const CENTER_STORAGE_KEY = "lb_active_center_id";
+
   async function applySessionState(resolvedSessionState: SessionState, envError: Error | null) {
     setSessionState(resolvedSessionState);
     if (resolvedSessionState.status === "authenticated") {
@@ -26,9 +28,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const userObj = resolvedSessionState.session.user;
       setUser(userObj);
 
-      const centersRes = await useCases.auth.getMyCenters?.();
-      if (centersRes && centersRes.ok && centersRes.data.length > 0) {
-        const targetCenters = centersRes.data;
+      try {
+        const centersRes = await useCases.auth.getMyCenters?.();
+        const targetCenters = centersRes && centersRes.ok ? centersRes.data : [];
+
+        // A session whose center membership cannot be verified (query error)
+        // or that belongs to no center at all must NOT keep the app running:
+        // every tenant-scoped query would fail anyway, so fail safe to Login
+        // with a clear, translated message instead of a half-broken app.
+        if (!centersRes || !centersRes.ok || targetCenters.length === 0) {
+          const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
+          setSessionState({ status: "error", error: err });
+          setUser(null);
+          return;
+        }
 
         if (config.branchMode === "single") {
           const hasMembership = targetCenters.some(c => c.id === config.centerId);
@@ -38,15 +51,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             return;
           }
-          localStorage.removeItem("activeCenterId");
+          try {
+            localStorage.removeItem(CENTER_STORAGE_KEY);
+          } catch { /* storage unavailable */ }
         } else {
-          let activeId = localStorage.getItem("activeCenterId");
+          let activeId = localStorage.getItem(CENTER_STORAGE_KEY);
           if (!activeId || !targetCenters.find(c => c.id === activeId)) {
             activeId = targetCenters[0].id;
           }
           useCases.tenant.setActiveCenterId(activeId);
-          localStorage.setItem("activeCenterId", activeId);
+          try {
+            localStorage.setItem(CENTER_STORAGE_KEY, activeId);
+          } catch { /* storage unavailable */ }
         }
+      } catch (error: any) {
+        // Membership bootstrap crashed (e.g. network error) — never leave the
+        // app half-initialized. Route safely to Login with a clear message.
+        console.error("[AppContext] Center membership check failed:", error);
+        const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
+        setSessionState({ status: "error", error: err });
+        setUser(null);
+        return;
       }
     } else {
       // unauthenticated

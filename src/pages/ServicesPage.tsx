@@ -4,7 +4,7 @@ import {
   Plus, Pencil, Trash2, RefreshCw, Scissors, Search, 
   Save, X, CheckCircle2, Clock, Tag, DollarSign,
   Layers, Sparkles, Zap, ChevronRight, MoreVertical,
-  TrendingUp, Star, LayoutGrid
+  TrendingUp, Star, LayoutGrid, XCircle
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -17,6 +17,9 @@ import { Service } from "../domain/entities";
 import {
   requiredText, nonNegativeNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
 } from "../domain/validation";
+import { PageHeader } from "../shared/components/PageHeader";
+import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -35,11 +38,16 @@ export default function ServicesPage() {
 
   const isEditing = !!editingId;
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   async function reload() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await unwrap(useCases.services.list());
       setItems(res);
+    } catch (e: any) {
+      setLoadError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -135,37 +143,53 @@ export default function ServicesPage() {
     }
   }
 
+  /** تعطيل/تفعيل الخدمة — تختفي من نقطة البيع دون حذف سجلها. */
+  async function onToggleActive(s: Service) {
+    const next = !s.isActive;
+    const ok = await confirm({
+      title: next ? t("Enable Service") : t("Disable Service"),
+      message: next
+        ? t("This service will be available in POS again")
+        : t("This service will be hidden from POS until re-enabled"),
+      type: "status",
+    });
+    if (!ok) return;
+    try {
+      await unwrap(useCases.services.update(s.id, { isActive: next }));
+      await reload();
+      showToast('success', t("Success"), next ? t("Service enabled") : t("Service disabled"));
+    } catch (err: any) {
+      showToast('error', t("Error"), err?.message || String(err));
+    }
+  }
+
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
-            <Scissors className="h-8 w-8 transition-transform group-hover:rotate-12" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">{t("Services")}</h1>
-            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Manage your spa service catalog")}</p>
-          </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80 group font">
-            <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
-              className="w-full rounded-[1.5rem] border border-border bg-card py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
-              placeholder={t("Search services...")}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={reload}
-            className="h-14 w-14 rounded-[1.5rem] border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
-          >
-            <RefreshCw className={clsx("h-6 w-6", loading && "animate-spin")} />
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Scissors className="h-7 w-7 sm:h-8 sm:w-8" />}
+        title={t("Services")}
+        subtitle={t("Manage your spa service catalog")}
+        actions={
+          <>
+            <div className="relative w-full sm:w-72 group">
+              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                className="w-full rounded-[1.5rem] border border-border bg-card py-3.5 ps-11 pe-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+                placeholder={t("Search services...")}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={reload}
+              className="h-12 w-12 rounded-[1.5rem] border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+              title={t("Refresh")}
+            >
+              <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} />
+            </button>
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:gap-6 lg:gap-10 lg:grid-cols-[450px_1fr]">
         {/* Form Section */}
@@ -309,7 +333,14 @@ export default function ServicesPage() {
                           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
                             {s.name[0]}
                           </div>
-                          <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{s.name}</div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors truncate">{s.name}</div>
+                            {s.isActive === false && (
+                              <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                                {t("Disabled")}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td>
@@ -336,6 +367,18 @@ export default function ServicesPage() {
                       <td>
                         <div className="flex items-center gap-3">
                           <button 
+                            onClick={() => onToggleActive(s)} 
+                            className={clsx(
+                              "h-12 w-12 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110 active:scale-95",
+                              s.isActive === false
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white"
+                                : "border-border bg-card text-muted-foreground hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/20"
+                            )}
+                            title={s.isActive === false ? t("Enable") : t("Disable")}
+                          >
+                            {s.isActive === false ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+                          </button>
+                          <button 
                             onClick={() => onEdit(s)} 
                             className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95"
                             title={t("Edit")}
@@ -354,16 +397,7 @@ export default function ServicesPage() {
                     </motion.tr>
                   ))}
                 </AnimatePresence>
-                {filtered.length === 0 && !loading && (
-                  <tr>
-                    <td colSpan={5} className="px-10 py-40 text-center">
-                      <div className="flex flex-col items-center justify-center gap-6 opacity-20">
-                        <Scissors className="h-20 w-20" />
-                        <p className="text-xl font-bold uppercase tracking-[0.3em]">{t("No Services Found")}</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} colSpan={5} compact />
               </tbody>
             </table>
           </div>
@@ -426,12 +460,7 @@ export default function ServicesPage() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            {filtered.length === 0 && !loading && (
-               <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-                 <Scissors className="h-16 w-16" />
-                 <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Services Found")}</p>
-               </div>
-            )}
+            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} compact />
           </div>
         </motion.div>
       </div>
