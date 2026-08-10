@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { 
-  CalendarDays, ChevronLeft, ChevronRight, Plus, X, Clock, 
+import {
+  CalendarDays, ChevronLeft, ChevronRight, Plus, X, Clock,
   User, Scissors, Search, Bell, CheckCircle2, Calendar as CalendarIcon,
   Filter, MoreVertical, Phone, MapPin, Sparkles, XCircle, UserPlus
 } from "lucide-react";
@@ -81,8 +81,8 @@ function addDays(d: Date, n: number) {
 
 function startOfWeek(d: Date) {
   const x = startOfDay(d);
-  const day = x.getDay(); 
-  const diff = (day + 1) % 7; 
+  const day = x.getDay();
+  const diff = (day + 1) % 7;
   return addDays(x, -diff);
 }
 
@@ -412,42 +412,42 @@ export default function AppointmentsPage() {
         actions={
           <>
             <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-1.5 rounded-[1.5rem] border border-border shadow-inner w-full justify-center sm:justify-start">
-              <button 
-                onClick={() => setAnchor(new Date())} 
-                className="px-4 sm:px-5 py-2.5 text-xs font-bold text-foreground hover:bg-card rounded-xl transition-all shadow-sm"
+              <button
+                onClick={() => setAnchor(new Date())}
+                className="min-h-11 px-4 sm:px-5 py-2.5 text-xs font-bold text-foreground hover:bg-card rounded-xl transition-all shadow-sm"
               >
                 {t("Today")}
               </button>
               <div className="flex items-center border-x border-border/50 px-1 sm:px-2 gap-1 sm:gap-2">
-                <button 
-                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, -1) : addDays(d, -7))} 
-                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                <button
+                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, -1) : addDays(d, -7))}
+                  className="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
                   title={t("Previous")}
                 >
                   {i18n.language === "ar" ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
                 </button>
-                <button 
-                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, 1) : addDays(d, 7))} 
-                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                <button
+                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, 1) : addDays(d, 7))}
+                  className="h-11 w-11 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
                   title={t("Next")}
                 >
                   {i18n.language === "ar" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
               </div>
               <div className="flex gap-1.5">
-                <button 
-                  onClick={() => setMode("day")} 
+                <button
+                  onClick={() => setMode("day")}
                   className={clsx(
-                    "px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
+                    "min-h-11 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all",
                     mode === "day" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {t("Day")}
                 </button>
-                <button 
-                  onClick={() => setMode("week")} 
+                <button
+                  onClick={() => setMode("week")}
                   className={clsx(
-                    "px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
+                    "min-h-11 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all",
                     mode === "week" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -455,8 +455,8 @@ export default function AppointmentsPage() {
                 </button>
               </div>
             </div>
-            <button 
-              onClick={() => openBooking()} 
+            <button
+              onClick={() => openBooking()}
               className="h-13 min-h-[52px] px-6 sm:px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
             >
               <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -479,7 +479,7 @@ export default function AppointmentsPage() {
             key={id}
             onClick={() => setStatusFilter(id)}
             className={clsx(
-              "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border",
+              "min-h-11 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border",
               statusFilter === id
                 ? "bg-primary text-primary-foreground border-primary/20 shadow-md"
                 : "bg-card text-muted-foreground border-border hover:text-foreground"
@@ -516,7 +516,7 @@ export default function AppointmentsPage() {
         ))}
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6 lg:space-y-0"
@@ -599,7 +599,7 @@ export default function AppointmentsPage() {
                               const minutes = dt.getHours() * 60 + dt.getMinutes();
                               const row = minutes / SLOT_MINS;
                               const span = (a.service?.durationMins ?? 30) / SLOT_MINS;
-                              
+
                               return (
                                 <motion.div
                                   layoutId={a.id}
@@ -688,7 +688,7 @@ export default function AppointmentsPage() {
                     </h3>
                     <button
                       onClick={() => openBooking(slotToDate(day, 9 * 2))}
-                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                      className="min-h-11 px-2 text-xs font-bold text-primary hover:underline flex items-center gap-1"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       {t("Add")}
@@ -712,7 +712,7 @@ export default function AppointmentsPage() {
                             className="min-w-0 bg-card border border-border rounded-2xl p-3 sm:p-5 shadow-sm flex flex-col gap-2 relative overflow-hidden cursor-pointer"
                           >
                             <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).split(" ")[0])} />
-                            
+
                             <div className="flex items-start justify-between gap-3">
                               <div className="space-y-1 min-w-0">
                                 <span className="font-bold text-foreground text-base sm:text-lg block truncate">{a.customer?.name}</span>
@@ -751,14 +751,14 @@ export default function AppointmentsPage() {
       <AnimatePresence>
         {open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setOpen(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-xl"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
@@ -774,8 +774,8 @@ export default function AppointmentsPage() {
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Fill in the details below")}</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setOpen(false)} 
+                <button
+                  onClick={() => setOpen(false)}
                   className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90 shrink-0"
                 >
                   <X className="h-6 w-6" />
@@ -788,7 +788,7 @@ export default function AppointmentsPage() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Date")}</label>
                     <div className="relative">
                       <CalendarIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input 
+                      <input
                         type="date"
                         className="w-full rounded-2xl border border-border bg-card ps-11 pe-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
                         value={slotDate ? `${slotDate.getFullYear()}-${String(slotDate.getMonth() + 1).padStart(2, '0')}-${String(slotDate.getDate()).padStart(2, '0')}` : ''}
@@ -806,7 +806,7 @@ export default function AppointmentsPage() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Time")}</label>
                     <div className="relative">
                       <Clock className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input 
+                      <input
                         type="time"
                         className="w-full rounded-2xl border border-border bg-card ps-11 pe-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
                         value={slotDate ? `${String(slotDate.getHours()).padStart(2, '0')}:${String(slotDate.getMinutes()).padStart(2, '0')}` : ''}
@@ -834,16 +834,16 @@ export default function AppointmentsPage() {
                     />
                     <AnimatePresence>
                       {customers.length > 0 && !customerId && (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute bottom-full inset-x-0 mb-4 max-h-64 overflow-auto rounded-[2rem] border border-border shadow-2xl bg-card z-10 p-2"
                         >
                           {customers.map((c) => (
-                            <button 
-                              key={c.id} 
-                              onClick={() => { setCustomerId(c.id); setCustomerQ(c.name); }} 
+                            <button
+                              key={c.id}
+                              onClick={() => { setCustomerId(c.id); setCustomerQ(c.name); }}
                               className="flex w-full items-center justify-between px-6 py-4 rounded-2xl text-start text-sm hover:bg-muted transition-all group/item"
                             >
                               <div className="flex items-center gap-4">
@@ -878,7 +878,7 @@ export default function AppointmentsPage() {
                     </motion.div>
                   )}
                   {customerId && (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20"
@@ -897,9 +897,9 @@ export default function AppointmentsPage() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Service")}</label>
                     <div className="relative">
                       <Scissors className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <select 
-                        className="w-full appearance-none rounded-[1.5rem] border border-border bg-card py-4.5 ps-14 pe-12 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer" 
-                        value={serviceId} 
+                      <select
+                        className="w-full appearance-none rounded-[1.5rem] border border-border bg-card py-4.5 ps-14 pe-12 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer"
+                        value={serviceId}
                         onChange={(e) => setServiceId(e.target.value)}
                       >
                         {services.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.durationMins} {t("min")})</option>)}
@@ -912,9 +912,9 @@ export default function AppointmentsPage() {
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Specialist")}</label>
                     <div className="relative">
                       <User className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                      <select 
-                        className="w-full appearance-none rounded-[1.5rem] border border-border bg-card py-4.5 ps-14 pe-12 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer" 
-                        value={employeeId} 
+                      <select
+                        className="w-full appearance-none rounded-[1.5rem] border border-border bg-card py-4.5 ps-14 pe-12 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer"
+                        value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
                       >
                         {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}

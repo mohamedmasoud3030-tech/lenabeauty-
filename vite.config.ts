@@ -36,8 +36,8 @@ export default defineConfig(({mode}) => {
           name: 'LenaBeauty - إدارة الصالون',
           short_name: 'LenaBeauty',
           description: 'نظام إدارة الصالونات الاحترافي - LenaBeauty',
-          theme_color: '#ec4899',
-          background_color: '#ffffff',
+          theme_color: '#8B5CF6',
+          background_color: '#FCFAFF',
           display: 'standalone',
           orientation: 'portrait',
           lang: 'ar',
@@ -138,8 +138,9 @@ export default defineConfig(({mode}) => {
         'react-router-dom',
         'clsx',
         'lucide-react',
+        'recharts',
+        'use-sync-external-store/shim/with-selector',
       ],
-      exclude: ['recharts'],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

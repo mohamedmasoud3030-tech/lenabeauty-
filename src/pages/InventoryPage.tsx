@@ -185,7 +185,7 @@ export default function InventoryPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 rounded-2xl bg-destructive/10 border border-destructive/20 px-5 py-4 text-destructive"
+          className="flex items-center gap-4 rounded-2xl bg-warning/10 border border-warning/20 px-5 py-4 text-warning"
         >
           <Bell className="h-5 w-5 flex-shrink-0 animate-pulse" />
           <p className="text-sm font-bold">
@@ -193,7 +193,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => setShowLowStockOnly(true)}
-            className="ms-auto text-xs font-bold underline underline-offset-2 hover:opacity-70 transition-opacity"
+            className="ms-auto min-h-11 inline-flex items-center text-xs font-bold underline underline-offset-2 hover:opacity-70 transition-opacity"
           >
             {t("View All")}
           </button>
@@ -276,7 +276,7 @@ export default function InventoryPage() {
           <div className="flex items-center gap-4 mb-6">
             <div className={clsx(
               "h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner",
-              stats.lowStock > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+              stats.lowStock > 0 ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
             )}>
               <AlertCircle className="h-6 w-6" />
             </div>
@@ -290,7 +290,7 @@ export default function InventoryPage() {
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
-          className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-4 sm:p-6 lg:p-10 shadow-2xl h-fit space-y-4 sm:space-y-6 lg:space-y-10 sticky top-10"
+          className="order-2 lg:order-1 rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card p-4 sm:p-6 lg:p-10 shadow-2xl h-fit space-y-4 sm:space-y-6 lg:space-y-10 lg:sticky lg:top-10"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -404,7 +404,7 @@ export default function InventoryPage() {
         <motion.div
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
-          className="overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
+          className="order-1 lg:order-2 overflow-hidden rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
         >
           <div className="border-b border-border bg-muted/30 px-4 sm:px-6 lg:px-10 py-4 sm:py-6 lg:py-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -417,10 +417,10 @@ export default function InventoryPage() {
               <button
                 onClick={() => setShowLowStockOnly(v => !v)}
                 className={clsx(
-                  "h-10 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-sm",
+                  "h-11 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-sm",
                   showLowStockOnly
-                    ? "bg-destructive text-white border-destructive"
-                    : "border-border bg-card text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    ? "bg-warning text-warning-foreground border-warning"
+                    : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning"
                 )}
               >
                 <AlertTriangle className="h-4 w-4" />
@@ -428,12 +428,12 @@ export default function InventoryPage() {
               </button>
               <button
                 onClick={() => exportToCSV(filtered, t)}
-                className="h-10 px-3 rounded-xl border border-border bg-card flex items-center gap-2 text-xs font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                className="h-11 px-3 rounded-xl border border-border bg-card flex items-center gap-2 text-xs font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
               >
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">{t("Export")}</span>
               </button>
-              <button className="h-10 w-10 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm">
+              <button className="h-11 w-11 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm">
                 <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} onClick={load} />
               </button>
             </div>
@@ -477,7 +477,7 @@ export default function InventoryPage() {
                           <div className={clsx(
                             "inline-flex items-center gap-2.5 rounded-2xl px-5 py-2.5 text-xs font-bold border shadow-sm transition-all",
                             low
-                              ? "bg-destructive/10 text-destructive border-destructive animate-pulse"
+                              ? "bg-warning/10 text-warning border-warning/30 animate-pulse"
                               : "bg-muted text-foreground border-border"
                           )}>
                             {p.stockQuantity}

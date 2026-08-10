@@ -251,7 +251,7 @@ export default function DashboardPage() {
           </button>
           <button 
             onClick={() => nav("/pos")}
-            className="group relative inline-flex items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
+            className="group relative inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -312,7 +312,7 @@ export default function DashboardPage() {
             </h2>
             <button
               onClick={() => nav("/appointments")}
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+              className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
             >
               {t("View All")}
             </button>
@@ -361,7 +361,7 @@ export default function DashboardPage() {
             </h2>
             <button
               onClick={() => nav("/inventory")}
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+              className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
             >
               {t("View All")}
             </button>
@@ -565,7 +565,7 @@ export default function DashboardPage() {
 
                 <button 
                   onClick={() => nav("/reports")}
-                  className="group w-full rounded-lg bg-secondary py-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-secondary/80 flex items-center justify-center gap-2 shadow-lg mt-auto"
+                  className="group w-full min-h-11 rounded-lg bg-secondary py-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-secondary/80 flex items-center justify-center gap-2 shadow-lg mt-auto"
                 >
                   {t("View Detailed Reports")}
                   <ArrowRight className={clsx("h-4 w-4 transition-transform", i18n.language === "ar" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1")} />
@@ -591,7 +591,7 @@ export default function DashboardPage() {
             </div>
             <button 
               onClick={load}
-              className="group flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:opacity-80 transition-opacity"
+              className="group min-h-11 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:opacity-80 transition-opacity"
             >
               {t("Refresh")}
               <Zap className={clsx("h-3 w-3 transition-transform", loading && "animate-spin")} />
@@ -732,7 +732,7 @@ function QuickActionButton({ title, icon, color, onClick }: {
     <button 
       onClick={onClick}
       className={clsx(
-        "group w-full flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:shadow-lg hover:-translate-y-0.5",
+        "group min-h-11 w-full flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:shadow-lg hover:-translate-y-0.5",
         colorClasses[color]
       )}
     >

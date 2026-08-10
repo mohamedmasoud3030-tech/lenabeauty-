@@ -75,7 +75,7 @@ export default function PosInvoicesPage() {
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [showCheckoutSummary, setShowCheckoutSummary] = useState(isMobile);
+  const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
