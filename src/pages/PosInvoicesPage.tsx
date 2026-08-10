@@ -11,7 +11,7 @@ import {
   Zap, Clock, TrendingUp
 } from "lucide-react";
 // UserPlus used for inline new-customer creation at the POS checkout panel
-import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
+import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -337,20 +337,8 @@ export default function PosInvoicesPage() {
   return (
     <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
 
-      {/* Print Modal */}
-      {showPrintModal && printData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl print:p-0 print:bg-transparent">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-lg w-full max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-h-none"
-          >
-            <div id="invoice-print-container">
-              <InvoicePrintLayout data={printData} onClose={() => setShowPrintModal(false)} />
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* Receipt preview — shared overlay above all chrome, sticky Print/Close */}
+      <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
 
       {/* Mobile: Toggle between catalog and checkout */}
       {isMobile && (

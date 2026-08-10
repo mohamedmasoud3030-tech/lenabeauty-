@@ -5,14 +5,18 @@ import { clsx } from "clsx";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import brandingService from "../../infrastructure/services/brandingService";
 import { formatOMRAmount } from "../money";
+import { formatSalonDate, formatSalonTime } from "../dateTime";
+import { getDisplayName } from "../displayName";
 
 interface Props {
   data: InvoicePrintData;
   onClose?: () => void;
   paperSize?: "80mm" | "58mm";
+  /** When rendered inside a shared Modal, the overlay provides Print/Close. */
+  hideControls?: boolean;
 }
 
-export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize = "80mm" }) => {
+export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize = "80mm", hideControls = false }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   const { invoice, items, customer, settings } = data;
@@ -81,29 +85,30 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           <div className="text-center">
             <h1 className="font-bold text-sm uppercase tracking-tight">{salonName}</h1>
             {salonAddress && <p className="text-[9px] opacity-80 mt-0.5">{salonAddress}</p>}
-            {salonPhone && <p className="text-[9px] opacity-80">{t("Tel")}: {salonPhone}</p>}
-            {taxNumber && <p className="text-[9px] opacity-80">{t("Tax ID")}: {taxNumber}</p>}
+            {salonPhone && (
+              <p className="text-[9px] opacity-80" dir="ltr" style={{ textAlign: "center" }}>
+                {t("Tel")}: {salonPhone}
+              </p>
+            )}
+            {taxNumber && (
+              <p className="text-[9px] opacity-80" dir="ltr" style={{ textAlign: "center" }}>
+                {t("Tax ID")}: {taxNumber}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Invoice Header */}
         <div className="mb-2 text-[10px]">
           <div className="flex justify-between mb-1">
-            <span className="font-bold">
+            <span className="font-bold" dir="ltr">
               {t("Invoice")}: {invoice.serialNumber || invoice.id.slice(0, 8).toUpperCase()}
             </span>
-            <span>
-              {new Date(invoice.date).toLocaleDateString(i18n.language === "ar" ? "ar-SA" : "en-US")}
-            </span>
+            <span>{formatSalonDate(invoice.date, i18n.language)}</span>
           </div>
           <div className="flex justify-between text-[9px] opacity-70">
-            <span>
-              {new Date(invoice.date).toLocaleTimeString(i18n.language === "ar" ? "ar-SA" : "en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-            {invoice.staffName && <span>{t("Staff")}: {invoice.staffName}</span>}
+            <span>{formatSalonTime(invoice.date, i18n.language)}</span>
+            {invoice.staffName && <span>{t("Staff")}: {getDisplayName(invoice.staffName, t("Unnamed"))}</span>}
           </div>
         </div>
 
@@ -111,8 +116,12 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         {customer && (
           <div className="mb-2 pb-2 border-b border-gray-300 text-[10px]">
             <p className="font-bold uppercase text-[8px] opacity-50 mb-0.5">{t("Customer")}</p>
-            <p className="font-bold">{customer.name}</p>
-            {customer.phone && <p className="text-[9px] opacity-70">{customer.phone}</p>}
+            <p className="font-bold">{getDisplayName(customer.name, t("Unnamed"))}</p>
+            {customer.phone && (
+              <p className="text-[9px] opacity-70" dir="ltr" style={{ textAlign: isRtl ? "right" : "left" }}>
+                {customer.phone}
+              </p>
+            )}
           </div>
         )}
 
@@ -242,31 +251,35 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         `}} />
       </div>
 
-      {/* Screen-only Controls */}
-      <div className="print:hidden flex gap-3 justify-center mt-6">
-        <button
-          onClick={handlePrint}
-          className="min-h-11 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-sm transition-colors"
-        >
-          🖨️ {t("Print Invoice")}
-        </button>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="min-h-11 px-6 py-2.5 rounded-lg border border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-colors"
-          >
-            ✕ {t("Close")}
-          </button>
-        )}
-      </div>
+      {/* Screen-only Controls — hidden when the shared Modal provides them */}
+      {!hideControls && (
+        <>
+          <div className="print:hidden flex gap-3 justify-center mt-6">
+            <button
+              onClick={handlePrint}
+              className="min-h-11 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-sm transition-colors"
+            >
+              {t("Print Invoice")}
+            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="min-h-11 px-6 py-2.5 rounded-lg border border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-colors"
+              >
+                {t("Close")}
+              </button>
+            )}
+          </div>
 
-      {/* Print Preview Info */}
-      <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
-        <p className="font-bold mb-1">💡 {t("Print Tips")}</p>
-        <p>
-          {t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}
-        </p>
-      </div>
+          {/* Print Preview Info */}
+          <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
+            <p className="font-bold mb-1">{t("Print Tips")}</p>
+            <p>
+              {t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -10,7 +11,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
-import { useConfirm } from "./ConfirmDialog";
+import { ConfirmContext } from "./ConfirmDialog";
 
 export type ModalSize = "sm" | "md" | "lg" | "xl";
 
@@ -60,7 +61,10 @@ export function Modal({
   className,
 }: ModalProps) {
   const { t } = useTranslation();
-  const { confirm } = useConfirm();
+  // Use the confirm context with a safe fallback so the Modal never hard-
+  // crashes when rendered outside ConfirmProvider (e.g. in isolated tests).
+  const confirmCtx = useContext(ConfirmContext);
+  const confirm = confirmCtx?.confirm ?? (async () => true);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const titleId = useId();

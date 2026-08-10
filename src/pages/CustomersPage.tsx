@@ -20,7 +20,7 @@ import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 import { formatOMRAmount } from "../shared/money";
-import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
+import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { InvoicePrintData } from "../application/dto";
 
 interface InvoiceHistoryItem extends Invoice {
@@ -233,13 +233,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
-      {printData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm print:static print:bg-transparent print:p-0">
-          <div className="max-h-[95vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl print:max-h-none print:overflow-visible print:rounded-none print:p-0 print:shadow-none">
-            <InvoicePrintLayout data={printData} onClose={() => setPrintData(null)} />
-          </div>
-        </div>
-      )}
+      <ReceiptPreviewModal data={printData} onClose={() => setPrintData(null)} />
 
       <PageHeader
         icon={<User className="h-7 w-7 sm:h-8 sm:w-8" />}

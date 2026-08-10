@@ -16,7 +16,7 @@ interface ConfirmContextValue {
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 }
 
-const ConfirmContext = createContext<ConfirmContextValue | undefined>(undefined);
+export const ConfirmContext = createContext<ConfirmContextValue | undefined>(undefined);
 
 export function useConfirm() {
   const ctx = useContext(ConfirmContext);
