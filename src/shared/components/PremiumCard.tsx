@@ -90,11 +90,11 @@ interface StatCardProps {
 
 export function StatCard({ label, value, unit, trend, icon, color = "blue" }: StatCardProps) {
   const colorClasses = {
-    blue: "bg-blue-500/10 text-blue-600",
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    amber: "bg-amber-500/10 text-amber-600",
-    rose: "bg-rose-500/10 text-rose-600",
-    purple: "bg-purple-500/10 text-purple-600",
+    blue: "bg-info/10 text-info",
+    emerald: "bg-success/10 text-success",
+    amber: "bg-warning/10 text-warning",
+    rose: "bg-destructive/10 text-destructive",
+    purple: "bg-primary/10 text-primary",
   };
 
   return (
@@ -112,7 +112,7 @@ export function StatCard({ label, value, unit, trend, icon, color = "blue" }: St
               animate={{ scale: 1 }}
               className={clsx(
                 "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold",
-                trend.isPositive ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+                trend.isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
               )}
             >
               {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%

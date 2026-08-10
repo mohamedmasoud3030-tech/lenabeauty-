@@ -188,7 +188,7 @@ export const SalonLogo: React.FC<SalonLogoProps> = ({
       <div
         className={clsx(
           "flex items-center justify-center rounded-full font-bold text-white",
-          "bg-gradient-to-br from-pink-500 to-purple-600 shadow-lg",
+          "bg-gradient-to-br from-primary to-secondary shadow-lg",
           sizeClasses[size],
           className
         )}
@@ -248,7 +248,7 @@ export const ServiceImage: React.FC<ServiceImageProps> = ({
     return (
       <div
         className={clsx(
-          "flex items-center justify-center rounded-xl bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100 text-2xl",
+          "flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 text-2xl",
           className
         )}
         style={{ width: size, height: size }}

@@ -42,15 +42,15 @@ function ErrorFallback({ error, onReset }: { error: Error | null; onReset: () =>
   const { t } = useTranslation();
 
   return (
-    <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-rose-500/10 via-background to-background p-6">
-      <div className="w-full max-w-lg rounded-[2.5rem] border border-rose-500/20 bg-card shadow-2xl overflow-hidden">
-        <div className="bg-rose-500/10 border-b border-rose-500/20 px-10 py-8 flex items-center gap-4">
-          <div className="h-16 w-16 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-600 shadow-inner">
+    <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-destructive/10 via-background to-background p-6">
+      <div className="w-full max-w-lg rounded-[2.5rem] border border-destructive/20 bg-card shadow-2xl overflow-hidden">
+        <div className="bg-destructive/10 border-b border-destructive/20 px-10 py-8 flex items-center gap-4">
+          <div className="h-16 w-16 rounded-2xl bg-destructive/20 flex items-center justify-center text-destructive shadow-inner">
             <AlertTriangle className="h-8 w-8" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-2xl font-bold text-rose-600">{t('Something went wrong')}</h2>
-            <p className="text-[10px] font-bold text-rose-600/70 uppercase tracking-widest">{t('Error')}</p>
+            <h2 className="text-2xl font-bold text-destructive">{t('Something went wrong')}</h2>
+            <p className="text-[10px] font-bold text-destructive/70 uppercase tracking-widest">{t('Error')}</p>
           </div>
         </div>
 
