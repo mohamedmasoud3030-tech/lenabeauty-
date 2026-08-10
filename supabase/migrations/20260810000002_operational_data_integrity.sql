@@ -99,13 +99,13 @@ ALTER TABLE public.invoice_items
 DO $$ BEGIN
   ALTER TABLE public.invoice_items
     ADD CONSTRAINT invoice_items_type_valid
-    CHECK (item_type IN ('service', 'product', 'package')) NOT VALID;
+    CHECK (item_type IS NOT NULL AND item_type IN ('service', 'product', 'package')) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   ALTER TABLE public.invoice_items
     ADD CONSTRAINT invoice_items_name_not_blank
-    CHECK (length(btrim(item_name)) > 0) NOT VALID;
+    CHECK (item_name IS NOT NULL AND length(btrim(item_name)) > 0) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
