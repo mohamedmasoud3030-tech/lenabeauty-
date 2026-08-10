@@ -21,6 +21,11 @@ import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 import { formatOMRAmount } from "../shared/money";
+import {
+  ALL_SERVICE_CATEGORIES,
+  filterServicesForCatalog,
+  ServiceCategoryFilters,
+} from "../shared/catalog/ServiceCategoryFilters";
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -29,6 +34,7 @@ export default function ServicesPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_SERVICE_CATEGORIES);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,11 +65,10 @@ export default function ServicesPage() {
     void reload();
   }, []);
 
-  const filtered = useMemo(() => {
-    const text = q.trim().toLowerCase();
-    if (!text) return items;
-    return items.filter((s: Service) => (s.name + " " + (s.categoryName ?? s.categoryId)).toLowerCase().includes(text));
-  }, [items, q]);
+  const filtered = useMemo(
+    () => filterServicesForCatalog(items, selectedCategory, q),
+    [items, selectedCategory, q],
+  );
 
   function resetForm() {
     setEditingId(null);
@@ -326,6 +331,14 @@ export default function ServicesPage() {
               <span className="text-xs font-bold text-primary">{items.length}</span>
             </div>
           </div>
+          <div className="border-b border-border px-3 py-3 sm:px-6">
+            <ServiceCategoryFilters
+              services={items}
+              selectedCategory={selectedCategory}
+              onSelect={setSelectedCategory}
+              allLabel={t("All")}
+            />
+          </div>
           <div className="hidden lg:block overflow-x-auto scrollbar-hide">
             <table className="w-full min-w-[700px] text-sm md:min-w-full">
               <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
@@ -425,77 +438,68 @@ export default function ServicesPage() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
+          <div className="lg:hidden grid grid-cols-2 gap-3 p-3">
             <AnimatePresence mode="popLayout">
               {filtered.map((s, idx) => (
                 <motion.div
                   layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   key={s.id}
-                  className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                  className="min-w-0 rounded-2xl border border-border bg-card p-3 shadow-sm flex flex-col gap-3"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
-                      {s.name[0]}
+                  <div className="min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-bold text-foreground text-sm leading-snug line-clamp-2">{s.name}</span>
+                      {!s.isActive && <span className="text-[9px] font-bold text-destructive shrink-0">{t("Disabled")}</span>}
                     </div>
-                    <div className="flex-1 min-w-0 flex flex-col">
-                      <span className="font-bold text-foreground text-lg truncate">{s.name}</span>
-                      {!s.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
-                      <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0 truncate">
-                        <Tag className="h-3 w-3" />
-                        {s.categoryName ?? s.categoryId}
-                      </div>
+                    <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-primary min-w-0">
+                      <Tag className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{s.categoryName ?? s.categoryId}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-foreground text-xl">{formatOMRAmount(s.price)}</span>
-                        <TrendingUp className="h-4 w-4 text-emerald-500" />
-                      </div>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
-                      </span>
+                  <div className="mt-auto border-t border-border pt-2 space-y-1">
+                    <div className="font-bold text-foreground text-base leading-none">{formatOMRAmount(s.price)}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground">
+                      {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
-                      <Clock className="h-4 w-4 text-primary" />
-                      <span className="font-bold text-foreground text-sm">{s.durationMinutes} {t("min")}</span>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                      <Clock className="h-3 w-3 text-primary" />
+                      {s.durationMinutes} {t("min")}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-2">
+                  <div className="flex items-center gap-1 pt-1">
                     <button
                       onClick={() => void onToggleActive(s)}
-                      className={clsx(
-                        "h-12 rounded-2xl border px-3 flex items-center justify-center transition-all shadow-sm",
-                        s.isActive ? "border-border text-muted-foreground" : "border-emerald-500/30 text-emerald-600"
-                      )}
+                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
                       title={s.isActive ? t("Disable") : t("Enable")}
                     >
-                      {s.isActive ? <XCircle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                      {s.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
                     </button>
                     <button
                       onClick={() => onEdit(s)}
-                      className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
+                      title={t("Edit")}
                     >
-                      <Pencil className="h-5 w-5" />
-                      {t("Edit")}
+                      <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => void onDelete(s.id)}
-                      className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shadow-sm"
+                      className="h-11 min-w-0 flex-1 rounded-xl border border-border text-destructive flex items-center justify-center"
+                      title={t("Delete")}
                     >
-                      <Trash2 className="h-5 w-5" />
-                      {t("Delete")}
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
-            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} compact />
+            <div className="col-span-2">
+              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} compact />
+            </div>
           </div>
         </motion.div>
       </div>

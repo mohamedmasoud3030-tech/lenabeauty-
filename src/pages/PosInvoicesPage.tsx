@@ -21,6 +21,11 @@ import { calculateCheckoutTotals } from "../domain/commerce";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
+import {
+  ALL_SERVICE_CATEGORIES,
+  filterServicesForCatalog,
+  ServiceCategoryFilters,
+} from "../shared/catalog/ServiceCategoryFilters";
 
 interface CartItem {
   id: string;
@@ -59,6 +64,7 @@ export default function PosInvoicesPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState(ALL_SERVICE_CATEGORIES);
   // Inline «عميل جديد → بيع» دون مغادرة نقطة البيع
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -322,7 +328,7 @@ export default function PosInvoicesPage() {
   }
 
   const filteredItems = activeTab === "SERVICES"
-    ? services.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+    ? filterServicesForCatalog(services, selectedServiceCategory, itemSearchQ)
     : activeTab === "PRODUCTS"
       ? products.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
       : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
@@ -433,6 +439,14 @@ export default function PosInvoicesPage() {
                   onChange={(e) => setItemSearchQ(e.target.value)}
                 />
               </div>
+              {activeTab === "SERVICES" && (
+                <ServiceCategoryFilters
+                  services={services}
+                  selectedCategory={selectedServiceCategory}
+                  onSelect={setSelectedServiceCategory}
+                  allLabel={t("All")}
+                />
+              )}
             </div>
 
             <div className="flex-1 overflow-auto p-4 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0">
