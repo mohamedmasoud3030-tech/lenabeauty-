@@ -6,14 +6,17 @@ import { ToastProvider } from "../shared/components/Toast";
 import { ConfirmProvider } from "../shared/components/ConfirmDialog";
 import { useCases } from "../app/composition/useCases";
 import i18n from "../i18n";
+import { MemoryRouter } from "react-router-dom";
 
 function renderPage() {
   return render(
-    <ToastProvider>
-      <ConfirmProvider>
-        <SettingsPage />
-      </ConfirmProvider>
-    </ToastProvider>
+    <MemoryRouter initialEntries={["/settings"]}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <SettingsPage />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>
   );
 }
 
