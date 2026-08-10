@@ -73,6 +73,17 @@ export interface Appointment {
   /** Service duration captured when booked; catalog edits do not rewrite it. */
   durationMinutesSnapshot?: number;
   status: AppointmentStatus;
+  /** Lightweight joined records used by the operational calendar. */
+  customer?: { id: string; name: string; phone?: string };
+  employee?: { id: string; name: string };
+  service?: {
+    id: string;
+    name: string;
+    categoryId?: string;
+    price: number;
+    durationMinutes: number;
+    durationMins: number;
+  };
   notes?: string;
   depositAmount?: number;
   noShowFeeAmount?: number;

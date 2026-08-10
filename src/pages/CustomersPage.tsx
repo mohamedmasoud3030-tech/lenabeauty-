@@ -132,7 +132,7 @@ export default function CustomersPage() {
     setSavingNotes(true);
     try {
       await unwrap(useCases.customers.update(openId, { notes }));
-      showToast('error', t("Error"), t("Notes saved successfully"));
+      showToast('success', t("Success"), t("Notes saved successfully"));
       await load();
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {

@@ -301,10 +301,21 @@ export default function PosInvoicesPage() {
         }
       } catch (e) {
         console.error("Print failed", e);
+        showToast('error', t("Error"), t("Payment succeeded, but receipt could not be loaded"));
       }
 
+      // The payment is already committed at this point. Clear the order and
+      // report success before refreshing so a transient catalog read can never
+      // be misreported as a failed payment. The refresh makes decremented stock
+      // visible immediately and prevents a second order using stale quantity.
       clearCart();
       showToast('success', t("Success"), t("Payment successful!"));
+      try {
+        await loadData();
+      } catch (e) {
+        console.error("Catalog refresh failed after successful checkout", e);
+        showToast('error', t("Error"), t("Sale completed, but catalog refresh failed"));
+      }
     } catch (err: any) {
       showToast('error', t("Error"), err.message || t("Payment failed"));
     }

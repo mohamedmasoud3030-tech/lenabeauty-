@@ -114,7 +114,10 @@ describe("POS operational flow", () => {
       { type: "package", packageId: "pkg1", qty: 1, price: 20 },
     ]);
 
-    // 8) Receipt modal shows the invoice with the three items and the total
+    // 8) Successful payment refreshes the catalog so product stock is not stale.
+    await waitFor(() => expect(useCases.products.list).toHaveBeenCalledTimes(2));
+
+    // 9) Receipt modal shows the invoice with the three items and the total
     expect((await screen.findAllByText("لينا بيوتي")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0);
     expect(screen.getAllByText("شامبو").length).toBeGreaterThan(0);

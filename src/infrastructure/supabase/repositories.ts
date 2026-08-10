@@ -660,10 +660,15 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     try {
       const { data, error } = await getSupabaseClient()
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          customers (id, name, phone),
+          employees (id, name),
+          services (id, name, category_id, price, duration_minutes)
+        `)
         .eq('center_id', centerRes.data)
         .gte('date_time', range.fromISO)
-        .lte('date_time', range.toISO)
+        .lt('date_time', range.toISO)
         .order('date_time', { ascending: true });
 
       if (error) return { ok: false, error: createQueryError("Appointment.list", error.message) };
