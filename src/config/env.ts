@@ -8,6 +8,14 @@ export class EnvironmentConfigurationError extends Error {
 export type BackendMode = "supabase" | "tauri";
 export type BranchMode = "single" | "multi";
 
+// Browser-facing Supabase values are public by design. Keep them only as
+// production fallbacks so a missing Vercel VITE_* variable cannot disable the
+// single-center Lena deployment; explicit environment values still override
+// these defaults for other deployments.
+const LENA_PRODUCTION_SUPABASE_URL = "https://tuzzvqsnbtzvkffmazyf.supabase.co";
+const LENA_PRODUCTION_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1enp2cXNuYnR6dmtmZm1henlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMzg5NzQsImV4cCI6MjEwMTgxNDk3NH0.spKglkQKiC5vQCk5HgYFb0XfTst85vZ27izZJ6OvYoE";
+const LENA_PRODUCTION_CENTER_ID = "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d";
+
 function validateUrl(url: string | undefined): boolean {
   if (!url) return false;
   try {
@@ -26,22 +34,29 @@ function validateUUID(uuid: string | undefined): boolean {
 
 export function parseEnv(customEnv?: Record<string, string | undefined>) {
   const getEnv = (key: string) => customEnv ? customEnv[key] : import.meta.env[key];
+  const useProductionFallbacks = !customEnv && import.meta.env.PROD;
 
-  const backendRaw = getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase();
+  const backendRaw = (
+    getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase()
+    || (useProductionFallbacks ? "supabase" : undefined)
+  );
   if (backendRaw !== "supabase" && backendRaw !== "tauri") {
     throw new EnvironmentConfigurationError("INVALID_BACKEND_CONFIGURATION: must be 'supabase' or 'tauri'");
   }
 
   const backend: BackendMode = backendRaw as BackendMode;
-  const url = getEnv("VITE_SUPABASE_URL")?.trim() || undefined;
-  const key = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY")?.trim() || undefined;
+  const url = getEnv("VITE_SUPABASE_URL")?.trim()
+    || (useProductionFallbacks ? LENA_PRODUCTION_SUPABASE_URL : undefined);
+  const key = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY")?.trim()
+    || (useProductionFallbacks ? LENA_PRODUCTION_PUBLISHABLE_KEY : undefined);
   
   const branchModeRaw = (getEnv("VITE_BRANCH_MODE")?.trim().toLowerCase()) || "single";
   if (branchModeRaw !== "single" && branchModeRaw !== "multi") {
     throw new EnvironmentConfigurationError(`UNSUPPORTED_BRANCH_CONFIGURATION: ${branchModeRaw}`);
   }
   const branchMode: BranchMode = branchModeRaw as BranchMode;
-  const rawCenterId = getEnv("VITE_CENTER_ID")?.trim() || undefined;
+  const rawCenterId = getEnv("VITE_CENTER_ID")?.trim()
+    || (useProductionFallbacks ? LENA_PRODUCTION_CENTER_ID : undefined);
 
   let centerId: string | undefined;
 
