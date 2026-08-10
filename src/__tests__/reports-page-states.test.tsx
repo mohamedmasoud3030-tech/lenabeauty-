@@ -131,6 +131,6 @@ describe("ReportsPage screen states", () => {
     expect(await screen.findByText(i18n.t("Transaction Details"))).toBeInTheDocument();
     expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0);
     // Discount is shown when > 0
-    expect(screen.getByText("-1.00")).toBeInTheDocument();
+    expect(screen.getByText("-1.000")).toBeInTheDocument();
   });
 });
