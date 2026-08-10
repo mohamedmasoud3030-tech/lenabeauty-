@@ -29,6 +29,9 @@ describe("duration-aware appointment overlap migration", () => {
     expect(migration).toContain("EXCLUDE USING gist");
     expect(migration).toContain("employee_id WITH =");
     expect(migration).toContain("duration_minutes_snapshot * INTERVAL '1 minute'");
+    expect(migration).toContain("tsrange(");
+    expect(migration).toContain("date_time AT TIME ZONE 'UTC'");
+    expect(migration).not.toContain("tstzrange(");
     expect(migration).toContain("'[)'");
     expect(migration).toContain("WITH &&");
     expect(migration).toContain("WHERE (status = 'SCHEDULED')");
