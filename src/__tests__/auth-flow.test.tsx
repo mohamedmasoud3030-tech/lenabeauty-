@@ -26,8 +26,12 @@ describe("auth flow", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(env, "validateEnvironment").mockImplementation(() => {});
+    // Bootstrap requires a verifiable center membership — an empty/error
+    // membership result now fails safe to Login (see AppContext).
+    (env.config as any).centerId = "center-1";
+    (env.config as any).branchMode = "single";
     vi.spyOn(useCases.auth, "getSession").mockResolvedValue({ ok: true, data: { status: "anonymous" } });
-    vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({ ok: true, data: [] });
+    vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({ ok: true, data: [{ id: "center-1", name: "Lena Beauty" }] });
   });
 
   it("allows protected route access immediately after a successful login", async () => {

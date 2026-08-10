@@ -10,6 +10,7 @@ import {
   Zap, Clock, TrendingUp
 } from "lucide-react";
 import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
+import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Customer, Employee, Product, Service } from "../domain/entities";
@@ -410,9 +411,14 @@ export default function PosInvoicesPage() {
                     ))}
                   </AnimatePresence>
                   {filteredItems.length === 0 && (
-                    <div className="col-span-full py-16 lg:py-24 flex flex-col items-center justify-center gap-4 opacity-20">
-                      <Search className="h-12 w-12" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest">{t("No items found")}</p>
+                    <div className="col-span-full">
+                      <ScreenState
+                        state="empty"
+                        compact
+                        icon={<Search className="h-6 w-6" />}
+                        title={t("No items found")}
+                        description={itemSearchQ.trim() ? t("Try a different search term") : t("Add services or products to start selling")}
+                      />
                     </div>
                   )}
                 </div>
@@ -454,19 +460,13 @@ export default function PosInvoicesPage() {
             <div className="flex-1 overflow-auto p-4 lg:p-6 space-y-2 scrollbar-hide">
               <AnimatePresence initial={false} mode="popLayout">
                 {cart.length === 0 ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-30 py-8"
-                  >
-                    <div className="h-16 w-16 rounded-xl bg-muted flex items-center justify-center">
-                      <ShoppingCart className="h-8 w-8" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold uppercase tracking-widest">{t("Cart is Empty")}</p>
-                      <p className="text-[10px]">{t("Add items to start")}</p>
-                    </div>
-                  </motion.div>
+                  <ScreenState
+                    state="empty"
+                    compact
+                    icon={<ShoppingCart className="h-6 w-6" />}
+                    title={t("Cart is Empty")}
+                    description={t("Add items to start")}
+                  />
                 ) : (
                   cart.map((item) => (
                     <motion.div 

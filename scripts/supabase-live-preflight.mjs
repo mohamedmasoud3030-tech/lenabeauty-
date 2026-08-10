@@ -46,6 +46,7 @@ const canonicalMigrations = [
   "20260628000015_attendance_advances_payroll.sql",
   "20260628000016_validation_constraints.sql",
   "20260809000001_delivery_security_hardening.sql",
+  "20260810000001_fix_invoice_items_packages.sql",
 ];
 
 function parseEnvFile(path) {

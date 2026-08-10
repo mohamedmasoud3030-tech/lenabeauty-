@@ -193,17 +193,18 @@ export function mapCenterSettings(row: unknown): CenterSettings {
 
 export function mapInvoiceItem(row: unknown): InvoiceItem {
   assertRowObject(row, "mapInvoiceItem");
-  if (typeof row.id !== "string" || typeof row.invoice_id !== "string" || row.price === undefined || row.quantity === undefined) {
-      throw createMappingError("mapInvoiceItem", "Missing or invalid required fields (id, invoice_id, price, quantity)");
+  if (typeof row.id !== "string" || row.price === undefined || row.quantity === undefined) {
+      throw createMappingError("mapInvoiceItem", "Missing or invalid required fields (id, price, quantity)");
   }
   return {
     id: row.id,
-    invoiceId: row.invoice_id,
+    invoiceId: typeof row.invoice_id === "string" ? row.invoice_id : "",
     serviceId: typeof row.service_id === "string" ? row.service_id : undefined,
     productId: typeof row.product_id === "string" ? row.product_id : undefined,
+    packageId: typeof row.package_id === "string" ? row.package_id : undefined,
     price: Number(row.price),
     quantity: Number(row.quantity),
-    createdAt: parseDate(row.created_at, "created_at", "mapInvoiceItem")
+    createdAt: row.created_at ? parseDate(row.created_at, "created_at", "mapInvoiceItem") : new Date(0)
   };
 }
 

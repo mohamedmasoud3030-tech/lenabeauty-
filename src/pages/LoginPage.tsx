@@ -232,7 +232,10 @@ export default function LoginPage() {
                   transition={{ duration: 0.25 }}
                 >
                   {initError ? t(initError) : t(error)}
-                  {initError && (
+                  {/* The "disabled until configured" note only applies to real
+                      configuration problems — a stale/invalid session must not
+                      imply the whole app is misconfigured. */}
+                  {initError && /not configured|MISSING_SINGLE_BRANCH_CENTER_ID|INVALID_SUPABASE_CONFIGURATION|UNSUPPORTED_BRANCH_CONFIGURATION/.test(initError) && (
                     <div className="mt-1 text-xs opacity-70">
                       {t("Supabase production login is disabled until configured.")}
                     </div>
@@ -271,7 +274,6 @@ export default function LoginPage() {
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     dir="ltr"
-                    disabled={!!initError}
                   />
                 </div>
               </motion.div>
@@ -303,7 +305,6 @@ export default function LoginPage() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     dir="ltr"
-                    disabled={!!initError}
                   />
                   <button
                     type="button"
@@ -325,11 +326,11 @@ export default function LoginPage() {
               >
                 <motion.button
                   type="submit"
-                  disabled={!!initError || isLoading}
+                  disabled={isLoading}
                   className="w-full py-3 rounded-xl font-semibold text-sm text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}
-                  whileHover={!initError && !isLoading ? { scale: 1.02, filter: "brightness(1.08)" } : {}}
-                  whileTap={!initError && !isLoading ? { scale: 0.97 } : {}}
+                  whileHover={!isLoading ? { scale: 1.02, filter: "brightness(1.08)" } : {}}
+                  whileTap={!isLoading ? { scale: 0.97 } : {}}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 >
                   <AnimatePresence mode="wait">

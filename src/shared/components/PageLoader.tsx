@@ -1,7 +1,9 @@
 import { motion } from "motion/react";
 import { Zap } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export function PageLoader() {
+  const { t } = useTranslation();
   return (
     <div
       className="w-full h-screen flex flex-col items-center justify-center gap-6 bg-gradient-to-b from-background to-muted/10"
@@ -26,7 +28,7 @@ export function PageLoader() {
           className="flex items-center gap-2 text-sm font-bold text-muted-foreground uppercase tracking-widest"
         >
           <Zap className="h-4 w-4 text-primary" />
-          <span>Loading</span>
+          <span>{t("Loading")}</span>
         </motion.div>
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
