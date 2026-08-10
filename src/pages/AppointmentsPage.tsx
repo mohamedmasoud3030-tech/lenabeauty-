@@ -9,6 +9,12 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { getDisplayName, getInitials } from "../shared/displayName";
+import {
+  formatSalonDate,
+  formatSalonTime,
+  formatSalonDayHeader,
+  formatSalonWeekdayLong,
+} from "../shared/dateTime";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
@@ -88,13 +94,11 @@ function startOfWeek(d: Date) {
 }
 
 function fmtDayHeader(d: Date) {
-  const lang = i18n.language || "ar";
-  return d.toLocaleDateString(lang, { weekday: "short", day: "2-digit", month: "2-digit" });
+  return formatSalonDayHeader(d, i18n.language);
 }
 
 function fmtTime(d: Date) {
-  const lang = i18n.language || "ar";
-  return d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
+  return formatSalonTime(d, i18n.language);
 }
 
 function statusClass(s: AppointmentStatus | string) {
@@ -560,8 +564,8 @@ export default function AppointmentsPage() {
                 </div>
                 {range.days.map((d) => (
                   <div key={d.toISOString()} className="border-r border-border/50 p-8 text-center space-y-1">
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{d.toLocaleDateString(i18n.language || "ar", { weekday: "long" })}</div>
-                    <div className="text-2xl font-bold text-foreground">{d.toLocaleDateString(i18n.language || "ar", { day: "2-digit", month: "2-digit" })}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{formatSalonWeekdayLong(d, i18n.language)}</div>
+                    <div className="text-2xl font-bold text-foreground">{formatSalonDate(d, i18n.language)}</div>
                   </div>
                 ))}
               </div>
@@ -791,6 +795,8 @@ export default function AppointmentsPage() {
                       <CalendarIcon className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
                         type="date"
+                        dir="ltr"
+                        lang="en"
                         className="w-full rounded-2xl border border-border bg-card ps-11 pe-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
                         value={slotDate ? `${slotDate.getFullYear()}-${String(slotDate.getMonth() + 1).padStart(2, '0')}-${String(slotDate.getDate()).padStart(2, '0')}` : ''}
                         onChange={(e) => {
@@ -801,6 +807,9 @@ export default function AppointmentsPage() {
                           setSlotDate(newDate);
                         }}
                       />
+                      {slotDate && (
+                        <p className="mt-1 ms-2 text-[11px] font-bold text-muted-foreground" dir="auto">{formatSalonDate(slotDate, i18n.language)}</p>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -809,6 +818,8 @@ export default function AppointmentsPage() {
                       <Clock className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
                         type="time"
+                        dir="ltr"
+                        lang="en"
                         className="w-full rounded-2xl border border-border bg-card ps-11 pe-4 py-3.5 text-sm font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
                         value={slotDate ? `${String(slotDate.getHours()).padStart(2, '0')}:${String(slotDate.getMinutes()).padStart(2, '0')}` : ''}
                         onChange={(e) => {
@@ -819,6 +830,9 @@ export default function AppointmentsPage() {
                           setSlotDate(d);
                         }}
                       />
+                      {slotDate && (
+                        <p className="mt-1 ms-2 text-[11px] font-bold text-muted-foreground" dir="auto">{formatSalonTime(slotDate, i18n.language)}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -918,7 +932,7 @@ export default function AppointmentsPage() {
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
                       >
-                        {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                        {employees.map((e) => <option key={e.id} value={e.id}>{getDisplayName(e, t("Unnamed"))}</option>)}
                       </select>
                       <ChevronRight className="absolute end-6 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
                     </div>
