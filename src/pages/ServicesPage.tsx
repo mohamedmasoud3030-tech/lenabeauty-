@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "motion/react";
 
 import { Service } from "../domain/entities";
 import {
-  requiredText, nonNegativeNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
+  requiredText, positiveNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
 } from "../domain/validation";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
@@ -33,7 +33,8 @@ export default function ServicesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
-  const [price, setPrice] = useState("0");
+  const [price, setPrice] = useState("");
+  const [pricingMode, setPricingMode] = useState<"FIXED" | "STARTING_FROM">("FIXED");
   const [durationMins, setDurationMins] = useState("30");
 
   const isEditing = !!editingId;
@@ -60,14 +61,15 @@ export default function ServicesPage() {
   const filtered = useMemo(() => {
     const text = q.trim().toLowerCase();
     if (!text) return items;
-    return items.filter((s: Service) => (s.name + " " + s.categoryId).toLowerCase().includes(text));
+    return items.filter((s: Service) => (s.name + " " + (s.categoryName ?? s.categoryId)).toLowerCase().includes(text));
   }, [items, q]);
 
   function resetForm() {
     setEditingId(null);
     setName("");
     setCategory("");
-    setPrice("0");
+    setPrice("");
+    setPricingMode("FIXED");
     setDurationMins("30");
     setErrors({});
   }
@@ -75,7 +77,7 @@ export default function ServicesPage() {
   async function onSubmit() {
     const nameR = requiredText(name);
     const categoryR = requiredText(category);
-    const priceR = nonNegativeNumber(price);
+    const priceR = positiveNumber(price);
     const durationR = positiveInteger(durationMins);
     const issues = collectIssues([
       { field: "name", result: nameR },
@@ -91,8 +93,9 @@ export default function ServicesPage() {
 
     const payload = {
       name: (nameR as FieldResult<string> & { ok: true }).value,
-      categoryId: (categoryR as FieldResult<string> & { ok: true }).value,
+      categoryName: (categoryR as FieldResult<string> & { ok: true }).value,
       price: (priceR as FieldResult<number> & { ok: true }).value,
+      pricingMode,
       durationMinutes: (durationR as FieldResult<number> & { ok: true }).value,
     };
 
@@ -118,8 +121,9 @@ export default function ServicesPage() {
   async function onEdit(s: Service) {
     setEditingId(s.id);
     setName(s.name);
-    setCategory(s.categoryId);
+    setCategory(s.categoryName ?? s.categoryId);
     setPrice(String(s.price));
+    setPricingMode(s.pricingMode);
     setDurationMins(String(s.durationMinutes));
   }
 
@@ -247,9 +251,23 @@ export default function ServicesPage() {
               </div>
             </div>
 
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Pricing method")}</label>
+              <select
+                className="w-full rounded-[1.5rem] border border-border bg-muted/30 px-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
+                value={pricingMode}
+                onChange={(e) => setPricingMode(e.target.value as "FIXED" | "STARTING_FROM")}
+              >
+                <option value="FIXED">{t("Fixed price")}</option>
+                <option value="STARTING_FROM">{t("Starts from")}</option>
+              </select>
+            </div>
+
             <div className="grid gap-8 sm:grid-cols-2">
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Price")}</label>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">
+                  {pricingMode === "STARTING_FROM" ? t("Minimum price") : t("Price")}
+                </label>
                 <div className="relative">
                    <DollarSign className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
@@ -346,7 +364,7 @@ export default function ServicesPage() {
                       <td>
                         <div className="inline-flex items-center gap-2.5 rounded-2xl bg-primary/5 px-4 py-2 text-xs font-bold text-primary border border-primary/10 shadow-sm">
                           <Tag className="h-3.5 w-3.5" />
-                          {s.categoryId}
+                          {s.categoryName ?? s.categoryId}
                         </div>
                       </td>
                       <td>
@@ -355,7 +373,9 @@ export default function ServicesPage() {
                             <span className="font-bold text-foreground text-xl">{s.price.toFixed(2)}</span>
                             <TrendingUp className="h-4 w-4 text-emerald-500" />
                           </div>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                          </span>
                         </div>
                       </td>
                       <td>
@@ -422,7 +442,7 @@ export default function ServicesPage() {
                       <span className="font-bold text-foreground text-lg truncate">{s.name}</span>
                       <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0 truncate">
                         <Tag className="h-3 w-3" />
-                        {s.categoryId}
+                        {s.categoryName ?? s.categoryId}
                       </div>
                     </div>
                   </div>
@@ -433,7 +453,9 @@ export default function ServicesPage() {
                         <span className="font-bold text-foreground text-xl">{s.price.toFixed(2)}</span>
                         <TrendingUp className="h-4 w-4 text-emerald-500" />
                       </div>
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                        {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground font-medium bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
                       <Clock className="h-4 w-4 text-primary" />

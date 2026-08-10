@@ -6,7 +6,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { Service } from "../domain/entities";
-import { requiredText, nonNegativeNumber, collectIssues, issuesToMap } from "../domain/validation";
+import { requiredText, positiveNumber, collectIssues, issuesToMap } from "../domain/validation";
 
 export default function PackagesPage() {
   const { t } = useTranslation();
@@ -18,7 +18,7 @@ export default function PackagesPage() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [packagePrice, setPackagePrice] = useState("0");
+  const [packagePrice, setPackagePrice] = useState("");
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -44,7 +44,7 @@ export default function PackagesPage() {
 
   async function handleCreate() {
     const nameR = requiredText(name);
-    const priceR = nonNegativeNumber(packagePrice);
+    const priceR = positiveNumber(packagePrice);
     const issues = collectIssues([
       { field: "name", result: nameR },
       { field: "packagePrice", result: priceR },
@@ -67,7 +67,7 @@ export default function PackagesPage() {
       }));
       setName("");
       setDescription("");
-      setPackagePrice("0");
+      setPackagePrice("");
       setSelectedServiceIds([]);
       await load();
       showToast("success", t("Success"), t("Package created successfully"));

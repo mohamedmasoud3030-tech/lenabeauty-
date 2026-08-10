@@ -18,11 +18,16 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
 
   const { invoice, items, customer, settings } = data;
 
-  // Calculate totals
-  const subtotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const discount = invoice.discount || 0;
+  // The persisted checkout breakdown is authoritative. The item sum is only a
+  // compatibility fallback for invoices created before subtotal_amount existed.
+  const itemSubtotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const subtotal = invoice.subtotalAmount > 0 ? invoice.subtotalAmount : itemSubtotal;
+  const manualDiscount = invoice.manualDiscount || 0;
+  const tierDiscount = invoice.tierDiscount || 0;
+  const loyaltyDiscount = invoice.loyaltyDiscount || 0;
+  const giftCardDiscount = invoice.giftCardDiscount || 0;
   const tax = invoice.tax || 0;
-  const total = invoice.totalAmount || (subtotal - discount + tax);
+  const total = invoice.totalAmount;
 
   // Generate QR code data (invoice details)
   const qrData = JSON.stringify({
@@ -160,24 +165,35 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
             <span className="font-bold">{subtotal.toFixed(3)}</span>
           </div>
 
-          {discount > 0 && (
+          {manualDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Discount")}:</span>
-              <span>-{discount.toFixed(3)}</span>
+              <span>-{manualDiscount.toFixed(3)}</span>
+            </div>
+          )}
+          {tierDiscount > 0 && (
+            <div className="flex justify-between text-[9px] opacity-80">
+              <span>{t("Tier Discount")}:</span>
+              <span>-{tierDiscount.toFixed(3)}</span>
+            </div>
+          )}
+          {loyaltyDiscount > 0 && (
+            <div className="flex justify-between text-[9px] opacity-80">
+              <span>{t("Loyalty Points")}:</span>
+              <span>-{loyaltyDiscount.toFixed(3)}</span>
+            </div>
+          )}
+          {giftCardDiscount > 0 && (
+            <div className="flex justify-between text-[9px] opacity-80">
+              <span>{t("Gift Card Redemption")}:</span>
+              <span>-{giftCardDiscount.toFixed(3)}</span>
             </div>
           )}
 
           {tax > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
-              <span>{t("Tax")}:</span>
+              <span>{t("Tax")}{invoice.taxRate !== undefined ? ` (${invoice.taxRate}%)` : ""}:</span>
               <span>+{tax.toFixed(3)}</span>
-            </div>
-          )}
-
-          {invoice.loyaltyPointsUsed > 0 && (
-            <div className="flex justify-between text-[9px] opacity-80">
-              <span>{t("Loyalty Points")}:</span>
-              <span>-{invoice.loyaltyPointsUsed}</span>
             </div>
           )}
 

@@ -16,12 +16,12 @@ import { useConfirm } from "../shared/components/ConfirmDialog";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  requiredText, nonNegativeNumber, nonNegativeInteger, collectIssues, issuesToMap
+  requiredText, nonNegativeNumber, positiveNumber, nonNegativeInteger, collectIssues, issuesToMap
 } from "../domain/validation";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 
-type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number };
+type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number; isActive: boolean; trackInventory: boolean };
 
 // Export products to CSV
 function exportToCSV(products: Product[], t: (k: string) => string) {
@@ -58,7 +58,8 @@ export default function InventoryPage() {
   const [stockQuantity, setStockQuantity] = useState("0");
   const [reorderLevel, setReorderLevel] = useState("0");
   const [cost, setCost] = useState("0");
-  const [price, setPrice] = useState("0");
+  const [price, setPrice] = useState("");
+  const [trackInventory, setTrackInventory] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isEditing = !!editingId;
@@ -86,14 +87,14 @@ export default function InventoryPage() {
     let result = rows;
     const text = q.trim().toLowerCase();
     if (text) result = result.filter((p) => p.name.toLowerCase().includes(text));
-    if (showLowStockOnly) result = result.filter((p) => p.stockQuantity < (p.reorderLevel ?? lowStockThreshold));
+    if (showLowStockOnly) result = result.filter((p) => p.isActive && p.trackInventory && p.stockQuantity < (p.reorderLevel ?? lowStockThreshold));
     return result;
   }, [rows, q, showLowStockOnly, lowStockThreshold]);
 
   const stats = useMemo(() => {
     const totalItems = rows.length;
-    const lowStock = rows.filter(p => p.stockQuantity < (p.reorderLevel ?? 5)).length;
-    const totalValue = rows.reduce((acc, p) => acc + (p.stockQuantity * p.cost), 0);
+    const lowStock = rows.filter(p => p.isActive && p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5)).length;
+    const totalValue = rows.filter((p) => p.trackInventory).reduce((acc, p) => acc + (p.stockQuantity * p.cost), 0);
     return { totalItems, lowStock, totalValue };
   }, [rows]);
 
@@ -103,7 +104,8 @@ export default function InventoryPage() {
     setStockQuantity("0");
     setReorderLevel("0");
     setCost("0");
-    setPrice("0");
+    setPrice("");
+    setTrackInventory(true);
     setErrors({});
   }
 
@@ -112,7 +114,7 @@ export default function InventoryPage() {
     const stockR = nonNegativeInteger(stockQuantity);
     const reorderR = nonNegativeInteger(reorderLevel);
     const costR = nonNegativeNumber(cost);
-    const priceR = nonNegativeNumber(price);
+    const priceR = positiveNumber(price);
     const issues = collectIssues([
       { field: "name", result: nameR },
       { field: "stockQuantity", result: stockR },
@@ -132,6 +134,7 @@ export default function InventoryPage() {
       reorderLevel: (reorderR as { ok: true; value: number }).value,
       cost: (costR as { ok: true; value: number }).value,
       price: (priceR as { ok: true; value: number }).value,
+      trackInventory,
     };
 
     try {
@@ -154,6 +157,7 @@ export default function InventoryPage() {
     setReorderLevel(String(p.reorderLevel ?? 0));
     setCost(String(p.cost));
     setPrice(String(p.price));
+    setTrackInventory(p.trackInventory);
     setErrors({});
   }
 
@@ -165,6 +169,11 @@ export default function InventoryPage() {
     });
     if (!ok) return;
     await unwrap(useCases.products.delete(id));
+    await load();
+  }
+
+  async function onToggleActive(product: Product) {
+    await unwrap(useCases.products.update(product.id, { isActive: !product.isActive }));
     await load();
   }
 
@@ -372,6 +381,15 @@ export default function InventoryPage() {
               </div>
             </div>
 
+            <label className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-5 py-4 text-sm font-bold">
+              <input
+                type="checkbox"
+                checked={trackInventory}
+                onChange={(e) => setTrackInventory(e.target.checked)}
+              />
+              {t("Track inventory for this product")}
+            </label>
+
             <button
               onClick={submit}
               className="w-full h-16 rounded-2xl bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 group"
@@ -433,7 +451,7 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-border/50">
                 <AnimatePresence mode="popLayout">
                   {filtered.map((p, idx) => {
-                    const low = p.stockQuantity < 5;
+                    const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
                     return (
                       <motion.tr 
                         layout
@@ -448,7 +466,10 @@ export default function InventoryPage() {
                             <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
                               {p.name[0]}
                             </div>
-                            <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{p.name}</div>
+                            <div>
+                              <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{p.name}</div>
+                              {!p.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
+                            </div>
                           </div>
                         </td>
                         <td>
@@ -479,6 +500,16 @@ export default function InventoryPage() {
                         </td>
                         <td>
                           <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => void onToggleActive(p)}
+                              className={clsx(
+                                "h-11 w-11 rounded-2xl border flex items-center justify-center transition-all shadow-sm hover:scale-110",
+                                p.isActive ? "border-border text-muted-foreground hover:text-amber-600" : "border-emerald-500/30 text-emerald-600"
+                              )}
+                              title={p.isActive ? t("Disable") : t("Enable")}
+                            >
+                              <CheckCircle2 className="h-5 w-5" />
+                            </button>
                             <button 
                               onClick={() => onEdit(p)} 
                               className="h-11 w-11 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110"
@@ -506,7 +537,7 @@ export default function InventoryPage() {
           <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
             <AnimatePresence mode="popLayout">
               {filtered.map((p, idx) => {
-                const low = p.stockQuantity < 5;
+                const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
                 return (
                   <motion.div
                     layout
@@ -522,6 +553,7 @@ export default function InventoryPage() {
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col items-start">
                         <span className="font-bold text-foreground text-lg truncate w-full">{p.name}</span>
+                        {!p.isActive && <span className="text-[10px] font-bold text-rose-600">{t("Disabled")}</span>}
                         <div className={clsx(
                           "inline-flex items-center gap-1.5 rounded-xl px-2 py-1 mt-1 text-[10px] font-bold border shrink-0",
                           low ? "bg-rose-500/10 text-rose-600 border-rose-200 animate-pulse" : "bg-muted text-foreground border-border"
@@ -553,6 +585,13 @@ export default function InventoryPage() {
                     </div>
 
                     <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={() => void onToggleActive(p)}
+                        className="h-12 rounded-2xl border border-border px-3 flex items-center justify-center text-muted-foreground"
+                        title={p.isActive ? t("Disable") : t("Enable")}
+                      >
+                        <CheckCircle2 className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => onEdit(p)}
                         className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
