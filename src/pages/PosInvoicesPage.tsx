@@ -106,7 +106,9 @@ export default function PosInvoicesPage() {
       ]);
       setServices(s);
       setProducts(p);
-      setPackages(pkg);
+      // Packages arrive with packagePrice (domain field) — expose it as `price`
+      // so the cart, totals, and checkout payload work for package lines too.
+      setPackages((pkg as any[]).map((p) => ({ ...p, price: Number(p.packagePrice) || 0 })));
       setEmployees(e);
       setGiftCards(gc);
       if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);

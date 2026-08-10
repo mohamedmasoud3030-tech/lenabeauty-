@@ -78,35 +78,38 @@ export default function ReportsPage() {
     return d.toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { day: "numeric", month: "short" });
   }
 
+  /** Shared error state for the three report tabs (avoids duplicated blocks). */
+  function reportError(unsupportedTitle: string, failedTitle: string) {
+    return (
+      <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
+        <ScreenState
+          state="error"
+          title={error === "BACKEND_METHOD_UNSUPPORTED" ? unsupportedTitle : failedTitle}
+          description={error === "BACKEND_METHOD_UNSUPPORTED" ? t("BACKEND_METHOD_UNSUPPORTED") : t("Something went wrong while loading. Try again.")}
+          actionLabel="Retry"
+          onAction={load}
+          errorDetail={error === "BACKEND_METHOD_UNSUPPORTED" ? undefined : (error ?? undefined)}
+        />
+      </div>
+    );
+  }
+
+  /** Shared empty state for the three report tabs (avoids duplicated blocks). */
+  function reportEmpty(icon: React.ReactNode, title: string, description: string, actionLabel: string, onAction: () => void) {
+    return (
+      <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
+        <ScreenState state="empty" icon={icon} title={title} description={description} actionLabel={actionLabel} onAction={onAction} />
+      </div>
+    );
+  }
+
   const renderSales = () => {
     if (error) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="error"
-            title={error === "BACKEND_METHOD_UNSUPPORTED" ? t("Sales report requires backend") : t("Failed to load sales report")}
-            description={error === "BACKEND_METHOD_UNSUPPORTED" ? t("BACKEND_METHOD_UNSUPPORTED") : t("Something went wrong while loading. Try again.")}
-            actionLabel="Retry"
-            onAction={load}
-            errorDetail={error === "BACKEND_METHOD_UNSUPPORTED" ? undefined : error}
-          />
-        </div>
-      );
+      return reportError(t("Sales report requires backend"), t("Failed to load sales report"));
     }
 
     if (!data || data.length === 0) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="empty"
-            icon={<ShoppingBag className="h-6 w-6" />}
-            title={t("No Sales Data")}
-            description={t("Start selling to see detailed analytics")}
-            actionLabel="New Invoice"
-            onAction={() => nav("/pos")}
-          />
-        </div>
-      );
+      return reportEmpty(<ShoppingBag className="h-6 w-6" />, t("No Sales Data"), t("Start selling to see detailed analytics"), "New Invoice", () => nav("/pos"));
     }
 
     const salesData = data as SalesReportRow[];
@@ -378,33 +381,11 @@ export default function ReportsPage() {
 
   const renderAppointments = () => {
     if (error) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="error"
-            title={error === "BACKEND_METHOD_UNSUPPORTED" ? t("Appointments report requires backend") : t("Failed to load appointments report")}
-            description={error === "BACKEND_METHOD_UNSUPPORTED" ? t("BACKEND_METHOD_UNSUPPORTED") : t("Something went wrong while loading. Try again.")}
-            actionLabel="Retry"
-            onAction={load}
-            errorDetail={error === "BACKEND_METHOD_UNSUPPORTED" ? undefined : error}
-          />
-        </div>
-      );
+      return reportError(t("Appointments report requires backend"), t("Failed to load appointments report"));
     }
 
     if (!data || data.length === 0) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="empty"
-            icon={<Calendar className="h-6 w-6" />}
-            title={t("No Appointments Data")}
-            description={t("Book appointments to see analytics")}
-            actionLabel="Book Appointment"
-            onAction={() => nav("/appointments")}
-          />
-        </div>
-      );
+      return reportEmpty(<Calendar className="h-6 w-6" />, t("No Appointments Data"), t("Book appointments to see analytics"), "Book Appointment", () => nav("/appointments"));
     }
 
     const appData = data as AppointmentReportRow[];
@@ -510,33 +491,11 @@ export default function ReportsPage() {
 
   const renderInventory = () => {
     if (error) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="error"
-            title={error === "BACKEND_METHOD_UNSUPPORTED" ? t("Inventory report requires backend") : t("Failed to load inventory report")}
-            description={error === "BACKEND_METHOD_UNSUPPORTED" ? t("BACKEND_METHOD_UNSUPPORTED") : t("Something went wrong while loading. Try again.")}
-            actionLabel="Retry"
-            onAction={load}
-            errorDetail={error === "BACKEND_METHOD_UNSUPPORTED" ? undefined : error}
-          />
-        </div>
-      );
+      return reportError(t("Inventory report requires backend"), t("Failed to load inventory report"));
     }
 
     if (!data || data.length === 0) {
-      return (
-        <div className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm shadow-xl">
-          <ScreenState
-            state="empty"
-            icon={<Package className="h-6 w-6" />}
-            title={t("No Inventory Data")}
-            description={t("Add products or services to see inventory")}
-            actionLabel="Go to Inventory"
-            onAction={() => nav("/inventory")}
-          />
-        </div>
-      );
+      return reportEmpty(<Package className="h-6 w-6" />, t("No Inventory Data"), t("Add products or services to see inventory"), "Go to Inventory", () => nav("/inventory"));
     }
 
     const invData = data as InventoryReportRow[];

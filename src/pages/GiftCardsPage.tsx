@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Gift, Plus, Search } from "lucide-react";
-import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -105,15 +105,8 @@ export default function GiftCardsPage() {
             </div>
           </div>
           <div className="space-y-3">
-            {loading ? <ScreenState state="loading" title={t("Loading gift cards...")} compact /> : filtered.length === 0 ? (
-              <ScreenState
-                state="empty"
-                icon={<Gift className="h-6 w-6" />}
-                title={t("No gift cards found")}
-                description={t("Issue a gift card to get started")}
-                compact
-              />
-            ) : filtered.map((card) => (
+            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading gift cards...")} emptyTitle={t("No gift cards found")} emptyDescription={t("Issue a gift card to get started")} emptyIcon={<Gift className="h-6 w-6" />} empty={filtered.length === 0} compact />
+            {filtered.length > 0 && filtered.map((card) => (
               <div key={card.id} className="rounded-2xl border p-4 flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 font-semibold"><Gift className="h-4 w-4" /> {card.code}</div>

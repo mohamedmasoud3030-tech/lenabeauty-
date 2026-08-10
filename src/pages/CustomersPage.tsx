@@ -17,6 +17,7 @@ import { Customer, Appointment, Invoice } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -434,41 +435,7 @@ export default function CustomersPage() {
                   </motion.tr>
                 ))}
               </AnimatePresence>
-              {loading && filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState state="loading" title={t("Loading customers...")} compact />
-                  </td>
-                </tr>
-              ) : loadError ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState
-                      state="error"
-                      title={t("Failed to load customers")}
-                      description={t("Something went wrong while loading. Try again.")}
-                      actionLabel="Retry"
-                      onAction={load}
-                      errorDetail={loadError}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState
-                      state="empty"
-                      icon={<Users className="h-6 w-6" />}
-                      title={t("No Customers Found")}
-                      description={q ? t("Try a different search term") : t("Add your first customer to start selling")}
-                      actionLabel="Add Customer"
-                      onAction={() => setShowAddModal(true)}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ) : null}
+              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading customers...")} errorTitle={t("Failed to load customers")} emptyTitle={t("No Customers Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} emptyIcon={<Users className="h-6 w-6" />} emptyActionLabel="Add Customer" onEmptyAction={() => setShowAddModal(true)} colSpan={5} compact />
             </tbody>
           </table>
         </div>
@@ -538,29 +505,7 @@ export default function CustomersPage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          {loading && filtered.length === 0 ? (
-            <ScreenState state="loading" title={t("Loading customers...")} compact />
-          ) : loadError ? (
-            <ScreenState
-              state="error"
-              title={t("Failed to load customers")}
-              description={t("Something went wrong while loading. Try again.")}
-              actionLabel="Retry"
-              onAction={load}
-              errorDetail={loadError}
-              compact
-            />
-          ) : filtered.length === 0 ? (
-            <ScreenState
-              state="empty"
-              icon={<Users className="h-6 w-6" />}
-              title={t("No Customers Found")}
-              description={q ? t("Try a different search term") : t("Add your first customer to start selling")}
-              actionLabel="Add Customer"
-              onAction={() => setShowAddModal(true)}
-              compact
-            />
-          ) : null}
+          <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading customers...")} errorTitle={t("Failed to load customers")} emptyTitle={t("No Customers Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} emptyIcon={<Users className="h-6 w-6" />} emptyActionLabel="Add Customer" onEmptyAction={() => setShowAddModal(true)} compact />
         </div>
       </motion.div>
 

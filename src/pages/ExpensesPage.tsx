@@ -12,6 +12,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 export default function ExpensesPage() {
   const { showToast } = useToast();
@@ -313,39 +314,7 @@ export default function ExpensesPage() {
                   </motion.tr>
                 ))}
               </AnimatePresence>
-              {loading && filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState state="loading" title={t("Loading expenses...")} compact />
-                  </td>
-                </tr>
-              ) : loadError ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState
-                      state="error"
-                      title={t("Failed to load expenses")}
-                      description={t("Something went wrong while loading. Try again.")}
-                      actionLabel="Retry"
-                      onAction={load}
-                      errorDetail={loadError}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <ScreenState
-                      state="empty"
-                      icon={<Receipt className="h-6 w-6" />}
-                      title={t("No Expenses Found")}
-                      description={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ) : null}
+              <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading expenses...")} errorTitle={t("Failed to load expenses")} emptyTitle={t("No Expenses Found")} emptyDescription={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")} emptyIcon={<Receipt className="h-6 w-6" />} colSpan={5} compact />
             </tbody>
           </table>
         </div>
@@ -408,27 +377,7 @@ export default function ExpensesPage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          {loading && filtered.length === 0 ? (
-            <ScreenState state="loading" title={t("Loading expenses...")} compact />
-          ) : loadError ? (
-            <ScreenState
-              state="error"
-              title={t("Failed to load expenses")}
-              description={t("Something went wrong while loading. Try again.")}
-              actionLabel="Retry"
-              onAction={load}
-              errorDetail={loadError}
-              compact
-            />
-          ) : filtered.length === 0 ? (
-            <ScreenState
-              state="empty"
-              icon={<Receipt className="h-6 w-6" />}
-              title={t("No Expenses Found")}
-              description={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")}
-              compact
-            />
-          ) : null}
+          <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading expenses...")} errorTitle={t("Failed to load expenses")} emptyTitle={t("No Expenses Found")} emptyDescription={q || selectedCategory !== "All" ? t("Try a different search term") : t("Record your first expense")} emptyIcon={<Receipt className="h-6 w-6" />} compact />
         </div>
       </motion.div>
 

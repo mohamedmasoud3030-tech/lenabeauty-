@@ -19,6 +19,7 @@ import {
   requiredText, nonNegativeNumber, nonNegativeInteger, collectIssues, issuesToMap
 } from "../domain/validation";
 import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number };
 
@@ -496,39 +497,7 @@ export default function InventoryPage() {
                     );
                   })}
                 </AnimatePresence>
-                {loading && filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState state="loading" title={t("Loading products...")} compact />
-                    </td>
-                  </tr>
-                ) : loadError ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState
-                        state="error"
-                        title={t("Failed to load products")}
-                        description={t("Something went wrong while loading. Try again.")}
-                        actionLabel="Retry"
-                        onAction={load}
-                        errorDetail={loadError}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState
-                        state="empty"
-                        icon={<Boxes className="h-6 w-6" />}
-                        title={t("No Products Found")}
-                        description={q ? t("Try a different search term") : t("Add your first product to start selling")}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                ) : null}
+                <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading products...")} errorTitle={t("Failed to load products")} emptyTitle={t("No Products Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first product to start selling")} emptyIcon={<Boxes className="h-6 w-6" />} colSpan={5} compact />
               </tbody>
             </table>
           </div>
@@ -603,27 +572,7 @@ export default function InventoryPage() {
                 );
               })}
             </AnimatePresence>
-            {loading && filtered.length === 0 ? (
-              <ScreenState state="loading" title={t("Loading products...")} compact />
-            ) : loadError ? (
-              <ScreenState
-                state="error"
-                title={t("Failed to load products")}
-                description={t("Something went wrong while loading. Try again.")}
-                actionLabel="Retry"
-                onAction={load}
-                errorDetail={loadError}
-                compact
-              />
-            ) : filtered.length === 0 ? (
-              <ScreenState
-                state="empty"
-                icon={<Boxes className="h-6 w-6" />}
-                title={t("No Products Found")}
-                description={q ? t("Try a different search term") : t("Add your first product to start selling")}
-                compact
-              />
-            ) : null}
+            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading products...")} errorTitle={t("Failed to load products")} emptyTitle={t("No Products Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first product to start selling")} emptyIcon={<Boxes className="h-6 w-6" />} compact />
           </div>
         </motion.div>
       </div>

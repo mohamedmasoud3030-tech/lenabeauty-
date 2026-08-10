@@ -19,6 +19,7 @@ import {
 } from "../domain/validation";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -396,39 +397,7 @@ export default function ServicesPage() {
                     </motion.tr>
                   ))}
                 </AnimatePresence>
-                {loading && filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState state="loading" title={t("Loading services...")} compact />
-                    </td>
-                  </tr>
-                ) : loadError ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState
-                        state="error"
-                        title={t("Failed to load services")}
-                        description={t("Something went wrong while loading. Try again.")}
-                        actionLabel="Retry"
-                        onAction={reload}
-                        errorDetail={loadError}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState
-                        state="empty"
-                        icon={<Scissors className="h-6 w-6" />}
-                        title={t("No Services Found")}
-                        description={q ? t("Try a different search term") : t("Add your first service to start selling")}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                ) : null}
+                <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} colSpan={5} compact />
               </tbody>
             </table>
           </div>
@@ -491,27 +460,7 @@ export default function ServicesPage() {
                 </motion.div>
               ))}
             </AnimatePresence>
-            {loading && filtered.length === 0 ? (
-              <ScreenState state="loading" title={t("Loading services...")} compact />
-            ) : loadError ? (
-              <ScreenState
-                state="error"
-                title={t("Failed to load services")}
-                description={t("Something went wrong while loading. Try again.")}
-                actionLabel="Retry"
-                onAction={reload}
-                errorDetail={loadError}
-                compact
-              />
-            ) : filtered.length === 0 ? (
-              <ScreenState
-                state="empty"
-                icon={<Scissors className="h-6 w-6" />}
-                title={t("No Services Found")}
-                description={q ? t("Try a different search term") : t("Add your first service to start selling")}
-                compact
-              />
-            ) : null}
+            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={reload} loadingTitle={t("Loading services...")} errorTitle={t("Failed to load services")} emptyTitle={t("No Services Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first service to start selling")} emptyIcon={<Scissors className="h-6 w-6" />} compact />
           </div>
         </motion.div>
       </div>

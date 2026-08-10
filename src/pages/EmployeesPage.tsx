@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 import { Employee } from "../domain/entities";
 import { requiredText, nonNegativeNumber, percentField, collectIssues, issuesToMap } from "../domain/validation";
 
@@ -250,26 +251,8 @@ export default function EmployeesPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               <AnimatePresence mode="popLayout">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState state="loading" title={t("Loading Team...")} compact />
-                    </td>
-                  </tr>
-                ) : employees.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                      <ScreenState
-                        state="empty"
-                        icon={<Users className="h-6 w-6" />}
-                        title={t("No Employees Found")}
-                        description={t("Add your first team member")}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  employees.map((emp, idx) => (
+                <ListState loading={loading} error={null} empty={employees.length === 0} onRetry={load} loadingTitle={t("Loading Team...")} emptyTitle={t("No Employees Found")} emptyDescription={t("Add your first team member")} emptyIcon={<Users className="h-6 w-6" />} colSpan={5} compact />
+                {employees.length > 0 && employees.map((emp, idx) => (
                     <motion.tr 
                       layout
                       initial={{ opacity: 0, x: -20 }}
@@ -338,8 +321,7 @@ export default function EmployeesPage() {
                         </td>
                       )}
                     </motion.tr>
-                  ))
-                )}
+                  ))}
               </AnimatePresence>
             </tbody>
           </table>
@@ -348,18 +330,8 @@ export default function EmployeesPage() {
         {/* Mobile Cards */}
         <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
           <AnimatePresence mode="popLayout">
-            {loading ? (
-              <ScreenState state="loading" title={t("Loading Team...")} compact />
-            ) : employees.length === 0 ? (
-              <ScreenState
-                state="empty"
-                icon={<Users className="h-6 w-6" />}
-                title={t("No Employees Found")}
-                description={t("Add your first team member")}
-                compact
-              />
-            ) : (
-              employees.map((emp, idx) => (
+            <ListState loading={loading} error={null} empty={employees.length === 0} onRetry={load} loadingTitle={t("Loading Team...")} emptyTitle={t("No Employees Found")} emptyDescription={t("Add your first team member")} emptyIcon={<Users className="h-6 w-6" />} compact />
+            {employees.length > 0 && employees.map((emp, idx) => (
                 <motion.div
                   layout
                   initial={{ opacity: 0, y: 20 }}
@@ -420,8 +392,7 @@ export default function EmployeesPage() {
                     </div>
                   )}
                 </motion.div>
-              ))
-            )}
+              ))}
           </AnimatePresence>
         </div>
       </motion.div>

@@ -73,4 +73,72 @@ describe("Appointments operational UX", () => {
     // The created customer is now selected inside the dialog
     await waitFor(() => expect(screen.getAllByText("سارة").length).toBeGreaterThan(0));
   });
+
+  it("completes a scheduled appointment from the edit dialog", async () => {
+    await i18n.changeLanguage("ar");
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: "a1",
+          customerId: "c1",
+          employeeId: "e1",
+          serviceId: "s1",
+          dateTime: new Date(),
+          status: "SCHEDULED",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          customer: { id: "c1", name: "أمل", phone: "90000000" },
+          service: { id: "s1", name: "قص شعر", durationMinutes: 30, price: 5 },
+          employee: { id: "e1", name: "سارة" },
+        },
+      ],
+    } as any);
+    const updateSpy = vi.spyOn(useCases.appointments, "update").mockResolvedValue({ ok: true, data: {} } as any);
+
+    renderPage();
+
+    // Scheduled appointment card is visible; open it (desktop grid + mobile card both render)
+    const cards = await screen.findAllByText("قص شعر");
+    fireEvent.click(cards[0]);
+
+    // Explicit Arabic quick actions exist
+    expect(screen.getByText(i18n.t("Complete Appointment"))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("Cancel Appointment"))).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(i18n.t("Complete Appointment")));
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith("a1", { status: "COMPLETED" }));
+  });
+
+  it("cancels a scheduled appointment from the edit dialog", async () => {
+    await i18n.changeLanguage("ar");
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: "a2",
+          customerId: "c1",
+          employeeId: "e1",
+          serviceId: "s1",
+          dateTime: new Date(),
+          status: "SCHEDULED",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          customer: { id: "c1", name: "أمل", phone: "90000000" },
+          service: { id: "s1", name: "قص شعر", durationMinutes: 30, price: 5 },
+          employee: { id: "e1", name: "سارة" },
+        },
+      ],
+    } as any);
+    const updateSpy = vi.spyOn(useCases.appointments, "update").mockResolvedValue({ ok: true, data: {} } as any);
+
+    renderPage();
+
+    const cards = await screen.findAllByText("قص شعر");
+    fireEvent.click(cards[0]);
+    fireEvent.click(screen.getByText(i18n.t("Cancel Appointment")));
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith("a2", { status: "CANCELLED" }));
+  });
 });

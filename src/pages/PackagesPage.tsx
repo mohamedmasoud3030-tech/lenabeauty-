@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Boxes, Plus, Search } from "lucide-react";
-import { ScreenState } from "../shared/components/ScreenState";
+import { ListState } from "../shared/components/ListState";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -126,15 +126,8 @@ export default function PackagesPage() {
           </div>
 
           <div className="space-y-3">
-            {loading ? <ScreenState state="loading" title={t("Loading packages...")} compact /> : filtered.length === 0 ? (
-              <ScreenState
-                state="empty"
-                icon={<Boxes className="h-6 w-6" />}
-                title={t("No packages found")}
-                description={t("Create a package to sell grouped services")}
-                compact
-              />
-            ) : filtered.map((pkg) => (
+            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading packages...")} emptyTitle={t("No packages found")} emptyDescription={t("Create a package to sell grouped services")} emptyIcon={<Boxes className="h-6 w-6" />} empty={filtered.length === 0} compact />
+            {filtered.length > 0 && filtered.map((pkg) => (
               <div key={pkg.id} className="rounded-2xl border p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
