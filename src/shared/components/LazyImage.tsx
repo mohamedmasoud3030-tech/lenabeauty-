@@ -7,6 +7,7 @@
  */
 import React, { useRef, useState, useEffect } from "react";
 import { clsx } from "clsx";
+import { getInitials } from "../displayName";
 
 interface LazyImageProps {
   src: string;
@@ -176,13 +177,9 @@ export const SalonLogo: React.FC<SalonLogoProps> = ({
   const sizePx = { sm: 32, md: 48, lg: 64, xl: 96 };
 
   if (!logoUrl) {
-    // Text fallback with gradient
-    const initials = salonName
-      .split(" ")
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase();
+    // Text fallback with gradient — safe initials via the shared helper so an
+    // empty/whitespace salon name never yields "undefined".
+    const initials = getInitials(salonName, "L");
 
     return (
       <div

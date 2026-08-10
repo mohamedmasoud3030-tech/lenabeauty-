@@ -4,6 +4,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { useAuth } from "../auth";
 import { 
   Plus, Trash2, Edit, Users, UserPlus, X, Save, 
@@ -264,10 +265,10 @@ export default function EmployeesPage() {
                       <td>
                         <div className="flex items-center gap-5">
                           <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all group-hover:scale-110 shadow-inner">
-                            {emp.name[0]}
+                            {getInitials(emp, "·")}
                           </div>
                           <div className="space-y-0.5">
-                            <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{emp.name}</span>
+                            <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{getDisplayName(emp, t("Unnamed"))}</span>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Staff ID")}: {emp.id.slice(-6).toUpperCase()}</span>
                           </div>
                         </div>
@@ -342,10 +343,10 @@ export default function EmployeesPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
-                      {emp.name[0]}
+                      {getInitials(emp, "·")}
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-start gap-1">
-                      <span className="font-bold text-foreground text-lg truncate w-full leading-tight">{emp.name}</span>
+                      <span className="font-bold text-foreground text-lg truncate w-full leading-tight">{getDisplayName(emp, t("Unnamed"))}</span>
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Staff ID")}: {emp.id.slice(-6).toUpperCase()}</span>
                       <div className="inline-flex items-center gap-1.5 rounded-xl bg-muted px-2 py-1 mt-1 text-[10px] font-bold text-muted-foreground border border-transparent shadow-sm shrink-0">
                         <Briefcase className="h-3 w-3" />

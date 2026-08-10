@@ -10,6 +10,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { validateBackupPayload } from "../application/dto";
 import { requiredText, percentField, collectIssues, issuesToMap } from "../domain/validation";
 import { motion, AnimatePresence } from "motion/react";
@@ -42,7 +43,9 @@ type Settings = {
 
 type UserRow = {
   id: string;
-  username: string;
+  // Transport can omit username for legacy/incomplete auth rows; treated as
+  // optional so rendering never assumes it is present.
+  username?: string;
   role: "ADMIN" | "STAFF";
   isActive: boolean;
   createdAt?: string;
@@ -196,7 +199,7 @@ export default function SettingsPage() {
 
   function onEdit(u: UserRow) {
     setEditingId(u.id);
-    setUsername(u.username);
+    setUsername(u.username ?? "");
     setRole(u.role);
     setIsActive(u.isActive);
     setPassword("");
@@ -222,7 +225,12 @@ export default function SettingsPage() {
   }
 
   const usersSorted = useMemo(
-    () => [...users].sort((a, b) => (a.username > b.username ? 1 : -1)),
+    () => [...users].sort((a, b) => {
+      const an = (a.username ?? "").trim();
+      const bn = (b.username ?? "").trim();
+      if (an === bn) return 0;
+      return an > bn ? 1 : -1;
+    }),
     [users]
   );
 
@@ -652,9 +660,9 @@ export default function SettingsPage() {
                             <td>
                               <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                  {u.username[0].toUpperCase()}
+                                  {getInitials(u, "·")}
                                 </div>
-                                <span className="text-sm font-bold text-foreground">{u.username}</span>
+                                <span className="text-sm font-bold text-foreground">{getDisplayName(u, t("Unnamed"))}</span>
                               </div>
                             </td>
                             <td>
@@ -710,11 +718,11 @@ export default function SettingsPage() {
                         <div key={`m-user-${u.id}`} className="bg-card border border-border rounded-[2rem] p-5 shadow-sm flex flex-col gap-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-                                {u.username[0].toUpperCase()}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-bold text-foreground text-base">{u.username}</span>
+                                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                                {getInitials(u, "·")}
+                                </div>
+                                <div className="flex flex-col">
+                                <span className="font-bold text-foreground text-base">{getDisplayName(u, t("Unnamed"))}</span>
                                 <span className={clsx(
                                   "inline-flex items-center rounded-full mt-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider w-fit",
                                   u.role === "ADMIN" ? "bg-primary/10 text-primary" : "bg-info/10 text-info"

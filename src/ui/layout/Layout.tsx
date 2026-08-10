@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
+import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
+import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
 
 export default function Layout() {
@@ -135,7 +137,7 @@ export default function Layout() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="hidden sm:flex h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-primary/10 border border-primary/20 items-center justify-center text-primary font-bold text-sm shadow-inner hover:scale-105 transition-transform active:scale-95"
                 >
-                  {me?.username?.[0]?.toUpperCase()}
+                  {getInitials(me, "·")}
                 </button>
                 
                 {/* User Menu Dropdown */}
@@ -148,7 +150,7 @@ export default function Layout() {
                       className="absolute top-full mt-2 end-0 w-48 rounded-lg bg-card border border-border shadow-xl z-50"
                     >
                       <div className="p-3 border-b border-border">
-                        <p className="text-xs font-bold text-foreground">{me?.username}</p>
+                        <p className="text-xs font-bold text-foreground">{getDisplayName(me, t("Unnamed"))}</p>
                         <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
                           {me?.role === "ADMIN" ? t("Administrator") : me?.role === "STAFF" ? t("Staff Member") : ""}
                         </p>
@@ -184,7 +186,9 @@ export default function Layout() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
               >
-                <Outlet />
+                <ErrorBoundary resetKey={location.pathname}>
+                  <Outlet />
+                </ErrorBoundary>
               </motion.div>
             </AnimatePresence>
           </main>

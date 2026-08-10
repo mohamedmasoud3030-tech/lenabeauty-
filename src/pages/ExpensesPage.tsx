@@ -4,6 +4,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { 
   Receipt, Plus, Trash2, Calendar, Tag, DollarSign, 
   Search, X, Save, TrendingDown,
@@ -267,9 +268,9 @@ export default function ExpensesPage() {
                     <td>
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
-                          {exp.description[0]}
+                          {getInitials(exp.description, "·")}
                         </div>
-                        <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{exp.description}</div>
+                        <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors">{getDisplayName(exp.description, t("Unnamed"))}</div>
                       </div>
                     </td>
                     <td>
@@ -333,10 +334,10 @@ export default function ExpensesPage() {
               >
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shadow-inner shrink-0">
-                    {exp.description[0]}
+                    {getInitials(exp.description, "·")}
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col items-start">
-                    <span className="font-bold text-foreground text-lg truncate w-full">{exp.description}</span>
+                    <span className="font-bold text-foreground text-lg truncate w-full">{getDisplayName(exp.description, t("Unnamed"))}</span>
                     <div className="inline-flex items-center gap-1.5 rounded-xl bg-primary/5 px-2 py-1 mt-1 text-[10px] font-bold text-primary border border-primary/10 w-fit shrink-0">
                       <Tag className="h-3 w-3" />
                       {t(exp.category)}

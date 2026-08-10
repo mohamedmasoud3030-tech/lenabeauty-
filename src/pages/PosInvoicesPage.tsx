@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
@@ -618,10 +619,10 @@ export default function PosInvoicesPage() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-lg">
-                            {selectedCustomer.name[0]}
+                            {getInitials(selectedCustomer, "·")}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-foreground block truncate">{selectedCustomer.name}</span>
+                            <span className="text-xs font-bold text-foreground block truncate">{getDisplayName(selectedCustomer, t("Unnamed"))}</span>
                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{selectedCustomer.phone}</span>
                           </div>
                         </div>
@@ -664,9 +665,9 @@ export default function PosInvoicesPage() {
                                   onClick={() => { setSelectedCustomer(c); setCustomers([]); setSearchQ(""); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted rounded-lg text-start transition-all group/item"
                                 >
-                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{c.name[0]}</div>
+                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{getInitials(c, "·")}</div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-foreground truncate">{c.name}</p>
+                                    <p className="text-xs font-bold text-foreground truncate">{getDisplayName(c, t("Unnamed"))}</p>
                                     <p className="text-[9px] text-muted-foreground font-bold tracking-widest truncate">{c.phone}</p>
                                   </div>
                                 </button>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { Calendar, Clock, Check, Sparkles, ArrowRight, User, Phone, Scissors } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
+import { getInitials } from "../shared/displayName";
 import type { PublicService, PublicStaff, PublicCenterInfo } from "../domain/ports/repositories";
 
 // Booking window: next 14 days, 09:00–21:00 on the hour.
@@ -155,7 +156,7 @@ export default function BookingPage() {
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-xl">
         <div className="max-w-3xl mx-auto px-4 py-5 flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-white font-bold">
-            {center?.name?.[0]?.toUpperCase() || "L"}
+            {center?.name ? getInitials(center.name, "L") : "L"}
           </div>
           <div className="min-w-0">
             <h1 className="font-bold text-lg text-foreground truncate">{center?.name || t("Book an Appointment")}</h1>

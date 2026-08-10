@@ -10,6 +10,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -364,10 +365,10 @@ export default function ServicesPage() {
                       <td>
                         <div className="flex items-center gap-4">
                           <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">
-                            {s.name[0]}
+                            {getInitials(s.name, "·")}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors truncate">{s.name}</div>
+                            <div className="font-bold text-foreground text-lg group-hover:text-primary transition-colors truncate">{getDisplayName(s.name, t("Unnamed"))}</div>
                             {s.isActive === false && (
                               <span className="inline-flex items-center gap-1 mt-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                                 {t("Disabled")}

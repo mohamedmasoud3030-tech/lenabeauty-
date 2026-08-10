@@ -11,6 +11,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
@@ -327,10 +328,10 @@ export default function CustomersPage() {
                     <td>
                       <div className="flex items-center gap-5">
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all group-hover:scale-110 shadow-inner">
-                          {c.name[0]}
+                          {getInitials(c, "·")}
                         </div>
                         <div className="space-y-0.5">
-                          <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{c.name}</span>
+                          <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{getDisplayName(c, t("Unnamed"))}</span>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Client ID")}: {c.id.slice(-6).toUpperCase()}</span>
                         </div>
                       </div>

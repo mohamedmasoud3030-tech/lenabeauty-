@@ -8,6 +8,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
@@ -847,9 +848,9 @@ export default function AppointmentsPage() {
                               className="flex w-full items-center justify-between px-6 py-4 rounded-2xl text-start text-sm hover:bg-muted transition-all group/item"
                             >
                               <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xs group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">{c.name[0]}</div>
+                                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xs group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors">{getInitials(c, "·")}</div>
                                 <div className="text-start">
-                                  <span className="font-bold text-foreground block">{c.name}</span>
+                                  <span className="font-bold text-foreground block">{getDisplayName(c, t("Unnamed"))}</span>
                                   <span className="text-[10px] text-muted-foreground font-bold tracking-widest">{c.phone}</span>
                                 </div>
                               </div>
