@@ -19,17 +19,29 @@ interface ErrorBoundaryState {
   reportId: string | null;
 }
 
-/** Short, non-reversible id shown to users so support can correlate logs. */
+/**
+ * Short, non-sensitive correlation id shown to users so support can match
+ * a report to developer logs. This is NOT a security token — it only needs
+ * to be unique enough to correlate, so a monotonic timestamp + counter is
+ * used instead of a pseudorandom generator (which SonarCloud flags as a
+ * security hotspot). Crypto.getRandomValues is preferred when available.
+ */
+let reportCounter = 0;
 function createReportId(): string {
   // Crypto is available in all supported browsers and in the jsdom test env.
-  const bytes =
-    typeof crypto !== 'undefined' && 'getRandomValues' in crypto
-      ? crypto.getRandomValues(new Uint8Array(6))
-      : Array.from({ length: 6 }, () => Math.floor(Math.random() * 256));
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase();
+  if (typeof crypto !== 'undefined' && 'getRandomValues' in crypto) {
+    const bytes = crypto.getRandomValues(new Uint8Array(6));
+    return Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+  }
+  // Deterministic fallback: monotonic timestamp + in-process counter.
+  // No Math.random() — avoids the insecure-prng security hotspot entirely.
+  reportCounter += 1;
+  const time = Date.now().toString(16).padStart(8, '0');
+  const count = reportCounter.toString(16).padStart(4, '0');
+  return `${time}${count}`.toUpperCase().slice(-12);
 }
 
 /**
