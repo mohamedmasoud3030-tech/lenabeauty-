@@ -237,7 +237,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
               box-sizing: border-box !important;
               page-break-after: avoid !important;
             }
-            @page { size: ${paperWidth} auto; margin: 0; }
+            @page { size: auto; margin: 0; }
           }
         `}} />
       </div>

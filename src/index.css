@@ -217,7 +217,7 @@ body {
   }
 
   @page {
-    size: 80mm auto;
+    size: auto;
     margin: 0;
   }
 }
