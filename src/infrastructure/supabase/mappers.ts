@@ -147,6 +147,9 @@ export function mapAppointment(row: unknown): Appointment {
         employeeId: typeof row.employee_id === "string" ? row.employee_id : undefined,
         serviceId: typeof row.service_id === "string" ? row.service_id : undefined,
         dateTime: parseDate(row.date_time, "date_time", "mapAppointment"),
+        durationMinutesSnapshot: row.duration_minutes_snapshot !== undefined && row.duration_minutes_snapshot !== null
+          ? Number(row.duration_minutes_snapshot)
+          : undefined,
         status: status,
         notes: typeof row.notes === "string" ? row.notes : undefined,
         depositAmount: Number(row.deposit_amount) || 0,

@@ -55,11 +55,15 @@ function mapCustomer(c: any): Customer {
 }
 
 function mapAppt(a: any): Appt {
+  const service = mapService(a.service || {});
+  if (Number.isInteger(a.durationMinutesSnapshot) && a.durationMinutesSnapshot > 0) {
+    service.durationMins = a.durationMinutesSnapshot;
+  }
   return {
     ...a,
     customer: mapCustomer(a.customer || {}),
     employee: mapEmployee(a.employee || {}),
-    service: mapService(a.service || {}),
+    service,
   };
 }
 

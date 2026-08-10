@@ -70,6 +70,8 @@ export interface Appointment {
   employeeId?: string;
   serviceId?: string;
   dateTime: Date;
+  /** Service duration captured when booked; catalog edits do not rewrite it. */
+  durationMinutesSnapshot?: number;
   status: AppointmentStatus;
   notes?: string;
   depositAmount?: number;
