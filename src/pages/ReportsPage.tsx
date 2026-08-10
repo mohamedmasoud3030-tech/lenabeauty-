@@ -21,6 +21,7 @@ import { SalesReportRow, AppointmentReportRow, InventoryReportRow } from "../app
 import { LazyChart } from "../shared/components/LazyChart";
 import { ScreenState } from "../shared/components/ScreenState";
 import { formatLocalDateOnly } from "../shared/dateRange";
+import { formatOMRAmount } from "../shared/money";
 
 function initialReportDateRange() {
   const today = new Date();
@@ -173,7 +174,7 @@ export default function ReportsPage() {
           <KPICard
             variants={item}
             title={t("Total Revenue")}
-            value={totalSales.toFixed(2)}
+            value={formatOMRAmount(totalSales)}
             currency="OMR"
             icon={<Wallet className="h-5 w-5" />}
             trend={trend}
@@ -183,7 +184,7 @@ export default function ReportsPage() {
           <KPICard
             variants={item}
             title={t("Average Ticket")}
-            value={avgSale.toFixed(2)}
+            value={formatOMRAmount(avgSale)}
             currency="OMR"
             icon={<ShoppingBag className="h-5 w-5" />}
             trend="0"
@@ -192,7 +193,7 @@ export default function ReportsPage() {
           <KPICard
             variants={item}
             title={t("Peak Day")}
-            value={maxDay.toFixed(2)}
+            value={formatOMRAmount(maxDay)}
             currency="OMR"
             icon={<Flame className="h-5 w-5" />}
             trend={bestDay ? bestDay.date.split("-").slice(1).reverse().join("/") : "—"}
@@ -265,7 +266,7 @@ export default function ReportsPage() {
                     }}
                     labelStyle={{ fontWeight: 700, fontSize: "12px", color: "hsl(var(--muted-foreground))" }}
                     labelFormatter={(label) => formatDay(String(label))}
-                    formatter={(value) => [`${Number(value ?? 0).toFixed(2)} OMR`, t("Revenue")]}
+                    formatter={(value) => [`${formatOMRAmount(value)} OMR`, t("Revenue")]}
                   />
                   <Area
                     type="monotone"
@@ -315,7 +316,7 @@ export default function ReportsPage() {
                     <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{formatDay(sale.date.split("T")[0])}</td>
                     <td className="py-3 px-3 text-muted-foreground font-medium truncate max-w-[200px]">{sale.customer ?? "—"}</td>
                     <td className="py-3 px-3 text-muted-foreground">{sale.items.length}</td>
-                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{sale.totalAmount.toFixed(2)} OMR</td>
+                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{formatOMRAmount(sale.totalAmount)} OMR</td>
                     <td className="py-3 px-3 text-end">
                       <button className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">
                         {t("Details")}
@@ -343,7 +344,7 @@ export default function ReportsPage() {
                   </p>
                 </div>
                 <div className="text-end shrink-0">
-                  <p className="text-sm font-bold text-foreground">{sale.totalAmount.toFixed(2)} OMR</p>
+                  <p className="text-sm font-bold text-foreground">{formatOMRAmount(sale.totalAmount)} OMR</p>
                   <ChevronRight className={clsx("h-4 w-4 text-muted-foreground ms-auto mt-0.5", i18n.language === "ar" && "rotate-180")} />
                 </div>
               </button>
@@ -361,8 +362,8 @@ export default function ReportsPage() {
               <h4 className="font-bold text-foreground">{t("Performance Metrics")}</h4>
             </div>
             <div className="space-y-4">
-              <InsightRow label={t("Avg Daily Revenue")} value={`${(totalSales / Math.max(chartData.length, 1)).toFixed(2)} OMR`} />
-              <InsightRow label={t("Best Performing Day")} value={bestDay ? `${bestDay.amount.toFixed(2)} OMR · ${formatDay(bestDay.date)}` : "—"} />
+              <InsightRow label={t("Avg Daily Revenue")} value={`${formatOMRAmount(totalSales / Math.max(chartData.length, 1))} OMR`} />
+              <InsightRow label={t("Best Performing Day")} value={bestDay ? `${formatOMRAmount(bestDay.amount)} OMR · ${formatDay(bestDay.date)}` : "—"} />
               <InsightRow label={t("Total Items Sold")} value={totalItemsSold.toString()} />
               <InsightRow label={t("Top Selling Item")} value={topItem ? `${topItem[0]} (${topItem[1].qty})` : "—"} />
             </div>
@@ -722,10 +723,10 @@ export default function ReportsPage() {
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
                           <p className="text-[10px] font-bold text-muted-foreground mt-0.5">
-                            {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")} · {item.qty} × {item.price.toFixed(2)}
+                            {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")} · {item.qty} × {formatOMRAmount(item.price)}
                           </p>
                         </div>
-                        <p className="text-sm font-bold text-foreground shrink-0">{(item.price * item.qty).toFixed(2)}</p>
+                        <p className="text-sm font-bold text-foreground shrink-0">{formatOMRAmount(item.price * item.qty)}</p>
                       </div>
                     ))
                   )}
@@ -734,17 +735,17 @@ export default function ReportsPage() {
                 <div className="space-y-1.5 border-t border-border pt-3 text-sm">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground font-medium">{t("Subtotal")}</span>
-                    <span className="font-bold text-foreground">{(selectedSale.totalAmount + selectedSale.discount).toFixed(2)}</span>
+                    <span className="font-bold text-foreground">{formatOMRAmount(selectedSale.totalAmount + selectedSale.discount)}</span>
                   </div>
                   {selectedSale.discount > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground font-medium">{t("Discount")}</span>
-                      <span className="font-bold text-rose-500">-{selectedSale.discount.toFixed(2)}</span>
+                      <span className="font-bold text-rose-500">-{formatOMRAmount(selectedSale.discount)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-1">
                     <span className="font-bold text-foreground">{t("Total")}</span>
-                    <span className="text-lg font-bold text-primary">{selectedSale.totalAmount.toFixed(2)} OMR</span>
+                    <span className="text-lg font-bold text-primary">{formatOMRAmount(selectedSale.totalAmount)} OMR</span>
                   </div>
                 </div>
               </div>

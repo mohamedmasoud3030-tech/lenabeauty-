@@ -20,6 +20,7 @@ import {
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
+import { formatOMRAmount } from "../shared/money";
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -371,7 +372,7 @@ export default function ServicesPage() {
                       <td>
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground text-xl">{s.price.toFixed(2)}</span>
+                            <span className="font-bold text-foreground text-xl">{formatOMRAmount(s.price)}</span>
                             <TrendingUp className="h-4 w-4 text-emerald-500" />
                           </div>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
@@ -452,7 +453,7 @@ export default function ServicesPage() {
                   <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-foreground text-xl">{s.price.toFixed(2)}</span>
+                        <span className="font-bold text-foreground text-xl">{formatOMRAmount(s.price)}</span>
                         <TrendingUp className="h-4 w-4 text-emerald-500" />
                       </div>
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">

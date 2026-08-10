@@ -20,6 +20,7 @@ import {
 } from "../domain/validation";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
+import { formatOMRAmount } from "../shared/money";
 
 type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number; isActive: boolean; trackInventory: boolean };
 
@@ -255,7 +256,7 @@ export default function InventoryPage() {
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Inventory Value")}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-foreground">{stats.totalValue.toFixed(2)}</span>
+            <span className="text-4xl font-bold text-foreground">{formatOMRAmount(stats.totalValue)}</span>
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
           </div>
         </motion.div>
@@ -484,13 +485,13 @@ export default function InventoryPage() {
                           </div>
                         </td>
                         <td className="text-muted-foreground font-bold text-base">
-                          <span className="font-bold text-foreground">{p.cost.toFixed(2)}</span>
+                          <span className="font-bold text-foreground">{formatOMRAmount(p.cost)}</span>
                           <span className="ms-1.5 text-[10px] uppercase tracking-[0.2em] opacity-40">{t("OMR")}</span>
                         </td>
                         <td>
                           <div className="flex flex-col items-start">
                             <div className="flex items-baseline gap-1.5">
-                              <span className="font-bold text-primary text-xl">{p.price.toFixed(2)}</span>
+                              <span className="font-bold text-primary text-xl">{formatOMRAmount(p.price)}</span>
                               <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">{t("OMR")}</span>
                             </div>
                             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">
@@ -568,14 +569,14 @@ export default function InventoryPage() {
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Cost")}</span>
                         <div className="flex items-center gap-1">
-                          <span className="font-bold text-foreground text-base">{p.cost.toFixed(2)}</span>
+                          <span className="font-bold text-foreground text-base">{formatOMRAmount(p.cost)}</span>
                           <span className="text-[8px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
                         </div>
                       </div>
                       <div className="flex flex-col text-end">
                         <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{t("Price")}</span>
                         <div className="flex items-center gap-1">
-                          <span className="font-bold text-primary text-xl">{p.price.toFixed(2)}</span>
+                          <span className="font-bold text-primary text-xl">{formatOMRAmount(p.price)}</span>
                           <span className="text-[8px] font-bold text-primary uppercase">{t("OMR")}</span>
                         </div>
                         <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-50">

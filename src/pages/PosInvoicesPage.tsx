@@ -20,6 +20,7 @@ import { InvoicePrintData } from "../application/dto";
 import { calculateCheckoutTotals } from "../domain/commerce";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
+import { formatOMRAmount } from "../shared/money";
 
 interface CartItem {
   id: string;
@@ -183,7 +184,7 @@ export default function PosInvoicesPage() {
     if (type === "service" && item.pricingMode === "STARTING_FROM") {
       const entered = window.prompt(
         t("Enter the final selling price for this service"),
-        item.price.toFixed(3),
+        formatOMRAmount(item.price),
       );
       if (entered === null) return;
       finalPrice = Number(entered);
@@ -295,7 +296,7 @@ export default function PosInvoicesPage() {
         setPrintData(pData);
         setShowPrintModal(true);
         if (isDesktopShell()) {
-          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${pData.invoice.totalAmount}</p></div>`;
+          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${formatOMRAmount(pData.invoice.totalAmount)}</p></div>`;
           await desktopRepository.printHtml(`Invoice ${pData.invoice.id}`, invoiceHtml);
         }
       } catch (e) {
@@ -473,7 +474,7 @@ export default function PosInvoicesPage() {
                         </div>
 
                         <div className="w-full pt-2 border-t border-border/50 flex items-baseline justify-between">
-                          <span className="text-base lg:text-lg font-bold text-foreground">{it.price}</span>
+                          <span className="text-base lg:text-lg font-bold text-foreground">{formatOMRAmount(it.price)}</span>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase">
                             {activeTab === "SERVICES" && (it as Service).pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
                           </span>
@@ -558,7 +559,7 @@ export default function PosInvoicesPage() {
                         </p>
                       </div>
                       <div className="text-end space-y-1">
-                        <p className="text-xs font-bold text-foreground">{item.price} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
+                        <p className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
                         <button 
                           onClick={() => removeFromCart(item.cartId)} 
                           className="h-6 w-6 flex items-center justify-center rounded-md text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
@@ -754,7 +755,7 @@ export default function PosInvoicesPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{loyaltyDiscount} {t("OMR Discount")}</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatOMRAmount(loyaltyDiscount)} {t("OMR Discount")}</p>
                       </div>
                     </div>
                     <button 
@@ -785,7 +786,7 @@ export default function PosInvoicesPage() {
                   />
                   {selectedGiftCard && (
                     <p className="text-[9px] font-bold text-sky-600 uppercase tracking-widest">
-                      {t("Available Balance")}: {selectedGiftCard.currentBalance.toFixed(2)} {t("OMR")} · {t("Redeem for")} {giftCardDiscount.toFixed(2)} {t("OMR")}
+                      {t("Available Balance")}: {formatOMRAmount(selectedGiftCard.currentBalance)} {t("OMR")} · {t("Redeem for")} {formatOMRAmount(giftCardDiscount)} {t("OMR")}
                     </p>
                   )}
                 </div>
@@ -796,36 +797,36 @@ export default function PosInvoicesPage() {
                 <div className="space-y-2 bg-muted/50 rounded-lg p-3">
                   <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                     <span>{t("Subtotal")}</span>
-                    <span>{subtotal.toFixed(2)} OMR</span>
+                    <span>{formatOMRAmount(subtotal)} OMR</span>
                   </div>
                   {tierDiscount > 0 && tierInfo && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
                       <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
-                      <span>-{tierDiscount.toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(tierDiscount)} OMR</span>
                     </div>
                   )}
                   {(discount > 0 || loyaltyDiscount > 0) && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
                       <span>{t("Discounts")}</span>
-                      <span>-{(discount + loyaltyDiscount).toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(discount + loyaltyDiscount)} OMR</span>
                     </div>
                   )}
                   {giftCardDiscount > 0 && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-sky-600 uppercase tracking-widest">
                       <span>{t("Gift Card Redemption")}</span>
-                      <span>-{giftCardDiscount.toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(giftCardDiscount)} OMR</span>
                     </div>
                   )}
                   {taxRate > 0 && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                       <span>{t("VAT")} ({taxRate}%)</span>
-                      <span>{tax.toFixed(2)} OMR</span>
+                      <span>{formatOMRAmount(tax)} OMR</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <span className="text-xs font-bold text-foreground uppercase tracking-[0.1em]">{t("Total")}</span>
                     <div className="text-end">
-                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{total.toFixed(2)}</span>
+                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{formatOMRAmount(total)}</span>
                       <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
                     </div>
                   </div>

@@ -23,6 +23,7 @@ import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components
 import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 import { ScreenState } from "../shared/components/ScreenState";
+import { formatOMRAmount } from "../shared/money";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -172,7 +173,7 @@ export default function DashboardPage() {
                 ? res.data.map((e) => ({
                     id: `exp-${e.id}`,
                     type: "EXPENSE_CREATED",
-                    message: `${t("New expense recorded")}: ${e.amount} ${s.currency || ""}`.trim(),
+                    message: `${t("New expense recorded")}: ${formatOMRAmount(e.amount)} ${s.currency || ""}`.trim(),
                     createdAt: new Date(e.createdAt).toISOString(),
                   }))
                 : []
@@ -266,7 +267,7 @@ export default function DashboardPage() {
         <StatCard 
           variants={item}
           title={t("Today's Revenue")} 
-          value={loading ? "…" : summary?.canViewRevenue ? `${summary?.todayRevenue || 0}` : "—"}
+          value={loading ? "…" : summary?.canViewRevenue ? formatOMRAmount(summary?.todayRevenue) : "—"}
           subValue={summary?.canViewRevenue ? t("Total Invoices Today") : t("No data")}
           icon={<DollarSign className="h-5 w-5" />}
           trend={summary?.canViewRevenue ? "+0%" : "—"}
@@ -412,7 +413,7 @@ export default function DashboardPage() {
                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Daily revenue trend")}</p>
               </div>
               <div className="text-end">
-                <p className="text-sm font-bold text-foreground">{totalRevenue7Days.toFixed(2)} {summary?.currency}</p>
+                <p className="text-sm font-bold text-foreground">{formatOMRAmount(totalRevenue7Days)} {summary?.currency}</p>
                 <p className="text-[9px] text-muted-foreground font-bold uppercase">{t("Total")}</p>
               </div>
             </div>
@@ -472,7 +473,7 @@ export default function DashboardPage() {
                       }}
                       labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
                       labelFormatter={(label) => formatChartDay(String(label))}
-                      formatter={(value) => [`${Number(value ?? 0).toFixed(2)} ${summary?.currency}`, t("Revenue")]}
+                      formatter={(value) => [`${formatOMRAmount(value)} ${summary?.currency}`, t("Revenue")]}
                     />
                     <Area
                       type="monotone"
@@ -523,7 +524,7 @@ export default function DashboardPage() {
                   <div className="relative z-10">
                     <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-80">{t("Net Profit")}</p>
                     <div className="flex items-baseline gap-2 mt-2">
-                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tighter">{pnl.profit}</h3>
+                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tighter">{formatOMRAmount(pnl.profit)}</h3>
                       <span className="text-xs font-bold opacity-70 uppercase">{summary?.currency}</span>
                     </div>
                   </div>
@@ -767,7 +768,7 @@ function FinancialRow({ label, value, currency, icon, color }: {
         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{label}</span>
       </div>
       <div className="text-end">
-        <span className="text-sm font-bold text-foreground">{value}</span>
+        <span className="text-sm font-bold text-foreground">{formatOMRAmount(value)}</span>
         <span className="ms-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{currency}</span>
       </div>
     </div>

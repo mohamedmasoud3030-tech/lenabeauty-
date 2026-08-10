@@ -4,6 +4,7 @@ import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import brandingService from "../../infrastructure/services/brandingService";
+import { formatOMRAmount } from "../money";
 
 interface Props {
   data: InvoicePrintData;
@@ -146,12 +147,12 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
                 <td className="py-1 leading-tight">
                   <p className="font-bold break-words">{item.name}</p>
                   <p className="text-[8px] opacity-60">
-                    {item.price.toFixed(3)} {settings?.currency || "OMR"} × {item.qty}
+                    {formatOMRAmount(item.price)} {settings?.currency || "OMR"} × {item.qty}
                   </p>
                 </td>
                 <td className="py-1 text-center font-bold">{item.qty}</td>
                 <td className={clsx("py-1 font-bold", isRtl ? "text-left" : "text-right")}>
-                  {(item.price * item.qty).toFixed(3)}
+                  {formatOMRAmount(item.price * item.qty)}
                 </td>
               </tr>
             ))}
@@ -162,44 +163,44 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         <div className="border-t-2 border-b border-black py-1.5 mb-2 space-y-0.5 text-[10px]">
           <div className="flex justify-between">
             <span>{t("Subtotal")}:</span>
-            <span className="font-bold">{subtotal.toFixed(3)}</span>
+            <span className="font-bold">{formatOMRAmount(subtotal)}</span>
           </div>
 
           {manualDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Discount")}:</span>
-              <span>-{manualDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(manualDiscount)}</span>
             </div>
           )}
           {tierDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Tier Discount")}:</span>
-              <span>-{tierDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(tierDiscount)}</span>
             </div>
           )}
           {loyaltyDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Loyalty Points")}:</span>
-              <span>-{loyaltyDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(loyaltyDiscount)}</span>
             </div>
           )}
           {giftCardDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Gift Card Redemption")}:</span>
-              <span>-{giftCardDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(giftCardDiscount)}</span>
             </div>
           )}
 
           {tax > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Tax")}{invoice.taxRate !== undefined ? ` (${invoice.taxRate}%)` : ""}:</span>
-              <span>+{tax.toFixed(3)}</span>
+              <span>+{formatOMRAmount(tax)}</span>
             </div>
           )}
 
           <div className="flex justify-between font-bold text-sm border-t border-black pt-1">
             <span>{t("Grand Total")}:</span>
-            <span>{total.toFixed(3)} {settings?.currency || "OMR"}</span>
+            <span>{formatOMRAmount(total)} {settings?.currency || "OMR"}</span>
           </div>
         </div>
 
