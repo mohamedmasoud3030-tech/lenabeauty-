@@ -15,7 +15,7 @@
 
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
 
 ALTER TABLE public.appointments
   ADD COLUMN IF NOT EXISTS duration_minutes_snapshot INTEGER;
