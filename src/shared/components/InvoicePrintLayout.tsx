@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
@@ -15,8 +15,6 @@ interface Props {
 export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize = "80mm" }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const printRef = useRef<HTMLDivElement>(null);
-
   const { invoice, items, customer, settings } = data;
 
   // The persisted checkout breakdown is authoritative. The item sum is only a
@@ -30,31 +28,31 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
   const tax = invoice.tax || 0;
   const total = invoice.totalAmount;
 
-  // Generate QR code data (invoice details)
-  const qrData = JSON.stringify({
-    id: invoice.id,
-    date: invoice.date,
-    amount: total,
-    salon: settings?.name,
-  });
+  const salonName = (isRtl ? settings?.displayNameAr : settings?.displayName)
+    || settings?.name
+    || brandingService.getSalonName(isRtl);
+  const salonAddress = settings?.address || brandingService.getAddress(isRtl);
+  const salonPhone = settings?.phone || brandingService.getSetting("phone");
+  const taxNumber = settings?.brandTaxNumber || brandingService.getSetting("taxNumber");
+  const receiptLogo = settings?.brandLogoBase64 || settings?.logoPath;
+  const footerText = (isRtl ? settings?.brandFooterTextAr : settings?.brandFooterText)
+    || brandingService.getFooterText(isRtl);
+  const paymentKey = ({ cash: "Cash", card: "Card", transfer: "Transfer" } as const)[
+    invoice.paymentMethod.toLowerCase() as "cash" | "card" | "transfer"
+  ] || invoice.paymentMethod;
 
+  const qrData = JSON.stringify({ id: invoice.id, date: invoice.date, amount: total, salon: salonName });
   const paperWidth = paperSize === "80mm" ? "80mm" : "58mm";
   const paperPadding = paperSize === "80mm" ? "4mm" : "2mm";
 
-  const handlePrint = () => {
-    const printWindow = window.open("", "", "height=600,width=800");
-    if (printWindow && printRef.current) {
-      printWindow.document.write(printRef.current.innerHTML);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
+  // Printing the current document is more reliable on mobile than a popup.
+  // Global print CSS isolates this receipt from navigation and modal chrome.
+  const handlePrint = () => window.print();
 
   return (
     <div className="space-y-4">
       {/* Preview Container */}
-      <div 
-        ref={printRef}
+      <div
         id="invoice-print-container"
         className={clsx(
           "bg-white text-black font-mono print:m-0",
@@ -72,27 +70,19 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
       >
         {/* Header with Logo */}
         <div className="text-center mb-3 border-b border-black pb-2">
-          {settings?.logoPath && (
-            <img 
-              src={settings.logoPath} 
-              alt="Logo" 
+          {receiptLogo && (
+            <img
+              src={receiptLogo}
+              alt="Logo"
               className="h-12 mx-auto mb-1 object-contain"
               style={{ maxWidth: "100%" }}
             />
           )}
           <div className="text-center">
-            <h1 className="font-bold text-sm uppercase tracking-tight">
-              {brandingService.getSalonName(isRtl)}
-            </h1>
-            <p className="text-[9px] opacity-80 mt-0.5">
-              {brandingService.getAddress(isRtl)}
-            </p>
-            <p className="text-[9px] opacity-80">
-              {t("Tel")}: {brandingService.getSetting('phone')}
-            </p>
-            <p className="text-[9px] opacity-80">
-              {t("Tax ID")}: {brandingService.getSetting('taxNumber')}
-            </p>
+            <h1 className="font-bold text-sm uppercase tracking-tight">{salonName}</h1>
+            {salonAddress && <p className="text-[9px] opacity-80 mt-0.5">{salonAddress}</p>}
+            {salonPhone && <p className="text-[9px] opacity-80">{t("Tel")}: {salonPhone}</p>}
+            {taxNumber && <p className="text-[9px] opacity-80">{t("Tax ID")}: {taxNumber}</p>}
           </div>
         </div>
 
@@ -113,7 +103,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
                 minute: "2-digit",
               })}
             </span>
-            <span>{t("Staff")}: {invoice.staffName || "—"}</span>
+            {invoice.staffName && <span>{t("Staff")}: {invoice.staffName}</span>}
           </div>
         </div>
 
@@ -208,7 +198,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         {invoice.paymentMethod && (
           <div className="text-center text-[9px] mb-2 pb-2 border-b border-gray-300">
             <p className="opacity-70">
-              {t("Payment")}: {invoice.paymentMethod}
+              {t("Payment")}: {t(paymentKey)}
             </p>
           </div>
         )}
@@ -230,62 +220,40 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           <p className="uppercase tracking-wider font-bold">
             {t("Thank you for your visit")}
           </p>
-          <p className="opacity-60">
-            {brandingService.getSalonName(isRtl)}
-          </p>
+          <p className="opacity-60">{salonName}</p>
           <p className="text-[7px] opacity-50 mt-1">
             {t("Invoice ID")}: {invoice.id.slice(0, 12)}
           </p>
-          <p className="text-[7px] opacity-50">
-            {brandingService.getFooterText(isRtl)}
-          </p>
+          <p className="text-[7px] opacity-50">{footerText}</p>
         </div>
 
         {/* Print Styles */}
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            * {
-              margin: 0 !important;
-              padding: 0 !important;
-              box-sizing: border-box !important;
-            }
-            body {
-              width: ${paperWidth} !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
             #invoice-print-container {
               width: ${paperWidth} !important;
               margin: 0 !important;
               padding: ${paperPadding} !important;
+              box-sizing: border-box !important;
               page-break-after: avoid !important;
             }
-            @page {
-              size: ${paperWidth} auto;
-              margin: 0;
-              padding: 0;
-            }
-          }
-          @media print and (max-width: 100mm) {
-            body {
-              font-size: 10px !important;
-            }
+            @page { size: ${paperWidth} auto; margin: 0; }
           }
         `}} />
       </div>
 
       {/* Screen-only Controls */}
       <div className="print:hidden flex gap-3 justify-center mt-6">
-        <button 
+        <button
           onClick={handlePrint}
-          className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+          className="min-h-11 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-sm transition-colors"
         >
           🖨️ {t("Print Invoice")}
         </button>
         {onClose && (
-          <button 
+          <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-lg border-2 border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-all"
+            className="min-h-11 px-6 py-2.5 rounded-lg border border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-colors"
           >
             ✕ {t("Close")}
           </button>

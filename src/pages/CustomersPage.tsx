@@ -19,6 +19,8 @@ import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 import { formatOMRAmount } from "../shared/money";
+import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
+import { InvoicePrintData } from "../application/dto";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -213,16 +215,12 @@ export default function CustomersPage() {
     }
   }
 
-  const [printData, setPrintData] = useState<any | null>(null);
+  const [printData, setPrintData] = useState<InvoicePrintData | null>(null);
 
   async function handleReprint(invoiceId: string) {
     try {
       const pData = await unwrap(useCases.invoices.getForPrint(invoiceId));
       setPrintData(pData);
-      setTimeout(() => {
-        window.print();
-        setPrintData(null);
-      }, 500);
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
@@ -234,54 +232,10 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
-      {/* Print Area Hidden */}
       {printData && (
-        <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-          <div className="text-center mb-6 space-y-1">
-            <h1 className="font-bold text-xl">{printData.settings?.name || "Lena Beauty"}</h1>
-            <div className="text-xs opacity-70">{printData.settings?.address}</div>
-            <div className="text-xs opacity-70">{printData.settings?.phone}</div>
-          </div>
-          <div className="border-t border-b border-dashed border-black py-3 mb-4 text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "رقم الفاتورة:" : "Invoice No:"}</span> 
-              <span className="font-bold">{printData.invoice.id.slice(-6).toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "التاريخ:" : "Date:"}</span> 
-              <span>{new Date(printData.invoice.date).toLocaleString(i18n.language || "ar")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "العميل:" : "Customer:"}</span> 
-              <span className="font-bold">{printData.customer?.name}</span>
-            </div>
-          </div>
-          <table className="w-full text-xs mb-4">
-            <thead>
-              <tr className="border-b border-black">
-                <th className="py-2 text-start">
-                  {i18n.language === "ar" ? "الصنف" : "Item"}
-                </th>
-                <th className="py-2 text-end">
-                  {i18n.language === "ar" ? "السعر" : "Price"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dashed divide-black/20">
-              {printData.items.map((it: any) => (
-                <tr key={it.id}>
-                  <td className="py-2">{it.name}</td>
-                  <td className="py-2 font-bold text-end">{it.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="border-t border-black pt-3 text-base font-bold flex justify-between">
-            <span>{i18n.language === "ar" ? "الإجمالي:" : "Total Amount:"}</span>
-            <span>{printData.invoice.totalAmount} {printData.settings?.currency}</span>
-          </div>
-          <div className="text-center mt-10 text-xs opacity-50 italic">
-            {i18n.language === "ar" ? "شكراً لزيارتكم!" : "Thank you for your visit!"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm print:static print:bg-transparent print:p-0">
+          <div className="max-h-[95vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-2 shadow-2xl print:max-h-none print:overflow-visible print:rounded-none print:p-0 print:shadow-none">
+            <InvoicePrintLayout data={printData} onClose={() => setPrintData(null)} />
           </div>
         </div>
       )}
