@@ -20,16 +20,23 @@ import { useNavigate } from "react-router-dom";
 import { SalesReportRow, AppointmentReportRow, InventoryReportRow } from "../application/dto";
 import { LazyChart } from "../shared/components/LazyChart";
 import { ScreenState } from "../shared/components/ScreenState";
+import { formatLocalDateOnly } from "../shared/dateRange";
+
+function initialReportDateRange() {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+  return {
+    from: formatLocalDateOnly(from),
+    to: formatLocalDateOnly(today),
+  };
+}
 
 export default function ReportsPage() {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const nav = useNavigate();
   const [tab, setTab] = useState<"sales" | "appointments" | "inventory">("sales");
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
-    to: new Date().toISOString().split("T")[0],
-  });
+  const [dateRange, setDateRange] = useState(initialReportDateRange);
   const [data, setData] = useState<(SalesReportRow | AppointmentReportRow | InventoryReportRow)[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
