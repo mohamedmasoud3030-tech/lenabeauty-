@@ -1,21 +1,24 @@
-import React, { useRef } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import brandingService from "../../infrastructure/services/brandingService";
+import { formatOMRAmount } from "../money";
+import { formatSalonDate, formatSalonTime } from "../dateTime";
+import { getDisplayName } from "../displayName";
 
 interface Props {
   data: InvoicePrintData;
   onClose?: () => void;
   paperSize?: "80mm" | "58mm";
+  /** When rendered inside a shared Modal, the overlay provides Print/Close. */
+  hideControls?: boolean;
 }
 
-export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize = "80mm" }) => {
+export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize = "80mm", hideControls = false }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const printRef = useRef<HTMLDivElement>(null);
-
   const { invoice, items, customer, settings } = data;
 
   // The persisted checkout breakdown is authoritative. The item sum is only a
@@ -29,31 +32,31 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
   const tax = invoice.tax || 0;
   const total = invoice.totalAmount;
 
-  // Generate QR code data (invoice details)
-  const qrData = JSON.stringify({
-    id: invoice.id,
-    date: invoice.date,
-    amount: total,
-    salon: settings?.name,
-  });
+  const salonName = (isRtl ? settings?.displayNameAr : settings?.displayName)
+    || settings?.name
+    || brandingService.getSalonName(isRtl);
+  const salonAddress = settings?.address || brandingService.getAddress(isRtl);
+  const salonPhone = settings?.phone || brandingService.getSetting("phone");
+  const taxNumber = settings?.brandTaxNumber || brandingService.getSetting("taxNumber");
+  const receiptLogo = settings?.brandLogoBase64 || settings?.logoPath;
+  const footerText = (isRtl ? settings?.brandFooterTextAr : settings?.brandFooterText)
+    || brandingService.getFooterText(isRtl);
+  const paymentKey = ({ cash: "Cash", card: "Card", transfer: "Transfer" } as const)[
+    invoice.paymentMethod.toLowerCase() as "cash" | "card" | "transfer"
+  ] || invoice.paymentMethod;
 
+  const qrData = JSON.stringify({ id: invoice.id, date: invoice.date, amount: total, salon: salonName });
   const paperWidth = paperSize === "80mm" ? "80mm" : "58mm";
   const paperPadding = paperSize === "80mm" ? "4mm" : "2mm";
 
-  const handlePrint = () => {
-    const printWindow = window.open("", "", "height=600,width=800");
-    if (printWindow && printRef.current) {
-      printWindow.document.write(printRef.current.innerHTML);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
+  // Printing the current document is more reliable on mobile than a popup.
+  // Global print CSS isolates this receipt from navigation and modal chrome.
+  const handlePrint = () => window.print();
 
   return (
     <div className="space-y-4">
       {/* Preview Container */}
-      <div 
-        ref={printRef}
+      <div
         id="invoice-print-container"
         className={clsx(
           "bg-white text-black font-mono print:m-0",
@@ -71,48 +74,41 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
       >
         {/* Header with Logo */}
         <div className="text-center mb-3 border-b border-black pb-2">
-          {settings?.logoPath && (
-            <img 
-              src={settings.logoPath} 
-              alt="Logo" 
+          {receiptLogo && (
+            <img
+              src={receiptLogo}
+              alt="Logo"
               className="h-12 mx-auto mb-1 object-contain"
               style={{ maxWidth: "100%" }}
             />
           )}
           <div className="text-center">
-            <h1 className="font-bold text-sm uppercase tracking-tight">
-              {brandingService.getSalonName(isRtl)}
-            </h1>
-            <p className="text-[9px] opacity-80 mt-0.5">
-              {brandingService.getAddress(isRtl)}
-            </p>
-            <p className="text-[9px] opacity-80">
-              {t("Tel")}: {brandingService.getSetting('phone')}
-            </p>
-            <p className="text-[9px] opacity-80">
-              {t("Tax ID")}: {brandingService.getSetting('taxNumber')}
-            </p>
+            <h1 className="font-bold text-sm uppercase tracking-tight">{salonName}</h1>
+            {salonAddress && <p className="text-[9px] opacity-80 mt-0.5">{salonAddress}</p>}
+            {salonPhone && (
+              <p className="text-[9px] opacity-80" dir="ltr" style={{ textAlign: "center" }}>
+                {t("Tel")}: {salonPhone}
+              </p>
+            )}
+            {taxNumber && (
+              <p className="text-[9px] opacity-80" dir="ltr" style={{ textAlign: "center" }}>
+                {t("Tax ID")}: {taxNumber}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Invoice Header */}
         <div className="mb-2 text-[10px]">
           <div className="flex justify-between mb-1">
-            <span className="font-bold">
+            <span className="font-bold" dir="ltr">
               {t("Invoice")}: {invoice.serialNumber || invoice.id.slice(0, 8).toUpperCase()}
             </span>
-            <span>
-              {new Date(invoice.date).toLocaleDateString(i18n.language === "ar" ? "ar-SA" : "en-US")}
-            </span>
+            <span>{formatSalonDate(invoice.date, i18n.language)}</span>
           </div>
           <div className="flex justify-between text-[9px] opacity-70">
-            <span>
-              {new Date(invoice.date).toLocaleTimeString(i18n.language === "ar" ? "ar-SA" : "en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-            <span>{t("Staff")}: {invoice.staffName || "—"}</span>
+            <span>{formatSalonTime(invoice.date, i18n.language)}</span>
+            {invoice.staffName && <span>{t("Staff")}: {getDisplayName(invoice.staffName, t("Unnamed"))}</span>}
           </div>
         </div>
 
@@ -120,8 +116,12 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         {customer && (
           <div className="mb-2 pb-2 border-b border-gray-300 text-[10px]">
             <p className="font-bold uppercase text-[8px] opacity-50 mb-0.5">{t("Customer")}</p>
-            <p className="font-bold">{customer.name}</p>
-            {customer.phone && <p className="text-[9px] opacity-70">{customer.phone}</p>}
+            <p className="font-bold">{getDisplayName(customer.name, t("Unnamed"))}</p>
+            {customer.phone && (
+              <p className="text-[9px] opacity-70" dir="ltr" style={{ textAlign: isRtl ? "right" : "left" }}>
+                {customer.phone}
+              </p>
+            )}
           </div>
         )}
 
@@ -146,12 +146,12 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
                 <td className="py-1 leading-tight">
                   <p className="font-bold break-words">{item.name}</p>
                   <p className="text-[8px] opacity-60">
-                    {item.price.toFixed(3)} {settings?.currency || "OMR"} × {item.qty}
+                    {formatOMRAmount(item.price)} {settings?.currency || "OMR"} × {item.qty}
                   </p>
                 </td>
                 <td className="py-1 text-center font-bold">{item.qty}</td>
                 <td className={clsx("py-1 font-bold", isRtl ? "text-left" : "text-right")}>
-                  {(item.price * item.qty).toFixed(3)}
+                  {formatOMRAmount(item.price * item.qty)}
                 </td>
               </tr>
             ))}
@@ -162,44 +162,44 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         <div className="border-t-2 border-b border-black py-1.5 mb-2 space-y-0.5 text-[10px]">
           <div className="flex justify-between">
             <span>{t("Subtotal")}:</span>
-            <span className="font-bold">{subtotal.toFixed(3)}</span>
+            <span className="font-bold">{formatOMRAmount(subtotal)}</span>
           </div>
 
           {manualDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Discount")}:</span>
-              <span>-{manualDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(manualDiscount)}</span>
             </div>
           )}
           {tierDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Tier Discount")}:</span>
-              <span>-{tierDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(tierDiscount)}</span>
             </div>
           )}
           {loyaltyDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Loyalty Points")}:</span>
-              <span>-{loyaltyDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(loyaltyDiscount)}</span>
             </div>
           )}
           {giftCardDiscount > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Gift Card Redemption")}:</span>
-              <span>-{giftCardDiscount.toFixed(3)}</span>
+              <span>-{formatOMRAmount(giftCardDiscount)}</span>
             </div>
           )}
 
           {tax > 0 && (
             <div className="flex justify-between text-[9px] opacity-80">
               <span>{t("Tax")}{invoice.taxRate !== undefined ? ` (${invoice.taxRate}%)` : ""}:</span>
-              <span>+{tax.toFixed(3)}</span>
+              <span>+{formatOMRAmount(tax)}</span>
             </div>
           )}
 
           <div className="flex justify-between font-bold text-sm border-t border-black pt-1">
             <span>{t("Grand Total")}:</span>
-            <span>{total.toFixed(3)} {settings?.currency || "OMR"}</span>
+            <span>{formatOMRAmount(total)} {settings?.currency || "OMR"}</span>
           </div>
         </div>
 
@@ -207,7 +207,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         {invoice.paymentMethod && (
           <div className="text-center text-[9px] mb-2 pb-2 border-b border-gray-300">
             <p className="opacity-70">
-              {t("Payment")}: {invoice.paymentMethod}
+              {t("Payment")}: {t(paymentKey)}
             </p>
           </div>
         )}
@@ -229,75 +229,57 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           <p className="uppercase tracking-wider font-bold">
             {t("Thank you for your visit")}
           </p>
-          <p className="opacity-60">
-            {brandingService.getSalonName(isRtl)}
-          </p>
+          <p className="opacity-60">{salonName}</p>
           <p className="text-[7px] opacity-50 mt-1">
             {t("Invoice ID")}: {invoice.id.slice(0, 12)}
           </p>
-          <p className="text-[7px] opacity-50">
-            {brandingService.getFooterText(isRtl)}
-          </p>
+          <p className="text-[7px] opacity-50">{footerText}</p>
         </div>
 
         {/* Print Styles */}
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            * {
-              margin: 0 !important;
-              padding: 0 !important;
-              box-sizing: border-box !important;
-            }
-            body {
-              width: ${paperWidth} !important;
-              margin: 0 !important;
-              padding: 0 !important;
-            }
             #invoice-print-container {
               width: ${paperWidth} !important;
               margin: 0 !important;
               padding: ${paperPadding} !important;
+              box-sizing: border-box !important;
               page-break-after: avoid !important;
             }
-            @page {
-              size: ${paperWidth} auto;
-              margin: 0;
-              padding: 0;
-            }
-          }
-          @media print and (max-width: 100mm) {
-            body {
-              font-size: 10px !important;
-            }
+            @page { size: auto; margin: 0; }
           }
         `}} />
       </div>
 
-      {/* Screen-only Controls */}
-      <div className="print:hidden flex gap-3 justify-center mt-6">
-        <button 
-          onClick={handlePrint}
-          className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
-        >
-          🖨️ {t("Print Invoice")}
-        </button>
-        {onClose && (
-          <button 
-            onClick={onClose}
-            className="px-6 py-2.5 rounded-lg border-2 border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-all"
-          >
-            ✕ {t("Close")}
-          </button>
-        )}
-      </div>
+      {/* Screen-only Controls — hidden when the shared Modal provides them */}
+      {!hideControls && (
+        <>
+          <div className="print:hidden flex gap-3 justify-center mt-6">
+            <button
+              onClick={handlePrint}
+              className="min-h-11 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-sm transition-colors"
+            >
+              {t("Print Invoice")}
+            </button>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="min-h-11 px-6 py-2.5 rounded-lg border border-border text-foreground font-bold text-sm uppercase tracking-widest hover:bg-muted transition-colors"
+              >
+                {t("Close")}
+              </button>
+            )}
+          </div>
 
-      {/* Print Preview Info */}
-      <div className="print:hidden bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-900 text-center">
-        <p className="font-bold mb-1">💡 {t("Print Tips")}</p>
-        <p>
-          {t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}
-        </p>
-      </div>
+          {/* Print Preview Info */}
+          <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
+            <p className="font-bold mb-1">{t("Print Tips")}</p>
+            <p>
+              {t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}
+            </p>
+          </div>
+        </>
+      )}
     </div>
   );
 };

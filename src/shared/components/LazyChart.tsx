@@ -124,7 +124,7 @@ export const MobileAwareChart: React.FC<MobileAwareChartProps> = ({
           className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-600"
         >
           <span>{title ?? t("Show chart")}</span>
-          <span className="text-xs text-blue-500">{t("Tap to view")} ▼</span>
+          <span className="text-xs text-info">{t("Tap to view")} ▼</span>
         </button>
       </div>
     );

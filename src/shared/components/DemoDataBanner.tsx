@@ -18,9 +18,9 @@ export function DemoDataBanner() {
   return (
     <div
       role="status"
-      className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900"
+      className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-warning"
     >
-      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
       <div className="text-sm leading-relaxed">
         <p className="font-bold">{t("Demo data")}</p>
         <p className="opacity-90">

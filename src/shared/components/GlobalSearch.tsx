@@ -114,7 +114,7 @@ export function GlobalSearch() {
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
         aria-label={t("Search")}
-        className="flex items-center justify-center md:justify-start gap-2 h-10 w-10 md:h-auto md:w-auto bg-muted/30 md:px-3 md:py-2 rounded-lg border border-border shadow-inner group hover:bg-muted/50 transition-all"
+        className="flex items-center justify-center md:justify-start gap-2 h-11 w-11 md:h-auto md:w-auto bg-muted/30 md:px-3 md:py-2 rounded-lg border border-border shadow-inner group hover:bg-muted/50 transition-all"
       >
         <Search className="h-5 w-5 md:h-4 md:w-4 text-muted-foreground group-hover:text-primary" />
         <span className="hidden md:inline text-xs text-muted-foreground group-hover:text-foreground transition-colors">

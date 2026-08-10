@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
+import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
+import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
 
 export default function Layout() {
@@ -69,17 +71,17 @@ export default function Layout() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[80px] lg:pb-0">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-[320px_1fr] relative">
         
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {showSidebar && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[var(--z-bottom-nav)] bg-black/60 backdrop-blur-sm lg:hidden"
               onClick={() => setShowSidebar(false)}
             />
           )}
@@ -87,9 +89,9 @@ export default function Layout() {
 
         {/* Sidebar Container */}
         <div className={clsx(
-          "fixed inset-y-0 z-50 w-[80%] max-w-[320px] transform transition-all duration-300 ease-[0.23,1,0.32,1] lg:static lg:translate-x-0 shadow-2xl lg:shadow-none print:hidden start-0",
-          showSidebar 
-            ? "translate-x-0" 
+          "fixed inset-y-0 z-[var(--z-sidebar)] w-[80%] max-w-[320px] transform transition-all duration-300 ease-[0.23,1,0.32,1] lg:static lg:translate-x-0 shadow-2xl lg:shadow-none print:hidden start-0",
+          showSidebar
+            ? "translate-x-0"
             : (isRtl ? "translate-x-full lg:translate-x-0" : "-translate-x-full lg:translate-x-0")
         )}>
           <Sidebar onClose={() => setShowSidebar(false)} />
@@ -97,12 +99,12 @@ export default function Layout() {
 
         <div className="flex min-w-0 flex-col relative">
           {/* Header */}
-          <header className="sticky top-0 z-30 flex h-14 sm:h-16 lg:h-20 items-center justify-between border-b border-border bg-card/60 px-3 sm:px-6 lg:px-10 backdrop-blur-3xl shadow-sm print:hidden gap-3">
+          <header className="sticky top-0 z-[var(--z-header)] flex h-14 sm:h-16 lg:h-20 items-center justify-between border-b border-border bg-card/60 px-3 sm:px-6 lg:px-10 backdrop-blur-3xl shadow-sm print:hidden gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setShowSidebar(true)}
                 aria-label={t("Open menu")}
-                className="lg:hidden h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm active:scale-95"
+                className="lg:hidden h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm active:scale-95"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -123,7 +125,7 @@ export default function Layout() {
               <CenterSwitcher />
               <GlobalSearch />
 
-              <button className="h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
+              <button onClick={() => nav("/settings?tab=notifications")} className="h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
                 <Bell className="h-5 w-5 group-hover:rotate-12 transition-transform" />
                 <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-primary border-2 border-card shadow-sm" />
               </button>
@@ -135,7 +137,7 @@ export default function Layout() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="hidden sm:flex h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-primary/10 border border-primary/20 items-center justify-center text-primary font-bold text-sm shadow-inner hover:scale-105 transition-transform active:scale-95"
                 >
-                  {me?.username?.[0]?.toUpperCase()}
+                  {getInitials(me, "·")}
                 </button>
                 
                 {/* User Menu Dropdown */}
@@ -148,7 +150,7 @@ export default function Layout() {
                       className="absolute top-full mt-2 end-0 w-48 rounded-lg bg-card border border-border shadow-xl z-50"
                     >
                       <div className="p-3 border-b border-border">
-                        <p className="text-xs font-bold text-foreground">{me?.username}</p>
+                        <p className="text-xs font-bold text-foreground">{getDisplayName(me, t("Unnamed"))}</p>
                         <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
                           {me?.role === "ADMIN" ? t("Administrator") : me?.role === "STAFF" ? t("Staff Member") : ""}
                         </p>
@@ -184,7 +186,9 @@ export default function Layout() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
               >
-                <Outlet />
+                <ErrorBoundary resetKey={location.pathname}>
+                  <Outlet />
+                </ErrorBoundary>
               </motion.div>
             </AnimatePresence>
           </main>
@@ -192,9 +196,9 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - Improved */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-8px_30px_rgb(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)] print:hidden">
-        <nav className="flex items-stretch justify-around h-[80px] px-1">
+      {/* Mobile Bottom Navigation - compact, safe-area aware */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[var(--z-bottom-nav)] bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-4px_20px_rgb(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] print:hidden">
+        <nav className="flex items-stretch justify-around h-16 px-0.5">
           {bottomNavItems.map(({ to, labelKey, Icon }) => (
             <NavLink
               key={to}
@@ -202,7 +206,7 @@ export default function Layout() {
               end={to === "/dashboard"}
               className={({ isActive }) =>
                 clsx(
-                  "flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-200 min-h-[44px]",
+                  "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 min-h-[44px]",
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                 )
               }
@@ -210,10 +214,10 @@ export default function Layout() {
               {({ isActive }) => (
                 <>
                   <div className={clsx(
-                    "flex items-center justify-center h-10 w-16 rounded-lg transition-all duration-300",
-                    isActive ? "bg-primary/15 scale-110" : "bg-transparent scale-100"
+                    "flex items-center justify-center h-8 w-12 rounded-lg transition-all duration-300",
+                    isActive ? "bg-primary/15 scale-105" : "bg-transparent scale-100"
                   )}>
-                    <Icon className={clsx("h-6 w-6", isActive && "fill-primary/20 stroke-[2px]")} />
+                    <Icon className={clsx("h-5 w-5", isActive && "stroke-[2px]")} />
                   </div>
                   <span className={clsx(
                     "text-[9px] font-bold tracking-wider leading-tight",
@@ -225,12 +229,13 @@ export default function Layout() {
               )}
             </NavLink>
           ))}
-          <button 
+          <button
             onClick={() => setShowSidebar(true)}
-            className="flex flex-col items-center justify-center flex-1 gap-1 text-muted-foreground hover:text-foreground transition-all duration-200 min-h-[44px]"
+            className="flex flex-col items-center justify-center flex-1 gap-0.5 text-muted-foreground hover:text-foreground transition-all duration-200 min-h-[44px]"
+            aria-label={t("Open menu")}
           >
-            <div className="flex items-center justify-center h-10 w-16 rounded-lg bg-transparent hover:bg-muted/30 transition-all">
-              <Menu className="h-6 w-6" />
+            <div className="flex items-center justify-center h-8 w-12 rounded-lg bg-transparent hover:bg-muted/30 transition-all">
+              <Menu className="h-5 w-5" />
             </div>
             <span className="text-[9px] font-bold tracking-wider leading-tight">{t("Menu")}</span>
           </button>

@@ -39,6 +39,8 @@ All money is OMR at three decimals:
 - Non-inventory products are sellable without stock decrement.
 - Packages require a positive confirmed price, at least one component, and all included services active at sale time.
 - New appointments start `SCHEDULED` and require a same-center customer, active service, active employee, and time.
+- The service duration is snapshotted by the database when booked (and refreshed only when the appointment's service changes), so later catalog edits do not reinterpret old bookings.
+- Half-open scheduled ranges `[start, start + duration)` for the same center/employee cannot overlap; the PostgreSQL exclusion constraint is safe under concurrent requests.
 - Only `SCHEDULED → COMPLETED | CANCELLED | NO_SHOW` transitions are allowed.
 - Completed, cancelled, and no-show appointments cannot be edited or deleted.
 

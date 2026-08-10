@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
@@ -10,7 +11,7 @@ import {
   Zap, Clock, TrendingUp
 } from "lucide-react";
 // UserPlus used for inline new-customer creation at the POS checkout panel
-import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
+import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -20,6 +21,12 @@ import { InvoicePrintData } from "../application/dto";
 import { calculateCheckoutTotals } from "../domain/commerce";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
+import { formatOMRAmount } from "../shared/money";
+import {
+  ALL_SERVICE_CATEGORIES,
+  filterServicesForCatalog,
+  ServiceCategoryFilters,
+} from "../shared/catalog/ServiceCategoryFilters";
 
 interface CartItem {
   id: string;
@@ -58,6 +65,7 @@ export default function PosInvoicesPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState(ALL_SERVICE_CATEGORIES);
   // Inline «عميل جديد → بيع» دون مغادرة نقطة البيع
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -68,7 +76,7 @@ export default function PosInvoicesPage() {
   const [loading, setLoading] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [showCheckoutSummary, setShowCheckoutSummary] = useState(isMobile);
+  const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
@@ -183,7 +191,7 @@ export default function PosInvoicesPage() {
     if (type === "service" && item.pricingMode === "STARTING_FROM") {
       const entered = window.prompt(
         t("Enter the final selling price for this service"),
-        item.price.toFixed(3),
+        formatOMRAmount(item.price),
       );
       if (entered === null) return;
       finalPrice = Number(entered);
@@ -295,22 +303,33 @@ export default function PosInvoicesPage() {
         setPrintData(pData);
         setShowPrintModal(true);
         if (isDesktopShell()) {
-          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${pData.invoice.totalAmount}</p></div>`;
+          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${formatOMRAmount(pData.invoice.totalAmount)}</p></div>`;
           await desktopRepository.printHtml(`Invoice ${pData.invoice.id}`, invoiceHtml);
         }
       } catch (e) {
         console.error("Print failed", e);
+        showToast('error', t("Error"), t("Payment succeeded, but receipt could not be loaded"));
       }
 
+      // The payment is already committed at this point. Clear the order and
+      // report success before refreshing so a transient catalog read can never
+      // be misreported as a failed payment. The refresh makes decremented stock
+      // visible immediately and prevents a second order using stale quantity.
       clearCart();
       showToast('success', t("Success"), t("Payment successful!"));
+      try {
+        await loadData();
+      } catch (e) {
+        console.error("Catalog refresh failed after successful checkout", e);
+        showToast('error', t("Error"), t("Sale completed, but catalog refresh failed"));
+      }
     } catch (err: any) {
       showToast('error', t("Error"), err.message || t("Payment failed"));
     }
   }
 
   const filteredItems = activeTab === "SERVICES"
-    ? services.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
+    ? filterServicesForCatalog(services, selectedServiceCategory, itemSearchQ)
     : activeTab === "PRODUCTS"
       ? products.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
       : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
@@ -318,20 +337,8 @@ export default function PosInvoicesPage() {
   return (
     <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
 
-      {/* Print Modal */}
-      {showPrintModal && printData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl print:p-0 print:bg-transparent">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-[2rem] shadow-2xl overflow-hidden max-w-lg w-full max-h-[90vh] overflow-y-auto print:shadow-none print:rounded-none print:max-h-none"
-          >
-            <div id="invoice-print-container">
-              <InvoicePrintLayout data={printData} onClose={() => setShowPrintModal(false)} />
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* Receipt preview — shared overlay above all chrome, sticky Print/Close */}
+      <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
 
       {/* Mobile: Toggle between catalog and checkout */}
       {isMobile && (
@@ -358,7 +365,7 @@ export default function PosInvoicesPage() {
           >
             {t("Cart")}
             {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
                 {cart.length}
               </span>
             )}
@@ -421,6 +428,14 @@ export default function PosInvoicesPage() {
                   onChange={(e) => setItemSearchQ(e.target.value)}
                 />
               </div>
+              {activeTab === "SERVICES" && (
+                <ServiceCategoryFilters
+                  services={services}
+                  selectedCategory={selectedServiceCategory}
+                  onSelect={setSelectedServiceCategory}
+                  allLabel={t("All")}
+                />
+              )}
             </div>
 
             <div className="flex-1 overflow-auto p-4 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0">
@@ -460,20 +475,20 @@ export default function PosInvoicesPage() {
                           {activeTab === "PRODUCTS" && (
                             <div className={clsx(
                               "mt-1 text-[10px] font-bold uppercase tracking-wider",
-                              (it as Product).stockQuantity > 5 ? "text-emerald-600" : "text-rose-600"
+                              (it as Product).stockQuantity > 5 ? "text-success" : "text-destructive"
                             )}>
                               {(it as Product).stockQuantity} {t("Stock")}
                             </div>
                           )}
                           {activeTab === "PACKAGES" && (
-                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-sky-600">
+                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-info">
                               {(it as any).items?.length || 0} {t("Included Services")}
                             </div>
                           )}
                         </div>
 
                         <div className="w-full pt-2 border-t border-border/50 flex items-baseline justify-between">
-                          <span className="text-base lg:text-lg font-bold text-foreground">{it.price}</span>
+                          <span className="text-base lg:text-lg font-bold text-foreground">{formatOMRAmount(it.price)}</span>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase">
                             {activeTab === "SERVICES" && (it as Service).pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
                           </span>
@@ -519,7 +534,7 @@ export default function PosInvoicesPage() {
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
                   onClick={clearCart}
-                  className="h-8 w-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                  className="h-8 w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center"
                   title={t("Clear cart")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -558,10 +573,10 @@ export default function PosInvoicesPage() {
                         </p>
                       </div>
                       <div className="text-end space-y-1">
-                        <p className="text-xs font-bold text-foreground">{item.price} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
+                        <p className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
                         <button 
                           onClick={() => removeFromCart(item.cartId)} 
-                          className="h-6 w-6 flex items-center justify-center rounded-md text-rose-500 hover:bg-rose-500/10 transition-all opacity-0 group-hover:opacity-100"
+                          className="h-6 w-6 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>
@@ -592,16 +607,16 @@ export default function PosInvoicesPage() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-lg">
-                            {selectedCustomer.name[0]}
+                            {getInitials(selectedCustomer, "·")}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-foreground block truncate">{selectedCustomer.name}</span>
+                            <span className="text-xs font-bold text-foreground block truncate">{getDisplayName(selectedCustomer, t("Unnamed"))}</span>
                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{selectedCustomer.phone}</span>
                           </div>
                         </div>
                         <button 
                           onClick={() => setSelectedCustomer(null)} 
-                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-rose-500 hover:bg-rose-500/10 transition-all shrink-0"
+                          className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-destructive hover:bg-destructive/10 transition-all shrink-0"
                         >
                           <XCircle className="h-4 w-4" />
                         </button>
@@ -638,9 +653,9 @@ export default function PosInvoicesPage() {
                                   onClick={() => { setSelectedCustomer(c); setCustomers([]); setSearchQ(""); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted rounded-lg text-start transition-all group/item"
                                 >
-                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{c.name[0]}</div>
+                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{getInitials(c, "·")}</div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-foreground truncate">{c.name}</p>
+                                    <p className="text-xs font-bold text-foreground truncate">{getDisplayName(c, t("Unnamed"))}</p>
                                     <p className="text-[9px] text-muted-foreground font-bold tracking-widest truncate">{c.phone}</p>
                                   </div>
                                 </button>
@@ -746,22 +761,22 @@ export default function PosInvoicesPage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 shadow-inner"
+                    className="flex items-center justify-between rounded-lg border border-success/20 bg-success/5 p-3 shadow-inner"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-success/20 flex items-center justify-center text-success shrink-0">
                         <Sparkles className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{loyaltyDiscount} {t("OMR Discount")}</p>
+                        <p className="text-[9px] font-bold text-success uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
+                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatOMRAmount(loyaltyDiscount)} {t("OMR Discount")}</p>
                       </div>
                     </div>
                     <button 
                       onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
                       className={clsx(
                         "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shadow-inner shrink-0",
-                        useLoyaltyPoints ? "bg-emerald-500" : "bg-muted"
+                        useLoyaltyPoints ? "bg-success" : "bg-muted"
                       )}
                     >
                       <span className={clsx(
@@ -784,8 +799,8 @@ export default function PosInvoicesPage() {
                     onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                   />
                   {selectedGiftCard && (
-                    <p className="text-[9px] font-bold text-sky-600 uppercase tracking-widest">
-                      {t("Available Balance")}: {selectedGiftCard.currentBalance.toFixed(2)} {t("OMR")} · {t("Redeem for")} {giftCardDiscount.toFixed(2)} {t("OMR")}
+                    <p className="text-[9px] font-bold text-info uppercase tracking-widest">
+                      {t("Available Balance")}: {formatOMRAmount(selectedGiftCard.currentBalance)} {t("OMR")} · {t("Redeem for")} {formatOMRAmount(giftCardDiscount)} {t("OMR")}
                     </p>
                   )}
                 </div>
@@ -796,36 +811,36 @@ export default function PosInvoicesPage() {
                 <div className="space-y-2 bg-muted/50 rounded-lg p-3">
                   <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                     <span>{t("Subtotal")}</span>
-                    <span>{subtotal.toFixed(2)} OMR</span>
+                    <span>{formatOMRAmount(subtotal)} OMR</span>
                   </div>
                   {tierDiscount > 0 && tierInfo && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-emerald-600 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-success uppercase tracking-widest">
                       <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
-                      <span>-{tierDiscount.toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(tierDiscount)} OMR</span>
                     </div>
                   )}
                   {(discount > 0 || loyaltyDiscount > 0) && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-rose-500 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-destructive uppercase tracking-widest">
                       <span>{t("Discounts")}</span>
-                      <span>-{(discount + loyaltyDiscount).toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(discount + loyaltyDiscount)} OMR</span>
                     </div>
                   )}
                   {giftCardDiscount > 0 && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-sky-600 uppercase tracking-widest">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-info uppercase tracking-widest">
                       <span>{t("Gift Card Redemption")}</span>
-                      <span>-{giftCardDiscount.toFixed(2)} OMR</span>
+                      <span>-{formatOMRAmount(giftCardDiscount)} OMR</span>
                     </div>
                   )}
                   {taxRate > 0 && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                       <span>{t("VAT")} ({taxRate}%)</span>
-                      <span>{tax.toFixed(2)} OMR</span>
+                      <span>{formatOMRAmount(tax)} OMR</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <span className="text-xs font-bold text-foreground uppercase tracking-[0.1em]">{t("Total")}</span>
                     <div className="text-end">
-                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{total.toFixed(2)}</span>
+                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{formatOMRAmount(total)}</span>
                       <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
                     </div>
                   </div>

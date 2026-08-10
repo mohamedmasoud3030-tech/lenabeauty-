@@ -1,11 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Sidebar from "../ui/layout/Sidebar";
 import i18n from "../i18n";
 import { UserRole } from "../domain/entities/Session";
+import { useCases } from "../app/composition/useCases";
 
-// The Sidebar consumes auth via useAuth; mock the hook for this structural test.
 vi.mock("../auth", () => ({
   useAuth: () => ({
     me: { id: "u1", username: "admin@salon.com", role: UserRole.ADMIN, name: "Admin" },
@@ -13,43 +13,53 @@ vi.mock("../auth", () => ({
   }),
 }));
 
-describe("Sidebar IA (operational navigation)", () => {
+describe("Sidebar client-trial navigation", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.restoreAllMocks();
+    vi.spyOn(useCases.giftCards, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.servicePackages, "list").mockResolvedValue({ ok: true, data: [] } as any);
   });
 
-  it("groups navigation into Arabic operational sections with the daily trio first", async () => {
+  async function renderSidebar() {
     await i18n.changeLanguage("ar");
-
     render(
       <MemoryRouter>
         <Sidebar />
       </MemoryRouter>,
     );
+  }
 
-    // Group titles are translated and present
-    expect(screen.getByText(i18n.t("Daily Operations"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Catalog"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Management"))).toBeInTheDocument();
+  it("shows only the compact daily client-trial navigation", async () => {
+    await renderSidebar();
 
-    // Daily trio: Dashboard / Appointments / POS
-    expect(screen.getByText(i18n.t("Dashboard"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Appointments"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("POS"))).toBeInTheDocument();
+    for (const label of [
+      "Dashboard", "Appointments", "POS", "Customers", "Services",
+      "Inventory", "Employees", "Reports", "Settings",
+    ]) {
+      expect(screen.getByText(i18n.t(label))).toBeInTheDocument();
+    }
 
-    // Customers group includes customers + gift cards + customer experience
-    // (group title and nav item share the same label)
-    expect(screen.getAllByText(i18n.t("Customers")).length).toBeGreaterThan(0);
-    expect(screen.getByText(i18n.t("Gift Cards"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Customer Experience"))).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(i18n.t("Gift Cards"))).not.toBeInTheDocument();
+      expect(screen.queryByText(i18n.t("Packages"))).not.toBeInTheDocument();
+    });
 
-    // Catalog: services, inventory, packages
-    expect(screen.getByText(i18n.t("Services"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Inventory"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Packages"))).toBeInTheDocument();
+    for (const hidden of [
+      "Customer Experience", "Attendance", "Advances", "Payroll",
+      "Staff Analytics", "Branding", "Expenses",
+    ]) {
+      expect(screen.queryByText(i18n.t(hidden))).not.toBeInTheDocument();
+    }
+  });
 
-    // Admin-only management: reports + settings
-    expect(screen.getByText(i18n.t("Reports"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("Settings"))).toBeInTheDocument();
+  it("shows optional gift-card and package links only when real rows exist", async () => {
+    vi.mocked(useCases.giftCards.list).mockResolvedValue({ ok: true, data: [{ id: "gift-1" }] } as any);
+    vi.mocked(useCases.servicePackages.list).mockResolvedValue({ ok: true, data: [{ id: "package-1" }] } as any);
+
+    await renderSidebar();
+
+    expect(await screen.findByText(i18n.t("Gift Cards"))).toBeInTheDocument();
+    expect(await screen.findByText(i18n.t("Packages"))).toBeInTheDocument();
   });
 });

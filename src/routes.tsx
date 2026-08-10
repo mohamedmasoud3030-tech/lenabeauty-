@@ -15,8 +15,6 @@ const InventoryPage = lazy(() => import("./pages/InventoryPage"));
 const ExpensesPage = lazy(() => import("./pages/ExpensesPage"));
 const ReportsPage = lazy(() => import("./pages/ReportsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
-const NotificationsSettingsPage = lazy(() => import("./pages/NotificationsSettingsPage"));
-const PaymentGatewaySettingsPage = lazy(() => import("./pages/PaymentGatewaySettingsPage"));
 const GiftCardsPage = lazy(() => import("./pages/GiftCardsPage"));
 const PackagesPage = lazy(() => import("./pages/PackagesPage"));
 const CustomerExperiencePage = lazy(() => import("./pages/CustomerExperiencePage"));
@@ -29,9 +27,6 @@ const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
 const AttendancePage = lazy(() => import("./pages/AttendancePage"));
 const AdvancesPage = lazy(() => import("./pages/AdvancesPage"));
 const StaffAnalyticsPage = lazy(() => import("./pages/StaffAnalyticsPage"));
-
-// صفحات الإعدادات المتقدمة
-const BrandingSettingsPage = lazy(() => import("./pages/BrandingSettingsPage"));
 
 export function AppRoutes() {
   return (
@@ -48,26 +43,28 @@ export function AppRoutes() {
           <Route path="/customers" element={<Suspense fallback={<PageLoader />}><CustomersPage /></Suspense>} />
           <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCardsPage /></Suspense>} />
           <Route path="/packages" element={<Suspense fallback={<PageLoader />}><PackagesPage /></Suspense>} />
-          <Route path="/customer-experience" element={<Suspense fallback={<PageLoader />}><CustomerExperiencePage /></Suspense>} />
-          <Route path="/forecasting" element={<Suspense fallback={<PageLoader />}><ForecastingPage /></Suspense>} />
-          <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />
           <Route path="/inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
-          <Route path="/expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
-
-          {/* صفحات الموظفين */}
-          <Route path="/payroll" element={<Suspense fallback={<PageLoader />}><PayrollPageEnhanced /></Suspense>} />
-          <Route path="/attendance" element={<Suspense fallback={<PageLoader />}><AttendancePage /></Suspense>} />
-          <Route path="/advances" element={<Suspense fallback={<PageLoader />}><AdvancesPage /></Suspense>} />
-          <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
 
           <Route element={<RequireAdmin />}>
+            <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />
             <Route path="/reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
             <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
-            <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsSettingsPage /></Suspense>} />
-            <Route path="/payment-gateway" element={<Suspense fallback={<PageLoader />}><PaymentGatewaySettingsPage /></Suspense>} />
+
+            {/* Deferred modules keep their routes/data but stay out of trial navigation. */}
+            <Route path="/customer-experience" element={<Suspense fallback={<PageLoader />}><CustomerExperiencePage /></Suspense>} />
+            <Route path="/forecasting" element={<Suspense fallback={<PageLoader />}><ForecastingPage /></Suspense>} />
+            <Route path="/expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
+            <Route path="/payroll" element={<Suspense fallback={<PageLoader />}><PayrollPageEnhanced /></Suspense>} />
+            <Route path="/attendance" element={<Suspense fallback={<PageLoader />}><AttendancePage /></Suspense>} />
+            <Route path="/advances" element={<Suspense fallback={<PageLoader />}><AdvancesPage /></Suspense>} />
+            <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
             <Route path="/accounting" element={<Suspense fallback={<PageLoader />}><AccountingPage /></Suspense>} />
             <Route path="/advanced-automation" element={<Suspense fallback={<PageLoader />}><AdvancedAutomationPage /></Suspense>} />
-            <Route path="/branding" element={<Suspense fallback={<PageLoader />}><BrandingSettingsPage /></Suspense>} />
+
+            {/* Legacy deep links land in the matching Settings section. */}
+            <Route path="/branding" element={<Navigate to="/settings?tab=branding" replace />} />
+            <Route path="/notifications" element={<Navigate to="/settings?tab=notifications" replace />} />
+            <Route path="/payment-gateway" element={<Navigate to="/settings?tab=payments" replace />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

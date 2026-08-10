@@ -1,3 +1,5 @@
+import { LENA_BRAND_PALETTE } from '../../shared/theme/brandPalette';
+
 /**
  * Branding Service
  * Manages salon identity and branding across the entire application
@@ -31,9 +33,9 @@ const DEFAULT_BRANDING: BrandingSettings = {
   taxNumber: 'OM123456789',
   registrationNumber: 'CR/2024/123456',
   logo: null,
-  primaryColor: '#8B5CF6',
-  secondaryColor: '#EC4899',
-  accentColor: '#06B6D4',
+  primaryColor: LENA_BRAND_PALETTE.primary,
+  secondaryColor: LENA_BRAND_PALETTE.secondary,
+  accentColor: LENA_BRAND_PALETTE.surfaceAccent,
   footerText: 'Powered by LenaBeauty',
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };

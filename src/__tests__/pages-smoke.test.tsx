@@ -145,7 +145,7 @@ describe("Dashboard page smoke (empty revenue state)", () => {
     });
     // Total label shows the real sum of the 7-day data (17), not a fake "0".
     await waitFor(() => {
-      expect(screen.getByText("17.00 OMR")).toBeInTheDocument();
+      expect(screen.getByText("17.000 OMR")).toBeInTheDocument();
     });
   });
 });

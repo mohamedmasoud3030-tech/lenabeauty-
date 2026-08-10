@@ -140,6 +140,42 @@ export function mapAppointment(row: unknown): Appointment {
         throw createMappingError("mapAppointment", `Invalid or missing appointment status (${rawStatus})`);
     }
     const status = rawStatus as AppointmentStatus;
+    const customerRelation = Array.isArray(row.customers) ? row.customers[0] : row.customers;
+    const employeeRelation = Array.isArray(row.employees) ? row.employees[0] : row.employees;
+    const serviceRelation = Array.isArray(row.services) ? row.services[0] : row.services;
+    const customer = customerRelation && typeof customerRelation === "object"
+      && typeof (customerRelation as Record<string, unknown>).id === "string"
+      && typeof (customerRelation as Record<string, unknown>).name === "string"
+      ? {
+          id: (customerRelation as Record<string, unknown>).id as string,
+          name: (customerRelation as Record<string, unknown>).name as string,
+          phone: typeof (customerRelation as Record<string, unknown>).phone === "string"
+            ? (customerRelation as Record<string, unknown>).phone as string
+            : undefined,
+        }
+      : undefined;
+    const employee = employeeRelation && typeof employeeRelation === "object"
+      && typeof (employeeRelation as Record<string, unknown>).id === "string"
+      && typeof (employeeRelation as Record<string, unknown>).name === "string"
+      ? {
+          id: (employeeRelation as Record<string, unknown>).id as string,
+          name: (employeeRelation as Record<string, unknown>).name as string,
+        }
+      : undefined;
+    const service = serviceRelation && typeof serviceRelation === "object"
+      && typeof (serviceRelation as Record<string, unknown>).id === "string"
+      && typeof (serviceRelation as Record<string, unknown>).name === "string"
+      ? {
+          id: (serviceRelation as Record<string, unknown>).id as string,
+          name: (serviceRelation as Record<string, unknown>).name as string,
+          categoryId: typeof (serviceRelation as Record<string, unknown>).category_id === "string"
+            ? (serviceRelation as Record<string, unknown>).category_id as string
+            : undefined,
+          price: Number((serviceRelation as Record<string, unknown>).price ?? 0),
+          durationMinutes: Number((serviceRelation as Record<string, unknown>).duration_minutes ?? 30),
+          durationMins: Number((serviceRelation as Record<string, unknown>).duration_minutes ?? 30),
+        }
+      : undefined;
 
     return {
         id: row.id,
@@ -147,7 +183,13 @@ export function mapAppointment(row: unknown): Appointment {
         employeeId: typeof row.employee_id === "string" ? row.employee_id : undefined,
         serviceId: typeof row.service_id === "string" ? row.service_id : undefined,
         dateTime: parseDate(row.date_time, "date_time", "mapAppointment"),
+        durationMinutesSnapshot: row.duration_minutes_snapshot !== undefined && row.duration_minutes_snapshot !== null
+          ? Number(row.duration_minutes_snapshot)
+          : undefined,
         status: status,
+        customer,
+        employee,
+        service,
         notes: typeof row.notes === "string" ? row.notes : undefined,
         depositAmount: Number(row.deposit_amount) || 0,
         noShowFeeAmount: Number(row.no_show_fee_amount) || 0,

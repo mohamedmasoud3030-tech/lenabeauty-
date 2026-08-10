@@ -23,6 +23,7 @@ import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components
 import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 import { ScreenState } from "../shared/components/ScreenState";
+import { formatOMRAmount } from "../shared/money";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -172,7 +173,7 @@ export default function DashboardPage() {
                 ? res.data.map((e) => ({
                     id: `exp-${e.id}`,
                     type: "EXPENSE_CREATED",
-                    message: `${t("New expense recorded")}: ${e.amount} ${s.currency || ""}`.trim(),
+                    message: `${t("New expense recorded")}: ${formatOMRAmount(e.amount)} ${s.currency || ""}`.trim(),
                     createdAt: new Date(e.createdAt).toISOString(),
                   }))
                 : []
@@ -250,7 +251,7 @@ export default function DashboardPage() {
           </button>
           <button 
             onClick={() => nav("/pos")}
-            className="group relative inline-flex items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
+            className="group relative inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-2">
               <Plus className="h-4 w-4" />
@@ -262,11 +263,11 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-3 sm:gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-4">
         <StatCard 
           variants={item}
           title={t("Today's Revenue")} 
-          value={loading ? "…" : summary?.canViewRevenue ? `${summary?.todayRevenue || 0}` : "—"}
+          value={loading ? "…" : summary?.canViewRevenue ? formatOMRAmount(summary?.todayRevenue) : "—"}
           subValue={summary?.canViewRevenue ? t("Total Invoices Today") : t("No data")}
           icon={<DollarSign className="h-5 w-5" />}
           trend={summary?.canViewRevenue ? "+0%" : "—"}
@@ -311,7 +312,7 @@ export default function DashboardPage() {
             </h2>
             <button
               onClick={() => nav("/appointments")}
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+              className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
             >
               {t("View All")}
             </button>
@@ -355,12 +356,12 @@ export default function DashboardPage() {
         <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
             <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               {t("Operational Alerts")}
             </h2>
             <button
               onClick={() => nav("/inventory")}
-              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+              className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
             >
               {t("View All")}
             </button>
@@ -380,13 +381,13 @@ export default function DashboardPage() {
                   <button
                     key={p.id}
                     onClick={() => nav("/inventory")}
-                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-amber-500/40 transition-all"
+                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-warning/40 transition-all"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
                       <p className="text-[10px] font-bold text-muted-foreground">{t("Low Stock")}</p>
                     </div>
-                    <span className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    <span className="h-8 w-8 rounded-lg bg-warning/10 text-warning flex items-center justify-center text-xs font-bold shrink-0">
                       {p.stock}
                     </span>
                   </button>
@@ -406,13 +407,13 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  <TrendingUp className="h-5 w-5 text-success" />
                   {t("7-Day Revenue")}
                 </h2>
                 <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Daily revenue trend")}</p>
               </div>
               <div className="text-end">
-                <p className="text-sm font-bold text-foreground">{totalRevenue7Days.toFixed(2)} {summary?.currency}</p>
+                <p className="text-sm font-bold text-foreground">{formatOMRAmount(totalRevenue7Days)} {summary?.currency}</p>
                 <p className="text-[9px] text-muted-foreground font-bold uppercase">{t("Total")}</p>
               </div>
             </div>
@@ -444,8 +445,8 @@ export default function DashboardPage() {
                   <AreaChart data={chartData} margin={{ top: 10, right: isMobile ? 6 : 24, left: isMobile ? -16 : 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -472,12 +473,12 @@ export default function DashboardPage() {
                       }}
                       labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
                       labelFormatter={(label) => formatChartDay(String(label))}
-                      formatter={(value) => [`${Number(value ?? 0).toFixed(2)} ${summary?.currency}`, t("Revenue")]}
+                      formatter={(value) => [`${formatOMRAmount(value)} ${summary?.currency}`, t("Revenue")]}
                     />
                     <Area
                       type="monotone"
                       dataKey="revenue"
-                      stroke="#10b981"
+                      stroke="hsl(var(--success))"
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorRevenue)"
@@ -494,7 +495,7 @@ export default function DashboardPage() {
           <div className="border-b border-border px-4 sm:px-6 py-4 sm:py-6 bg-muted/20">
             <div className="space-y-1">
               <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-emerald-500" />
+                <Wallet className="h-5 w-5 text-success" />
                 {t("Financial Summary")}
               </h2>
               <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("This Month")}</p>
@@ -519,11 +520,11 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4 flex-1 flex flex-col">
                 {/* Net Profit - Highlighted */}
-                <div className="relative rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-4 text-white shadow-lg overflow-hidden group">
+                <div className="relative rounded-xl bg-gradient-to-br from-success to-success p-4 text-white shadow-lg overflow-hidden group">
                   <div className="relative z-10">
                     <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-80">{t("Net Profit")}</p>
                     <div className="flex items-baseline gap-2 mt-2">
-                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tighter">{pnl.profit}</h3>
+                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tighter">{formatOMRAmount(pnl.profit)}</h3>
                       <span className="text-xs font-bold opacity-70 uppercase">{summary?.currency}</span>
                     </div>
                   </div>
@@ -564,7 +565,7 @@ export default function DashboardPage() {
 
                 <button 
                   onClick={() => nav("/reports")}
-                  className="group w-full rounded-lg bg-secondary py-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-secondary/80 flex items-center justify-center gap-2 shadow-lg mt-auto"
+                  className="group w-full min-h-11 rounded-lg bg-secondary py-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-secondary/80 flex items-center justify-center gap-2 shadow-lg mt-auto"
                 >
                   {t("View Detailed Reports")}
                   <ArrowRight className={clsx("h-4 w-4 transition-transform", i18n.language === "ar" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1")} />
@@ -590,7 +591,7 @@ export default function DashboardPage() {
             </div>
             <button 
               onClick={load}
-              className="group flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:opacity-80 transition-opacity"
+              className="group min-h-11 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:opacity-80 transition-opacity"
             >
               {t("Refresh")}
               <Zap className={clsx("h-3 w-3 transition-transform", loading && "animate-spin")} />
@@ -684,16 +685,16 @@ function StatCard({ title, value, subValue, icon, trend, color, variants }: {
   variants: import("motion/react").Variants
 }) {
   const colorMap: Record<string, string> = {
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    blue: "bg-blue-500/10 text-blue-600",
-    purple: "bg-purple-500/10 text-purple-600",
-    rose: "bg-rose-500/10 text-rose-600",
+    emerald: "bg-success/10 text-success",
+    blue: "bg-info/10 text-info",
+    purple: "bg-primary/10 text-primary",
+    rose: "bg-destructive/10 text-destructive",
   };
 
   return (
     <motion.div 
       variants={variants}
-      className="group relative rounded-xl sm:rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-1 overflow-hidden"
+      className="group relative rounded-xl sm:rounded-2xl border border-border bg-card p-3 sm:p-6 shadow-sm transition-all hover:shadow-md overflow-hidden"
     >
       <div className="flex items-start justify-between relative z-10">
         <div className={clsx("rounded-lg p-2.5 sm:p-3 transition-all group-hover:scale-110 shadow-sm", colorMap[color])}>
@@ -720,18 +721,18 @@ function QuickActionButton({ title, icon, color, onClick }: {
   onClick: () => void
 }) {
   const colorClasses: Record<string, string> = {
-    blue: "bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white",
-    emerald: "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white",
-    purple: "bg-purple-500/10 text-purple-600 hover:bg-purple-500 hover:text-white",
-    amber: "bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white",
-    slate: "bg-slate-500/10 text-slate-600 hover:bg-slate-500 hover:text-white",
+    blue: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
+    emerald: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
+    purple: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
+    amber: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
+    slate: "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground",
   };
 
   return (
     <button 
       onClick={onClick}
       className={clsx(
-        "group w-full flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:shadow-lg hover:-translate-y-0.5",
+        "group min-h-11 w-full flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:shadow-lg hover:-translate-y-0.5",
         colorClasses[color]
       )}
     >
@@ -752,10 +753,10 @@ function FinancialRow({ label, value, currency, icon, color }: {
   color: string
 }) {
   const colorClasses: Record<string, string> = {
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    orange: "bg-orange-500/10 text-orange-600",
-    blue: "bg-blue-500/10 text-blue-600",
-    rose: "bg-rose-500/10 text-rose-600"
+    emerald: "bg-success/10 text-success",
+    orange: "bg-warning/10 text-warning",
+    blue: "bg-info/10 text-info",
+    rose: "bg-destructive/10 text-destructive"
   };
 
   return (
@@ -767,7 +768,7 @@ function FinancialRow({ label, value, currency, icon, color }: {
         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{label}</span>
       </div>
       <div className="text-end">
-        <span className="text-sm font-bold text-foreground">{value}</span>
+        <span className="text-sm font-bold text-foreground">{formatOMRAmount(value)}</span>
         <span className="ms-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{currency}</span>
       </div>
     </div>

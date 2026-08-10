@@ -11,6 +11,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { getDisplayName, getInitials } from "../shared/displayName";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
@@ -18,6 +19,9 @@ import { getTierBySpend } from "../domain/loyalty";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
+import { formatOMRAmount } from "../shared/money";
+import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
+import { InvoicePrintData } from "../application/dto";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -132,7 +136,7 @@ export default function CustomersPage() {
     setSavingNotes(true);
     try {
       await unwrap(useCases.customers.update(openId, { notes }));
-      showToast('error', t("Error"), t("Notes saved successfully"));
+      showToast('success', t("Success"), t("Notes saved successfully"));
       await load();
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
@@ -212,16 +216,12 @@ export default function CustomersPage() {
     }
   }
 
-  const [printData, setPrintData] = useState<any | null>(null);
+  const [printData, setPrintData] = useState<InvoicePrintData | null>(null);
 
   async function handleReprint(invoiceId: string) {
     try {
       const pData = await unwrap(useCases.invoices.getForPrint(invoiceId));
       setPrintData(pData);
-      setTimeout(() => {
-        window.print();
-        setPrintData(null);
-      }, 500);
     } catch (err: any) {
       if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
@@ -233,57 +233,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
-      {/* Print Area Hidden */}
-      {printData && (
-        <div id="print-area" className="hidden print:block bg-white text-black p-8 font-sans text-sm w-[80mm] mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
-          <div className="text-center mb-6 space-y-1">
-            <h1 className="font-bold text-xl">{printData.settings?.name || "Lena Beauty"}</h1>
-            <div className="text-xs opacity-70">{printData.settings?.address}</div>
-            <div className="text-xs opacity-70">{printData.settings?.phone}</div>
-          </div>
-          <div className="border-t border-b border-dashed border-black py-3 mb-4 text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "رقم الفاتورة:" : "Invoice No:"}</span> 
-              <span className="font-bold">{printData.invoice.id.slice(-6).toUpperCase()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "التاريخ:" : "Date:"}</span> 
-              <span>{new Date(printData.invoice.date).toLocaleString(i18n.language || "ar")}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>{i18n.language === "ar" ? "العميل:" : "Customer:"}</span> 
-              <span className="font-bold">{printData.customer?.name}</span>
-            </div>
-          </div>
-          <table className="w-full text-xs mb-4">
-            <thead>
-              <tr className="border-b border-black">
-                <th className="py-2 text-start">
-                  {i18n.language === "ar" ? "الصنف" : "Item"}
-                </th>
-                <th className="py-2 text-end">
-                  {i18n.language === "ar" ? "السعر" : "Price"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-dashed divide-black/20">
-              {printData.items.map((it: any) => (
-                <tr key={it.id}>
-                  <td className="py-2">{it.name}</td>
-                  <td className="py-2 font-bold text-end">{it.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="border-t border-black pt-3 text-base font-bold flex justify-between">
-            <span>{i18n.language === "ar" ? "الإجمالي:" : "Total Amount:"}</span>
-            <span>{printData.invoice.totalAmount} {printData.settings?.currency}</span>
-          </div>
-          <div className="text-center mt-10 text-xs opacity-50 italic">
-            {i18n.language === "ar" ? "شكراً لزيارتكم!" : "Thank you for your visit!"}
-          </div>
-        </div>
-      )}
+      <ReceiptPreviewModal data={printData} onClose={() => setPrintData(null)} />
 
       <PageHeader
         icon={<User className="h-7 w-7 sm:h-8 sm:w-8" />}
@@ -322,9 +272,9 @@ export default function CustomersPage() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 print:hidden">
         {[
           { label: t('Total Clients'), value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: t('Total Revenue'), value: stats.totalRevenue.toFixed(2) + ' OMR', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-          { label: t('VIP Clients'), value: stats.vip, icon: Crown, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-          { label: t('New Clients'), value: stats.newThisMonth, icon: Star, color: 'text-blue-600', bg: 'bg-blue-500/10' },
+          { label: t('Total Revenue'), value: formatOMRAmount(stats.totalRevenue) + ' OMR', icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
+          { label: t('VIP Clients'), value: stats.vip, icon: Crown, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: t('New Clients'), value: stats.newThisMonth, icon: Star, color: 'text-info', bg: 'bg-info/10' },
         ].map(({ label, value, icon: Icon, color, bg }, i) => (
           <motion.div
             key={label}
@@ -372,10 +322,10 @@ export default function CustomersPage() {
                     <td>
                       <div className="flex items-center gap-5">
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all group-hover:scale-110 shadow-inner">
-                          {c.name[0]}
+                          {getInitials(c, "·")}
                         </div>
                         <div className="space-y-0.5">
-                          <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{c.name}</span>
+                          <span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{getDisplayName(c, t("Unnamed"))}</span>
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Client ID")}: {c.id.slice(-6).toUpperCase()}</span>
                         </div>
                       </div>
@@ -389,8 +339,8 @@ export default function CustomersPage() {
                     <td>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground text-xl">{c.totalSpent.toFixed(2)}</span>
-                          <TrendingUp className="h-4 w-4 text-emerald-500" />
+                          <span className="font-bold text-foreground text-xl">{formatOMRAmount(c.totalSpent)}</span>
+                          <TrendingUp className="h-4 w-4 text-success" />
                         </div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR Total")}</span>
                       </div>
@@ -418,14 +368,14 @@ export default function CustomersPage() {
                         </button>
                         <button
                           onClick={() => openEdit(c)}
-                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info hover:border-info/20 transition-all shadow-sm hover:scale-110 active:scale-95"
                           title={t("Edit")}
                         >
                           <Pencil className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => void handleDeleteCustomer(c.id)}
-                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 hover:border-rose-500/20 transition-all shadow-sm hover:scale-110 active:scale-95"
+                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all shadow-sm hover:scale-110 active:scale-95"
                           title={t("Delete")}
                         >
                           <Trash2 className="h-5 w-5" />
@@ -441,71 +391,60 @@ export default function CustomersPage() {
         </div>
 
         {/* Mobile Cards */}
-        <div className="lg:hidden grid gap-4 grid-cols-1">
+        <div className="lg:hidden grid grid-cols-2 gap-3">
           <AnimatePresence mode="popLayout">
             {filtered.map((c, idx) => (
               <motion.div
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 key={c.id}
-                className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4"
+                className="min-w-0 rounded-2xl border border-border bg-card p-3 shadow-sm flex flex-col gap-3"
               >
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase shadow-inner shrink-0">
-                    {c.name[0]}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <span className="font-bold text-foreground text-lg truncate">{c.name}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{t("Client ID")}: {c.id.slice(-6).toUpperCase()}</span>
-                  </div>
+                <div className="min-w-0">
+                  <span className="block truncate text-sm font-bold text-foreground">{c.name}</span>
+                  <span className="block truncate text-[9px] font-bold text-muted-foreground" dir="ltr">{c.phone ?? "—"}</span>
                 </div>
 
-                <div className="flex items-center gap-3 bg-muted/50 px-4 py-3 rounded-xl w-fit">
-                  <Phone className="h-5 w-5 text-primary" />
-                  <span className="font-bold text-foreground text-sm" dir="ltr">{c.phone ?? "—"}</span>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border pt-4 mt-2">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-foreground text-xl">{c.totalSpent.toFixed(2)}</span>
-                      <TrendingUp className="h-4 w-4 text-emerald-500" />
-                    </div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR Total")}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-500/10 px-4 py-2 text-xs font-bold text-amber-600 border border-amber-500/20 shadow-sm">
-                    <Sparkles className="h-4 w-4" />
+                <div className="mt-auto border-t border-border pt-2">
+                  <div className="text-base font-bold text-foreground">{formatOMRAmount(c.totalSpent)}</div>
+                  <div className="text-[9px] font-bold text-muted-foreground">{t("OMR Total")}</div>
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-warning">
+                    <Sparkles className="h-3 w-3" />
                     {c.loyaltyPoints} {t("Pts")}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => openHistory(c)}
-                    className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-primary flex items-center justify-center"
+                    title={t("History")}
                   >
-                    <History className="h-5 w-5" />
-                    {t("History")}
+                    <History className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => openEdit(c)}
-                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-blue-500/10 hover:text-blue-500 transition-all shadow-sm shrink-0"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
+                    title={t("Edit")}
                   >
-                    <Pencil className="h-5 w-5" />
+                    <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => void handleDeleteCustomer(c.id)}
-                    className="h-12 w-14 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500 transition-all shadow-sm shrink-0"
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-destructive flex items-center justify-center"
+                    title={t("Delete")}
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
-          <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading customers...")} errorTitle={t("Failed to load customers")} emptyTitle={t("No Customers Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} emptyIcon={<Users className="h-6 w-6" />} emptyActionLabel="Add Customer" onEmptyAction={() => setShowAddModal(true)} compact />
+          <div className="col-span-2">
+            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading customers...")} errorTitle={t("Failed to load customers")} emptyTitle={t("No Customers Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} emptyIcon={<Users className="h-6 w-6" />} emptyActionLabel="Add Customer" onEmptyAction={() => setShowAddModal(true)} compact />
+          </div>
         </div>
       </motion.div>
 
@@ -601,7 +540,7 @@ export default function CustomersPage() {
                                 </div>
                                 <span className={clsx(
                                   "rounded-xl px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-sm",
-                                  a.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
+                                  a.status === 'COMPLETED' ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
                                 )}>
                                   {t(a.status)}
                                 </span>
@@ -650,7 +589,7 @@ export default function CustomersPage() {
                                   </span>
                                 </div>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-lg font-bold text-primary">{inv.totalAmount.toFixed(2)}</span>
+                                  <span className="text-lg font-bold text-primary">{formatOMRAmount(inv.totalAmount)}</span>
                                   <span className="text-[9px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
                                 </div>
                               </div>
@@ -784,7 +723,7 @@ export default function CustomersPage() {
             >
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                     <Pencil className="h-7 w-7" />
                   </div>
                   <div className="space-y-0.5">
@@ -806,7 +745,7 @@ export default function CustomersPage() {
                   <div className="relative">
                     <User className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all shadow-inner"
+                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
                       placeholder={t("Enter customer name")}
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
@@ -818,7 +757,7 @@ export default function CustomersPage() {
                   <div className="relative">
                     <Phone className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-start shadow-inner"
+                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-start shadow-inner"
                       dir="ltr"
                       placeholder="968XXXXXXXX"
                       value={editPhone}
@@ -830,7 +769,7 @@ export default function CustomersPage() {
                 <button
                   disabled={adding}
                   onClick={handleEditCustomer}
-                  className="group relative w-full h-16 rounded-[2rem] bg-blue-500 font-bold text-white shadow-2xl shadow-blue-500/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 overflow-hidden flex items-center justify-center gap-3"
+                  className="group relative w-full h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 overflow-hidden flex items-center justify-center gap-3"
                 >
                   <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                   <Save className="h-6 w-6 relative z-10" />

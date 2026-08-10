@@ -31,6 +31,7 @@ import {
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
 import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 import { validateCheckoutContract } from "../../domain/commerce";
+import { localDateRangeISO } from "../../shared/dateRange";
 
 /**
  * Repository-boundary validation helper. Validates a payload's fields with the
@@ -659,10 +660,15 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     try {
       const { data, error } = await getSupabaseClient()
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          customers (id, name, phone),
+          employees (id, name),
+          services (id, name, category_id, price, duration_minutes)
+        `)
         .eq('center_id', centerRes.data)
         .gte('date_time', range.fromISO)
-        .lte('date_time', range.toISO)
+        .lt('date_time', range.toISO)
         .order('date_time', { ascending: true });
 
       if (error) return { ok: false, error: createQueryError("Appointment.list", error.message) };
@@ -1758,6 +1764,7 @@ class SupabaseReportAdapter implements ReportRepository {
     if (!centerRes.ok) return centerRes as any;
 
     try {
+      const range = localDateRangeISO(fromStr, toStr);
       const { data, error } = await getSupabaseClient()
         .from('invoices')
         .select(`
@@ -1780,8 +1787,8 @@ class SupabaseReportAdapter implements ReportRepository {
         `)
         .eq('center_id', centerRes.data)
         .eq('status', 'PAID')
-        .gte('date', fromStr)
-        .lte('date', toStr)
+        .gte('date', range.fromISO)
+        .lt('date', range.toExclusiveISO)
         .order('date', { ascending: false });
 
       if (error) {
@@ -1803,6 +1810,7 @@ class SupabaseReportAdapter implements ReportRepository {
     if (!centerRes.ok) return centerRes as any;
 
     try {
+      const range = localDateRangeISO(fromStr, toStr);
       const client = getSupabaseClient();
       const { data, error } = await client
         .from('appointments')
@@ -1814,8 +1822,8 @@ class SupabaseReportAdapter implements ReportRepository {
           services (name)
         `)
         .eq('center_id', centerRes.data)
-        .gte('date_time', fromStr)
-        .lte('date_time', toStr)
+        .gte('date_time', range.fromISO)
+        .lt('date_time', range.toExclusiveISO)
         .order('date_time', { ascending: false });
 
       if (error) {
