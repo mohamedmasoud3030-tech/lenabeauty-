@@ -15,6 +15,8 @@ import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { Customer, Appointment, Invoice } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
+import { PageHeader } from "../shared/components/PageHeader";
+import { ScreenState } from "../shared/components/ScreenState";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -73,11 +75,16 @@ export default function CustomersPage() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await unwrap(useCases.customers.list());
       setRows(res);
+    } catch (e: any) {
+      setLoadError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -93,15 +100,19 @@ export default function CustomersPage() {
     return rows.filter((c) => (c.name + " " + (c.phone ?? "")).toLowerCase().includes(text));
   }, [rows, q]);
 
-  const stats = useMemo(() => ({
-    total: rows.length,
-    totalRevenue: rows.reduce((s, c) => s + c.totalSpent, 0),
-    vip: rows.filter(c => c.loyaltyPoints >= 500).length,
-    newThisMonth: rows.filter(c => {
-      // approximate: customers with low totalSpent are likely new
-      return c.totalSpent < 50;
-    }).length,
-  }), [rows]);
+  const stats = useMemo(() => {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    return {
+      total: rows.length,
+      totalRevenue: rows.reduce((s, c) => s + c.totalSpent, 0),
+      // VIP = أعلى فئتين ولاءً (ذهبي/بلاتيني) من الإنفاق الفعلي — لا تقديرات.
+      vip: rows.filter(c => ["tier.platinum", "tier.gold"].includes(getTierBySpend(c.totalSpent).labelKey)).length,
+      // عملاء جدد فعليًا من تاريخ الإنشاء — لا تخمين من إنفاق منخفض.
+      newThisMonth: rows.filter(c => c.createdAt && c.createdAt.getTime() >= monthStart.getTime()).length,
+    };
+  }, [rows]);
 
   async function openHistory(customer: Customer) {
     setOpenId(customer.id);
@@ -273,45 +284,38 @@ export default function CustomersPage() {
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 print:hidden">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
-            <User className="h-8 w-8 transition-transform group-hover:rotate-12" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
-              {t("Customers")}
-            </h1>
-            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Manage your client database")}</p>
-          </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80 group">
-            <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
-              className="w-full rounded-[1.5rem] border border-border bg-card py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
-              placeholder={t("Search by name or phone...")}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() => exportCustomersCSV(filtered, t)}
-            className="h-14 w-full sm:w-auto px-6 rounded-[1.5rem] border border-border bg-card font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-          >
-            <Download className="h-5 w-5" />
-            {t("Export")}
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="h-14 w-full sm:w-auto px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-          >
-            <UserPlus className="h-6 w-6" />
-            {t("Add Customer")}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<User className="h-7 w-7 sm:h-8 sm:w-8" />}
+        title={t("Customers")}
+        subtitle={t("Manage your client database")}
+        actions={
+          <>
+            <div className="relative w-full sm:w-72 group">
+              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                className="w-full rounded-[1.5rem] border border-border bg-card py-3.5 ps-11 pe-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+                placeholder={t("Search by name or phone...")}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => exportCustomersCSV(filtered, t)}
+              className="h-12 w-full sm:w-auto px-5 rounded-[1.5rem] border border-border bg-card font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {t("Export")}
+            </button>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="h-12 w-full sm:w-auto px-6 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <UserPlus className="h-5 w-5" />
+              {t("Add Customer")}
+            </button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 print:hidden">
@@ -430,16 +434,41 @@ export default function CustomersPage() {
                   </motion.tr>
                 ))}
               </AnimatePresence>
-              {filtered.length === 0 && !loading && (
+              {loading && filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-10 py-40 text-center">
-                    <div className="flex flex-col items-center justify-center gap-6 opacity-20">
-                      <Search className="h-20 w-20" />
-                      <p className="text-xl font-bold uppercase tracking-[0.3em]">{t("No Customers Found")}</p>
-                    </div>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <ScreenState state="loading" title={t("Loading customers...")} compact />
                   </td>
                 </tr>
-              )}
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <ScreenState
+                      state="error"
+                      title={t("Failed to load customers")}
+                      description={t("Something went wrong while loading. Try again.")}
+                      actionLabel="Retry"
+                      onAction={load}
+                      errorDetail={loadError}
+                      compact
+                    />
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center">
+                    <ScreenState
+                      state="empty"
+                      icon={<Users className="h-6 w-6" />}
+                      title={t("No Customers Found")}
+                      description={q ? t("Try a different search term") : t("Add your first customer to start selling")}
+                      actionLabel="Add Customer"
+                      onAction={() => setShowAddModal(true)}
+                      compact
+                    />
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -509,12 +538,29 @@ export default function CustomersPage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          {filtered.length === 0 && !loading && (
-             <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-               <Search className="h-16 w-16" />
-               <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Customers Found")}</p>
-             </div>
-          )}
+          {loading && filtered.length === 0 ? (
+            <ScreenState state="loading" title={t("Loading customers...")} compact />
+          ) : loadError ? (
+            <ScreenState
+              state="error"
+              title={t("Failed to load customers")}
+              description={t("Something went wrong while loading. Try again.")}
+              actionLabel="Retry"
+              onAction={load}
+              errorDetail={loadError}
+              compact
+            />
+          ) : filtered.length === 0 ? (
+            <ScreenState
+              state="empty"
+              icon={<Users className="h-6 w-6" />}
+              title={t("No Customers Found")}
+              description={q ? t("Try a different search term") : t("Add your first customer to start selling")}
+              actionLabel="Add Customer"
+              onAction={() => setShowAddModal(true)}
+              compact
+            />
+          ) : null}
         </div>
       </motion.div>
 
@@ -554,10 +600,7 @@ export default function CustomersPage() {
 
               <div className="max-h-[80vh] overflow-auto p-5 sm:p-10 scrollbar-hide">
                 {!history ? (
-                  <div className="flex flex-col items-center justify-center py-40 gap-6 opacity-40">
-                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-xs font-bold uppercase tracking-[0.2em]">{t("Fetching Data...")}</p>
-                  </div>
+                  <ScreenState state="loading" title={t("Fetching Data...")} compact />
                 ) : (
                   <div className="grid gap-12 lg:grid-cols-3">
                     {/* Notes Section */}
@@ -626,10 +669,13 @@ export default function CustomersPage() {
                             </motion.div>
                           ))
                         ) : (
-                          <div className="rounded-[2rem] border border-dashed border-border py-32 text-center opacity-20">
-                            <Calendar className="h-12 w-12 mx-auto mb-4" />
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em]">{t("No Appointments")}</p>
-                          </div>
+                          <ScreenState
+                            state="empty"
+                            compact
+                            icon={<Calendar className="h-6 w-6" />}
+                            title={t("No Appointments")}
+                            description={t("No appointments recorded yet")}
+                          />
                         )}
                       </div>
                     </div>
@@ -682,10 +728,13 @@ export default function CustomersPage() {
                             </motion.div>
                           ))
                         ) : (
-                          <div className="rounded-[2rem] border border-dashed border-border py-32 text-center opacity-20">
-                            <Receipt className="h-12 w-12 mx-auto mb-4" />
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em]">{t("No Invoices")}</p>
-                          </div>
+                          <ScreenState
+                            state="empty"
+                            compact
+                            icon={<Receipt className="h-6 w-6" />}
+                            title={t("No Invoices")}
+                            description={t("No invoices recorded yet")}
+                          />
                         )}
                       </div>
                     </div>
@@ -711,7 +760,7 @@ export default function CustomersPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
@@ -786,7 +835,7 @@ export default function CustomersPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">

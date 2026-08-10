@@ -11,7 +11,8 @@ import {
   TrendingUp, TrendingDown, FileText, Calendar, Package, ShoppingBag,
   ArrowUpRight, ArrowDownRight, RefreshCw, Activity, Sparkles,
   Clock, Wallet, BarChart3, CheckCircle2,
-  XCircle, AlertCircle, Target, Flame, Award, Zap as ZapIcon
+  XCircle, AlertCircle, Target, Flame, Award, Zap as ZapIcon,
+  ChevronRight, X, User, Receipt
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -32,6 +33,8 @@ export default function ReportsPage() {
   const [data, setData] = useState<(SalesReportRow | AppointmentReportRow | InventoryReportRow)[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Drill-down: العملية المحددة من سجل المعاملات
+  const [selectedSale, setSelectedSale] = useState<SalesReportRow | null>(null);
   // Guards against stale async results: when the user switches tabs while a
   // request is in flight, the old request must not overwrite the new tab's
   // state (previously it could flash the previous tab's error/empty screen).
@@ -265,6 +268,76 @@ export default function ReportsPage() {
                 </AreaChart>
               </ResponsiveContainer>
             </LazyChart>
+          </div>
+        </motion.div>
+
+        {/* سجل المعاملات — عرض مبيعات الفترة مع إمكانية الوصول لتفاصيل العملية */}
+        <motion.div variants={item} className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm p-4 sm:p-6 lg:p-8 shadow-xl overflow-hidden">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-foreground">{t("Sales Transactions")}</h4>
+              <p className="text-xs text-muted-foreground">{salesData.length} {t("transactions")}</p>
+            </div>
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-start">
+                  <th className="text-start py-3 px-3 font-bold text-muted-foreground uppercase tracking-widest text-xs">{t("Date")}</th>
+                  <th className="text-start py-3 px-3 font-bold text-muted-foreground uppercase tracking-widest text-xs">{t("Customer")}</th>
+                  <th className="text-start py-3 px-3 font-bold text-muted-foreground uppercase tracking-widest text-xs">{t("Items")}</th>
+                  <th className="text-start py-3 px-3 font-bold text-muted-foreground uppercase tracking-widest text-xs">{t("Total")}</th>
+                  <th className="text-end py-3 px-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {salesData.slice(0, 20).map((sale) => (
+                  <tr
+                    key={sale.id}
+                    onClick={() => setSelectedSale(sale)}
+                    className="cursor-pointer hover:bg-muted/40 transition-colors"
+                  >
+                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{formatDay(sale.date.split("T")[0])}</td>
+                    <td className="py-3 px-3 text-muted-foreground font-medium truncate max-w-[200px]">{sale.customer ?? "—"}</td>
+                    <td className="py-3 px-3 text-muted-foreground">{sale.items.length}</td>
+                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{sale.totalAmount.toFixed(2)} OMR</td>
+                    <td className="py-3 px-3 text-end">
+                      <button className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">
+                        {t("Details")}
+                        <ChevronRight className={clsx("h-3 w-3", i18n.language === "ar" && "rotate-180")} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {salesData.slice(0, 15).map((sale) => (
+              <button
+                key={sale.id}
+                onClick={() => setSelectedSale(sale)}
+                className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-start hover:border-primary/30 transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground truncate">{sale.customer ?? t("Walk-in")}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground mt-0.5">
+                    {formatDay(sale.date.split("T")[0])} · {sale.items.length} {t("Items")}
+                  </p>
+                </div>
+                <div className="text-end shrink-0">
+                  <p className="text-sm font-bold text-foreground">{sale.totalAmount.toFixed(2)} OMR</p>
+                  <ChevronRight className={clsx("h-4 w-4 text-muted-foreground ms-auto mt-0.5", i18n.language === "ar" && "rotate-180")} />
+                </div>
+              </button>
+            ))}
           </div>
         </motion.div>
 
@@ -542,13 +615,36 @@ export default function ReportsPage() {
             {t("Deep insights into your business performance")}
           </p>
         </div>
-        <button
-          onClick={load}
-          className="group relative h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-lg hover:scale-110 active:scale-95"
-          title={t("Refresh")}
-        >
-          <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} />
-        </button>
+        <div className="flex items-end gap-2 sm:gap-3 flex-wrap">
+          {/* Date range filter — أرقام مفهومة وفلاتر تاريخ سليمة */}
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <input
+              type="date"
+              aria-label={t("From date")}
+              className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto"
+              value={dateRange.from}
+              max={dateRange.to}
+              onChange={(e) => { if (e.target.value) setDateRange((p) => ({ ...p, from: e.target.value })); }}
+            />
+            <span className="text-xs font-bold text-muted-foreground">—</span>
+            <input
+              type="date"
+              aria-label={t("To date")}
+              className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto"
+              value={dateRange.to}
+              min={dateRange.from}
+              onChange={(e) => { if (e.target.value) setDateRange((p) => ({ ...p, to: e.target.value })); }}
+            />
+          </div>
+          <button
+            onClick={load}
+            className="group relative h-11 w-11 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-lg hover:scale-110 active:scale-95"
+            title={t("Refresh")}
+          >
+            <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -598,6 +694,96 @@ export default function ReportsPage() {
           <motion.div key="inventory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {renderInventory()}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* تفاصيل العملية — drill-down من سجل المعاملات */}
+      <AnimatePresence>
+        {selectedSale && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedSale(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 30 }}
+              className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[2rem] border border-border bg-card shadow-2xl"
+            >
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border px-5 sm:px-8 py-4 sm:py-6 bg-muted/20 backdrop-blur-xl">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                    <Receipt className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">{t("Transaction Details")}</h2>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {t("Invoice No")} · {selectedSale.id.slice(-6).toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedSale(null)}
+                  className="h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90 shrink-0"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-5 sm:p-8 space-y-5">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-xl bg-muted/40 p-3">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t("Date")}</p>
+                    <p className="font-bold text-foreground">{formatDay(selectedSale.date.split("T")[0])}</p>
+                  </div>
+                  <div className="rounded-xl bg-muted/40 p-3">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t("Customer")}</p>
+                    <p className="font-bold text-foreground truncate">{selectedSale.customer ?? t("Walk-in")}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("Items")}</p>
+                  {selectedSale.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("No items recorded")}</p>
+                  ) : (
+                    selectedSale.items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">{item.name}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground mt-0.5">
+                            {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")} · {item.qty} × {item.price.toFixed(2)}
+                          </p>
+                        </div>
+                        <p className="text-sm font-bold text-foreground shrink-0">{(item.price * item.qty).toFixed(2)}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-1.5 border-t border-border pt-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground font-medium">{t("Subtotal")}</span>
+                    <span className="font-bold text-foreground">{(selectedSale.totalAmount + selectedSale.discount).toFixed(2)}</span>
+                  </div>
+                  {selectedSale.discount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">{t("Discount")}</span>
+                      <span className="font-bold text-rose-500">-{selectedSale.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="font-bold text-foreground">{t("Total")}</span>
+                    <span className="text-lg font-bold text-primary">{selectedSale.totalAmount.toFixed(2)} OMR</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </motion.div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { 
   CalendarDays, ChevronLeft, ChevronRight, Plus, X, Clock, 
   User, Scissors, Search, Bell, CheckCircle2, Calendar as CalendarIcon,
-  Filter, MoreVertical, Phone, MapPin, Sparkles, XCircle
+  Filter, MoreVertical, Phone, MapPin, Sparkles, XCircle, UserPlus
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -12,6 +12,8 @@ import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import i18n from "i18next";
+import { ScreenState } from "../shared/components/ScreenState";
+import { PageHeader } from "../shared/components/PageHeader";
 
 type Customer = { id: string; name: string; phone: string | null };
 type Service = { id: string; name: string; category: string; durationMins: number; price: number };
@@ -124,10 +126,18 @@ export default function AppointmentsPage() {
   const [status, setStatus] = useState<AppointmentStatus>(AppointmentStatus.SCHEDULED);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState(0);
   const [noShowFeeAmount, setNoShowFeeAmount] = useState(0);
   const [chargeNoShowFee, setChargeNoShowFee] = useState(true);
   const [noShowNote, setNoShowNote] = useState("");
+
+  // Status filter: ALL | SCHEDULED | COMPLETED | CANCELLED | NO_SHOW
+  const [statusFilter, setStatusFilter] = useState<"ALL" | AppointmentStatus>("ALL");
+
+  // Inline "create customer" inside the booking dialog
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
+  const [customerSearchDone, setCustomerSearchDone] = useState(false);
 
   const range = useMemo(() => {
     if (mode === "day") {
@@ -143,6 +153,7 @@ export default function AppointmentsPage() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const [sv, em, a] = await Promise.all([
         unwrap(useCases.services.list()),
@@ -154,8 +165,9 @@ export default function AppointmentsPage() {
       setAppts(a.map(mapAppt));
       if (sv.length && !serviceId) setServiceId(sv[0].id);
       if (em.length && !employeeId) setEmployeeId(em[0].id);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setLoadError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -166,17 +178,62 @@ export default function AppointmentsPage() {
   }, [range.from.getTime(), range.to.getTime()]);
 
   useEffect(() => {
+    setCustomerSearchDone(false);
     const t = setTimeout(async () => {
       const q = customerQ.trim();
       if (!q) {
         setCustomers([]);
+        setCustomerSearchDone(true);
         return;
       }
-      const res = await unwrap(useCases.customers.list(q));
-      setCustomers(res.map(mapCustomer));
-    }, 250);
+      try {
+        const res = await unwrap(useCases.customers.list(q));
+        setCustomers(res.map(mapCustomer));
+      } catch {
+        setCustomers([]);
+      } finally {
+        setCustomerSearchDone(true);
+      }
+    }, 300);
     return () => clearTimeout(t);
   }, [customerQ]);
+
+  /** Inline flow: «عميل جديد → حجز موعد» بدون مغادرة الحوار. */
+  async function handleCreateCustomerInline() {
+    const name = customerQ.trim();
+    if (!name || creatingCustomer) return;
+    setCreatingCustomer(true);
+    try {
+      const created = await unwrap(useCases.customers.create({ name }));
+      setCustomerId(created.id);
+      setCustomerQ(created.name);
+      setCustomers([]);
+      showToast('success', t("Success"), t("Customer created successfully"));
+    } catch (err: any) {
+      showToast('error', t("Error"), err?.message || String(err));
+    } finally {
+      setCreatingCustomer(false);
+    }
+  }
+
+  /** Quick status action from the edit dialog (explicit Arabic actions). */
+  async function setApptStatus(appt: Appt, next: AppointmentStatus) {
+    setBusy(true);
+    try {
+      await unwrap(useCases.appointments.update(appt.id, { status: next }));
+      showToast('success', t("Success"), t("Appointment updated successfully"));
+      await load();
+      setOpen(false);
+    } catch (err: any) {
+      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
+         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      } else {
+         showToast('error', t("Error"), err?.message || String(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const slots = useMemo(() => {
     const count = (24 * 60) / SLOT_MINS;
@@ -313,15 +370,6 @@ export default function AppointmentsPage() {
     }
   }
 
-  const apptsByDay = useMemo(() => {
-    const map = new Map<string, Appt[]>();
-    for (const a of appts) {
-      const d = startOfDay(new Date(a.dateTime)).toISOString();
-      map.set(d, [...(map.get(d) ?? []), a]);
-    }
-    return map;
-  }, [appts]);
-
   // Stats
   const apptStats = useMemo(() => ({
     total: appts.length,
@@ -332,72 +380,105 @@ export default function AppointmentsPage() {
     protected: appts.filter(a => (a.depositAmount ?? 0) > 0 || (a.noShowFeeAmount ?? 0) > 0).length,
   }), [appts]);
 
+  const filteredAppts = useMemo(() => {
+    if (statusFilter === "ALL") return appts;
+    return appts.filter(a => a.status === statusFilter);
+  }, [appts, statusFilter]);
+
+  const apptsByDay = useMemo(() => {
+    const map = new Map<string, Appt[]>();
+    for (const a of filteredAppts) {
+      const d = startOfDay(new Date(a.dateTime)).toISOString();
+      map.set(d, [...(map.get(d) ?? []), a]);
+    }
+    return map;
+  }, [filteredAppts]);
+
   return (
     <div className="space-y-6 pb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
-            <CalendarDays className="h-8 w-8 transition-transform group-hover:rotate-12" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight">{t("Appointments")}</h1>
-            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Manage your spa schedule")}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full sm:w-auto">
-          <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-1.5 rounded-[1.5rem] border border-border shadow-inner w-full justify-center sm:justify-start">
+      <PageHeader
+        icon={<CalendarDays className="h-7 w-7 sm:h-8 sm:w-8" />}
+        title={t("Appointments")}
+        subtitle={t("Manage your spa schedule")}
+        actions={
+          <>
+            <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-1.5 rounded-[1.5rem] border border-border shadow-inner w-full justify-center sm:justify-start">
+              <button 
+                onClick={() => setAnchor(new Date())} 
+                className="px-4 sm:px-5 py-2.5 text-xs font-bold text-foreground hover:bg-card rounded-xl transition-all shadow-sm"
+              >
+                {t("Today")}
+              </button>
+              <div className="flex items-center border-x border-border/50 px-1 sm:px-2 gap-1 sm:gap-2">
+                <button 
+                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, -1) : addDays(d, -7))} 
+                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                  title={t("Previous")}
+                >
+                  {i18n.language === "ar" ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+                </button>
+                <button 
+                  onClick={() => setAnchor(d => mode === "day" ? addDays(d, 1) : addDays(d, 7))} 
+                  className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                  title={t("Next")}
+                >
+                  {i18n.language === "ar" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </button>
+              </div>
+              <div className="flex gap-1.5">
+                <button 
+                  onClick={() => setMode("day")} 
+                  className={clsx(
+                    "px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
+                    mode === "day" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t("Day")}
+                </button>
+                <button 
+                  onClick={() => setMode("week")} 
+                  className={clsx(
+                    "px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
+                    mode === "week" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {t("Week")}
+                </button>
+              </div>
+            </div>
             <button 
-              onClick={() => setAnchor(new Date())} 
-              className="px-5 py-2.5 text-xs font-bold text-foreground hover:bg-card rounded-xl transition-all shadow-sm"
+              onClick={() => openBooking()} 
+              className="h-13 min-h-[52px] px-6 sm:px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
             >
-              {t("Today")}
+              <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+              {t("New Appointment")}
             </button>
-            <div className="flex items-center border-x border-border/50 px-2 gap-2">
-              <button 
-                onClick={() => setAnchor(d => mode === "day" ? addDays(d, -1) : addDays(d, -7))} 
-                className="p-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-                title={t("Previous")}
-              >
-                {i18n.language === "ar" ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-              </button>
-              <button 
-                onClick={() => setAnchor(d => mode === "day" ? addDays(d, 1) : addDays(d, 7))} 
-                className="p-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
-                title={t("Next")}
-              >
-                {i18n.language === "ar" ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              </button>
-            </div>
-            <div className="flex gap-1.5">
-              <button 
-                onClick={() => setMode("day")} 
-                className={clsx(
-                  "px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
-                  mode === "day" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {t("Day")}
-              </button>
-              <button 
-                onClick={() => setMode("week")} 
-                className={clsx(
-                  "px-5 py-2.5 rounded-xl text-xs font-bold transition-all", 
-                  mode === "week" ? "bg-card text-primary shadow-md" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {t("Week")}
-              </button>
-            </div>
-          </div>
-          <button 
-            onClick={() => openBooking()} 
-            className="h-14 px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
+          </>
+        }
+      />
+
+      {/* Status filter — فصل واضح بين القادم والمنتهي والملغي */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {([
+          { id: "ALL", label: t("All") },
+          { id: AppointmentStatus.SCHEDULED, label: t("Upcoming") },
+          { id: AppointmentStatus.COMPLETED, label: t("Completed") },
+          { id: AppointmentStatus.CANCELLED, label: t("Canceled") },
+          { id: AppointmentStatus.NO_SHOW, label: t("No-show") },
+        ] as { id: "ALL" | AppointmentStatus; label: string }[]).map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setStatusFilter(id)}
+            className={clsx(
+              "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap border",
+              statusFilter === id
+                ? "bg-primary text-primary-foreground border-primary/20 shadow-md"
+                : "bg-card text-muted-foreground border-border hover:text-foreground"
+            )}
           >
-            <Plus className="h-6 w-6" />
-            {t("New Appointment")}
+            {label}
           </button>
-        </div>
+        ))}
       </div>
 
       {/* Stats Row */}
@@ -432,6 +513,35 @@ export default function AppointmentsPage() {
         className="space-y-6 lg:space-y-0"
       >
         <div className="hidden lg:block overflow-hidden rounded-[3rem] border border-border bg-card shadow-2xl">
+          {loading ? (
+            <div className="min-h-[400px]">
+              <ScreenState state="loading" title={t("Loading appointments...")} compact />
+            </div>
+          ) : loadError ? (
+            <div className="min-h-[400px]">
+              <ScreenState
+                state="error"
+                title={t("Failed to load appointments")}
+                description={t("Something went wrong while loading. Try again.")}
+                actionLabel="Retry"
+                onAction={load}
+                errorDetail={loadError}
+                compact
+              />
+            </div>
+          ) : Array.from(apptsByDay.values()).flat().length === 0 ? (
+            <div className="min-h-[400px]">
+              <ScreenState
+                state="empty"
+                icon={<CalendarIcon className="h-6 w-6" />}
+                title={t("No Appointments")}
+                description={t("Book an appointment to get started")}
+                actionLabel="New Appointment"
+                onAction={() => openBooking()}
+                compact
+              />
+            </div>
+          ) : (
           <div className="overflow-x-auto scrollbar-hide">
             <div className="min-w-[1200px]">
               <div className="grid border-b border-border bg-muted/20" style={{ gridTemplateColumns: `120px repeat(${range.days.length}, 1fr)` }}>
@@ -523,68 +633,108 @@ export default function AppointmentsPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Mobile View */}
         <div className="lg:hidden space-y-6">
-          {range.days.map((day) => {
-            const dayKey = startOfDay(day).toISOString();
-            const dayAppts = apptsByDay.get(dayKey) ?? [];
-            if (dayAppts.length === 0) return null;
+          {loading ? (
+            <div className="rounded-[2rem] border border-border bg-card/50">
+              <ScreenState state="loading" title={t("Loading appointments...")} compact />
+            </div>
+          ) : loadError ? (
+            <div className="rounded-[2rem] border border-border bg-card/50">
+              <ScreenState
+                state="error"
+                title={t("Failed to load appointments")}
+                description={t("Something went wrong while loading. Try again.")}
+                actionLabel="Retry"
+                onAction={load}
+                errorDetail={loadError}
+                compact
+              />
+            </div>
+          ) : Array.from(apptsByDay.values()).flat().length === 0 ? (
+            <div className="rounded-[2rem] border border-border bg-card/50">
+              <ScreenState
+                state="empty"
+                icon={<CalendarIcon className="h-6 w-6" />}
+                title={t("No Appointments")}
+                description={t("Book an appointment to get started")}
+                actionLabel="New Appointment"
+                onAction={() => openBooking()}
+                compact
+              />
+            </div>
+          ) : (
+            range.days.map((day) => {
+              const dayKey = startOfDay(day).toISOString();
+              const dayAppts = (apptsByDay.get(dayKey) ?? []).sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
 
-            return (
-              <div key={`mobile-${dayKey}`} className="space-y-4">
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest px-2">
-                  {fmtDayHeader(day)}
-                </h3>
-                <div className="grid gap-4">
-                  {dayAppts.sort((a,b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()).map(a => {
-                    const dt = new Date(a.dateTime);
-                    return (
-                      <motion.div
-                        key={`m-${a.id}`}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={() => openEditBooking(a)}
-                        className="bg-card border border-border rounded-[2rem] p-5 shadow-xl flex flex-col gap-4 relative overflow-hidden"
-                      >
-                        <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).replace("bg-", "bg-").split(" ")[0])} />
-                        
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <span className="font-bold text-foreground text-lg">{a.customer?.name}</span>
-                            <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                              <Scissors className="h-3 w-3" />
-                              {a.service?.name}
+              return (
+                <div key={`mobile-${dayKey}`} className="space-y-3">
+                  <div className="flex items-center justify-between px-2">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                      {fmtDayHeader(day)}
+                    </h3>
+                    <button
+                      onClick={() => openBooking(slotToDate(day, 9 * 2))}
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {t("Add")}
+                    </button>
+                  </div>
+
+                  {dayAppts.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-5 text-center">
+                      <p className="text-xs font-bold text-muted-foreground">{t("No appointments for this day")}</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {dayAppts.map(a => {
+                        const dt = new Date(a.dateTime);
+                        return (
+                          <motion.div
+                            key={`m-${a.id}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            onClick={() => openEditBooking(a)}
+                            className="bg-card border border-border rounded-[1.5rem] p-4 sm:p-5 shadow-xl flex flex-col gap-3 relative overflow-hidden cursor-pointer"
+                          >
+                            <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).split(" ")[0])} />
+                            
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1 min-w-0">
+                                <span className="font-bold text-foreground text-base sm:text-lg block truncate">{a.customer?.name}</span>
+                                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground truncate">
+                                  <Scissors className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{a.service?.name}</span>
+                                </div>
+                              </div>
+                              <span className={clsx("rounded-xl px-3 py-1 text-[10px] font-bold shadow-sm shrink-0", statusClass(a.status))}>
+                                {t(a.status)}
+                              </span>
                             </div>
-                          </div>
-                          <span className={clsx("rounded-xl px-3 py-1 text-[10px] font-bold uppercase tracking-widest shadow-sm", statusClass(a.status))}>
-                            {t(a.status)}
-                          </span>
-                        </div>
 
-                        <div className="flex items-center gap-4 border-t border-border pt-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
-                            <Clock className="h-4 w-4 text-primary" />
-                            {fmtTime(dt)}
-                          </div>
-                          <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl flex-1">
-                            <User className="h-4 w-4 text-primary" />
-                            <span className="truncate">{a.employee?.name}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                            <div className="flex items-center gap-3 border-t border-border pt-3 text-xs font-bold text-muted-foreground">
+                              <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
+                                <Clock className="h-4 w-4 text-primary" />
+                                {fmtTime(dt)}
+                              </div>
+                              <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl flex-1 min-w-0">
+                                <User className="h-4 w-4 text-primary shrink-0" />
+                                <span className="truncate">{a.employee?.name || "—"}</span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            );
-          })}
-          {Array.from(apptsByDay.values()).flat().length === 0 && !loading && (
-             <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-               <CalendarIcon className="h-16 w-16" />
-               <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Appointments")}</p>
-             </div>
+              );
+            })
           )}
         </div>
       </motion.div>
@@ -603,27 +753,27 @@ export default function AppointmentsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-2xl rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20 backdrop-blur-xl">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                     <CalendarIcon className="h-7 w-7" />
                   </div>
                   <div className="space-y-0.5">
-                    <h2 className="text-2xl font-bold text-foreground">{editApptId ? t("Edit Appointment") : t("Book Appointment")}</h2>
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground">{editApptId ? t("Edit Appointment") : t("Book Appointment")}</h2>
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Fill in the details below")}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setOpen(false)} 
-                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"
+                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90 shrink-0"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
 
-              <div className="p-6 sm:p-10 space-y-6 sm:space-y-8">
+              <div className="p-5 sm:p-10 space-y-6 sm:space-y-8">
                 <div className="grid grid-cols-2 gap-6 p-6 rounded-[2rem] bg-muted/30 border border-border shadow-inner">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Date")}</label>
@@ -701,17 +851,34 @@ export default function AppointmentsPage() {
                       )}
                     </AnimatePresence>
                   </div>
+                  {!customerId && customerQ.trim().length > 0 && customerSearchDone && customers.length === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4"
+                    >
+                      <p className="text-xs font-bold text-muted-foreground mb-2">{t("Customer not found")}</p>
+                      <button
+                        onClick={() => void handleCreateCustomerInline()}
+                        disabled={creatingCustomer}
+                        className="w-full h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        {creatingCustomer ? t("Creating...") : `${t("Create customer")}: ${customerQ.trim()}`}
+                      </button>
+                    </motion.div>
+                  )}
                   {customerId && (
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20"
                     >
-                      <div className="flex items-center gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                        <span className="text-sm font-bold text-foreground">{customerQ}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                        <span className="text-sm font-bold text-foreground truncate">{customerQ}</span>
                       </div>
-                      <button onClick={() => { setCustomerId(""); setCustomerQ(""); }} className="text-xs font-bold text-rose-500 hover:underline">{t("Remove")}</button>
+                      <button onClick={() => { setCustomerId(""); setCustomerQ(""); }} className="text-xs font-bold text-rose-500 hover:underline shrink-0 ms-2">{t("Remove")}</button>
                     </motion.div>
                   )}
                 </div>
@@ -843,6 +1010,27 @@ export default function AppointmentsPage() {
                           {t("Mark as No-Show")}
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {editApptId && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.COMPLETED); }}
+                        disabled={busy}
+                        className="h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-emerald-500 hover:text-white transition-all active:scale-95"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {t("Complete Appointment")}
+                      </button>
+                      <button
+                        onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.CANCELLED); }}
+                        disabled={busy}
+                        className="h-12 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-rose-500 hover:text-white transition-all active:scale-95"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        {t("Cancel Appointment")}
+                      </button>
                     </div>
                   )}
 

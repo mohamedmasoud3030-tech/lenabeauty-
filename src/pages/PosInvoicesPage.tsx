@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { 
+import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
   Zap, Clock, TrendingUp
 } from "lucide-react";
+// UserPlus used for inline new-customer creation at the POS checkout panel
 import { InvoicePrintLayout } from "../shared/components/InvoicePrintLayout";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
@@ -53,6 +54,11 @@ export default function PosInvoicesPage() {
   const [giftCards, setGiftCards] = useState<any[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
+  // Inline «عميل جديد → بيع» دون مغادرة نقطة البيع
+  const [showNewCustomer, setShowNewCustomer] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS" | "PACKAGES">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -116,6 +122,29 @@ export default function PosInvoicesPage() {
       setCustomers(res);
     } else {
       setCustomers([]);
+    }
+  }
+
+  /** إنشاء عميل جديد من داخل نقطة البيع ثم اختياره مباشرة للفاتورة. */
+  async function handleCreateCustomer() {
+    const name = newCustomerName.trim();
+    if (!name || creatingCustomer) return;
+    setCreatingCustomer(true);
+    try {
+      const created = await unwrap(useCases.customers.create({
+        name,
+        phone: newCustomerPhone.trim() || undefined,
+      }));
+      setSelectedCustomer(created);
+      setNewCustomerName("");
+      setNewCustomerPhone("");
+      setShowNewCustomer(false);
+      setSearchQ("");
+      showToast('success', t("Success"), t("Customer created successfully"));
+    } catch (err: any) {
+      showToast('error', t("Error"), err?.message || t("Failed to create customer"));
+    } finally {
+      setCreatingCustomer(false);
     }
   }
 
@@ -540,11 +569,19 @@ export default function PosInvoicesPage() {
                         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <input
                           ref={searchInputRef}
-                          className="w-full rounded-lg border border-border bg-card ps-10 pe-3 py-2.5 text-xs font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                          className="w-full rounded-lg border border-border bg-card ps-10 pe-10 py-2.5 text-xs font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all"
                           placeholder={t("Search customer...")}
                           value={searchQ}
                           onChange={(e) => searchCustomers(e.target.value)}
                         />
+                        <button
+                          onClick={() => { setShowNewCustomer(v => !v); setCustomers([]); }}
+                          className="absolute end-1.5 top-1/2 -translate-y-1/2 h-7 px-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-1 text-[10px] font-bold"
+                          title={t("New customer")}
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">{t("New")}</span>
+                        </button>
                         <AnimatePresence>
                           {customers.length > 0 && (
                             <motion.div 
@@ -570,6 +607,37 @@ export default function PosInvoicesPage() {
                           )}
                         </AnimatePresence>
                       </div>
+                    )}
+                    {showNewCustomer && !selectedCustomer && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 8 }}
+                        className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2"
+                      >
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("New customer")}</p>
+                        <input
+                          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                          placeholder={t("Customer name")}
+                          value={newCustomerName}
+                          onChange={(e) => setNewCustomerName(e.target.value)}
+                        />
+                        <input
+                          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
+                          placeholder={t("Phone (optional)")}
+                          dir="ltr"
+                          value={newCustomerPhone}
+                          onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        />
+                        <button
+                          onClick={() => void handleCreateCustomer()}
+                          disabled={creatingCustomer || !newCustomerName.trim()}
+                          className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md hover:brightness-110 transition-all"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          {creatingCustomer ? t("Creating...") : t("Create & select")}
+                        </button>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>

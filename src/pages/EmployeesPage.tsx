@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
+import { ScreenState } from "../shared/components/ScreenState";
 import { Employee } from "../domain/entities";
 import { requiredText, nonNegativeNumber, percentField, collectIssues, issuesToMap } from "../domain/validation";
 
@@ -251,20 +252,20 @@ export default function EmployeesPage() {
               <AnimatePresence mode="popLayout">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-10 py-40 text-center">
-                      <div className="flex flex-col items-center justify-center gap-6 opacity-40">
-                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                        <p className="text-xs font-bold uppercase tracking-[0.2em]">{t("Loading Team...")}</p>
-                      </div>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <ScreenState state="loading" title={t("Loading Team...")} compact />
                     </td>
                   </tr>
                 ) : employees.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-10 py-40 text-center">
-                      <div className="flex flex-col items-center justify-center gap-6 opacity-20">
-                        <Users className="h-20 w-20" />
-                        <p className="text-xl font-bold uppercase tracking-[0.3em]">{t("No Employees Found")}</p>
-                      </div>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <ScreenState
+                        state="empty"
+                        icon={<Users className="h-6 w-6" />}
+                        title={t("No Employees Found")}
+                        description={t("Add your first team member")}
+                        compact
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -348,15 +349,15 @@ export default function EmployeesPage() {
         <div className="lg:hidden p-4 grid gap-4 grid-cols-1">
           <AnimatePresence mode="popLayout">
             {loading ? (
-              <div className="flex flex-col items-center justify-center gap-6 opacity-40 py-20">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-xs font-bold uppercase tracking-[0.2em]">{t("Loading Team...")}</p>
-              </div>
+              <ScreenState state="loading" title={t("Loading Team...")} compact />
             ) : employees.length === 0 ? (
-              <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-                <Users className="h-16 w-16" />
-                <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Employees Found")}</p>
-              </div>
+              <ScreenState
+                state="empty"
+                icon={<Users className="h-6 w-6" />}
+                title={t("No Employees Found")}
+                description={t("Add your first team member")}
+                compact
+              />
             ) : (
               employees.map((emp, idx) => (
                 <motion.div

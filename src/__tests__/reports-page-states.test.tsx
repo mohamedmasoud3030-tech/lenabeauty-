@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import ReportsPage from "../pages/ReportsPage";
@@ -90,5 +90,47 @@ describe("ReportsPage screen states", () => {
     screen.getByText(i18n.t("Inventory")).click();
 
     expect(await screen.findByText(i18n.t("No Inventory Data"))).toBeInTheDocument();
+  });
+
+  it("shows the date range filter inputs", async () => {
+    vi.spyOn(useCases.reports, "getSales").mockResolvedValue({ ok: true, data: [] } as any);
+
+    await i18n.changeLanguage("ar");
+    renderPage();
+
+    expect(await screen.findByLabelText(i18n.t("From date"))).toBeInTheDocument();
+    expect(screen.getByLabelText(i18n.t("To date"))).toBeInTheDocument();
+  });
+
+  it("lists sales transactions with drill-down to transaction details", async () => {
+    vi.spyOn(useCases.reports, "getSales").mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: "inv-1",
+          date: "2026-08-10T10:00:00.000Z",
+          totalAmount: 15,
+          discount: 1,
+          customer: "أمل",
+          items: [
+            { id: "it-1", name: "قص شعر", type: "service", price: 15, qty: 1 },
+          ],
+        },
+      ],
+    } as any);
+
+    await i18n.changeLanguage("ar");
+    renderPage();
+
+    // Transactions section with the invoice row
+    expect(await screen.findByText(i18n.t("Sales Transactions"))).toBeInTheDocument();
+    expect(screen.getAllByText("أمل").length).toBeGreaterThan(0);
+
+    // Drill-down opens the transaction details dialog
+    fireEvent.click(screen.getAllByText("أمل")[0]);
+    expect(await screen.findByText(i18n.t("Transaction Details"))).toBeInTheDocument();
+    expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0);
+    // Discount is shown when > 0
+    expect(screen.getByText("-1.00")).toBeInTheDocument();
   });
 });

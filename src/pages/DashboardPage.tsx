@@ -6,7 +6,7 @@ import {
   Receipt, Sparkles, ArrowRight, Plus, 
   ShoppingBag, Calendar, UserPlus, FileText,
   Activity, Zap, Clock, ChevronRight, MoreVertical,
-  LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown
+  LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown, CheckCircle2
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -35,6 +35,9 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<{id: string, type: string, message: string, createdAt: string, user?: {username?: string}}[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  // تشغيلية حقيقية: مواعيد اليوم القادمة + تنبيهات المخزون
+  const [todayAppts, setTodayAppts] = useState<{ id: string; time: string; customerName: string; serviceName?: string; status: string }[]>([]);
+  const [lowStockItems, setLowStockItems] = useState<{ id: string; name: string; stock: number }[]>([]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -53,6 +56,7 @@ export default function DashboardPage() {
       setSummary(s);
 
       void loadActivity(s);
+      void loadTodayOps();
 
       if (s && s.canViewRevenue) {
         try {
@@ -76,6 +80,50 @@ export default function DashboardPage() {
       showToast('error', t("Error"), err.message || t("Failed to load dashboard"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  /** مواعيد اليوم القادمة + تنبيهات المخزون — بيانات حقيقية فقط. */
+  async function loadTodayOps() {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    try {
+      const [apptsRes, customersRes, servicesRes] = await Promise.all([
+        useCases.appointments.list({ fromISO: todayStart.toISOString(), toISO: todayEnd.toISOString() }),
+        useCases.customers.list(),
+        useCases.services.list(),
+      ]);
+      const customerNames = new Map((customersRes.ok ? customersRes.data : []).map((c) => [c.id, c.name]));
+      const serviceNames = new Map((servicesRes.ok ? servicesRes.data : []).map((s) => [s.id, s.name]));
+      const upcoming = (apptsRes.ok ? apptsRes.data : [])
+        .filter((a) => a.status === "SCHEDULED")
+        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+        .slice(0, 5)
+        .map((a) => ({
+          id: a.id,
+          time: a.dateTime.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+          customerName: a.customerId ? (customerNames.get(a.customerId) ?? "—") : "—",
+          serviceName: a.serviceId ? serviceNames.get(a.serviceId) : undefined,
+          status: a.status,
+        }));
+      setTodayAppts(upcoming);
+    } catch {
+      setTodayAppts([]);
+    }
+
+    try {
+      const productsRes = await useCases.products.list();
+      const low = (productsRes.ok ? productsRes.data : [])
+        .filter((p) => p.stockQuantity <= (p.reorderLevel ?? 5))
+        .sort((a, b) => a.stockQuantity - b.stockQuantity)
+        .slice(0, 5)
+        .map((p) => ({ id: p.id, name: p.name, stock: p.stockQuantity }));
+      setLowStockItems(low);
+    } catch {
+      setLowStockItems([]);
     }
   }
 
@@ -251,6 +299,102 @@ export default function DashboardPage() {
           trend={(summary?.lowStockCount && summary.lowStockCount > 0) ? "⚠️ Action" : "✓ Clear"}
           color={summary?.lowStockCount && summary.lowStockCount > 0 ? "rose" : "emerald"}
         />
+      </div>
+
+      {/* تشغيل اليوم: مواعيد قادمة + تنبيهات — معلومة تؤدي إلى فعل */}
+      <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
+        <motion.div variants={item} className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              {t("Today's Appointments")}
+            </h2>
+            <button
+              onClick={() => nav("/appointments")}
+              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+            >
+              {t("View All")}
+            </button>
+          </div>
+          <div className="p-4 sm:p-6">
+            {todayAppts.length === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<CalendarDays className="h-6 w-6" />}
+                title={t("No upcoming appointments today")}
+                description={t("Book an appointment to get started")}
+                actionLabel="New Appointment"
+                onAction={() => nav("/appointments")}
+              />
+            ) : (
+              <div className="space-y-2">
+                {todayAppts.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => nav("/appointments")}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-primary/30 transition-all"
+                  >
+                    <div className="h-10 w-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                      {a.time}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-foreground truncate">{a.customerName}</p>
+                      {a.serviceName && (
+                        <p className="text-[10px] font-bold text-muted-foreground truncate">{a.serviceName}</p>
+                      )}
+                    </div>
+                    <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", i18n.language === "ar" && "rotate-180")} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
+            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              {t("Operational Alerts")}
+            </h2>
+            <button
+              onClick={() => nav("/inventory")}
+              className="text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+            >
+              {t("View All")}
+            </button>
+          </div>
+          <div className="p-4 sm:p-6">
+            {lowStockItems.length === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<CheckCircle2 className="h-6 w-6" />}
+                title={t("No low stock alerts")}
+                description={t("Inventory levels are healthy")}
+              />
+            ) : (
+              <div className="space-y-2">
+                {lowStockItems.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => nav("/inventory")}
+                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-amber-500/40 transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground">{t("Low Stock")}</p>
+                    </div>
+                    <span className="h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-xs font-bold shrink-0">
+                      {p.stock}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Main Content Grid */}

@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   requiredText, nonNegativeNumber, nonNegativeInteger, collectIssues, issuesToMap
 } from "../domain/validation";
+import { ScreenState } from "../shared/components/ScreenState";
 
 type Product = { id: string; name: string; stockQuantity: number; price: number; cost: number; reorderLevel?: number };
 
@@ -61,11 +62,16 @@ export default function InventoryPage() {
 
   const isEditing = !!editingId;
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await unwrap(useCases.products.listFull());
       setRows(res);
+    } catch (e: any) {
+      setLoadError(e?.message || String(e));
     } finally {
       setLoading(false);
     }
@@ -490,22 +496,39 @@ export default function InventoryPage() {
                     );
                   })}
                 </AnimatePresence>
-                {filtered.length === 0 && !loading && (
+                {loading && filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-10 py-48 text-center">
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="flex flex-col items-center justify-center gap-6 opacity-20"
-                      >
-                        <div className="h-24 w-24 rounded-[2rem] bg-muted flex items-center justify-center">
-                          <Boxes className="h-12 w-12" />
-                        </div>
-                        <p className="text-xl font-bold uppercase tracking-[0.3em]">{t("No Products Found")}</p>
-                      </motion.div>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <ScreenState state="loading" title={t("Loading products...")} compact />
                     </td>
                   </tr>
-                )}
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <ScreenState
+                        state="error"
+                        title={t("Failed to load products")}
+                        description={t("Something went wrong while loading. Try again.")}
+                        actionLabel="Retry"
+                        onAction={load}
+                        errorDetail={loadError}
+                        compact
+                      />
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center">
+                      <ScreenState
+                        state="empty"
+                        icon={<Boxes className="h-6 w-6" />}
+                        title={t("No Products Found")}
+                        description={q ? t("Try a different search term") : t("Add your first product to start selling")}
+                        compact
+                      />
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -580,12 +603,27 @@ export default function InventoryPage() {
                 );
               })}
             </AnimatePresence>
-            {filtered.length === 0 && !loading && (
-               <div className="py-20 text-center flex flex-col items-center justify-center gap-6 opacity-20">
-                 <Boxes className="h-16 w-16" />
-                 <p className="text-lg font-bold uppercase tracking-[0.2em]">{t("No Products Found")}</p>
-               </div>
-            )}
+            {loading && filtered.length === 0 ? (
+              <ScreenState state="loading" title={t("Loading products...")} compact />
+            ) : loadError ? (
+              <ScreenState
+                state="error"
+                title={t("Failed to load products")}
+                description={t("Something went wrong while loading. Try again.")}
+                actionLabel="Retry"
+                onAction={load}
+                errorDetail={loadError}
+                compact
+              />
+            ) : filtered.length === 0 ? (
+              <ScreenState
+                state="empty"
+                icon={<Boxes className="h-6 w-6" />}
+                title={t("No Products Found")}
+                description={q ? t("Try a different search term") : t("Add your first product to start selling")}
+                compact
+              />
+            ) : null}
           </div>
         </motion.div>
       </div>
