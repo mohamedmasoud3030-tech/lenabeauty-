@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, Save, Eye, Download, Share2, Printer } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, Save, Download, Share2, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCases } from '../app/composition/useCases';
 import { unwrap } from '../shared/hooks/useApplication';
@@ -24,6 +24,8 @@ interface BrandingSettings {
   footerTextAr: string;
 }
 
+const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2MB
+
 const DEFAULT_SETTINGS: BrandingSettings = {
   salonName: 'LenaBeauty',
   salonNameAr: 'لينا بيوتي',
@@ -41,7 +43,6 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };
 
-/** Map the persisted CenterSettings branding fields onto the form shape. */
 function fromCenterSettings(cs: any): BrandingSettings {
   return {
     salonName: cs?.displayName ?? DEFAULT_SETTINGS.salonName,
@@ -61,10 +62,68 @@ function fromCenterSettings(cs: any): BrandingSettings {
   };
 }
 
+/** Convert a #RRGGBB hex string to the HSL triple used by the app tokens. */
+function hexToHsl(hex: string): string | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60;
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+/** Lift lightness for a readable dark-mode variant of a brand color. */
+function liftLightness(hsl: string, by: number): string {
+  const parts = hsl.split(' ');
+  const l = Math.min(100, Math.round(Number(parts[2].replace('%', ''))) + by);
+  return `${parts[0]} ${parts[1]} ${l}%`;
+}
+
+/**
+ * Feed saved branding values into the shared application tokens (--primary,
+ * --secondary, --ring, --accent) for BOTH light and dark modes, via a single
+ * injected <style> tag. Semantic colors (success/warning/danger/info) and the
+ * surface tokens are intentionally preserved.
+ */
+function applyBrandTokens(s: Pick<BrandingSettings, 'primaryColor' | 'secondaryColor' | 'accentColor'>) {
+  if (typeof document === 'undefined') return;
+  const pL = hexToHsl(s.primaryColor);
+  const sL = hexToHsl(s.secondaryColor);
+  const aL = hexToHsl(s.accentColor);
+  const rules: string[] = [];
+  if (pL) rules.push(`:root { --primary: ${pL}; --ring: ${pL}; }`);
+  if (sL) rules.push(`:root { --secondary: ${sL}; }`);
+  if (aL) rules.push(`:root { --accent: ${aL}; }`);
+  if (pL) rules.push(`.dark { --primary: ${liftLightness(pL, 10)}; --ring: ${liftLightness(pL, 10)}; }`);
+  if (sL) rules.push(`.dark { --secondary: ${liftLightness(sL, 8)}; }`);
+  if (aL) rules.push(`.dark { --accent: ${liftLightness(aL, 6)}; }`);
+  if (rules.length === 0) return;
+  let tag = document.getElementById('brand-tokens') as HTMLStyleElement | null;
+  if (!tag) {
+    tag = document.createElement('style');
+    tag.id = 'brand-tokens';
+    document.head.appendChild(tag);
+  }
+  tag.textContent = rules.join('\n');
+}
+
 export default function BrandingSettingsPage({ embedded = false }: { embedded?: boolean }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { showToast } = useToast();
-  const isArabic = i18n.language === 'ar';
   const [settings, setSettings] = useState<BrandingSettings>(DEFAULT_SETTINGS);
   const [preview, setPreview] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -73,41 +132,48 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   useEffect(() => {
     // Supabase is the source of truth; localStorage is only a cache/fallback.
     (async () => {
+      let next: BrandingSettings | null = null;
       try {
         const res = await useCases.settings.get();
         if (res.ok) {
-          const next = fromCenterSettings(res.data);
-          setSettings(next);
-          if (next.logo) setPreview(next.logo);
-          return;
+          next = fromCenterSettings(res.data);
         }
       } catch {
         // fall through to localStorage
       }
-      const savedLocal = localStorage.getItem('lenabeauty_branding');
-      if (savedLocal) {
-        try {
-          setSettings(JSON.parse(savedLocal));
-          const logoData = localStorage.getItem('lenabeauty_logo');
-          if (logoData) setPreview(logoData);
-        } catch {
-          /* ignore malformed cache */
+      if (!next) {
+        const savedLocal = localStorage.getItem('lenabeauty_branding');
+        if (savedLocal) {
+          try { next = JSON.parse(savedLocal); } catch { /* ignore */ }
         }
+      }
+      if (next) {
+        setSettings(next);
+        if (next.logo) setPreview(next.logo);
+        // Reflect the saved brand across the app tokens.
+        applyBrandTokens(next);
       }
     })();
   }, []);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64 = event.target?.result as string;
-        setPreview(base64);
-        setSettings(prev => ({ ...prev, logo: base64, logoFile: file }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+      return;
     }
+    if (file.size > MAX_LOGO_BYTES) {
+      showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      setPreview(base64);
+      setSettings(prev => ({ ...prev, logo: base64, logoFile: file }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleInputChange = (field: keyof BrandingSettings, value: string) => {
@@ -136,9 +202,10 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         address: settings.address,
         brandLogoBase64: settings.logo ?? undefined,
       }));
-      // localStorage remains a backward-compat cache; remote is authoritative.
       localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
       if (settings.logo) localStorage.setItem('lenabeauty_logo', settings.logo);
+      // Saved values feed the shared application tokens.
+      applyBrandTokens(settings);
       setSaved(true);
       showToast('success', t('Success'), t('Branding settings saved successfully'));
       setTimeout(() => setSaved(false), 3000);
@@ -157,335 +224,216 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     a.href = url;
     a.download = 'lenabeauty-branding-settings.json';
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleImportSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const imported = JSON.parse(event.target?.result as string);
-          setSettings(imported);
-          if (imported.logo) {
-            setPreview(imported.logo);
-          }
-          handleSave();
-        } catch (err) {
-          alert(isArabic ? 'فشل استيراد الإعدادات. تأكد من صيغة الملف.' : 'Failed to import settings. Please check the file format.');
-        }
-      };
-      reader.readAsText(file);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        setSettings(imported);
+        if (imported.logo) setPreview(imported.logo);
+        handleSave();
+      } catch {
+        showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+      }
+    };
+    reader.readAsText(file);
   };
 
+  const inputCls =
+    'w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition';
+  const labelCls = 'block text-[11px] font-bold text-muted-foreground mb-1';
+  const cardCls = 'bg-card border border-border rounded-xl p-3 sm:p-4';
+
+  const ColorRow = useCallback(
+    ({ field, labelKey }: { field: 'primaryColor' | 'secondaryColor' | 'accentColor'; labelKey: string }) => (
+      <div>
+        <label className={labelCls}>{t(labelKey)}</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={settings[field]}
+            onChange={(e) => handleColorChange(field, e.target.value)}
+            className="h-9 w-12 rounded-lg cursor-pointer border border-border bg-card p-0.5"
+            aria-label={t(labelKey)}
+          />
+          <input
+            type="text"
+            value={settings[field]}
+            onChange={(e) => handleColorChange(field, e.target.value)}
+            className={inputCls + ' font-mono text-xs'}
+            dir="ltr"
+          />
+        </div>
+      </div>
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [settings, t]
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="w-full">
-        {!embedded && (
-          <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
-              {isArabic ? 'إعدادات الهوية البصرية' : 'Branding Settings'}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {isArabic ? 'إدارة هوية الصالون وبيانات الشركة' : 'Manage your salon branding and company information'}
-            </p>
-          </div>
-        )}
+    <div className="space-y-4">
+      {!embedded && (
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground">{t('Branding Settings')}</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">{t('Manage your salon branding and company information')}</p>
+        </div>
+      )}
 
-        {/* Success Message */}
-        {saved && (
-          <div className="mb-6 p-4 bg-success/10 border border-success/30 rounded-lg text-success">
-            {isArabic ? 'تم حفظ الإعدادات بنجاح' : 'Settings saved successfully'}
-          </div>
-        )}
+      {saved && (
+        <div className="p-3 bg-success/10 border border-success/30 rounded-lg text-success text-sm font-bold">
+          {t('Branding settings saved successfully')}
+        </div>
+      )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Logo Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-card backdrop-blur-md border border-border rounded-2xl p-4 sm:p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">
-                {isArabic ? 'شعار الصالون' : 'Salon Logo'}
-              </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Logo + Colors */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className={cardCls}>
+            <h2 className="text-sm font-bold text-foreground mb-3">{t('Salon Logo')}</h2>
 
-              {/* Logo Preview */}
-              <div className="mb-4 p-4 sm:p-6 bg-muted/30 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center min-h-48">
-                {preview ? (
-                  <img src={preview} alt="Logo" className="max-w-full max-h-40 object-contain" />
-                ) : (
-                  <div className="text-center">
-                    <Upload className="w-12 h-12 text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm">
-                      {isArabic ? 'لم يتم رفع شعار بعد' : 'No logo uploaded yet'}
-                    </p>
-                  </div>
-                )}
+            <div className="mb-3 p-3 bg-muted/30 rounded-lg border-2 border-dashed border-primary/30 flex items-center justify-center min-h-32">
+              {preview ? (
+                <img src={preview} alt={t('Salon Logo')} className="max-w-full max-h-28 object-contain" />
+              ) : (
+                <div className="text-center">
+                  <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto mb-1.5" />
+                  <p className="text-muted-foreground text-xs">{t('No logo uploaded yet')}</p>
+                </div>
+              )}
+            </div>
+
+            <label className="block w-full">
+              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+              <div className="w-full bg-primary text-primary-foreground py-2.5 rounded-lg cursor-pointer hover:bg-primary/90 transition text-center font-bold text-sm flex items-center justify-center gap-2">
+                <Upload className="w-4 h-4" />
+                {t('Upload Logo')}
               </div>
+            </label>
+          </div>
 
-              {/* Upload Button */}
-              <label className="block w-full">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="hidden"
+          <div className={cardCls}>
+            <h2 className="text-sm font-bold text-foreground mb-3">{t('Colors')}</h2>
+            <div className="space-y-3">
+              <ColorRow field="primaryColor" labelKey="Primary Color" />
+              <ColorRow field="secondaryColor" labelKey="Secondary Color" />
+              <ColorRow field="accentColor" labelKey="Accent Color" />
+            </div>
+
+            {/* Real component preview using the picked colors */}
+            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[11px] font-bold text-muted-foreground mb-2">{t('Live preview')}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="h-9 px-3 rounded-lg font-bold text-sm text-white shadow-sm"
+                  style={{ backgroundColor: settings.primaryColor }}
+                >
+                  {t('Save')}
+                </button>
+                <span
+                  className="h-9 px-3 inline-flex items-center rounded-lg font-bold text-sm text-white"
+                  style={{ backgroundColor: settings.secondaryColor }}
+                >
+                  {t('Secondary Color')}
+                </span>
+                <span
+                  className="h-9 w-9 rounded-lg border border-border"
+                  style={{ backgroundColor: settings.accentColor }}
+                  aria-hidden
                 />
-                <div className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-3 rounded-lg cursor-pointer hover:shadow-lg hover:shadow-primary/20 transition text-center font-semibold flex items-center justify-center gap-2">
-                  <Upload className="w-5 h-5" />
-                  {isArabic ? 'رفع شعار' : 'Upload Logo'}
-                </div>
-              </label>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Color Palette */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <h3 className="text-lg font-bold text-foreground mb-4">
-                  {isArabic ? 'الألوان' : 'Colors'}
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-muted-foreground mb-2">
-                      {isArabic ? 'اللون الأساسي' : 'Primary Color'}
-                    </label>
-                    <div className="flex gap-3">
-                      <input
-                        type="color"
-                        value={settings.primaryColor}
-                        onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                        className="w-16 h-10 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.primaryColor}
-                        onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-                        className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-muted-foreground mb-2">
-                      {isArabic ? 'اللون الثانوي' : 'Secondary Color'}
-                    </label>
-                    <div className="flex gap-3">
-                      <input
-                        type="color"
-                        value={settings.secondaryColor}
-                        onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                        className="w-16 h-10 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.secondaryColor}
-                        onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-                        className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-foreground"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm text-muted-foreground mb-2">
-                      {isArabic ? 'لون التأكيد' : 'Accent Color'}
-                    </label>
-                    <div className="flex gap-3">
-                      <input
-                        type="color"
-                        value={settings.accentColor}
-                        onChange={(e) => handleColorChange('accentColor', e.target.value)}
-                        className="w-16 h-10 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.accentColor}
-                        onChange={(e) => handleColorChange('accentColor', e.target.value)}
-                        className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-foreground"
-                      />
-                    </div>
-                  </div>
-                </div>
+        {/* Form */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className={cardCls}>
+            <h2 className="text-sm font-bold text-foreground mb-3">{t('Basic Information')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{t('Salon Name (English)')}</label>
+                <input type="text" value={settings.salonName} onChange={(e) => handleInputChange('salonName', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Salon Name (Arabic)')}</label>
+                <input type="text" value={settings.salonNameAr} onChange={(e) => handleInputChange('salonNameAr', e.target.value)} className={inputCls} dir="rtl" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Phone')}</label>
+                <input type="tel" value={settings.phone} onChange={(e) => handleInputChange('phone', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Email')}</label>
+                <input type="email" value={settings.email} onChange={(e) => handleInputChange('email', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Address (English)')}</label>
+                <input type="text" value={settings.address} onChange={(e) => handleInputChange('address', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Address (Arabic)')}</label>
+                <input type="text" value={settings.addressAr} onChange={(e) => handleInputChange('addressAr', e.target.value)} className={inputCls} dir="rtl" />
               </div>
             </div>
           </div>
 
-          {/* Settings Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Information */}
-            <div className="bg-card backdrop-blur-md border border-border rounded-2xl p-4 sm:p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">
-                {isArabic ? 'المعلومات الأساسية' : 'Basic Information'}
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'اسم الصالون (إنجليزي)' : 'Salon Name (English)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.salonName}
-                    onChange={(e) => handleInputChange('salonName', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'اسم الصالون (عربي)' : 'Salon Name (Arabic)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.salonNameAr}
-                    onChange={(e) => handleInputChange('salonNameAr', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'الهاتف' : 'Phone'}
-                  </label>
-                  <input
-                    type="tel"
-                    value={settings.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'البريد الإلكتروني' : 'Email'}
-                  </label>
-                  <input
-                    type="email"
-                    value={settings.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'العنوان (إنجليزي)' : 'Address (English)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'العنوان (عربي)' : 'Address (Arabic)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.addressAr}
-                    onChange={(e) => handleInputChange('addressAr', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
+          <div className={cardCls}>
+            <h2 className="text-sm font-bold text-foreground mb-3">{t('Legal Information')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{t('Tax ID')}</label>
+                <input type="text" value={settings.taxNumber} onChange={(e) => handleInputChange('taxNumber', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Registration Number')}</label>
+                <input type="text" value={settings.registrationNumber} onChange={(e) => handleInputChange('registrationNumber', e.target.value)} className={inputCls} dir="ltr" />
               </div>
             </div>
+          </div>
 
-            {/* Legal Information */}
-            <div className="bg-card backdrop-blur-md border border-border rounded-2xl p-4 sm:p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">
-                {isArabic ? 'المعلومات القانونية' : 'Legal Information'}
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'الرقم الضريبي' : 'Tax Number'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.taxNumber}
-                    onChange={(e) => handleInputChange('taxNumber', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'رقم التسجيل التجاري' : 'Registration Number'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.registrationNumber}
-                    onChange={(e) => handleInputChange('registrationNumber', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
+          <div className={cardCls}>
+            <h2 className="text-sm font-bold text-foreground mb-3">{t('Footer Text')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>{t('Footer Text (English)')}</label>
+                <input type="text" value={settings.footerText} onChange={(e) => handleInputChange('footerText', e.target.value)} className={inputCls} dir="ltr" />
+              </div>
+              <div>
+                <label className={labelCls}>{t('Footer Text (Arabic)')}</label>
+                <input type="text" value={settings.footerTextAr} onChange={(e) => handleInputChange('footerTextAr', e.target.value)} className={inputCls} dir="rtl" />
               </div>
             </div>
+          </div>
 
-            {/* Footer Text */}
-            <div className="bg-card backdrop-blur-md border border-border rounded-2xl p-4 sm:p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">
-                {isArabic ? 'نص التذييل' : 'Footer Text'}
-              </h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'نص التذييل (إنجليزي)' : 'Footer Text (English)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.footerText}
-                    onChange={(e) => handleInputChange('footerText', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    {isArabic ? 'نص التذييل (عربي)' : 'Footer Text (Arabic)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.footerTextAr}
-                    onChange={(e) => handleInputChange('footerTextAr', e.target.value)}
-                    className="w-full bg-card border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary"
-                  />
-                </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 min-w-36 h-11 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 active:scale-95 transition font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              {t('Save Settings')}
+            </button>
+            <label className="flex-1 min-w-36">
+              <input type="file" accept=".json" onChange={handleImportSettings} className="hidden" />
+              <div className="w-full h-11 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition font-bold text-sm flex items-center justify-center gap-2 cursor-pointer">
+                <Download className="w-4 h-4" />
+                {t('Import')}
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleSave}
-                className="flex-1 min-w-40 bg-gradient-to-r from-primary to-secondary text-primary-foreground py-3 rounded-lg hover:shadow-lg hover:shadow-primary/20 transition font-semibold flex items-center justify-center gap-2"
-              >
-                <Save className="w-5 h-5" />
-                {isArabic ? 'حفظ الإعدادات' : 'Save Settings'}
-              </button>
-
-              <label className="flex-1 min-w-40">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportSettings}
-                  className="hidden"
-                />
-                <div className="w-full bg-card border border-border text-foreground py-3 rounded-lg hover:bg-muted transition font-semibold flex items-center justify-center gap-2 cursor-pointer">
-                  <Download className="w-5 h-5" />
-                  {isArabic ? 'استيراد' : 'Import'}
-                </div>
-              </label>
-
-              <button
-                onClick={handleExportSettings}
-                className="flex-1 min-w-40 bg-card border border-border text-foreground py-3 rounded-lg hover:bg-muted transition font-semibold flex items-center justify-center gap-2"
-              >
-                <Share2 className="w-5 h-5" />
-                {isArabic ? 'تصدير' : 'Export'}
-              </button>
-            </div>
+            </label>
+            <button
+              onClick={handleExportSettings}
+              className="flex-1 min-w-36 h-11 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition font-bold text-sm flex items-center justify-center gap-2"
+            >
+              <Share2 className="w-4 h-4" />
+              {t('Export')}
+            </button>
           </div>
         </div>
       </div>
