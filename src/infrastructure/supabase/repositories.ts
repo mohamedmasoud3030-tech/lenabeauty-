@@ -7,7 +7,7 @@ import {
   AttendanceRepository, AdvanceRepository, PayrollRepository
 } from "../../domain/ports/repositories";
 import { 
-  Customer, Employee, Service, Appointment, Product, Expense, Invoice, 
+  Customer, Employee, Service, Appointment, AppointmentStatus, Product, Expense, Invoice,
   CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
 } from "../../domain/entities";
 import { SessionState } from "../../domain/entities/Session";
@@ -30,6 +30,7 @@ import {
 } from "../../domain/validation";
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
 import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
+import { validateCheckoutContract } from "../../domain/commerce";
 
 /**
  * Repository-boundary validation helper. Validates a payload's fields with the
@@ -105,6 +106,34 @@ function localDayStartISO(date: Date): string {
 
 function localDayEndISO(date: Date): string {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1).toISOString();
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Resolve the UI's category name to the canonical center-scoped FK. */
+async function resolveServiceCategoryId(centerId: string, rawCategory: string): Promise<string> {
+  const client = getSupabaseClient();
+  const category = rawCategory.trim();
+  if (UUID_RE.test(category)) {
+    const { data, error } = await client
+      .from("service_categories")
+      .select("id")
+      .eq("id", category)
+      .eq("center_id", centerId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Service category is not available for this center");
+    return data.id;
+  }
+
+  const { data, error } = await client
+    .from("service_categories")
+    .upsert({ center_id: centerId, name: category }, { onConflict: "center_id,name", ignoreDuplicates: false })
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error("No service category returned after upsert");
+  return data.id;
 }
 
 class SupabaseAuthAdapter implements AuthRepository {
@@ -362,7 +391,7 @@ class SupabaseCustomerAdapter implements CustomerRepository {
       const client = getSupabaseClient();
       const [apptsRes, invsRes] = await Promise.all([
         client.from('appointments').select('*').eq('customer_id', id).eq('center_id', centerRes.data).order('date_time', { ascending: false }),
-        client.from('invoices').select('*').eq('customer_id', id).eq('center_id', centerRes.data).order('date', { ascending: false })
+        client.from('invoices').select('*').eq('customer_id', id).eq('center_id', centerRes.data).eq('status', 'PAID').order('date', { ascending: false })
       ]);
 
       if (apptsRes.error) return { ok: false, error: createQueryError("Customer.getHistory", apptsRes.error.message) };
@@ -507,7 +536,7 @@ class SupabaseServiceAdapter implements ServiceRepository {
     try {
       const { data, error } = await getSupabaseClient()
         .from('services')
-        .select('*')
+        .select('*, service_categories(name)')
         .eq('center_id', centerRes.data)
         .order('name', { ascending: true });
 
@@ -523,21 +552,25 @@ class SupabaseServiceAdapter implements ServiceRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const nameR = requiredText(data.name);
-    const priceR = nonNegativeNumber(data.price);
+    const categoryR = requiredText(data.categoryName ?? data.categoryId);
+    const priceR = positiveNumber(data.price);
     const durationR = positiveInteger(data.durationMinutes ?? data.durationMins);
     const boundary = validatePayload([
       { field: "name", result: nameR },
+      { field: "category", result: categoryR },
       { field: "price", result: priceR },
       { field: "duration", result: durationR },
     ]);
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
+      const categoryId = await resolveServiceCategoryId(centerRes.data, okValue(categoryR));
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
         name: okValue(nameR),
-        category_id: data.categoryId || null,
+        category_id: categoryId,
         price: okValue(priceR),
+        pricing_mode: data.pricingMode === "STARTING_FROM" ? "STARTING_FROM" : "FIXED",
         duration_minutes: okValue(durationR),
         is_active: data.isActive !== undefined ? data.isActive : true
       };
@@ -545,7 +578,7 @@ class SupabaseServiceAdapter implements ServiceRepository {
       const { data: row, error } = await getSupabaseClient()
         .from('services')
         .insert(payload)
-        .select()
+        .select('*, service_categories(name)')
         .maybeSingle();
 
       if (error) return { ok: false, error: createQueryError("Service.create", error.message) };
@@ -561,10 +594,13 @@ class SupabaseServiceAdapter implements ServiceRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const nameR = data.name !== undefined ? requiredText(data.name) : null;
-    const priceR = data.price !== undefined ? nonNegativeNumber(data.price) : null;
+    const categoryInput = data.categoryName ?? data.categoryId;
+    const categoryR = categoryInput !== undefined ? requiredText(categoryInput) : null;
+    const priceR = data.price !== undefined ? positiveNumber(data.price) : null;
     const durationR = data.durationMinutes !== undefined ? positiveInteger(data.durationMinutes) : null;
     const boundary = validatePayload([
       ...(nameR ? [{ field: "name", result: nameR }] : []),
+      ...(categoryR ? [{ field: "category", result: categoryR }] : []),
       ...(priceR ? [{ field: "price", result: priceR }] : []),
       ...(durationR ? [{ field: "duration", result: durationR }] : []),
     ]);
@@ -573,8 +609,9 @@ class SupabaseServiceAdapter implements ServiceRepository {
     try {
       const payload: Record<string, unknown> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
-      if (data.categoryId !== undefined) payload.category_id = data.categoryId || null;
+      if (categoryR) payload.category_id = await resolveServiceCategoryId(centerRes.data, okValue(categoryR));
       if (data.price !== undefined) payload.price = okValue(priceR);
+      if (data.pricingMode !== undefined) payload.pricing_mode = data.pricingMode;
       if (data.durationMinutes !== undefined) payload.duration_minutes = okValue(durationR);
       if (data.isActive !== undefined) payload.is_active = data.isActive;
 
@@ -585,7 +622,7 @@ class SupabaseServiceAdapter implements ServiceRepository {
         .update(payload)
         .eq('id', id)
         .eq('center_id', centerRes.data)
-        .select()
+        .select('*, service_categories(name)')
         .maybeSingle();
 
       if (error) return { ok: false, error: createQueryError("Service.update", error.message) };
@@ -640,14 +677,16 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const customerR = requiredText(data.customerId);
-    // dateTime is validated when provided (valid date); the "not in the past"
-    // rule is enforced by the public-booking RPC for end-user bookings.
-    const dateR = data.dateTime ? dateField(data.dateTime.toISOString(), { required: true }) : null;
+    const employeeR = requiredText(data.employeeId);
+    const serviceR = requiredText(data.serviceId);
+    const dateR = data.dateTime ? dateField(data.dateTime.toISOString(), { required: true }) : dateField(undefined, { required: true });
     const depositR = nonNegativeNumber(data.depositAmount ?? 0);
     const noShowFeeR = nonNegativeNumber(data.noShowFeeAmount ?? 0);
     const boundary = validatePayload([
       { field: "customer", result: customerR },
-      ...(dateR ? [{ field: "dateTime", result: dateR }] : []),
+      { field: "employee", result: employeeR },
+      { field: "service", result: serviceR },
+      { field: "dateTime", result: dateR },
       { field: "depositAmount", result: depositR },
       { field: "noShowFeeAmount", result: noShowFeeR },
     ]);
@@ -657,10 +696,12 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
       const payload: Record<string, unknown> = {
         center_id: centerRes.data,
         customer_id: okValue(customerR),
-        employee_id: data.employeeId,
-        service_id: data.serviceId,
-        date_time: dateR ? (okValue(dateR) as Date).toISOString() : (data.dateTime ? data.dateTime.toISOString() : new Date().toISOString()),
-        status: data.status || 'SCHEDULED', // Map AppointmentStatus
+        employee_id: okValue(employeeR),
+        service_id: okValue(serviceR),
+        date_time: (okValue(dateR) as Date).toISOString(),
+        // New appointments always start scheduled; terminal states are reached
+        // only through valid transitions enforced by the database trigger.
+        status: AppointmentStatus.SCHEDULED,
         notes: data.notes,
         deposit_amount: okValue(depositR),
         no_show_fee_amount: okValue(noShowFeeR),
@@ -804,7 +845,7 @@ class SupabaseProductAdapter implements ProductRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const nameR = requiredText(data.name);
-    const priceR = nonNegativeNumber(data.price);
+    const priceR = positiveNumber(data.price);
     const costR = nonNegativeNumber(data.cost);
     const stockR = nonNegativeInteger(data.stockQuantity ?? 0);
     const reorderR = nonNegativeInteger(data.reorderLevel ?? 0);
@@ -825,7 +866,9 @@ class SupabaseProductAdapter implements ProductRepository {
         stock_quantity: okValue(stockR),
         reorder_level: okValue(reorderR),
         price: okValue(priceR),
-        cost: okValue(costR)
+        cost: okValue(costR),
+        is_active: data.isActive !== undefined ? data.isActive : true,
+        track_inventory: data.trackInventory !== undefined ? data.trackInventory : true
       };
 
       const { data: row, error } = await getSupabaseClient()
@@ -847,7 +890,7 @@ class SupabaseProductAdapter implements ProductRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const nameR = data.name !== undefined ? requiredText(data.name) : null;
-    const priceR = data.price !== undefined ? nonNegativeNumber(data.price) : null;
+    const priceR = data.price !== undefined ? positiveNumber(data.price) : null;
     const costR = data.cost !== undefined ? nonNegativeNumber(data.cost) : null;
     const stockR = data.stockQuantity !== undefined ? nonNegativeInteger(data.stockQuantity) : null;
     const reorderR = data.reorderLevel !== undefined ? nonNegativeInteger(data.reorderLevel) : null;
@@ -868,6 +911,8 @@ class SupabaseProductAdapter implements ProductRepository {
       if (data.reorderLevel !== undefined) payload.reorder_level = okValue(reorderR);
       if (data.price !== undefined) payload.price = okValue(priceR);
       if (data.cost !== undefined) payload.cost = okValue(costR);
+      if (data.isActive !== undefined) payload.is_active = data.isActive;
+      if (data.trackInventory !== undefined) payload.track_inventory = data.trackInventory;
 
       delete payload.center_id;
 
@@ -1018,13 +1063,24 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
     const centerRes = getCenterIdFor("Invoice.checkout");
     if (!centerRes.ok) return centerRes as any;
 
+    const contractErrors = validateCheckoutContract(payload);
+    if (contractErrors.length > 0) {
+      return {
+        ok: false,
+        error: new DomainValidationError(
+          contractErrors.map((_, index) => ({ field: `checkout.${index}`, key: "validation.number_positive" })),
+          contractErrors.join("; "),
+        ),
+      };
+    }
+
     try {
       const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {
         p_center_id: centerRes.data,
         p_customer_id: payload.customerId,
-        p_employee_id: payload.employeeId || null,
+        p_employee_id: payload.employeeId,
         p_payment_method: payload.paymentMethod,
-        p_discount_amount: payload.discountAmount || 0,
+        p_discount_amount: payload.discountAmount ?? 0,
         p_use_loyalty_points: payload.useLoyaltyPoints || false,
         p_items: payload.items,
         p_gift_card_code: payload.giftCardCode || null
@@ -1066,9 +1122,10 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
       const [invoiceRes, itemRes, settingsRes] = await Promise.all([
         client
           .from('invoices')
-          .select('*')
+          .select('*, employees(name)')
           .eq('id', id)
           .eq('center_id', centerRes.data)
+          .eq('status', 'PAID')
           .maybeSingle(),
         client
           .from('invoice_items')
@@ -1579,9 +1636,9 @@ class SupabaseDashboardAdapter implements DashboardRepository {
       const [custRes, apptRes, prodRes, newCustRes, invoiceRes] = await Promise.all([
         client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
         client.from('appointments').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
-        client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).lte('stock_quantity', 5),
+        client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).eq('is_active', true).eq('track_inventory', true).lte('stock_quantity', 5),
         client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).gte('created_at', monthStart),
-        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', localDayStartISO(new Date())).lt('date', localDayEndISO(new Date()))
+        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).eq('status', 'PAID').gte('date', localDayStartISO(new Date())).lt('date', localDayEndISO(new Date()))
       ]);
 
       if (custRes.error) throw new Error(custRes.error.message);
@@ -1622,7 +1679,7 @@ class SupabaseDashboardAdapter implements DashboardRepository {
       const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
       const [invoiceRes, expenseRes, employeeRes] = await Promise.all([
-        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).gte('date', from).lt('date', to),
+        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).eq('status', 'PAID').gte('date', from).lt('date', to),
         client.from('expenses').select('amount').eq('center_id', centerRes.data).gte('date', from).lt('date', to),
         client.from('employees').select('base_salary, salary, commission_percentage, month_commission_total').eq('center_id', centerRes.data).eq('is_active', true)
       ]);
@@ -1665,6 +1722,7 @@ class SupabaseDashboardAdapter implements DashboardRepository {
         .from('invoices')
         .select('date, total_amount')
         .eq('center_id', centerRes.data)
+        .eq('status', 'PAID')
         .gte('date', localDayStartISO(fromDate))
         .lt('date', localDayEndISO(today))
         .order('date', { ascending: true });
@@ -1711,6 +1769,7 @@ class SupabaseReportAdapter implements ReportRepository {
             service_id,
             product_id,
             package_id,
+            item_name,
             price,
             quantity,
             created_at,
@@ -1720,6 +1779,7 @@ class SupabaseReportAdapter implements ReportRepository {
           )
         `)
         .eq('center_id', centerRes.data)
+        .eq('status', 'PAID')
         .gte('date', fromStr)
         .lte('date', toStr)
         .order('date', { ascending: false });
@@ -1898,7 +1958,7 @@ class SupabaseServicePackageAdapter implements ServicePackageRepository {
     if (!centerRes.ok) return centerRes as any;
 
     const nameR = requiredText(input.name);
-    const priceR = nonNegativeNumber(input.packagePrice);
+    const priceR = positiveNumber(input.packagePrice);
     const itemsOk = Array.isArray(input.items) && input.items.length > 0 &&
       input.items.every((it) => requiredText(it.serviceId).ok && positiveInteger(it.quantity).ok);
     if (!nameR.ok || !priceR.ok || !itemsOk) {
@@ -2049,7 +2109,7 @@ class SupabaseForecastAdapter implements ForecastRepository {
       const client = getSupabaseClient();
       const since = new Date(Date.now() - 30*24*60*60*1000).toISOString();
       const [invoicesRes, expensesRes] = await Promise.all([
-        client.from('invoices').select('total_amount, tax, created_at').eq('center_id', centerRes.data).gte('created_at', since),
+        client.from('invoices').select('total_amount, tax, created_at').eq('center_id', centerRes.data).eq('status', 'PAID').gte('created_at', since),
         client.from('expenses').select('amount, created_at').eq('center_id', centerRes.data).gte('created_at', since),
       ]);
       if (invoicesRes.error) return { ok:false, error:createQueryError("Forecast.getFinancialForecast", invoicesRes.error.message)};
