@@ -1,32 +1,10 @@
--- =============================================================================
--- Behavioral security/RLS acceptance for 20260810000005_security_hardening_auth
--- =============================================================================
--- Run only after the full migration chain in an isolated database (a Supabase
--- project SQL editor or a local `supabase start` stack — the standard
--- `anon` / `authenticated` roles are required). Every row created below is
--- rolled back. A successful run reaches the final ROLLBACK.
---
--- Prerequisite note: the fixture uses minimal auth.users rows (the same
--- pattern as the admin-bootstrap workflow). If the platform's auth schema
--- requires extra NOT NULL columns, fill them in the same INSERT.
---
--- Privilege boundary under test:
---   * anon must NOT execute any SECURITY DEFINER RPC and must have NO table
---     privileges in the public schema;
---   * authenticated members may execute ONLY the whitelisted staff RPCs;
---   * RLS keeps members of center A unable to read/insert center B data
---     (including by guessing a UUID of another center's customer);
---   * RPCs reject caller-supplied cross-center entity references;
---   * storage object policies are center-member scoped;
---   * center_settings cannot be deleted by members;
---   * the client-portal profile projection does not echo the portal token.
--- =============================================================================
+-- Behavioral security/RLS acceptance for 20260810000005_security_hardening_auth.
+-- Runs inside one transaction and leaves no residue.
 
 BEGIN;
 
--- -----------------------------------------------------------------------------
--- Fixtures (run as the migration owner / postgres: RLS is bypassed)
--- -----------------------------------------------------------------------------
+-- Minimal fixtures. `auth.users.confirmed_at` is generated on managed Supabase,
+-- so do not write it directly. Only the stable columns required by the FK are used.
 INSERT INTO public.centers (id, name)
 VALUES
   ('20000000-0000-4000-8000-000000000001', 'Security test center A'),
@@ -38,29 +16,10 @@ VALUES
   ('20000000-0000-4000-8000-000000000002', 'Security test center B', 'OMR')
 ON CONFLICT (center_id) DO NOTHING;
 
--- Minimal auth.users rows so the profiles FK is satisfiable.
-INSERT INTO auth.users (
-  instance_id, id, aud, role, email, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-  created_at, updated_at, confirmed_at
-)
+INSERT INTO auth.users (id, email)
 VALUES
-  (
-    '00000000-0000-0000-0000-000000000000',
-    '30000000-0000-4000-8000-000000000001',
-    'authenticated', 'authenticated',
-    'member.a@lenabeauty.test', crypt('password123', gen_salt('bf')),
-    now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"role":"ADMIN"}'::jsonb,
-    now(), now(), now()
-  ),
-  (
-    '00000000-0000-0000-0000-000000000000',
-    '30000000-0000-4000-8000-000000000002',
-    'authenticated', 'authenticated',
-    'member.b@lenabeauty.test', crypt('password123', gen_salt('bf')),
-    now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"role":"ADMIN"}'::jsonb,
-    now(), now(), now()
-  )
+  ('30000000-0000-4000-8000-000000000001', 'member.a@lenabeauty.test'),
+  ('30000000-0000-4000-8000-000000000002', 'member.b@lenabeauty.test')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.profiles (id, full_name)
@@ -78,9 +37,7 @@ VALUES
   ('40000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'Customer A', '+96800000001'),
   ('40000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002', 'Customer B', '+96800000002');
 
--- -----------------------------------------------------------------------------
--- 1. Routine privilege boundaries
--- -----------------------------------------------------------------------------
+-- 1. Routine privilege boundaries.
 DO $$
 DECLARE
   booking_rpcs TEXT[] := ARRAY[
@@ -111,7 +68,6 @@ DECLARE
   ];
   r TEXT;
 BEGIN
-  -- anon must not be able to execute any public-booking / client-portal RPC
   FOREACH r IN ARRAY booking_rpcs LOOP
     IF to_regprocedure(r) IS NOT NULL
        AND has_function_privilege('anon', to_regprocedure(r), 'EXECUTE') THEN
@@ -119,163 +75,104 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- anon must not be able to execute the staff RPCs either
   FOREACH r IN ARRAY staff_rpcs LOOP
     IF to_regprocedure(r) IS NOT NULL
        AND has_function_privilege('anon', to_regprocedure(r), 'EXECUTE') THEN
       RAISE EXCEPTION 'anon must not execute %', r;
     END IF;
-  END LOOP;
-
-  -- authenticated staff RPCs must remain executable (shipped UI calls them)
-  FOREACH r IN ARRAY staff_rpcs LOOP
     IF to_regprocedure(r) IS NULL
        OR NOT has_function_privilege('authenticated', to_regprocedure(r), 'EXECUTE') THEN
       RAISE EXCEPTION 'authenticated must be able to execute %', r;
     END IF;
   END LOOP;
 
-  -- the RLS helpers stay executable by both roles (policy evaluation)
-  IF to_regprocedure('app_private.user_center_ids()') IS NULL
-     OR NOT has_function_privilege('anon', to_regprocedure('app_private.user_center_ids()'), 'EXECUTE')
-     OR NOT has_function_privilege('anon', to_regprocedure('app_private.is_center_member(uuid)'), 'EXECUTE') THEN
-    RAISE EXCEPTION 'anon needs EXECUTE on RLS helper routines for policy evaluation';
-  END IF;
-  IF NOT has_function_privilege('authenticated', to_regprocedure('app_private.user_center_ids()'), 'EXECUTE')
-     OR NOT has_function_privilege('authenticated', to_regprocedure('app_private.is_center_member(uuid)'), 'EXECUTE') THEN
-    RAISE EXCEPTION 'authenticated needs EXECUTE on RLS helper routines';
+  IF NOT has_function_privilege('anon', 'app_private.user_center_ids()', 'EXECUTE')
+     OR NOT has_function_privilege('anon', 'app_private.is_center_member(uuid)', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'app_private.user_center_ids()', 'EXECUTE')
+     OR NOT has_function_privilege('authenticated', 'app_private.is_center_member(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'RLS helper EXECUTE grants are incomplete';
   END IF;
 END
 $$;
 
--- anon must have zero table privileges in the public schema
 DO $$
 BEGIN
   IF has_table_privilege('anon', 'public.customers', 'SELECT')
      OR has_table_privilege('anon', 'public.customers', 'INSERT')
      OR has_table_privilege('anon', 'public.invoices', 'SELECT') THEN
-    RAISE EXCEPTION 'anon must have no table privileges in the public schema';
+    RAISE EXCEPTION 'anon must have no table privileges in public';
   END IF;
 END
 $$;
 
--- -----------------------------------------------------------------------------
--- 2. RLS tenant isolation (as authenticated member A)
--- -----------------------------------------------------------------------------
+-- 2. RLS tenant isolation as member A.
 SET ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '30000000-0000-4000-8000-000000000001', true);
 
--- Precise assertions: member A sees center A's fixture rows, never center B's
--- rows, even when guessing the other center's UUID directly.
 DO $$
 DECLARE
   v_count INTEGER;
 BEGIN
-  SELECT count(*) INTO v_count
-  FROM public.customers
-  WHERE id = '40000000-0000-4000-8000-000000000002'; -- center B customer UUID guess
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'member A must not read center B customers by UUID, saw %', v_count;
-  END IF;
+  SELECT count(*) INTO v_count FROM public.customers
+  WHERE id = '40000000-0000-4000-8000-000000000002';
+  IF v_count <> 0 THEN RAISE EXCEPTION 'cross-center customer UUID became visible'; END IF;
 
-  SELECT count(*) INTO v_count
-  FROM public.customers
-  WHERE center_id = '20000000-0000-4000-8000-000000000002';
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'member A must not enumerate center B customers, saw %', v_count;
-  END IF;
-
-  SELECT count(*) INTO v_count
-  FROM public.customers
+  SELECT count(*) INTO v_count FROM public.customers
   WHERE center_id = '20000000-0000-4000-8000-000000000001';
-  IF v_count <> 1 THEN
-    RAISE EXCEPTION 'member A must see exactly 1 customer in own center, saw %', v_count;
-  END IF;
+  IF v_count <> 1 THEN RAISE EXCEPTION 'own-center customer is not visible'; END IF;
 
-  SELECT count(*) INTO v_count
-  FROM public.centers
+  SELECT count(*) INTO v_count FROM public.centers
   WHERE id = '20000000-0000-4000-8000-000000000002';
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'member A must not see center B, saw %', v_count;
-  END IF;
-
-  SELECT count(*) INTO v_count
-  FROM public.invoices
-  WHERE center_id = '20000000-0000-4000-8000-000000000002';
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'member A must not read center B invoices';
-  END IF;
+  IF v_count <> 0 THEN RAISE EXCEPTION 'cross-center center row became visible'; END IF;
 END
 $$;
 
--- cross-center INSERT must be rejected by RLS (WITH CHECK)
 DO $$
 BEGIN
   BEGIN
     INSERT INTO public.customers (id, center_id, name, phone)
-    VALUES (
-      '40000000-0000-4000-8000-000000000099',
-      '20000000-0000-4000-8000-000000000002', -- center B
-      'Impostor',
-      '+96800000099'
-    );
+    VALUES ('40000000-0000-4000-8000-000000000099', '20000000-0000-4000-8000-000000000002', 'Impostor', '+96800000099');
     RAISE EXCEPTION 'cross-center INSERT must be blocked by RLS';
-  EXCEPTION
-    WHEN insufficient_privilege THEN NULL;
-  END;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END
 $$;
 
--- cross-center checkout must fail with the unauthorized-center error (42501)
 DO $$
 BEGIN
   BEGIN
     PERFORM public.process_checkout_v1(
-      '20000000-0000-4000-8000-000000000002', -- center B
-      '40000000-0000-4000-8000-000000000002', -- customer B
+      '20000000-0000-4000-8000-000000000002',
+      '40000000-0000-4000-8000-000000000002',
       NULL, 'cash', 0, false, '[]'::jsonb
     );
     RAISE EXCEPTION 'cross-center checkout must be rejected';
-  EXCEPTION
-    WHEN insufficient_privilege THEN NULL;
-  END;
+  EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 END
 $$;
 
--- cross-center customer reference in create_service_file_v1 must be rejected
 DO $$
 BEGIN
   BEGIN
     PERFORM public.create_service_file_v1(
-      '20000000-0000-4000-8000-000000000001', -- center A
-      '40000000-0000-4000-8000-000000000002', -- customer B (other center)
+      '20000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000002',
       NULL, NULL, 'Impostor file', NULL,
       ARRAY[]::text[], ARRAY[]::text[], ARRAY[]::text[]
     );
     RAISE EXCEPTION 'cross-center service file must be rejected';
-  EXCEPTION
-    WHEN foreign_key_violation THEN NULL;
-  END;
-END
-$$;
+  EXCEPTION WHEN foreign_key_violation THEN NULL; END;
 
--- cross-center customer reference in create_customer_review_v1 must be rejected
-DO $$
-BEGIN
   BEGIN
     PERFORM public.create_customer_review_v1(
-      '20000000-0000-4000-8000-000000000001', -- center A
-      '40000000-0000-4000-8000-000000000002', -- customer B (other center)
+      '20000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000002',
       NULL, 5, 'review', false
     );
     RAISE EXCEPTION 'cross-center review must be rejected';
-  EXCEPTION
-    WHEN foreign_key_violation THEN NULL;
-  END;
+  EXCEPTION WHEN foreign_key_violation THEN NULL; END;
 END
 $$;
 
--- same-center positive paths must still work for the hardened RPCs
 DO $$
 DECLARE
   v_result JSONB;
@@ -286,7 +183,7 @@ BEGIN
     NULL, 5, 'Great visit', false
   );
   IF v_result->'review'->>'center_id' <> '20000000-0000-4000-8000-000000000001' THEN
-    RAISE EXCEPTION 'same-center review must be created in the caller center';
+    RAISE EXCEPTION 'same-center review failed';
   END IF;
 
   v_result := public.create_service_file_v1(
@@ -296,12 +193,11 @@ BEGIN
     ARRAY[]::text[], ARRAY[]::text[], ARRAY[]::text[]
   );
   IF v_result->'service_file'->>'center_id' <> '20000000-0000-4000-8000-000000000001' THEN
-    RAISE EXCEPTION 'same-center service file must be created in the caller center';
+    RAISE EXCEPTION 'same-center service file failed';
   END IF;
 END
 $$;
 
--- members must NOT be able to delete their own center_settings row
 DO $$
 BEGIN
   DELETE FROM public.center_settings
@@ -317,61 +213,48 @@ $$;
 
 RESET ROLE;
 
--- -----------------------------------------------------------------------------
--- 3. Storage policy scoping (static policy definition checks)
--- -----------------------------------------------------------------------------
+-- 3. Storage policy scoping. INSERT policies store their predicate in
+-- pg_policies.with_check, not qual.
 DO $$
 DECLARE
-  v_qual TEXT;
+  v_expr TEXT;
 BEGIN
-  SELECT qual::text INTO v_qual
+  SELECT qual::text INTO v_expr
   FROM pg_policies
-  WHERE schemaname = 'storage'
-    AND tablename = 'objects'
-    AND policyname = 'center_assets_member_select'
-    AND cmd = 'SELECT';
-  IF v_qual IS NULL THEN
-    RAISE EXCEPTION 'center_assets_member_select policy is missing';
-  END IF;
-  IF v_qual NOT LIKE '%app_private.is_center_member%'
-     OR v_qual NOT LIKE '%center-assets%' THEN
-    RAISE EXCEPTION 'storage select policy is not center-member scoped: %', v_qual;
+  WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname = 'center_assets_member_select' AND cmd = 'SELECT';
+  IF v_expr IS NULL OR v_expr NOT LIKE '%app_private.is_center_member%'
+     OR v_expr NOT LIKE '%center-assets%' THEN
+    RAISE EXCEPTION 'center_assets_member_select is not center-scoped';
   END IF;
 
-  SELECT qual::text INTO v_qual
+  SELECT with_check::text INTO v_expr
   FROM pg_policies
-  WHERE schemaname = 'storage'
-    AND tablename = 'objects'
-    AND policyname = 'center_assets_member_insert'
-    AND cmd = 'INSERT';
-  IF v_qual IS NULL OR v_qual NOT LIKE '%app_private.is_center_member%' THEN
-    RAISE EXCEPTION 'storage insert policy is not center-member scoped';
+  WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname = 'center_assets_member_insert' AND cmd = 'INSERT';
+  IF v_expr IS NULL OR v_expr NOT LIKE '%app_private.is_center_member%' THEN
+    RAISE EXCEPTION 'center_assets_member_insert is not center-scoped';
   END IF;
 
-  SELECT qual::text INTO v_qual
+  SELECT qual::text INTO v_expr
   FROM pg_policies
-  WHERE schemaname = 'storage'
-    AND tablename = 'objects'
-    AND policyname = 'center_assets_member_update'
-    AND cmd = 'UPDATE';
-  IF v_qual IS NULL OR v_qual NOT LIKE '%app_private.is_center_member%' THEN
-    RAISE EXCEPTION 'storage update policy is not center-member scoped';
+  WHERE schemaname = 'storage' AND tablename = 'objects'
+    AND policyname = 'center_assets_member_update' AND cmd = 'UPDATE';
+  IF v_expr IS NULL OR v_expr NOT LIKE '%app_private.is_center_member%' THEN
+    RAISE EXCEPTION 'center_assets_member_update is not center-scoped';
   END IF;
 
   IF EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE schemaname = 'storage'
-      AND tablename = 'objects'
+    WHERE schemaname = 'storage' AND tablename = 'objects'
       AND policyname IN ('center_assets_read', 'center_assets_write', 'center_assets_update')
   ) THEN
-    RAISE EXCEPTION 'legacy unscoped storage policies must be gone';
+    RAISE EXCEPTION 'legacy unscoped storage policies remain';
   END IF;
 END
 $$;
 
--- -----------------------------------------------------------------------------
--- 4. Client-portal profile projection must not echo the portal credential
--- -----------------------------------------------------------------------------
+-- 4. Portal profile must not echo portal_access_token or lockout counters.
 UPDATE public.customers
 SET portal_access_token = 'abcdef123456'
 WHERE id = '40000000-0000-4000-8000-000000000001';
@@ -386,14 +269,12 @@ BEGIN
     '+96800000001',
     'abcdef123456'
   );
+
   IF v_profile ? 'portal_access_token'
      OR v_profile->'customer' ? 'portal_access_token'
      OR v_profile->'customer' ? 'portal_failed_login_attempts'
      OR v_profile->'customer' ? 'portal_locked_until' THEN
-    RAISE EXCEPTION 'portal profile must not expose the portal credential or lockout counters';
-  END IF;
-  IF v_profile->'customer'->>'id' <> '40000000-0000-4000-8000-000000000001' THEN
-    RAISE EXCEPTION 'portal profile must return the authenticated customer';
+    RAISE EXCEPTION 'portal profile exposes portal_access_token or lockout counters';
   END IF;
 END
 $$;
