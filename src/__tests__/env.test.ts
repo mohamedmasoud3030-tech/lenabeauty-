@@ -45,4 +45,51 @@ describe("Environment Configuration Tests", () => {
         });
         expect(env.centerId).toBe("123e4567-e89b-12d3-a456-426614174000");
     });
+
+    it("derives development environment when VITE_ENVIRONMENT is unset in tests", () => {
+        const env = parseEnv({
+            VITE_DATA_BACKEND: "supabase",
+            VITE_SUPABASE_URL: "https://example.supabase.co",
+            VITE_SUPABASE_PUBLISHABLE_KEY: "mock-key",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        });
+        expect(env.environment).toBe("development");
+    });
+
+    it("accepts an explicit staging environment", () => {
+        const env = parseEnv({
+            VITE_ENVIRONMENT: "staging",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_SUPABASE_URL: "https://staging.example.supabase.co",
+            VITE_SUPABASE_PUBLISHABLE_KEY: "mock-key",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        });
+        expect(env.environment).toBe("staging");
+        expect(env.supabaseUrl).toBe("https://staging.example.supabase.co");
+    });
+
+    it("accepts an explicit production environment", () => {
+        const env = parseEnv({
+            VITE_ENVIRONMENT: "production",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_SUPABASE_URL: "https://prod.example.supabase.co",
+            VITE_SUPABASE_PUBLISHABLE_KEY: "mock-key",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        });
+        expect(env.environment).toBe("production");
+    });
+
+    it("rejects an unsupported VITE_ENVIRONMENT value", () => {
+        expect(() => parseEnv({
+            VITE_ENVIRONMENT: "preview",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_SUPABASE_URL: "https://example.supabase.co",
+            VITE_SUPABASE_PUBLISHABLE_KEY: "mock-key",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        })).toThrowError("UNSUPPORTED_ENVIRONMENT");
+    });
 });

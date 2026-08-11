@@ -1,45 +1,64 @@
 # Production Readiness — LenaBeauty
-**Updated:** 2026-08-09 · branch `main`
 
-A living, evidence-based checklist of what blocks (or unblocks) selling the current release.
+**Updated:** 2026-08-11
 
-## ✅ Done (verified in this repo)
+This checklist reflects the current staff-only release and the live demo/staging Supabase verification performed during PR #19.
 
-### Frontend / code health
-- `tsc --strict` = 0 errors · **245 unit tests pass** · production build clean (PWA).
-- No leaked secrets in tracked files. No `console.*` noise in production.
-- i18n (Arabic RTL + English) consistent; error messages keyed.
-- PWA: single valid manifest, real PNG icons, single SW registration.
-- Mobile UX audited (bottom-nav, search, toasts, safe-area).
+## Verified backend state
 
-### Backend (Supabase) — canonical migration chain
-- `supabase/migrations/` (18 files, applied in filename order):
-  1. `20260623000001_initial_schema.sql` — tables, indexes, triggers, seed center `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d`.
-  2. `20260623000002_enable_rls_and_policies.sql` — retired no-op (kept for chain completeness).
-  3. `20260628000001_enable_rls.sql` — RLS + tenant isolation (`user_center_ids` / `is_center_member`).
-  4. `20260628000002_admin_bootstrap.sql` — admin user link + role (edit `v_admin_uid` before running).
-  5–8. Checkout RPC chain (`process_checkout_v1` → VAT → tier discount → gift-card redemption → package bundles, final 8-arg signature).
-  9. `20260628000006_public_booking.sql` — public booking RPCs (RPCs kept; anon access revoked in 18).
-  10–14. Gift cards, packages, no-show protection, notifications/payment-gateway, client portal, reschedule/cancel, portal lockout.
-  15. `20260628000015_attendance_advances_payroll.sql` — attendance / advances / payroll tables + RPCs.
-  16. `20260628000016_validation_constraints.sql` — data-integrity `NOT VALID` CHECK constraints.
-  17–18. Delivery closure: `20260809000001_delivery_security_hardening.sql` — staff-only closure, revokes anon EXECUTE from every SECURITY DEFINER routine, locks routine `search_path`.
-- POS loyalty/subtotal math mirrors the server RPC exactly (regression-tested).
-- Core CRUD adapters: customers, employees, services, products, appointments, expenses, settings — real Supabase queries.
-- Dashboard + Reports use real `invoices`/`expenses` queries (not stubs).
+The current Lena Supabase project still contains demo/staging data and is the environment used for release verification. The latest applied hardening migrations are:
 
-### Release-scope decisions (staff-only)
-- Public booking (`/book`) and the customer portal (`/portal`) are **intentionally disabled** for this release: routes and staff-side portal distribution UI were removed; anon RPC EXECUTE stays revoked. No anonymous attack surface.
-- Staff self-service account creation is **out of scope**; new logins are provisioned by the developer (see `docs/DELIVERY-GUIDE.md`).
-- Desktop (Tauri) shell is a separate future track; Web/PWA is the current delivery target.
+- `20260810000005_security_hardening_auth.sql`
+- `20260810000006_security_grant_repair.sql`
 
-## ⚠️ Required before first sale (manual — outside code)
-These are the documented gates that only the owner can perform:
-1. **Rotate the leaked Supabase publishable key** (it is in git history).
-2. **Provision a live Supabase project** and apply the 18 migrations in order.
-3. Create the admin auth user, then run the admin bootstrap migration with its UUID.
-4. Set env vars in the Vercel dashboard (not in `vercel.json`); `VITE_CENTER_ID` must equal the seed center UUID.
-5. **Live QA pass** per `docs/SUPABASE_LIVE_QA_RUNBOOK.md`: log in, create a customer, run a real POS checkout, confirm invoice + stock + loyalty update, print an invoice, check dashboard/reports populate.
+Live PostgreSQL verification confirms:
+
+- tenant RLS hides other-center rows while preserving own-center access;
+- cross-center writes are rejected;
+- checkout rejects a caller-supplied other center;
+- review/service-file RPCs reject cross-center references;
+- `anon` has zero direct table privileges in `public`;
+- `center-assets` storage policies require path center membership;
+- `center_settings` has SELECT/INSERT/UPDATE policies only;
+- public booking/client-portal RPCs have zero `anon` and zero `authenticated` EXECUTE grants;
+- the legacy seven-argument checkout overload has zero client-role EXECUTE grants;
+- only the current eight-argument checkout overload used by the shipped UI is granted;
+- all eleven client-executable staff SECURITY DEFINER RPCs are membership-gated and have fixed `search_path`.
+
+See `docs/SECURITY_HARDENING_REPORT_2026-08-10.md` for the evidence and rationale.
+
+## Staff-only release boundary
+
+Public booking and the customer portal are intentionally disabled for this release. Their database routines remain installed for the future customer-booking phase but are not executable by client roles.
+
+The current delivery target is the Web/PWA staff application. No second Supabase production-data environment is created by PR #19.
+
+## Environment separation
+
+`VITE_ENVIRONMENT` explicitly distinguishes development, staging, and production behavior. Demo seeds remain outside the canonical migration chain. Production bootstrap must not contain demo users, services, appointments, invoices, or transactions.
+
+## Current code gates
+
+Arena's pre-live-verification HEAD reported:
+
+- typecheck: pass;
+- Vitest: 397/397 pass;
+- production build: pass;
+- npm audit: 0 vulnerabilities.
+
+Live verification subsequently added the grant-repair migration and strengthened the SQL/static regression tests. The updated PR HEAD must run the normal final CI/typecheck/test/build gate before merge.
+
+## Remaining production-pilot blockers
+
+1. **Supabase Leaked Password Protection is still disabled.** `auth.config` is not exposed in the managed database, so this cannot be truthfully marked fixed by SQL. Enable it through Supabase Auth settings / Management API, then confirm the Security Advisor warning disappears.
+2. Run final CI/typecheck/full tests/build on the updated PR #19 HEAD.
+3. Complete live browser acceptance with operator credentials when browser execution is available.
+4. Before real customer data is introduced, provision or explicitly designate the production-data environment and apply the canonical migrations without demo seeds.
+
+The repository contains publishable/anon client configuration by design; publishable keys are not service secrets. No service-role key, database password, or private key should be committed.
 
 ## Verdict
-The product is **technically complete for its staff-only core scope** (auth, CRUD, POS, invoicing, gift cards, packages, attendance/payroll, dashboard, reports) once a live Supabase project is connected and the 18 migrations are applied. Remaining blockers are **operational** (provision + live QA + key rotation), not code.
+
+**NOT YET READY FOR PRODUCTION PILOT.**
+
+The live database security defects found during PR #19 are closed on demo/staging. The remaining blockers are the managed Auth leaked-password setting, final updated-HEAD CI, and live browser acceptance. PR #19 should remain unmerged until these gates are closed.
