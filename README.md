@@ -51,6 +51,7 @@ See `.env.example`. Locally these live in `.env`; in production set them in the
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (never the secret key) |
 | `VITE_CENTER_ID` | UUID of the center (seeded by the initial migration) |
 | `VITE_BRANCH_MODE` | `single` or `multi` (multi-branch lets the operator switch the active center at runtime) |
+| `VITE_ENVIRONMENT` | Optional: `development` \| `staging` \| `production` (derived from the build when unset). Staging deployments should set `staging` explicitly — production fallbacks are never used outside production builds |
 
 ## Supabase setup
 

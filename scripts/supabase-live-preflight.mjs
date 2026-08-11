@@ -49,6 +49,8 @@ const canonicalMigrations = [
   "20260810000001_fix_invoice_items_packages.sql",
   "20260810000002_operational_data_integrity.sql",
   "20260810000003_appointment_overlap_integrity.sql",
+  "20260810000004_btree_gist_extension_schema.sql",
+  "20260810000005_security_hardening_auth.sql",
 ];
 
 function parseEnvFile(path) {
@@ -118,6 +120,10 @@ if (env.VITE_DATA_BACKEND && env.VITE_DATA_BACKEND !== "supabase") {
 
 if (env.VITE_BRANCH_MODE && env.VITE_BRANCH_MODE !== "single") {
   fail("VITE_BRANCH_MODE must be single for v1.0 live QA");
+}
+
+if (env.VITE_ENVIRONMENT && !["development", "staging", "production"].includes(env.VITE_ENVIRONMENT)) {
+  fail(`VITE_ENVIRONMENT must be development | staging | production, got ${env.VITE_ENVIRONMENT}`);
 }
 
 if (env.VITE_SUPABASE_URL && !validateUrl(env.VITE_SUPABASE_URL)) {

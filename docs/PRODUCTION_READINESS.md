@@ -1,7 +1,13 @@
 # Production Readiness — LenaBeauty
-**Updated:** 2026-08-09 · branch `main`
+**Updated:** 2026-08-10 · branch `main`
 
 A living, evidence-based checklist of what blocks (or unblocks) selling the current release.
+
+> Phase 4 (Production Readiness & Security Hardening) is covered in
+> `docs/SECURITY_HARDENING_REPORT_2026-08-10.md`; environment separation in
+> `docs/ENVIRONMENT_SEPARATION.md`. The migration chain is now **23 files**
+> (adds `20260810000004_btree_gist_extension_schema.sql` and
+> `20260810000005_security_hardening_auth.sql`).
 
 ## ✅ Done (verified in this repo)
 
@@ -36,10 +42,10 @@ A living, evidence-based checklist of what blocks (or unblocks) selling the curr
 ## ⚠️ Required before first sale (manual — outside code)
 These are the documented gates that only the owner can perform:
 1. **Rotate the leaked Supabase publishable key** (it is in git history).
-2. **Provision a live Supabase project** and apply the 18 migrations in order.
+2. **Provision a live Supabase project** and apply the 23 migrations in order.
 3. Create the admin auth user, then run the admin bootstrap migration with its UUID.
 4. Set env vars in the Vercel dashboard (not in `vercel.json`); `VITE_CENTER_ID` must equal the seed center UUID.
 5. **Live QA pass** per `docs/SUPABASE_LIVE_QA_RUNBOOK.md`: log in, create a customer, run a real POS checkout, confirm invoice + stock + loyalty update, print an invoice, check dashboard/reports populate.
 
 ## Verdict
-The product is **technically complete for its staff-only core scope** (auth, CRUD, POS, invoicing, gift cards, packages, attendance/payroll, dashboard, reports) once a live Supabase project is connected and the 18 migrations are applied. Remaining blockers are **operational** (provision + live QA + key rotation), not code.
+The product is **technically complete for its staff-only core scope** (auth, CRUD, POS, invoicing, gift cards, packages, attendance/payroll, dashboard, reports) once a live Supabase project is connected and the 23 migrations are applied. Remaining blockers are **operational** (provision + live QA + key rotation + applying the phase-4 hardening migration to staging), not code. The phase-4 security audit found no remaining in-code security defects after `20260810000005_security_hardening_auth.sql`.

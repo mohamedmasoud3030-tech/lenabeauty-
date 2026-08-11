@@ -8,10 +8,16 @@ export class EnvironmentConfigurationError extends Error {
 export type BackendMode = "supabase" | "tauri";
 export type BranchMode = "single" | "multi";
 
-// Browser-facing Supabase values are public by design. Keep them only as
-// production fallbacks so a missing Vercel VITE_* variable cannot disable the
-// single-center Lena deployment; explicit environment values still override
-// these defaults for other deployments.
+// Explicit environment model (Group 6 — environment separation).
+// VITE_ENVIRONMENT selects the runtime target; it is derived automatically in
+// builds (dev/test -> "development", prod -> "production") when not set.
+export type EnvironmentName = "development" | "staging" | "production";
+
+// Browser-facing Supabase values are public by design (anon key). Keep them
+// only as PRODUCTION fallbacks so a missing Vercel VITE_* variable cannot
+// disable the canonical single-center Lena deployment; explicit environment
+// values still override these defaults for other deployments. These fallbacks
+// are never used in development or staging builds.
 const LENA_PRODUCTION_SUPABASE_URL = "https://tuzzvqsnbtzvkffmazyf.supabase.co";
 const LENA_PRODUCTION_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1enp2cXNuYnR6dmtmZm1henlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMzg5NzQsImV4cCI6MjEwMTgxNDk3NH0.spKglkQKiC5vQCk5HgYFb0XfTst85vZ27izZJ6OvYoE";
 const LENA_PRODUCTION_CENTER_ID = "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d";
@@ -34,7 +40,23 @@ function validateUUID(uuid: string | undefined): boolean {
 
 export function parseEnv(customEnv?: Record<string, string | undefined>) {
   const getEnv = (key: string) => customEnv ? customEnv[key] : import.meta.env[key];
-  const useProductionFallbacks = !customEnv && import.meta.env.PROD;
+  const isProdBuild = !customEnv && import.meta.env.PROD;
+  const useProductionFallbacks = isProdBuild;
+
+  // Environment: explicit VITE_ENVIRONMENT wins; otherwise derived from the
+  // build (dev/test -> development, prod -> production).
+  const environmentRaw = getEnv("VITE_ENVIRONMENT")?.trim().toLowerCase();
+  let environment: EnvironmentName;
+  if (environmentRaw) {
+    if (environmentRaw !== "development" && environmentRaw !== "staging" && environmentRaw !== "production") {
+      throw new EnvironmentConfigurationError(
+        `UNSUPPORTED_ENVIRONMENT: ${environmentRaw} (expected development | staging | production)`,
+      );
+    }
+    environment = environmentRaw;
+  } else {
+    environment = isProdBuild ? "production" : "development";
+  }
 
   const backendRaw = (
     getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase()
@@ -99,6 +121,7 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
 
   return {
     backend,
+    environment,
     supabaseUrl: url,
     supabasePublishableKey: key,
     branchMode,
@@ -115,6 +138,7 @@ try {
   
   _config = {
     backend: "supabase",
+    environment: (import.meta.env.PROD ? "production" : "development") as EnvironmentName,
     supabaseUrl: undefined,
     supabasePublishableKey: undefined,
     branchMode: "single",
