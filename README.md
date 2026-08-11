@@ -65,9 +65,30 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260811000001_financial_entitlements.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, and the financial entitlements ledger for gift cards and packages (deferred obligations, atomic redemption, governed refund/void/expiry, RLS select-only on balances). Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
+5. Continue through `20260811004300_refund_status_repair.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, and the financial entitlements ledger for gift cards and packages (deferred obligations, atomic redemption, governed refund/void/expiry, RLS select-only on balances). Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
 
 The optional Arabic service catalog lives under `supabase/seeds/` and is explicitly gated to demo/staging. It is not part of the production migration chain. See `docs/OPERATIONAL_DATA_CONTRACT.md` and the paired rollback runbook under `supabase/rollbacks/`.
+
+### Automatic Demo migration sync
+
+Every merge to `main` that changes `supabase/migrations/**` now runs
+`.github/workflows/demo-supabase-migrations.yml`. It first runs the test,
+typecheck, lint, and production-build gates, then uses `supabase db push` to
+apply only pending migrations to the **Demo Supabase project** in filename
+order. Seeds are deliberately excluded.
+
+Configure these GitHub Actions repository secrets once (never put them in
+`.env`, Vercel, or source control):
+
+| Secret | Purpose |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Supabase personal access token allowed to link the Demo project |
+| `SUPABASE_PROJECT_REF` | Demo Supabase project reference |
+| `SUPABASE_DB_PASSWORD` | Demo database password used by the CLI connection |
+
+If any validation or migration fails, the workflow stops and reports failure;
+it does not mark later migrations as applied. This workflow is Demo-only. A
+future production database must use a separate protected workflow and secrets.
 
 Before a release, run `npm run preflight:supabase` with the normal client
 variables and a temporary local `SUPABASE_SERVICE_ROLE_KEY`. The script verifies

@@ -54,7 +54,10 @@ const canonicalMigrations = [
   "20260810000004_btree_gist_extension_schema.sql",
   "20260810000005_security_hardening_auth.sql",
   "20260810000006_security_grant_repair.sql",
-  "20260811000001_financial_entitlements.sql",
+  "20260811004000_financial_entitlements.sql",
+  "20260811004100_checkout_overload_repair.sql",
+  "20260811004200_gift_card_redemption_units_repair.sql",
+  "20260811004300_refund_status_repair.sql",
 ];
 
 function parseEnvFile(path) {
@@ -186,7 +189,7 @@ else pass("final checkout RPC exists");
 if (!checkout.includes("CREATE TABLE IF NOT EXISTS public.payments")) fail("canonical payments ledger is missing");
 else pass("canonical payments ledger exists");
 
-const entitlements = readFileSync(resolve(migrationsDir, "20260811000001_financial_entitlements.sql"), "utf8");
+const entitlements = readFileSync(resolve(migrationsDir, "20260811004000_financial_entitlements.sql"), "utf8");
 if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.customer_entitlements")) fail("entitlement tables are missing");
 else pass("entitlement tables exist");
 if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.entitlement_ledger")) fail("entitlement ledger is missing");

@@ -59,12 +59,16 @@ export default function ReportsPage() {
       let res;
       if (tab === "sales") {
         res = await unwrap(useCases.reports.getSales(dateRange.from, dateRange.to));
-        try {
-          const summaryRes = await useCases.entitlements.getSummary();
-          setEntitlementSummary(summaryRes.ok ? summaryRes.data : null);
-        } catch {
-          setEntitlementSummary(null);
-        }
+        // This optional all-time liability panel must never hold the main
+        // sales report in Loading/Empty/Error state when an older backend or
+        // a focused report-test double does not provide it.
+        void useCases.entitlements.getSummary()
+          .then((summaryRes) => {
+            if (seq === requestSeq.current) setEntitlementSummary(summaryRes.ok ? summaryRes.data : null);
+          })
+          .catch(() => {
+            if (seq === requestSeq.current) setEntitlementSummary(null);
+          });
       } else if (tab === "appointments") {
         res = await unwrap(useCases.reports.getAppointments(dateRange.from, dateRange.to));
       } else {
