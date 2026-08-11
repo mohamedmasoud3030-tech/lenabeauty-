@@ -83,7 +83,10 @@ describe("canonical Supabase migration chain", () => {
       "20260810000004_btree_gist_extension_schema.sql",
       "20260810000005_security_hardening_auth.sql",
       "20260810000006_security_grant_repair.sql",
-      "20260811000001_financial_entitlements.sql",
+      "20260811004000_financial_entitlements.sql",
+      "20260811004100_checkout_overload_repair.sql",
+      "20260811004200_gift_card_redemption_units_repair.sql",
+      "20260811004300_refund_status_repair.sql",
     ];
     const present = readdirSync(resolve(process.cwd(), "supabase/migrations")).filter((f) => f.endsWith(".sql"));
     for (const name of canonical) {

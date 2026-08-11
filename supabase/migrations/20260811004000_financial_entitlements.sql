@@ -237,6 +237,7 @@ BEGIN
                    WHEN 'REDEEM'     THEN -NEW.amount
                    WHEN 'REFUND'     THEN -NEW.amount
                    ELSE 0 END, 3);
+  v_refund_total := v_refund_total + CASE WHEN NEW.entry_type = 'REFUND' THEN NEW.amount ELSE 0 END;
 
   IF v_balance < -0.0005 THEN
     RAISE EXCEPTION 'entitlement_insufficient_balance' USING ERRCODE = '23514';
@@ -476,6 +477,9 @@ WHERE e.legacy_flag = true
 --   { "type": "gift_card", "code": "...", "price": value, "qty": 1 }      gift card sale
 -- A package line additionally creates the customer package entitlement
 -- (units per included service) in the same transaction.
+-- Remove every legacy overload before installing the defaulted signature.
+-- Leaving the seven-argument version makes ordinary legacy POS calls ambiguous.
+DROP FUNCTION IF EXISTS public.process_checkout_v1(UUID, UUID, UUID, TEXT, NUMERIC, BOOLEAN, JSONB);
 DROP FUNCTION IF EXISTS public.process_checkout_v1(UUID, UUID, UUID, TEXT, NUMERIC, BOOLEAN, JSONB, TEXT);
 
 CREATE OR REPLACE FUNCTION public.process_checkout_v1(
@@ -535,7 +539,7 @@ DECLARE
     v_ent_id               UUID;
     v_ent_amount           NUMERIC(12,3) := 0.000;
     v_ent_service_id       UUID;
-    v_ent_units            INTEGER := 0;
+    v_ent_units            INTEGER;
     v_covered              NUMERIC(12,3) := 0.000;
     v_total_units_all      INTEGER := 0;
     v_remaining_units_all  INTEGER := 0;
@@ -883,7 +887,7 @@ BEGIN
 
         v_ent_amount := 0.000;
         v_ent_service_id := NULL;
-        v_ent_units := 0;
+        v_ent_units := NULL;
 
         IF v_redemption_type = 'value' THEN
           IF v_entitlement.kind <> 'GIFT_CARD' THEN

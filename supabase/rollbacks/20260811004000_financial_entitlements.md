@@ -1,4 +1,4 @@
-# Rollback runbook — `20260811000001_financial_entitlements.sql`
+# Rollback runbook — `20260811004000_financial_entitlements.sql`
 
 Scope: financial entitlements for gift cards and packages (customer
 entitlements, package units, append-only entitlement ledger, extended

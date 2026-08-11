@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const migration = readFileSync(
-  resolve(process.cwd(), "supabase/migrations/20260811000001_financial_entitlements.sql"),
+  resolve(process.cwd(), "supabase/migrations/20260811004000_financial_entitlements.sql"),
   "utf8",
 );
 const securityTest = readFileSync(
@@ -37,6 +37,7 @@ describe("financial entitlements migration (gift cards + packages)", () => {
     expect(migration).toContain("v_balance := round(v_balance + CASE NEW.entry_type");
     expect(migration).toContain("UPDATE public.customer_entitlements ce");
     expect(migration).toContain("SET remaining_value = v_balance");
+    expect(migration).toContain("v_refund_total := v_refund_total + CASE WHEN NEW.entry_type = 'REFUND'");
     expect(migration).toContain("current_balance = v_balance"); // gift_cards mirror
     expect(migration).toContain("entitlement_insufficient_balance");
   });
@@ -49,7 +50,9 @@ describe("financial entitlements migration (gift cards + packages)", () => {
 
   it("extends the canonical atomic checkout with entitlements and gift-card sales", () => {
     expect(migration).toContain("DROP FUNCTION IF EXISTS public.process_checkout_v1");
+    expect(migration).toContain("DROP FUNCTION IF EXISTS public.process_checkout_v1(UUID, UUID, UUID, TEXT, NUMERIC, BOOLEAN, JSONB);");
     expect(migration).toContain("p_entitlement_redemptions JSONB DEFAULT NULL");
+    expect(migration).toContain("v_ent_units := NULL;");
     expect(migration).toContain("'gift_card'"); // new line type
     expect(migration).toContain("gift_card_code_already_exists");
     expect(migration).toContain("INSERT INTO public.entitlement_ledger");
