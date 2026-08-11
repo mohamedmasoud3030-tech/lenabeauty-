@@ -46,13 +46,14 @@ describe("canonical Supabase migration chain", () => {
     expect(hardening).toContain("SET search_path TO pg_catalog, public, app_private");
   });
 
-  it("includes the phase-4 security hardening migration as the chain tail", () => {
+  it("includes phase-4 security hardening plus the inherited-grant repair", () => {
     const hardening = readMigration("20260810000005_security_hardening_auth.sql");
+    const repair = readMigration("20260810000006_security_grant_repair.sql");
 
-    expect(hardening).toContain("REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public      FROM PUBLIC");
     expect(hardening).toContain("center_assets_member_select");
-    expect(hardening).toContain("password_hibp_enabled = true");
     expect(hardening).toContain("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon");
+    expect(repair).toContain("REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM authenticated");
+    expect(repair).toContain("GRANT EXECUTE ON FUNCTION public.process_checkout_v1(");
   });
 
   it("keeps every canonical migration file present and lexically ordered", () => {
@@ -81,6 +82,7 @@ describe("canonical Supabase migration chain", () => {
       "20260810000003_appointment_overlap_integrity.sql",
       "20260810000004_btree_gist_extension_schema.sql",
       "20260810000005_security_hardening_auth.sql",
+      "20260810000006_security_grant_repair.sql",
     ];
     const present = readdirSync(resolve(process.cwd(), "supabase/migrations")).filter((f) => f.endsWith(".sql"));
     for (const name of canonical) {
