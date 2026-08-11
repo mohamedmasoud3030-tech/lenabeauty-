@@ -17,6 +17,7 @@ const data: InvoicePrintData = {
     tierDiscount: 0,
     loyaltyDiscount: 0,
     giftCardDiscount: 0,
+    entitlementRedemption: 0,
     tax: 0,
     amountPaid: 50,
     status: "PAID" as never,

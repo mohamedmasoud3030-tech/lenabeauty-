@@ -23,7 +23,34 @@ export interface PackageCheckoutItem {
   price: number;
 }
 
-export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem | PackageCheckoutItem;
+/**
+ * A gift-card SALE line: the checkout records the payment collection and the
+ * deferred entitlement obligation atomically. `price` is the card value,
+ * `code` the new card code (>= 4 chars), `qty` must be 1.
+ */
+export interface GiftCardCheckoutItem {
+  type: "gift_card";
+  code: string;
+  price: number;
+  qty: number;
+  note?: string;
+  expiresAtISO?: string;
+}
+
+export type CheckoutItem = ServiceCheckoutItem | ProductCheckoutItem | PackageCheckoutItem | GiftCardCheckoutItem;
+
+/**
+ * Entitlement redemption applied to a checkout (server-capped, atomic):
+ *  - "value": monetary credit from a gift-card entitlement (customer-owned)
+ *  - "units": package sessions for the included service on this invoice
+ */
+export interface EntitlementRedemptionInput {
+  entitlementId: string;
+  type: "value" | "units";
+  amount?: number;
+  serviceId?: string;
+  units?: number;
+}
 
 export interface CheckoutPayload {
   customerId: string;
@@ -34,13 +61,15 @@ export interface CheckoutPayload {
   giftCardCode?: string;
   paymentMethod: PaymentMethod;
   items: CheckoutItem[];
+  /** Optional customer-owned entitlement redemptions (packages / gift cards). */
+  entitlementRedemptions?: EntitlementRedemptionInput[];
 }
 
 export interface InvoicePrintData {
   invoice: Invoice;
   items: {
     id: string;
-    type: "service" | "product" | "package";
+    type: "service" | "product" | "package" | "gift_card";
     name: string;
     price: number;
     qty: number;
@@ -81,7 +110,19 @@ export interface SalesReportRow {
   totalAmount: number;
   discount: number;
   customer?: string;
-  items: { id: string, name: string, type: "service" | "product" | "package", price: number, qty: number }[];
+  items: { id: string, name: string, type: "service" | "product" | "package" | "gift_card", price: number, qty: number }[];
+  /**
+   * Financial classification (OMR, 3 decimals):
+   *  - prepaidAmount: gift-card/package sale value on this invoice — NOT
+   *    earned revenue, it is a deferred obligation.
+   *  - redeemedAmount: entitlement value consumed on this invoice (gift card
+   *    + package redemptions) — recognized service revenue.
+   *  - earnedRevenue: service/product revenue recognized for this invoice =
+   *    totalAmount − prepaidAmount + redeemedAmount.
+   */
+  prepaidAmount: number;
+  redeemedAmount: number;
+  earnedRevenue: number;
 }
 
 export interface AppointmentReportRow {
@@ -123,8 +164,20 @@ export function validateCheckoutPayload(payload: any): string[] {
   }
   payload.items.forEach((item: any, idx: number) => {
     const slot = idx + 1;
-    if (!item || !["service", "product", "package"].includes(item.type)) {
+    if (!item || !["service", "product", "package", "gift_card"].includes(item.type)) {
       errors.push(`Item at slot ${slot} has invalid type`);
+      return;
+    }
+    if (item.type === "gift_card") {
+      if (typeof item.code !== "string" || item.code.trim().length < 4) {
+        errors.push(`Item at slot ${slot} must have a gift card code of at least 4 characters`);
+      }
+      if (item.qty !== 1) {
+        errors.push(`Item at slot ${slot} gift card quantity must be 1`);
+      }
+      if (typeof item.price !== "number" || !Number.isFinite(item.price) || item.price <= 0) {
+        errors.push(`Item at slot ${slot} must have a positive finite gift card value`);
+      }
       return;
     }
     const reference = item.type === "service" ? item.serviceId : item.type === "product" ? item.productId : item.packageId;
@@ -138,6 +191,39 @@ export function validateCheckoutPayload(payload: any): string[] {
       errors.push(`Item at slot ${slot} must have a positive finite price`);
     }
   });
+  if (payload.entitlementRedemptions !== undefined) {
+    if (!Array.isArray(payload.entitlementRedemptions)) {
+      errors.push("Entitlement redemptions must be an array");
+    } else {
+      const seen = new Set<string>();
+      payload.entitlementRedemptions.forEach((r: any, idx: number) => {
+        const slot = idx + 1;
+        if (!r || typeof r !== "object" || typeof r.entitlementId !== "string" || !r.entitlementId.trim()) {
+          errors.push(`Entitlement redemption ${slot} is missing its entitlement id`);
+          return;
+        }
+        if (seen.has(r.entitlementId)) {
+          errors.push(`Entitlement redemption ${slot} duplicates entitlement ${r.entitlementId}`);
+        }
+        seen.add(r.entitlementId);
+        if (r.type !== "value" && r.type !== "units") {
+          errors.push(`Entitlement redemption ${slot} has invalid type`);
+          return;
+        }
+        if (r.type === "value" && (typeof r.amount !== "number" || !Number.isFinite(r.amount) || r.amount <= 0)) {
+          errors.push(`Entitlement redemption ${slot} must have a positive finite amount`);
+        }
+        if (r.type === "units") {
+          if (typeof r.serviceId !== "string" || !r.serviceId.trim()) {
+            errors.push(`Entitlement redemption ${slot} is missing its service reference`);
+          }
+          if (!Number.isInteger(r.units) || (r.units ?? 0) <= 0) {
+            errors.push(`Entitlement redemption ${slot} must have a positive whole unit count`);
+          }
+        }
+      });
+    }
+  }
   return errors;
 }
 
@@ -168,12 +254,40 @@ export function validateBackupPayload(payload: any): payload is BackupPayload {
 }
 
 
+/**
+ * Selling a gift card: the payment method and acting employee are required so
+ * the sale flows through the checkout payment pipeline (invoice + payment +
+ * deferred entitlement), never as an unbooked card.
+ */
 export interface IssueGiftCardInput {
   code: string;
   initialBalance: number;
-  customerId?: string;
+  customerId: string;
+  employeeId: string;
+  paymentMethod: PaymentMethod;
   note?: string;
   expiresAtISO?: string;
+}
+
+export type EntitlementStatus =
+  | "ACTIVE"
+  | "PARTIALLY_REDEEMED"
+  | "FULLY_REDEEMED"
+  | "EXPIRED"
+  | "REFUNDED"
+  | "VOID";
+
+export interface EntitlementSummary {
+  /** Cash actually collected from payments in the period. */
+  cashCollected: number;
+  /** Earned service/product revenue in the period (redemptions included). */
+  earnedRevenue: number;
+  /** Outstanding prepaid obligation (gift cards + packages, ledger-derived). */
+  deferredLiability: number;
+  /** Value redeemed from entitlements in the period. */
+  redemptions: number;
+  /** Gift-card/package sale value booked as deferred in the period. */
+  prepaidSales: number;
 }
 
 export interface CreateServicePackageInput {

@@ -14,6 +14,7 @@ import {
   BookingRepository,
   GiftCardRepository,
   ServicePackageRepository,
+  EntitlementRepository,
   CustomerExperienceRepository,
   ForecastRepository,
   AccountingRepository,
@@ -37,6 +38,7 @@ import {
   SupabaseBookingAdapter,
   SupabaseGiftCardAdapter,
   SupabaseServicePackageAdapter,
+  SupabaseEntitlementAdapter,
   SupabaseCustomerExperienceAdapter,
   SupabaseForecastAdapter,
   SupabaseAccountingAdapter,
@@ -61,6 +63,7 @@ export interface RepositoryBundle {
   bookingAdapter: BookingRepository;
   giftCardAdapter: GiftCardRepository;
   servicePackageAdapter: ServicePackageRepository;
+  entitlementAdapter: EntitlementRepository;
   customerExperienceAdapter: CustomerExperienceRepository;
   forecastAdapter: ForecastRepository;
   accountingAdapter: AccountingRepository;
@@ -94,6 +97,7 @@ export function createRepositoryBundle(): RepositoryBundle {
       bookingAdapter: new SupabaseBookingAdapter(),
       giftCardAdapter: new SupabaseGiftCardAdapter(),
       servicePackageAdapter: new SupabaseServicePackageAdapter(),
+      entitlementAdapter: new SupabaseEntitlementAdapter(),
       customerExperienceAdapter: new SupabaseCustomerExperienceAdapter(),
       forecastAdapter: new SupabaseForecastAdapter(),
       accountingAdapter: new SupabaseAccountingAdapter(),

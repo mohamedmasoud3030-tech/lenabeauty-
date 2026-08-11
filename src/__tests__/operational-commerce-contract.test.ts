@@ -51,6 +51,7 @@ describe("canonical financial behavior", () => {
       tierDiscount: 8.025,
       loyaltyDiscount: 67,
       giftCardDiscount: 0.225,
+      entitlementRedemption: 0,
       net: 0,
       tax: 0,
       total: 0,

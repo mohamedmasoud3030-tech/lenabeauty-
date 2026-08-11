@@ -14,20 +14,23 @@ import { mapInvoice, mapInvoiceItem } from "./mappers";
 
 export type PrintItemShape = InvoicePrintData["items"][number];
 
-const FALLBACK_NAMES: Record<"service" | "product" | "package", string> = {
+const FALLBACK_NAMES: Record<"service" | "product" | "package" | "gift_card", string> = {
   service: "خدمة",
   product: "منتج",
   package: "باقة",
+  gift_card: "بطاقة هدية",
 };
 
 export function resolveItemType(item: {
   serviceId?: string;
   productId?: string;
   packageId?: string;
-}): "service" | "product" | "package" {
+  giftCardId?: string;
+}): "service" | "product" | "package" | "gift_card" {
   if (item.serviceId) return "service";
   if (item.productId) return "product";
   if (item.packageId) return "package";
+  if (item.giftCardId) return "gift_card";
   // Unknown/null refs (e.g. legacy rows): fall back to product, never crash.
   return "product";
 }
@@ -37,9 +40,14 @@ function toSafeNumber(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function joinedNameFor(itemRow: Record<string, any>, type: "service" | "product" | "package"): unknown {
+function roundMoney3(value: number): number {
+  return Math.round((value + Number.EPSILON) * 1000) / 1000;
+}
+
+function joinedNameFor(itemRow: Record<string, any>, type: "service" | "product" | "package" | "gift_card"): unknown {
   if (type === "service") return itemRow.services?.name;
   if (type === "product") return itemRow.products?.name;
+  if (type === "gift_card") return itemRow.gift_cards?.code ? `Gift Card ${itemRow.gift_cards.code}` : undefined;
   return itemRow.service_packages?.name;
 }
 
@@ -69,8 +77,17 @@ function mapItemRow(itemRow: unknown): SalesReportRow["items"][number] | null {
   };
 }
 
-/** Maps raw invoice rows (with nested invoice_items) to SalesReportRow. */
-export function mapSalesReportRows(rows: unknown[]): SalesReportRow[] {
+/**
+ * Maps raw invoice rows (with nested invoice_items) to SalesReportRow.
+ *
+ * @param redemptionByInvoice Optional map of ledger-derived redemption value
+ * per invoice (authoritative when present); falls back to the legacy
+ * gift_card_discount column for pre-ledger invoices.
+ */
+export function mapSalesReportRows(
+  rows: unknown[],
+  redemptionByInvoice?: Map<string, number>,
+): SalesReportRow[] {
   const out: SalesReportRow[] = [];
   for (const raw of rows) {
     if (!raw || typeof raw !== "object") continue;
@@ -89,13 +106,33 @@ export function mapSalesReportRows(rows: unknown[]): SalesReportRow[] {
       if (mapped) items.push(mapped);
     }
 
+    const totalAmount = toSafeNumber(invoice.totalAmount, 0);
+    // Prepaid lines (gift-card/package sales) are deferred obligations, NOT
+    // earned revenue. Their gross value is subtracted from the invoice cash
+    // total to derive the recognized service/product revenue.
+    const prepaidAmount = roundMoney3(
+      items
+        .filter((item) => item.type === "package" || item.type === "gift_card")
+        .reduce((sum, item) => sum + item.price * item.qty, 0),
+    );
+    // Redemption value consumed on this invoice converts deferred liability
+    // into recognized revenue; the ledger is authoritative, with a legacy
+    // fallback to the pre-ledger gift_card_discount column.
+    const redeemedAmount = roundMoney3(
+      redemptionByInvoice?.get(invoice.id) ?? toSafeNumber(invoice.giftCardDiscount, 0),
+    );
+    const earnedRevenue = roundMoney3(Math.max(0, totalAmount - prepaidAmount + redeemedAmount));
+
     out.push({
       id: invoice.id,
       date: invoice.date.toISOString(),
-      totalAmount: toSafeNumber(invoice.totalAmount, 0),
+      totalAmount,
       discount: toSafeNumber(invoice.discount, 0),
       customer: typeof row.customers?.name === "string" ? row.customers.name : undefined,
       items,
+      prepaidAmount,
+      redeemedAmount,
+      earnedRevenue,
     });
   }
   return out;

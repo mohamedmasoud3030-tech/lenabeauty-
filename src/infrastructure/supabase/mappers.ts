@@ -1,6 +1,7 @@
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, InvoiceItem, CenterSettings,
   AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
+  CustomerEntitlement, EntitlementLedgerEntry, PackageEntitlementUnit,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
   AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
 } from "../../domain/entities";
@@ -256,6 +257,7 @@ export function mapInvoiceItem(row: unknown): InvoiceItem {
     serviceId: typeof row.service_id === "string" ? row.service_id : undefined,
     productId: typeof row.product_id === "string" ? row.product_id : undefined,
     packageId: typeof row.package_id === "string" ? row.package_id : undefined,
+    giftCardId: typeof row.gift_card_id === "string" ? row.gift_card_id : undefined,
     price: Number(row.price),
     quantity: Number(row.quantity),
     createdAt: row.created_at ? parseDate(row.created_at, "created_at", "mapInvoiceItem") : new Date(0)
@@ -287,6 +289,7 @@ export function mapInvoice(row: unknown): Invoice {
     tierDiscount: Number(row.tier_discount ?? 0),
     loyaltyDiscount: isLegacyFinancialRow ? Number(row.loyalty_points_used ?? 0) : Number(row.loyalty_discount ?? 0),
     giftCardDiscount: Number(row.gift_card_discount ?? 0),
+    entitlementRedemption: Number(row.entitlement_redemption ?? 0),
     tax: row.tax !== undefined && row.tax !== null ? Number(row.tax) : undefined,
     taxRate: row.tax_rate !== undefined && row.tax_rate !== null ? Number(row.tax_rate) : undefined,
     amountPaid: isLegacyFinancialRow ? Number(row.total_amount) : Number(row.amount_paid ?? row.total_amount ?? 0),
@@ -381,6 +384,96 @@ export function mapGiftCardTransaction(row: unknown): GiftCardTransaction {
     invoiceId: typeof row.invoice_id === "string" ? row.invoice_id : undefined,
     note: typeof row.note === "string" ? row.note : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapGiftCardTransaction")
+  };
+}
+
+export function mapPackageEntitlementUnit(row: unknown): PackageEntitlementUnit {
+  assertRowObject(row, "mapPackageEntitlementUnit");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" ||
+      typeof row.entitlement_id !== "string" || typeof row.service_id !== "string") {
+    throw createMappingError("mapPackageEntitlementUnit", "Missing or invalid required fields");
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    entitlementId: row.entitlement_id,
+    serviceId: row.service_id,
+    totalUnits: Number(row.total_units) || 0,
+    usedUnits: Number(row.used_units) || 0,
+    serviceName: typeof (row.services as any)?.name === "string" ? (row.services as any).name : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapPackageEntitlementUnit")
+  };
+}
+
+export function mapCustomerEntitlement(row: unknown): CustomerEntitlement {
+  assertRowObject(row, "mapCustomerEntitlement");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" ||
+      typeof row.kind !== "string" || typeof row.original_value !== "number") {
+    throw createMappingError("mapCustomerEntitlement", "Missing or invalid required fields (id, center_id, kind, original_value)");
+  }
+  if (row.kind !== "GIFT_CARD" && row.kind !== "PACKAGE") {
+    throw createMappingError("mapCustomerEntitlement", `Invalid entitlement kind (${row.kind})`);
+  }
+  const status = typeof row.status === "string" ? row.status : "ACTIVE";
+  if (!["ACTIVE", "PARTIALLY_REDEEMED", "FULLY_REDEEMED", "EXPIRED", "REFUNDED", "VOID"].includes(status)) {
+    throw createMappingError("mapCustomerEntitlement", `Invalid entitlement status (${status})`);
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    customerId: typeof row.customer_id === "string" ? row.customer_id : undefined,
+    kind: row.kind as "GIFT_CARD" | "PACKAGE",
+    giftCardId: typeof row.gift_card_id === "string" ? row.gift_card_id : undefined,
+    packageId: typeof row.package_id === "string" ? row.package_id : undefined,
+    sourceInvoiceId: typeof row.source_invoice_id === "string" ? row.source_invoice_id : undefined,
+    originalValue: Number(row.original_value) || 0,
+    remainingValue: Number(row.remaining_value) || 0,
+    status: status as CustomerEntitlement["status"],
+    expiresAt: parseOptionalDate(row.expires_at, "expires_at", "mapCustomerEntitlement"),
+    legacyFlag: Boolean(row.legacy_flag),
+    createdAt: parseDate(row.created_at, "created_at", "mapCustomerEntitlement"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapCustomerEntitlement"),
+    units: Array.isArray(row.package_entitlement_units)
+      ? (row.package_entitlement_units as unknown[]).map(mapPackageEntitlementUnit)
+      : undefined,
+    sourceInvoiceSerial: typeof (row.source_invoice as any)?.serial_number === "string"
+      ? (row.source_invoice as any).serial_number
+      : undefined,
+    instrumentName: typeof (row.service_packages as any)?.name === "string"
+      ? (row.service_packages as any).name
+      : typeof (row.gift_cards as any)?.code === "string"
+        ? `Gift Card ${(row.gift_cards as any).code}`
+        : undefined,
+    giftCardCode: typeof (row.gift_cards as any)?.code === "string" ? (row.gift_cards as any).code : undefined,
+    customerName: typeof (row.customers as any)?.name === "string" ? (row.customers as any).name : undefined,
+  };
+}
+
+export function mapEntitlementLedgerEntry(row: unknown): EntitlementLedgerEntry {
+  assertRowObject(row, "mapEntitlementLedgerEntry");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" ||
+      typeof row.entitlement_id !== "string" || typeof row.entry_type !== "string") {
+    throw createMappingError("mapEntitlementLedgerEntry", "Missing or invalid required fields (id, center_id, entitlement_id, entry_type)");
+  }
+  const validTypes = ["ISSUE", "FUND", "REDEEM", "REFUND", "ADJUSTMENT", "EXPIRY", "VOID"];
+  if (!validTypes.includes(row.entry_type)) {
+    throw createMappingError("mapEntitlementLedgerEntry", `Invalid ledger entry type (${row.entry_type})`);
+  }
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    entitlementId: row.entitlement_id,
+    entryType: row.entry_type as EntitlementLedgerEntry["entryType"],
+    amount: Number(row.amount) || 0,
+    units: typeof row.units === "number" ? row.units : undefined,
+    serviceId: typeof row.service_id === "string" ? row.service_id : undefined,
+    invoiceId: typeof row.invoice_id === "string" ? row.invoice_id : undefined,
+    actorId: typeof row.actor_id === "string" ? row.actor_id : undefined,
+    reason: typeof row.reason === "string" ? row.reason : undefined,
+    legacyFlag: Boolean(row.legacy_flag),
+    createdAt: parseDate(row.created_at, "created_at", "mapEntitlementLedgerEntry"),
+    actorName: typeof (row.employees as any)?.name === "string" ? (row.employees as any).name : undefined,
+    invoiceSerial: typeof (row.invoices as any)?.serial_number === "string" ? (row.invoices as any).serial_number : undefined,
   };
 }
 

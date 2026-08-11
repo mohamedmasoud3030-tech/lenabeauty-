@@ -1,4 +1,4 @@
-import { CheckoutItem, CheckoutPayload, PaymentMethod } from "../application/dto";
+import { CheckoutItem, CheckoutPayload, PaymentMethod, EntitlementRedemptionInput } from "../application/dto";
 
 /**
  * Canonical client-side representation of the checkout contract.
@@ -28,10 +28,41 @@ export function isPaymentMethod(value: unknown): value is PaymentMethod {
   return value === "cash" || value === "card" || value === "transfer";
 }
 
+export interface EntitlementPreviewLine {
+  serviceId: string;
+  price: number;
+  qty: number;
+}
+
+/**
+ * Client-side preview of the value a package-unit redemption covers. Mirrors
+ * the server rule: covered = min(avg line price × units, remaining value),
+ * where the last session absorbs any rounding. The server's ledger is
+ * authoritative; this only drives the POS preview.
+ */
+export function estimatePackageRedemptionValue(
+  redemption: EntitlementRedemptionInput,
+  remainingValue: number,
+  serviceLines: EntitlementPreviewLine[],
+): number {
+  if (redemption.type !== "units" || !redemption.serviceId) {
+    return 0;
+  }
+  const matching = serviceLines.filter((line) => line.serviceId === redemption.serviceId);
+  if (matching.length === 0) return 0;
+  const lineQty = matching.reduce((sum, line) => sum + Math.max(1, Number(line.qty) || 1), 0);
+  const lineValue = matching.reduce((sum, line) => sum + (Number(line.price) || 0) * Math.max(1, Number(line.qty) || 1), 0);
+  if (lineQty <= 0) return 0;
+  const avgPrice = lineValue / lineQty;
+  const units = Math.min(Math.max(1, Number(redemption.units) || 1), lineQty);
+  return roundMoney(Math.min(Math.max(0, avgPrice) * units, Math.max(0, remainingValue)));
+}
+
 function itemReferenceIsValid(item: CheckoutItem): boolean {
   if (item.type === "service") return typeof item.serviceId === "string" && item.serviceId.length > 0;
   if (item.type === "product") return typeof item.productId === "string" && item.productId.length > 0;
   if (item.type === "package") return typeof item.packageId === "string" && item.packageId.length > 0;
+  if (item.type === "gift_card") return typeof item.code === "string" && item.code.trim().length >= 4;
   return false;
 }
 
@@ -54,14 +85,46 @@ export function validateCheckoutContract(payload: CheckoutPayload): string[] {
 
   payload.items.forEach((item, index) => {
     const slot = index + 1;
-    if (!item || !["service", "product", "package"].includes(item.type)) {
+    if (!item || !["service", "product", "package", "gift_card"].includes(item.type)) {
       errors.push(`Item at slot ${slot} has invalid type`);
       return;
     }
     if (!itemReferenceIsValid(item)) errors.push(`Item at slot ${slot} is missing its catalog reference`);
+    if (item.type === "gift_card" && item.qty !== 1) errors.push(`Item at slot ${slot} gift card quantity must be 1`);
     if (!Number.isInteger(item.qty) || item.qty <= 0) errors.push(`Item at slot ${slot} must have a positive whole quantity`);
     if (!isPositiveMoney(item.price)) errors.push(`Item at slot ${slot} must have a positive finite price`);
   });
+
+  if (payload.entitlementRedemptions !== undefined) {
+    if (!Array.isArray(payload.entitlementRedemptions)) {
+      errors.push("Entitlement redemptions must be an array");
+    } else {
+      const seen = new Set<string>();
+      payload.entitlementRedemptions.forEach((redemption, index) => {
+        const slot = index + 1;
+        if (!redemption || typeof redemption.entitlementId !== "string" || redemption.entitlementId.trim().length === 0) {
+          errors.push(`Entitlement redemption ${slot} is missing its entitlement id`);
+          return;
+        }
+        if (seen.has(redemption.entitlementId)) {
+          errors.push(`Entitlement redemption ${slot} duplicates entitlement ${redemption.entitlementId}`);
+        }
+        seen.add(redemption.entitlementId);
+        if (redemption.type === "value") {
+          if (!isPositiveMoney(redemption.amount ?? NaN)) errors.push(`Entitlement redemption ${slot} must have a positive finite amount`);
+        } else if (redemption.type === "units") {
+          if (typeof redemption.serviceId !== "string" || redemption.serviceId.length === 0) {
+            errors.push(`Entitlement redemption ${slot} is missing its service reference`);
+          }
+          if (!Number.isInteger(redemption.units) || (redemption.units ?? 0) <= 0) {
+            errors.push(`Entitlement redemption ${slot} must have a positive whole unit count`);
+          }
+        } else {
+          errors.push(`Entitlement redemption ${slot} has invalid type`);
+        }
+      });
+    }
+  }
 
   return errors;
 }
@@ -74,6 +137,8 @@ export interface CheckoutPreviewInput {
   useLoyaltyPoints: boolean;
   giftCardBalance: number;
   taxRate: number;
+  /** Package/entitlement redemption value already applied (default 0). */
+  entitlementRedemption?: number;
 }
 
 export interface CheckoutTotals {
@@ -82,6 +147,7 @@ export interface CheckoutTotals {
   tierDiscount: number;
   loyaltyDiscount: number;
   giftCardDiscount: number;
+  entitlementRedemption: number;
   net: number;
   tax: number;
   total: number;
@@ -100,7 +166,9 @@ export function calculateCheckoutTotals(input: CheckoutPreviewInput): CheckoutTo
     : 0;
   const afterLoyalty = Math.max(0, afterStandingDiscounts - loyaltyDiscount);
   const giftCardDiscount = roundMoney(Math.min(afterLoyalty, Math.max(0, input.giftCardBalance)));
-  const net = roundMoney(Math.max(0, afterLoyalty - giftCardDiscount));
+  const afterGiftCard = Math.max(0, afterLoyalty - giftCardDiscount);
+  const entitlementRedemption = roundMoney(Math.min(afterGiftCard, Math.max(0, input.entitlementRedemption ?? 0)));
+  const net = roundMoney(Math.max(0, afterGiftCard - entitlementRedemption));
   const tax = roundMoney(net * Math.max(0, input.taxRate) / 100);
   const total = roundMoney(net + tax);
 
@@ -110,6 +178,7 @@ export function calculateCheckoutTotals(input: CheckoutPreviewInput): CheckoutTo
     tierDiscount,
     loyaltyDiscount,
     giftCardDiscount,
+    entitlementRedemption,
     net,
     tax,
     total,

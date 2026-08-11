@@ -17,6 +17,7 @@ const receipt = {
     tierDiscount: 0,
     loyaltyDiscount: 0,
     giftCardDiscount: 0,
+    entitlementRedemption: 0,
     tax: 0.075,
     taxRate: 5,
     amountPaid: 12.075,

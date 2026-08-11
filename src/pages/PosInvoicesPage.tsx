@@ -15,10 +15,10 @@ import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
-import { Customer, Employee, Product, Service } from "../domain/entities";
+import { Customer, Employee, Product, Service, CustomerEntitlement } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
-import { InvoicePrintData } from "../application/dto";
-import { calculateCheckoutTotals } from "../domain/commerce";
+import { InvoicePrintData, EntitlementRedemptionInput } from "../application/dto";
+import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../domain/commerce";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
@@ -32,7 +32,7 @@ interface CartItem {
   id: string;
   name: string;
   price: number;
-  type: "service" | "product" | "package";
+  type: "service" | "product" | "package" | "gift_card";
   cartId: string;
   qty?: number;
   stockQuantity?: number;
@@ -42,6 +42,8 @@ interface CartItem {
   category?: string;
   brand?: string;
   includedServices?: number;
+  /** Gift-card sale line: the code of the new card. */
+  code?: string;
 }
 
 type PosPrintData = InvoicePrintData;
@@ -63,6 +65,12 @@ export default function PosInvoicesPage() {
   const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
   const [giftCardCode, setGiftCardCode] = useState("");
   const [giftCards, setGiftCards] = useState<any[]>([]);
+  // Customer-owned entitlements (packages) available for redemption at checkout.
+  const [entitlements, setEntitlements] = useState<CustomerEntitlement[]>([]);
+  const [entitlementRedemptions, setEntitlementRedemptions] = useState<EntitlementRedemptionInput[]>([]);
+  // Inline gift-card sale form (code + value).
+  const [giftCardSaleCode, setGiftCardSaleCode] = useState("");
+  const [giftCardSaleValue, setGiftCardSaleValue] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [itemSearchQ, setItemSearchQ] = useState("");
   const [selectedServiceCategory, setSelectedServiceCategory] = useState(ALL_SERVICE_CATEGORIES);
@@ -153,11 +161,10 @@ export default function PosInvoicesPage() {
         name,
         phone: newCustomerPhone.trim() || undefined,
       }));
-      setSelectedCustomer(created);
+      await selectCustomer(created);
       setNewCustomerName("");
       setNewCustomerPhone("");
       setShowNewCustomer(false);
-      setSearchQ("");
       showToast('success', t("Success"), t("Customer created successfully"));
     } catch (err: any) {
       showToast('error', t("Error"), err?.message || t("Failed to create customer"));
@@ -215,6 +222,65 @@ export default function PosInvoicesPage() {
     setDiscount(0);
     setUseLoyaltyPoints(false);
     setGiftCardCode("");
+    setEntitlements([]);
+    setEntitlementRedemptions([]);
+  }
+
+  async function selectCustomer(customer: Customer) {
+    setSelectedCustomer(customer);
+    setCustomers([]);
+    setSearchQ("");
+    setEntitlements([]);
+    setEntitlementRedemptions([]);
+    try {
+      const res = await useCases.entitlements.listForCustomer(customer.id);
+      if (res.ok) setEntitlements(res.data.filter((e) => e.kind === "PACKAGE"));
+    } catch {
+      setEntitlements([]);
+    }
+  }
+
+  function addGiftCardToCart() {
+    const code = giftCardSaleCode.trim().toUpperCase();
+    const value = Number(giftCardSaleValue);
+    if (code.length < 4) {
+      showToast('error', t("Error"), t("Gift card code must be at least 4 characters"));
+      return;
+    }
+    if (!Number.isFinite(value) || value <= 0) {
+      showToast('error', t("Error"), t("Gift card value must be positive"));
+      return;
+    }
+    if (cart.some((it) => it.type === "gift_card" && it.code === code)) {
+      showToast('error', t("Error"), t("This gift card code is already in the cart"));
+      return;
+    }
+    setCart([...cart, {
+      id: `gc-${code}`,
+      name: t("Gift Card") + ` ${code}`,
+      price: value,
+      type: "gift_card",
+      cartId: globalThis.crypto.randomUUID(),
+      qty: 1,
+      code,
+    }]);
+    setGiftCardSaleCode("");
+    setGiftCardSaleValue("");
+  }
+
+  /** Client-side preview of applied package redemptions (server is authoritative). */
+  function appliedRedemptionEstimate(): number {
+    let total = 0;
+    for (const redemption of entitlementRedemptions) {
+      if (redemption.type !== "units" || !redemption.serviceId) continue;
+      const entitlement = entitlements.find((e) => e.id === redemption.entitlementId);
+      if (!entitlement) continue;
+      const serviceLines = cart
+        .filter((it) => it.type === "service" && it.id === redemption.serviceId)
+        .map((it) => ({ serviceId: it.id, price: Number(it.price), qty: Number(it.qty ?? 1) }));
+      total += estimatePackageRedemptionValue(redemption, entitlement.remainingValue, serviceLines);
+    }
+    return total;
   }
 
   const tierInfo = selectedCustomer ? getTierBySpend(selectedCustomer.totalSpent) : null;
@@ -225,6 +291,7 @@ export default function PosInvoicesPage() {
   });
   // The shared pure calculator mirrors the authoritative RPC at OMR's
   // three-decimal precision. The RPC still re-resolves every catalog price.
+  const entitlementRedemptionPreview = appliedRedemptionEstimate();
   const checkoutTotals = calculateCheckoutTotals({
     items: cart.map((item) => ({ price: Number(item.price), qty: Number(item.qty ?? 1) })),
     manualDiscount: Number.isFinite(discount) ? discount : 0,
@@ -232,9 +299,10 @@ export default function PosInvoicesPage() {
     loyaltyPoints: selectedCustomer?.loyaltyPoints ?? 0,
     useLoyaltyPoints,
     giftCardBalance: selectedGiftCard?.currentBalance ?? 0,
+    entitlementRedemption: entitlementRedemptionPreview,
     taxRate,
   });
-  const { subtotal, tierDiscount, loyaltyDiscount, giftCardDiscount, tax, total } = checkoutTotals;
+  const { subtotal, tierDiscount, loyaltyDiscount, giftCardDiscount, entitlementRedemption, tax, total } = checkoutTotals;
 
   async function handleCheckout() {
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
@@ -270,6 +338,7 @@ export default function PosInvoicesPage() {
         discountAmount: discount,
         useLoyaltyPoints,
         giftCardCode: giftCardCode.trim() ? giftCardCode.trim().toUpperCase() : undefined,
+        entitlementRedemptions: entitlementRedemptions.length > 0 ? entitlementRedemptions : undefined,
         items: cart.map(it => {
           if (it.type === "service") {
             return {
@@ -285,11 +354,18 @@ export default function PosInvoicesPage() {
               qty: Number(it.qty ?? 1),
               price: Number(it.price)
             };
-          } else {
+          } else if (it.type === "package") {
             return {
               type: "package" as const,
               packageId: it.id,
               qty: Number(it.qty ?? 1),
+              price: Number(it.price)
+            };
+          } else {
+            return {
+              type: "gift_card" as const,
+              code: it.code || "",
+              qty: 1,
               price: Number(it.price)
             };
           }
@@ -509,6 +585,42 @@ export default function PosInvoicesPage() {
                   )}
                 </div>
               )}
+
+              {activeTab === "PACKAGES" && (
+                <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <CreditCard className="h-4 w-4" />
+                    <h3 className="text-sm font-bold">{t("Sell a Gift Card")}</h3>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      className="flex-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10"
+                      placeholder={t("New gift card code")}
+                      value={giftCardSaleCode}
+                      onChange={(e) => setGiftCardSaleCode(e.target.value.toUpperCase())}
+                    />
+                    <input
+                      className="w-full sm:w-28 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      placeholder={t("Value OMR")}
+                      value={giftCardSaleValue}
+                      onChange={(e) => setGiftCardSaleValue(e.target.value)}
+                    />
+                    <button
+                      onClick={addGiftCardToCart}
+                      className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
+                    >
+                      <Plus className="h-3.5 w-3.5 inline me-1" />
+                      {t("Add to Cart")}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    {t("Payment is collected at checkout and booked as a deferred obligation")}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -650,7 +762,7 @@ export default function PosInvoicesPage() {
                               {customers.map(c => (
                                 <button 
                                   key={c.id} 
-                                  onClick={() => { setSelectedCustomer(c); setCustomers([]); setSearchQ(""); }}
+                                  onClick={() => { void selectCustomer(c); }}
                                   className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted rounded-lg text-start transition-all group/item"
                                 >
                                   <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{getInitials(c, "·")}</div>
@@ -804,6 +916,75 @@ export default function PosInvoicesPage() {
                     </p>
                   )}
                 </div>
+
+                {selectedCustomer && entitlements.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <Boxes className="h-3 w-3" />
+                      {t("Customer Packages")}
+                    </label>
+                    <div className="space-y-2">
+                      {entitlements.map((ent) => {
+                        const eligible = (ent.units || []).filter((unit) => {
+                          const remaining = unit.totalUnits - unit.usedUnits;
+                          const inCart = cart.some((it) => it.type === "service" && it.id === unit.serviceId);
+                          return remaining > 0 && inCart && ent.status === "ACTIVE";
+                        });
+                        const alreadyApplied = entitlementRedemptions.find((r) => r.entitlementId === ent.id);
+                        return (
+                          <div key={ent.id} className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-bold truncate">{ent.instrumentName || t("Package")}</p>
+                              <span className="shrink-0 text-[9px] font-bold text-muted-foreground">{formatOMRAmount(ent.remainingValue)} {t("OMR")} {t("left")}</span>
+                            </div>
+                            {alreadyApplied ? (
+                              <div className="mt-1.5 flex items-center justify-between gap-2">
+                                <p className="text-[10px] font-bold text-info">
+                                  {t("Applied")}: {alreadyApplied.units} {t("sessions")} · {t("est")}. {formatOMRAmount(entitlementRedemptionPreview)} {t("OMR")}
+                                </p>
+                                <button
+                                  onClick={() => setEntitlementRedemptions((prev) => prev.filter((r) => r.entitlementId !== ent.id))}
+                                  className="shrink-0 rounded-md bg-muted px-2 py-1 text-[9px] font-bold text-destructive"
+                                >
+                                  {t("Remove")}
+                                </button>
+                              </div>
+                            ) : eligible.length > 0 ? (
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {eligible.map((unit) => {
+                                  const remaining = unit.totalUnits - unit.usedUnits;
+                                  const cartQty = cart
+                                    .filter((it) => it.type === "service" && it.id === unit.serviceId)
+                                    .reduce((sum, it) => sum + Number(it.qty ?? 1), 0);
+                                  const maxUnits = Math.min(remaining, cartQty);
+                                  if (maxUnits <= 0) return null;
+                                  return (
+                                    <button
+                                      key={unit.id}
+                                      onClick={() => setEntitlementRedemptions((prev) => [...prev, {
+                                        entitlementId: ent.id,
+                                        type: "units",
+                                        serviceId: unit.serviceId,
+                                        units: 1,
+                                      }])}
+                                      className="rounded-md bg-primary/10 px-2 py-1 text-[9px] font-bold text-primary"
+                                    >
+                                      {unit.serviceName || t("Service")}: {t("Apply")} 1 {t("session")} ({remaining} {t("left")})
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="mt-1 text-[9px] font-bold text-muted-foreground">
+                                {t("Add an included service to the cart to redeem sessions")}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Summary & Checkout */}
@@ -831,6 +1012,12 @@ export default function PosInvoicesPage() {
                       <span>-{formatOMRAmount(giftCardDiscount)} OMR</span>
                     </div>
                   )}
+                  {entitlementRedemption > 0 && (
+                    <div className="flex items-center justify-between text-[9px] font-bold text-info uppercase tracking-widest">
+                      <span>{t("Package Redemption")}</span>
+                      <span>-{formatOMRAmount(entitlementRedemption)} OMR</span>
+                    </div>
+                  )}
                   {taxRate > 0 && (
                     <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
                       <span>{t("VAT")} ({taxRate}%)</span>
@@ -844,6 +1031,11 @@ export default function PosInvoicesPage() {
                       <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
                     </div>
                   </div>
+                  {(giftCardDiscount > 0 || entitlementRedemption > 0) && (
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {t("Remaining payable after redemptions — the server caps amounts at the available balance")}
+                    </p>
+                  )}
                 </div>
 
                 <button 

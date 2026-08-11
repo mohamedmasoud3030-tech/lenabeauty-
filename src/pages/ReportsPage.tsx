@@ -17,7 +17,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { useNavigate } from "react-router-dom";
-import { SalesReportRow, AppointmentReportRow, InventoryReportRow } from "../application/dto";
+import { SalesReportRow, AppointmentReportRow, InventoryReportRow, EntitlementSummary } from "../application/dto";
 import { LazyChart } from "../shared/components/LazyChart";
 import { ScreenState } from "../shared/components/ScreenState";
 import { formatLocalDateOnly } from "../shared/dateRange";
@@ -41,6 +41,9 @@ export default function ReportsPage() {
   const [data, setData] = useState<(SalesReportRow | AppointmentReportRow | InventoryReportRow)[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ledger-derived financial facts (cash collected / earned revenue / deferred
+  // liability / redemptions). Guarded: the panel hides if the backend is old.
+  const [entitlementSummary, setEntitlementSummary] = useState<EntitlementSummary | null>(null);
   // Drill-down: العملية المحددة من سجل المعاملات
   const [selectedSale, setSelectedSale] = useState<SalesReportRow | null>(null);
   // Guards against stale async results: when the user switches tabs while a
@@ -56,6 +59,12 @@ export default function ReportsPage() {
       let res;
       if (tab === "sales") {
         res = await unwrap(useCases.reports.getSales(dateRange.from, dateRange.to));
+        try {
+          const summaryRes = await useCases.entitlements.getSummary();
+          setEntitlementSummary(summaryRes.ok ? summaryRes.data : null);
+        } catch {
+          setEntitlementSummary(null);
+        }
       } else if (tab === "appointments") {
         res = await unwrap(useCases.reports.getAppointments(dateRange.from, dateRange.to));
       } else {
@@ -209,6 +218,55 @@ export default function ReportsPage() {
           />
         </div>
 
+        {/* Financial facts: cash collected ≠ earned revenue ≠ prepaid liability */}
+        <motion.div variants={item} className="rounded-3xl border border-border bg-card/50 backdrop-blur-sm p-4 sm:p-6 shadow-xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Wallet className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-foreground">{t("Financial Facts")}</h4>
+              <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
+                {t("Cash collected, earned revenue and prepaid obligations are reported separately")}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Cash Collected")}</p>
+              <p className="mt-1 text-xl font-bold">{formatOMRAmount(totalSales)} {t("OMR")}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t("Period payments")}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Earned Service Revenue")}</p>
+              <p className="mt-1 text-xl font-bold text-success">
+                {formatOMRAmount(salesData.reduce((sum, s) => sum + (Number(s.earnedRevenue) || 0), 0))} {t("OMR")}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t("Includes entitlement redemptions")}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Prepaid Sales (Period)")}</p>
+              <p className="mt-1 text-xl font-bold text-warning">
+                {formatOMRAmount(salesData.reduce((sum, s) => sum + (Number(s.prepaidAmount) || 0), 0))} {t("OMR")}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t("Gift cards & packages sold — not earned yet")}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card p-4">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Entitlement Redemptions")}</p>
+              <p className="mt-1 text-xl font-bold text-info">
+                {formatOMRAmount(salesData.reduce((sum, s) => sum + (Number(s.redeemedAmount) || 0), 0))} {t("OMR")}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">{t("Deferred value converted to revenue")}</p>
+            </div>
+          </div>
+          {entitlementSummary && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              {t("Outstanding prepaid liability (all-time, ledger-derived)")}:{" "}
+              <span className="font-bold">{formatOMRAmount(entitlementSummary.deferredLiability)} {t("OMR")}</span>
+            </p>
+          )}
+        </motion.div>
+
         {/* Main Chart */}
         <motion.div variants={item} className="relative rounded-3xl border border-border bg-card/50 backdrop-blur-sm p-4 sm:p-6 lg:p-10 shadow-2xl overflow-hidden group hover:shadow-3xl transition-all">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
@@ -316,7 +374,17 @@ export default function ReportsPage() {
                     <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{formatDay(sale.date.split("T")[0])}</td>
                     <td className="py-3 px-3 text-muted-foreground font-medium truncate max-w-[200px]">{sale.customer ?? "—"}</td>
                     <td className="py-3 px-3 text-muted-foreground">{sale.items.length}</td>
-                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">{formatOMRAmount(sale.totalAmount)} OMR</td>
+                    <td className="py-3 px-3 font-bold text-foreground whitespace-nowrap">
+                      {formatOMRAmount(sale.totalAmount)} OMR
+                      <span className="ms-2 inline-flex flex-wrap gap-1 align-middle">
+                        {Number(sale.prepaidAmount) > 0 && (
+                          <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[9px] font-bold text-warning">{t("Prepaid")}</span>
+                        )}
+                        {Number(sale.redeemedAmount) > 0 && (
+                          <span className="rounded-full bg-info/10 px-2 py-0.5 text-[9px] font-bold text-info">{t("Redeemed")}</span>
+                        )}
+                      </span>
+                    </td>
                     <td className="py-3 px-3 text-end">
                       <button className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">
                         {t("Details")}
