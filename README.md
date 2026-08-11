@@ -65,7 +65,7 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260810000003_appointment_overlap_integrity.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, and concurrent-safe staff overlap protection. Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
+5. Continue through `20260811000001_financial_entitlements.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, and the financial entitlements ledger for gift cards and packages (deferred obligations, atomic redemption, governed refund/void/expiry, RLS select-only on balances). Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
 
 The optional Arabic service catalog lives under `supabase/seeds/` and is explicitly gated to demo/staging. It is not part of the production migration chain. See `docs/OPERATIONAL_DATA_CONTRACT.md` and the paired rollback runbook under `supabase/rollbacks/`.
 

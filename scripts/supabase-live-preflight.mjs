@@ -24,6 +24,8 @@ const requiredTables = [
   "employees",
   "products",
   "expenses",
+  "customer_entitlements",
+  "entitlement_ledger",
 ];
 
 const canonicalMigrations = [
@@ -51,6 +53,8 @@ const canonicalMigrations = [
   "20260810000003_appointment_overlap_integrity.sql",
   "20260810000004_btree_gist_extension_schema.sql",
   "20260810000005_security_hardening_auth.sql",
+  "20260810000006_security_grant_repair.sql",
+  "20260811000001_financial_entitlements.sql",
 ];
 
 function parseEnvFile(path) {
@@ -155,11 +159,20 @@ if (existsSync(legacyRlsPath)) {
 }
 
 const initialSchema = readFileSync(resolve(migrationsDir, canonicalMigrations[0]), "utf8");
+// Core tables are defined in the initial schema; later phases add their own
+// tables, so the presence check runs against the full canonical chain.
+const fullMigrationChain = canonicalMigrations
+  .map((name) => readFileSync(resolve(migrationsDir, name), "utf8"))
+  .join("\n");
 for (const table of requiredTables) {
-  if (!initialSchema.includes(`CREATE TABLE IF NOT EXISTS ${table}`)) {
-    fail(`initial schema missing ${table}`);
+  const qualified = `CREATE TABLE IF NOT EXISTS public.${table}`;
+  const unqualified = `CREATE TABLE IF NOT EXISTS ${table}`;
+  if (!initialSchema.includes(unqualified) &&
+      !fullMigrationChain.includes(qualified) &&
+      !fullMigrationChain.includes(unqualified)) {
+    fail(`schema chain missing ${table}`);
   } else {
-    pass(`initial schema includes ${table}`);
+    pass(`schema chain includes ${table}`);
   }
 }
 
@@ -172,6 +185,16 @@ if (!checkout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_v1"))
 else pass("final checkout RPC exists");
 if (!checkout.includes("CREATE TABLE IF NOT EXISTS public.payments")) fail("canonical payments ledger is missing");
 else pass("canonical payments ledger exists");
+
+const entitlements = readFileSync(resolve(migrationsDir, "20260811000001_financial_entitlements.sql"), "utf8");
+if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.customer_entitlements")) fail("entitlement tables are missing");
+else pass("entitlement tables exist");
+if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.entitlement_ledger")) fail("entitlement ledger is missing");
+else pass("entitlement ledger exists");
+if (!entitlements.includes("p_entitlement_redemptions JSONB DEFAULT NULL")) fail("extended checkout RPC is missing");
+else pass("extended checkout RPC exists");
+if (!entitlements.includes("GRANT EXECUTE ON FUNCTION public.refund_entitlement_v1")) fail("governed entitlement RPCs are missing");
+else pass("governed entitlement RPCs exist");
 
 async function verifyRemoteSchema() {
   // The browser-safe publishable key is enough to confirm that each table is

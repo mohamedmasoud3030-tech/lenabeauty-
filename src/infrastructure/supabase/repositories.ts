@@ -3,12 +3,14 @@ import {
   AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository,
   SettingsRepository, DashboardRepository, ReportRepository, Result, DomainError, AuthError,
   BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository,
+  EntitlementRepository,
   CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository,
   AttendanceRepository, AdvanceRepository, PayrollRepository
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, AppointmentStatus, Product, Expense, Invoice,
-  CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
+  CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem,
+  CustomerEntitlement, EntitlementLedgerEntry
 } from "../../domain/entities";
 import { SessionState } from "../../domain/entities/Session";
 import { 
@@ -18,6 +20,7 @@ import { getSupabaseClient } from "./client";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
   mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
+  mapCustomerEntitlement, mapEntitlementLedgerEntry,
   mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead,
   mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
 } from "./mappers";
@@ -28,7 +31,7 @@ import {
   percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField,
   DomainValidationError, ValidationIssue, FieldResult,
 } from "../../domain/validation";
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload, EntitlementSummary } from "../../application/dto";
 import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 import { validateCheckoutContract } from "../../domain/commerce";
 import { localDateRangeISO } from "../../shared/dateRange";
@@ -1065,7 +1068,7 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
 }
 
 class SupabaseInvoiceAdapter implements InvoiceRepository {
-  async checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number }, DomainError>> {
+  async checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number, giftCardRedeemed?: number, entitlementRedeemed?: number, giftCardsIssued?: { code: string; gift_card_id: string; value: number }[], packageEntitlements?: string[] }, DomainError>> {
     const contractErrors = validateCheckoutContract(payload);
     if (contractErrors.length > 0) {
       return {
@@ -1089,7 +1092,8 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
         p_discount_amount: payload.discountAmount ?? 0,
         p_use_loyalty_points: payload.useLoyaltyPoints || false,
         p_items: payload.items,
-        p_gift_card_code: payload.giftCardCode || null
+        p_gift_card_code: payload.giftCardCode || null,
+        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? payload.entitlementRedemptions : null
       });
       
       if (error) {
@@ -1105,12 +1109,17 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
          return { ok: false, error: createQueryError("Invoice.checkout", "Invalid response from checkout RPC") };
       }
 
+      const row = data as any;
       return { 
         ok: true, 
         data: {
-          invoice: mapInvoice((data as any).invoice),
-          total: Number((data as any).total) || 0,
-          earned: Number((data as any).earned) || 0
+          invoice: mapInvoice(row.invoice),
+          total: Number(row.total) || 0,
+          earned: Number(row.earned) || 0,
+          giftCardRedeemed: Number(row.gift_card_redeemed) || 0,
+          entitlementRedeemed: Number(row.entitlement_redeemed) || 0,
+          giftCardsIssued: Array.isArray(row.gift_cards_issued) ? row.gift_cards_issued : [],
+          packageEntitlements: Array.isArray(row.package_entitlements) ? row.package_entitlements : []
         }
       };
 
@@ -1139,7 +1148,8 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
             *,
             services (name),
             products (name),
-            service_packages (name)
+            service_packages (name),
+            gift_cards (code)
           `)
           .eq('invoice_id', id)
           .order('created_at', { ascending: true }),
@@ -1765,7 +1775,8 @@ class SupabaseReportAdapter implements ReportRepository {
 
     try {
       const range = localDateRangeISO(fromStr, toStr);
-      const { data, error } = await getSupabaseClient()
+      const client = getSupabaseClient();
+      const { data, error } = await client
         .from('invoices')
         .select(`
           *,
@@ -1776,13 +1787,15 @@ class SupabaseReportAdapter implements ReportRepository {
             service_id,
             product_id,
             package_id,
+            gift_card_id,
             item_name,
             price,
             quantity,
             created_at,
             services (name),
             products (name),
-            service_packages (name)
+            service_packages (name),
+            gift_cards (code)
           )
         `)
         .eq('center_id', centerRes.data)
@@ -1796,9 +1809,36 @@ class SupabaseReportAdapter implements ReportRepository {
         return { ok: false, error: createQueryError("Report.getSales", error.message) };
       }
 
+      // Ledger-derived redemption value per invoice (authoritative). Invoices
+      // without ledger rows keep their legacy gift_card_discount classification.
+      // The redemption lookup is keyed by the range's invoice ids, not by
+      // ledger date, so a redemption posted after its invoice date still
+      // classifies the invoice correctly.
+      const redemptionByInvoice = new Map<string, number>();
+      const invoiceIds = (data || [])
+        .map((raw: any) => typeof raw?.id === "string" ? raw.id : undefined)
+        .filter((id: string | undefined): id is string => Boolean(id));
+      for (let i = 0; i < invoiceIds.length; i += 900) {
+        const chunk = invoiceIds.slice(i, i + 900);
+        const ledgerRes = await client
+          .from('entitlement_ledger')
+          .select('invoice_id, amount')
+          .eq('center_id', centerRes.data)
+          .eq('entry_type', 'REDEEM')
+          .not('invoice_id', 'is', null)
+          .in('invoice_id', chunk);
+        if (!ledgerRes.error) {
+          for (const entry of (ledgerRes.data || []) as any[]) {
+            if (typeof entry.invoice_id !== "string") continue;
+            const amount = Number(entry.amount) || 0;
+            redemptionByInvoice.set(entry.invoice_id, (redemptionByInvoice.get(entry.invoice_id) || 0) + amount);
+          }
+        }
+      }
+
       // Defensive mapping: missing/invalid invoice or item rows are skipped
       // individually — the report must never crash on incomplete data.
-      const rows: SalesReportRow[] = mapSalesReportRows(data || []);
+      const rows: SalesReportRow[] = mapSalesReportRows(data || [], redemptionByInvoice);
 
       return { ok: true, data: rows };
     } catch (e: unknown) {
@@ -1897,17 +1937,40 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
     }
   }
 
-  async issue(input: { code: string; initialBalance: number; customerId?: string; note?: string; expiresAtISO?: string }): Promise<Result<any, DomainError>> {
+  async issue(input: { code: string; initialBalance: number; customerId: string; employeeId: string; paymentMethod: "cash" | "card" | "transfer"; note?: string; expiresAtISO?: string }): Promise<Result<any, DomainError>> {
     const centerRes = getCenterIdFor("GiftCard.issue");
     if (!centerRes.ok) return centerRes as any;
+
+    // Client-side contract guard: a gift card sale needs an owner, an acting
+    // employee, a payment method, and a positive value.
+    if (!input.customerId || !input.employeeId || !["cash", "card", "transfer"].includes(input.paymentMethod)) {
+      return { ok: false, error: createQueryError("GiftCard.issue", "Gift card sale requires a customer, an employee, and a payment method") };
+    }
+    const value = Number(input.initialBalance);
+    if (!Number.isFinite(value) || value <= 0) {
+      return { ok: false, error: createQueryError("GiftCard.issue", "Gift card value must be positive") };
+    }
+
     try {
-      const { data, error } = await getSupabaseClient().rpc('issue_gift_card_v1', {
+      // Sell through the atomic checkout pipeline: the payment collection and
+      // the deferred entitlement obligation are recorded in one transaction.
+      const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {
         p_center_id: centerRes.data,
-        p_code: input.code,
-        p_initial_balance: input.initialBalance,
-        p_customer_id: input.customerId || null,
-        p_note: input.note || null,
-        p_expires_at: input.expiresAtISO || null,
+        p_customer_id: input.customerId,
+        p_employee_id: input.employeeId,
+        p_payment_method: input.paymentMethod,
+        p_discount_amount: 0,
+        p_use_loyalty_points: false,
+        p_items: [{
+          type: "gift_card",
+          code: input.code.trim().toUpperCase(),
+          price: value,
+          qty: 1,
+          note: input.note || null,
+          expiresAtISO: input.expiresAtISO || null,
+        }],
+        p_gift_card_code: null,
+        p_entitlement_redemptions: null,
       });
       if (error) {
         if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
@@ -1916,8 +1979,19 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
         return { ok: false, error: createQueryError("GiftCard.issue", error.message) };
       }
       const row = (data || {}) as any;
-      if (!row.gift_card) return { ok: false, error: createQueryError("GiftCard.issue", "Invalid response from gift card RPC") };
-      return { ok: true, data: mapGiftCard(row.gift_card) };
+      const issued = Array.isArray(row.gift_cards_issued) ? row.gift_cards_issued[0] : undefined;
+      if (!issued?.gift_card_id) {
+        return { ok: false, error: createQueryError("GiftCard.issue", "Invalid response from checkout RPC") };
+      }
+      const cardRes = await getSupabaseClient()
+        .from('gift_cards')
+        .select('*')
+        .eq('id', issued.gift_card_id)
+        .eq('center_id', centerRes.data)
+        .maybeSingle();
+      if (cardRes.error) return { ok: false, error: createQueryError("GiftCard.issue", cardRes.error.message) };
+      if (!cardRes.data) return { ok: false, error: createQueryError("GiftCard.issue", "Issued card not found") };
+      return { ok: true, data: mapGiftCard(cardRes.data) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("GiftCard.issue", (e as Error).message) };
     }
@@ -1937,6 +2011,227 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
       return { ok: true, data: (data || []).map(mapGiftCardTransaction) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("GiftCard.getTransactions", (e as Error).message) };
+    }
+  }
+}
+
+const ENTITLEMENT_SELECT = `
+  *,
+  customers (name),
+  service_packages (name),
+  gift_cards (code),
+  source_invoice:invoices (serial_number),
+  package_entitlement_units (
+    id,
+    center_id,
+    entitlement_id,
+    service_id,
+    total_units,
+    used_units,
+    created_at,
+    services (name)
+  )
+`;
+
+export class SupabaseEntitlementAdapter implements EntitlementRepository {
+  async listForCustomer(customerId: string): Promise<Result<CustomerEntitlement[], DomainError>> {
+    const centerRes = getCenterIdFor("Entitlement.listForCustomer");
+    if (!centerRes.ok) return centerRes as any;
+    if (!customerId) return { ok: false, error: createQueryError("Entitlement.listForCustomer", "Customer id is required") };
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('customer_entitlements')
+        .select(ENTITLEMENT_SELECT)
+        .eq('center_id', centerRes.data)
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Entitlement.listForCustomer") };
+        return { ok: false, error: createQueryError("Entitlement.listForCustomer", error.message) };
+      }
+      return { ok: true, data: (data || []).map(mapCustomerEntitlement) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Entitlement.listForCustomer", (e as Error).message) };
+    }
+  }
+
+  async list(query?: string): Promise<Result<CustomerEntitlement[], DomainError>> {
+    const centerRes = getCenterIdFor("Entitlement.list");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const q = (query || "").trim().toLowerCase();
+      let request = getSupabaseClient()
+        .from('customer_entitlements')
+        .select(ENTITLEMENT_SELECT)
+        .eq('center_id', centerRes.data)
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (q) {
+        request = request.or(`customers.name.ilike.%${q}%,gift_cards.code.ilike.%${q}%,service_packages.name.ilike.%${q}%`);
+      }
+      const { data, error } = await request;
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Entitlement.list") };
+        return { ok: false, error: createQueryError("Entitlement.list", error.message) };
+      }
+      return { ok: true, data: (data || []).map(mapCustomerEntitlement) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Entitlement.list", (e as Error).message) };
+    }
+  }
+
+  async listLedger(entitlementId: string): Promise<Result<EntitlementLedgerEntry[], DomainError>> {
+    const centerRes = getCenterIdFor("Entitlement.listLedger");
+    if (!centerRes.ok) return centerRes as any;
+    if (!entitlementId) return { ok: false, error: createQueryError("Entitlement.listLedger", "Entitlement id is required") };
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('entitlement_ledger')
+        .select(`
+          *,
+          employees (name),
+          invoices (serial_number)
+        `)
+        .eq('center_id', centerRes.data)
+        .eq('entitlement_id', entitlementId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Entitlement.listLedger") };
+        return { ok: false, error: createQueryError("Entitlement.listLedger", error.message) };
+      }
+      return { ok: true, data: (data || []).map(mapEntitlementLedgerEntry) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Entitlement.listLedger", (e as Error).message) };
+    }
+  }
+
+  async refund(input: { entitlementId: string; amount: number; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; refunded: number; remainingAfter: number }, DomainError>> {
+    const centerRes = getCenterIdFor("Entitlement.refund");
+    if (!centerRes.ok) return centerRes as any;
+    if (!input.entitlementId || !input.actorEmployeeId || !input.reason.trim()) {
+      return { ok: false, error: createQueryError("Entitlement.refund", "Entitlement, acting employee, and reason are required") };
+    }
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      return { ok: false, error: createQueryError("Entitlement.refund", "Refund amount must be positive") };
+    }
+    try {
+      const { data, error } = await getSupabaseClient().rpc('refund_entitlement_v1', {
+        p_entitlement_id: input.entitlementId,
+        p_amount: input.amount,
+        p_reason: input.reason,
+        p_actor_employee_id: input.actorEmployeeId,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Entitlement.refund") };
+        }
+        return { ok: false, error: createQueryError("Entitlement.refund", error.message) };
+      }
+      const row = (data || {}) as any;
+      return {
+        ok: true,
+        data: {
+          entitlementId: row.entitlement_id,
+          refunded: Number(row.refunded) || 0,
+          remainingAfter: Number(row.remaining_after) || 0,
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Entitlement.refund", (e as Error).message) };
+    }
+  }
+
+  async voidEntitlement(input: { entitlementId: string; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; status: string }, DomainError>> {
+    return this.runGovernedRpc("void_entitlement_v1", { p_entitlement_id: input.entitlementId, p_reason: input.reason, p_actor_employee_id: input.actorEmployeeId }, "Entitlement.void");
+  }
+
+  async expire(input: { entitlementId: string; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; status: string }, DomainError>> {
+    return this.runGovernedRpc("expire_entitlement_v1", { p_entitlement_id: input.entitlementId, p_reason: input.reason, p_actor_employee_id: input.actorEmployeeId }, "Entitlement.expire");
+  }
+
+  private async runGovernedRpc(
+    rpcName: "void_entitlement_v1" | "expire_entitlement_v1",
+    args: Record<string, unknown>,
+    label: string,
+  ): Promise<Result<{ entitlementId: string; status: string }, DomainError>> {
+    if (typeof args.p_entitlement_id !== "string" || !args.p_entitlement_id || typeof args.p_actor_employee_id !== "string" || !args.p_actor_employee_id || typeof args.p_reason !== "string" || !args.p_reason.trim()) {
+      return { ok: false, error: createQueryError(label, "Entitlement, acting employee, and reason are required") };
+    }
+    try {
+      const { data, error } = await getSupabaseClient().rpc(rpcName, args);
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError(label) };
+        }
+        return { ok: false, error: createQueryError(label, error.message) };
+      }
+      const row = (data || {}) as any;
+      return { ok: true, data: { entitlementId: row.entitlement_id, status: row.status } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError(label, (e as Error).message) };
+    }
+  }
+
+  async getSummary(): Promise<Result<EntitlementSummary, DomainError>> {
+    const centerRes = getCenterIdFor("Entitlement.getSummary");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const client = getSupabaseClient();
+      const [paymentsRes, invoicesRes, ledgerRes, liabilityRes] = await Promise.all([
+        client
+          .from('payments')
+          .select('amount')
+          .eq('center_id', centerRes.data)
+          .eq('status', 'SUCCEEDED'),
+        client
+          .from('invoices')
+          .select('total_amount, tax, gift_card_discount, entitlement_redemption')
+          .eq('center_id', centerRes.data)
+          .eq('status', 'PAID'),
+        client
+          .from('entitlement_ledger')
+          .select('entry_type, amount, legacy_flag')
+          .eq('center_id', centerRes.data)
+          .in('entry_type', ['REDEEM', 'ISSUE']),
+        client
+          .from('customer_entitlements')
+          .select('remaining_value, status')
+          .eq('center_id', centerRes.data)
+          .not('status', 'in', '("REFUNDED","VOID")'),
+      ]);
+
+      const cashCollected = (paymentsRes.data || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
+      let earnedRevenue = 0;
+      for (const row of (invoicesRes.data || []) as any[]) {
+        earnedRevenue += (Number(row.total_amount) || 0)
+          - (Number(row.tax) || 0)
+          + (Number(row.gift_card_discount) || 0)
+          + (Number(row.entitlement_redemption) || 0);
+      }
+      let redemptions = 0;
+      let prepaidSales = 0;
+      for (const entry of (ledgerRes.data || []) as any[]) {
+        if (entry.entry_type === 'REDEEM') redemptions += Number(entry.amount) || 0;
+        if (entry.entry_type === 'ISSUE' && !entry.legacy_flag) prepaidSales += Number(entry.amount) || 0;
+      }
+      const deferredLiability = (liabilityRes.data || []).reduce(
+        (sum: number, r: any) => sum + (Number(r.remaining_value) || 0),
+        0,
+      );
+
+      const round3 = (n: number) => Math.round((n + Number.EPSILON) * 1000) / 1000;
+      return {
+        ok: true,
+        data: {
+          cashCollected: round3(cashCollected),
+          earnedRevenue: round3(earnedRevenue),
+          deferredLiability: round3(deferredLiability),
+          redemptions: round3(redemptions),
+          prepaidSales: round3(prepaidSales),
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Entitlement.getSummary", (e as Error).message) };
     }
   }
 }

@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { 
   SupabaseInvoiceAdapter, SupabaseReportAdapter, 
   SupabaseDashboardAdapter, SupabaseSettingsAdapter,
-  SupabaseCustomerAdapter, SupabaseExpenseAdapter
+  SupabaseCustomerAdapter, SupabaseExpenseAdapter,
+  SupabaseEntitlementAdapter
 } from "../infrastructure/supabase/repositories";
 
 describe("Phase 3: Supabase Adapter Contract Hardening", () => {
@@ -77,6 +78,19 @@ describe("Phase 3: Supabase Adapter Contract Hardening", () => {
         const r1 = await adapter.getHistory("123");
         expect(r1.ok).toBe(false);
         if (!r1.ok) expect((r1 as any).error.code).toBe("INFRASTRUCTURE_ERROR");
+    });
+
+    it("Entitlement refund/void/expire require the governed fields before infrastructure", async () => {
+        const adapter: any = new SupabaseEntitlementAdapter();
+        const r1 = await adapter.refund({ entitlementId: "", amount: 5, reason: "x", actorEmployeeId: "e1" });
+        expect(r1.ok).toBe(false);
+        const r2 = await adapter.refund({ entitlementId: "e1", amount: -1, reason: "x", actorEmployeeId: "e1" });
+        expect(r2.ok).toBe(false);
+        const r3 = await adapter.voidEntitlement({ entitlementId: "e1", reason: "", actorEmployeeId: "e1" });
+        expect(r3.ok).toBe(false);
+        const r4 = await adapter.expire({ entitlementId: "e1", reason: "ok", actorEmployeeId: "" });
+        expect(r4.ok).toBe(false);
+        if (r1.ok === false) expect((r1 as any).error.code).toBe("INFRASTRUCTURE_ERROR");
     });
 
     it("Expense.update is supported but remains bounded without infrastructure", async () => {

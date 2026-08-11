@@ -46,7 +46,10 @@ DECLARE
     'public.public_reschedule_booking_v1(uuid, uuid, text, text, timestamptz, uuid, text)'
   ];
   staff_rpcs text[] := ARRAY[
-    'public.process_checkout_v1(uuid, uuid, uuid, text, numeric, boolean, jsonb, text)',
+    'public.process_checkout_v1(uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)',
+    'public.refund_entitlement_v1(uuid, numeric, text, uuid)',
+    'public.void_entitlement_v1(uuid, text, uuid)',
+    'public.expire_entitlement_v1(uuid, text, uuid)',
     'public.upsert_notification_settings_v1(uuid, boolean, boolean, boolean, integer, text, text, text, text, text)',
     'public.upsert_payment_gateway_settings_v1(uuid, text, boolean, boolean, text, text, text, boolean, text, numeric, text, text)',
     'public.mark_appointment_no_show_v1(uuid, uuid, boolean, text)',

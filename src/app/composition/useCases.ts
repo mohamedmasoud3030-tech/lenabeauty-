@@ -93,6 +93,18 @@ export const useCases = {
     list: () => getRepositoryBundle().servicePackageAdapter.list(),
     create: (input: CreateServicePackageInput) => getRepositoryBundle().servicePackageAdapter.create(input),
   },
+  entitlements: {
+    listForCustomer: (customerId: string) => getRepositoryBundle().entitlementAdapter.listForCustomer(customerId),
+    list: (query?: string) => getRepositoryBundle().entitlementAdapter.list(query),
+    listLedger: (entitlementId: string) => getRepositoryBundle().entitlementAdapter.listLedger(entitlementId),
+    refund: (input: { entitlementId: string; amount: number; reason: string; actorEmployeeId: string }) =>
+      getRepositoryBundle().entitlementAdapter.refund(input),
+    voidEntitlement: (input: { entitlementId: string; reason: string; actorEmployeeId: string }) =>
+      getRepositoryBundle().entitlementAdapter.voidEntitlement(input),
+    expire: (input: { entitlementId: string; reason: string; actorEmployeeId: string }) =>
+      getRepositoryBundle().entitlementAdapter.expire(input),
+    getSummary: () => getRepositoryBundle().entitlementAdapter.getSummary(),
+  },
   reports: {
     getSales: (f: string, t: string) => getRepositoryBundle().reportAdapter.getSales(f, t),
     getAppointments: (f: string, t: string) => getRepositoryBundle().reportAdapter.getAppointments(f, t),

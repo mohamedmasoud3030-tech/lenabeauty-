@@ -1,6 +1,7 @@
 import {
   Customer, Employee, Service, ServiceCategory,
   Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
+  CustomerEntitlement, EntitlementLedgerEntry,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead,
   AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
 } from "../entities";
@@ -70,17 +71,46 @@ export interface ExpenseRepository {
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, InventoryForecastRow, FinancialForecastSummary } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, InventoryForecastRow, FinancialForecastSummary, EntitlementSummary } from "../../application/dto";
 
 export interface InvoiceRepository {
-  checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number }, DomainError>>;
+  checkout(payload: CheckoutPayload): Promise<Result<{
+    invoice: Invoice;
+    total: number;
+    earned: number;
+    giftCardRedeemed?: number;
+    entitlementRedeemed?: number;
+    giftCardsIssued?: { code: string; gift_card_id: string; value: number }[];
+    packageEntitlements?: string[];
+  }, DomainError>>;
   getForPrint(id: string): Promise<Result<InvoicePrintData, DomainError>>;
 }
 
 export interface GiftCardRepository {
   list(): Promise<Result<GiftCard[], DomainError>>;
-  issue(input: { code: string; initialBalance: number; customerId?: string; note?: string; expiresAtISO?: string }): Promise<Result<GiftCard, DomainError>>;
+  /**
+   * Sell a gift card through the atomic checkout pipeline so the payment
+   * collection and the deferred obligation are recorded together.
+   */
+  issue(input: { code: string; initialBalance: number; customerId: string; employeeId: string; paymentMethod: "cash" | "card" | "transfer"; note?: string; expiresAtISO?: string }): Promise<Result<GiftCard, DomainError>>;
   getTransactions(giftCardId: string): Promise<Result<GiftCardTransaction[], DomainError>>;
+}
+
+export interface EntitlementRepository {
+  /** Customer-owned entitlements (packages + gift cards) with remaining sessions. */
+  listForCustomer(customerId: string): Promise<Result<CustomerEntitlement[], DomainError>>;
+  /** All entitlements for the active center (search by customer/code/instrument). */
+  list(query?: string): Promise<Result<CustomerEntitlement[], DomainError>>;
+  /** Immutable ledger history for one entitlement. */
+  listLedger(entitlementId: string): Promise<Result<EntitlementLedgerEntry[], DomainError>>;
+  /** Governed refund of unused remaining value (audited reason + actor). */
+  refund(input: { entitlementId: string; amount: number; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; refunded: number; remainingAfter: number }, DomainError>>;
+  /** Governed void of an untouched instrument (audited reason + actor). */
+  voidEntitlement(input: { entitlementId: string; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; status: string }, DomainError>>;
+  /** Governed expiry marker — never recognizes breakage automatically. */
+  expire(input: { entitlementId: string; reason: string; actorEmployeeId: string }): Promise<Result<{ entitlementId: string; status: string }, DomainError>>;
+  /** Financial summary separating cash collected / earned revenue / deferred liability / redemptions. */
+  getSummary(): Promise<Result<EntitlementSummary, DomainError>>;
 }
 
 export interface ServicePackageRepository {

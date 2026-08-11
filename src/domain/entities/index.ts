@@ -119,6 +119,67 @@ export interface GiftCardTransaction {
   createdAt: Date;
 }
 
+/**
+ * Purchase-specific entitlement (gift card or package) owned by a customer.
+ * Every balance here is derived from `entitlement_ledger` by the database —
+ * never a client-written number.
+ */
+export interface CustomerEntitlement {
+  id: string;
+  centerId: string;
+  customerId?: string;
+  kind: "GIFT_CARD" | "PACKAGE";
+  giftCardId?: string;
+  packageId?: string;
+  sourceInvoiceId?: string;
+  originalValue: number;
+  remainingValue: number;
+  status: "ACTIVE" | "PARTIALLY_REDEEMED" | "FULLY_REDEEMED" | "EXPIRED" | "REFUNDED" | "VOID";
+  expiresAt?: Date;
+  legacyFlag: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  /** Remaining sessions per included service (PACKAGE entitlements only). */
+  units?: PackageEntitlementUnit[];
+  /** Purchase source invoice serial (joined for display). */
+  sourceInvoiceSerial?: string;
+  /** Instrument display name (joined for display). */
+  instrumentName?: string;
+  giftCardCode?: string;
+  customerName?: string;
+}
+
+export interface PackageEntitlementUnit {
+  id: string;
+  centerId: string;
+  entitlementId: string;
+  serviceId: string;
+  totalUnits: number;
+  usedUnits: number;
+  serviceName?: string;
+  createdAt: Date;
+}
+
+export type EntitlementLedgerEntryType =
+  | "ISSUE" | "FUND" | "REDEEM" | "REFUND" | "ADJUSTMENT" | "EXPIRY" | "VOID";
+
+export interface EntitlementLedgerEntry {
+  id: string;
+  centerId: string;
+  entitlementId: string;
+  entryType: EntitlementLedgerEntryType;
+  amount: number;
+  units?: number;
+  serviceId?: string;
+  invoiceId?: string;
+  actorId?: string;
+  reason?: string;
+  legacyFlag: boolean;
+  createdAt: Date;
+  actorName?: string;
+  invoiceSerial?: string;
+}
+
 export interface ServicePackageItem {
   id: string;
   packageId: string;
@@ -161,6 +222,7 @@ export interface InvoiceItem {
   serviceId?: string;
   productId?: string;
   packageId?: string;
+  giftCardId?: string;
   price: number;
   quantity: number;
   createdAt: Date;
@@ -181,6 +243,8 @@ export interface Invoice {
   tierDiscount: number;
   loyaltyDiscount: number;
   giftCardDiscount: number;
+  /** Value redeemed from customer entitlements (packages/gift cards by id). */
+  entitlementRedemption: number;
   tax?: number;
   taxRate?: number;
   amountPaid: number;

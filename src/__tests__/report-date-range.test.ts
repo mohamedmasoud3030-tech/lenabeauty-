@@ -126,6 +126,15 @@ describe("inclusive local report date ranges", () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "invoices") return salesQuery;
       if (table === "appointments") return appointmentsQuery;
+      // The sales adapter reads the entitlement ledger to classify redemptions;
+      // an empty ledger keeps the report behavior unchanged.
+      if (table === "entitlement_ledger") {
+        return {
+          select: () => ({
+            eq: () => ({ eq: () => ({ not: () => ({ in: () => ({ data: [], error: null }) }) }) }),
+          }),
+        };
+      }
       throw new Error(`Unexpected table: ${table}`);
     });
 
