@@ -62,6 +62,36 @@ VALUES
     '90 minute service', 15.000, 90, 'FIXED', true
   );
 
+CREATE OR REPLACE FUNCTION pg_temp.expect_overlap_rejection(
+  p_id UUID,
+  p_employee_id UUID,
+  p_service_id UUID,
+  p_date_time TIMESTAMPTZ,
+  p_message TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public.appointments (
+      id, center_id, customer_id, employee_id, service_id, date_time, status
+    ) VALUES (
+      p_id,
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      p_employee_id,
+      p_service_id,
+      p_date_time,
+      'SCHEDULED'
+    );
+    RAISE EXCEPTION '%', p_message;
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+END;
+$$;
+
 -- Baseline: employee one is occupied from 10:00 through 11:00.
 INSERT INTO public.appointments (
   id, center_id, customer_id, employee_id, service_id, date_time, status
@@ -89,93 +119,37 @@ BEGIN
 END;
 $$;
 
--- Same start must fail.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO public.appointments (
-      id, center_id, customer_id, employee_id, service_id, date_time, status
-    ) VALUES (
-      '10000000-0000-4000-8000-000000000020',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000004',
-      '10000000-0000-4000-8000-000000000007',
-      '2026-08-11 10:00:00+04',
-      'SCHEDULED'
-    );
-    RAISE EXCEPTION 'expected same-start overlap rejection';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
-END;
-$$;
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000020',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:00:00+04',
+  'expected same-start overlap rejection'
+);
 
--- Partial overlap must fail.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO public.appointments (
-      id, center_id, customer_id, employee_id, service_id, date_time, status
-    ) VALUES (
-      '10000000-0000-4000-8000-000000000011',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000004',
-      '10000000-0000-4000-8000-000000000007',
-      '2026-08-11 10:30:00+04',
-      'SCHEDULED'
-    );
-    RAISE EXCEPTION 'expected same-employee overlap rejection';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
-END;
-$$;
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000011',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:30:00+04',
+  'expected same-employee overlap rejection'
+);
 
--- Contained interval (10:15–10:45) must fail.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO public.appointments (
-      id, center_id, customer_id, employee_id, service_id, date_time, status
-    ) VALUES (
-      '10000000-0000-4000-8000-000000000021',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000004',
-      '10000000-0000-4000-8000-000000000007',
-      '2026-08-11 10:15:00+04',
-      'SCHEDULED'
-    );
-    RAISE EXCEPTION 'expected contained overlap rejection';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
-END;
-$$;
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000021',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:15:00+04',
+  'expected contained overlap rejection'
+);
 
--- Containing interval (09:45–11:15) must fail.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO public.appointments (
-      id, center_id, customer_id, employee_id, service_id, date_time, status
-    ) VALUES (
-      '10000000-0000-4000-8000-000000000022',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000004',
-      '10000000-0000-4000-8000-000000000008',
-      '2026-08-11 09:45:00+04',
-      'SCHEDULED'
-    );
-    RAISE EXCEPTION 'expected containing overlap rejection';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
-END;
-$$;
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000022',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000008',
+  '2026-08-11 09:45:00+04',
+  'expected containing overlap rejection'
+);
 
 -- The half-open range permits the same employee exactly at 11:00.
 INSERT INTO public.appointments (
