@@ -141,8 +141,22 @@ html[dir="rtl"] body {
   font-family: "Cairo", "Inter", sans-serif;
 }
 
+html {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   @apply bg-background text-foreground;
+  overflow-x: clip;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
+
+#root {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* ========================================
@@ -160,6 +174,25 @@ body {
 .touch-target {
   min-width: 44px;
   min-height: 44px;
+}
+
+/* Sit above the 64px + safe-area bottom nav. Collapses when the keyboard is open. */
+.above-bottom-nav {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+html.keyboard-open .above-bottom-nav {
+  bottom: 0.5rem;
+}
+
+/* Faster taps, no 300ms delay — do not add Android-style ripples. */
+button,
+a,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }
 
 /* Compact spacing for mobile to reduce scrolling */
@@ -266,41 +299,34 @@ body {
   @apply flex flex-col items-center justify-center gap-4 p-6 text-center;
 }
 
-/* Install prompt - mobile friendly */
+/* Install prompt - mobile friendly, sits above the bottom nav */
 .install-prompt {
-  @apply fixed bottom-24 left-4 right-4 z-50;
+  @apply fixed inset-x-4 z-50;
   @apply bg-card border border-border rounded-2xl shadow-2xl p-4;
   @apply flex items-center gap-4;
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+html.keyboard-open .install-prompt {
+  bottom: 0.5rem;
 }
 
 .install-prompt button {
   @apply flex-shrink-0 h-12 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm;
 }
 
-/* Touch feedback - ripple effect */
-.touch-feedback {
-  position: relative;
-  overflow: hidden;
-}
-
-.touch-feedback::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, currentColor 0%, transparent 70%);
-  opacity: 0;
-  transform: scale(2);
-  transition: opacity 0.3s, transform 0.3s;
-}
-
-.touch-feedback:active::after {
-  opacity: 0.1;
-  transform: scale(0);
-}
-
 /* ========================================
    FORM OPTIMIZATIONS FOR MOBILE
    ======================================== */
+
+/* 16px inputs on small phones — iOS zooms the page if the focused field is smaller. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
 
 /* Better keyboard/input types for mobile */
 input[type="tel"],

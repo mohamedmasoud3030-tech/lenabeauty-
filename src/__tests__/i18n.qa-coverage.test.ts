@@ -31,6 +31,7 @@ const QA_SCOPE_FILES = [
   "src/shared/components/ConfirmDialog.tsx",
   "src/shared/components/InvoicePrintLayout.tsx",
   "src/shared/components/PageLoader.tsx",
+  "src/shared/components/ReceiptPreviewModal.tsx",
 ];
 
 function extractKeys(source: string): Set<string> {

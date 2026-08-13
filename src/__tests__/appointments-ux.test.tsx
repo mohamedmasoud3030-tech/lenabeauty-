@@ -14,6 +14,7 @@ import i18n from "../i18n";
  */
 describe("Appointments operational UX", () => {
   beforeEach(() => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, writable: true, value: 1024 });
     vi.restoreAllMocks();
     vi.spyOn(useCases.services, "list").mockResolvedValue({
       ok: true,
@@ -39,6 +40,16 @@ describe("Appointments operational UX", () => {
       </ToastProvider>,
     );
   }
+
+  it("defaults to day mode on a small portrait phone", async () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, writable: true, value: 360 });
+    await i18n.changeLanguage("ar");
+    renderPage();
+    const dayBtn = await screen.findByRole("button", { name: i18n.t("Day") });
+    expect(dayBtn.className).toContain("text-primary");
+    const weekBtn = screen.getByRole("button", { name: i18n.t("Week") });
+    expect(weekBtn.className).not.toContain("shadow-md");
+  });
 
   it("shows status filter chips separating upcoming / completed / canceled", async () => {
     await i18n.changeLanguage("ar");

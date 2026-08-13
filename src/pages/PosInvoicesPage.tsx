@@ -411,20 +411,20 @@ export default function PosInvoicesPage() {
       : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
 
   return (
-    <div className="flex flex-col gap-4 lg:gap-6 min-h-[calc(100vh-120px)] pb-4 lg:pb-0">
+    <div className="flex flex-col gap-3 lg:gap-6 min-h-0 lg:min-h-[calc(100vh-120px)] pb-4 lg:pb-0 min-w-0 overflow-x-clip">
 
       {/* Receipt preview — shared overlay above all chrome, sticky Print/Close */}
       <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
 
       {/* Mobile: Quick Catalog/Cart Toggle + Sticky categories */}
       {isMobile && (
-        <div className="space-y-3 px-3 pt-3">
-          {/* Toggle */}
+        <div className="px-0 pt-1">
+          {/* One-handed catalog / cart toggle — thumb-width targets, no duplicate category row */}
           <div className="flex gap-2">
             <button
               onClick={() => setShowCheckoutSummary(false)}
               className={clsx(
-                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all touch-target",
+                "flex-1 min-h-11 py-2.5 rounded-xl font-bold text-xs transition-all touch-target",
                 !showCheckoutSummary 
                   ? "bg-primary text-primary-foreground shadow-lg" 
                   : "bg-muted text-muted-foreground"
@@ -435,7 +435,7 @@ export default function PosInvoicesPage() {
             <button
               onClick={() => setShowCheckoutSummary(true)}
               className={clsx(
-                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all relative touch-target",
+                "flex-1 min-h-11 py-2.5 rounded-xl font-bold text-xs transition-all relative touch-target",
                 showCheckoutSummary 
                   ? "bg-primary text-primary-foreground shadow-lg" 
                   : "bg-muted text-muted-foreground"
@@ -443,47 +443,16 @@ export default function PosInvoicesPage() {
             >
               {t("Cart")}
               {cart.length > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-destructive text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1.5 -end-1.5 bg-destructive text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {cart.length}
                 </span>
               )}
             </button>
           </div>
-          
-          {/* Sticky category tabs - horizontal scroll */}
-          {activeTab === "SERVICES" && !showCheckoutSummary && (
-            <div className="mobile-scroll-x flex gap-2 -mx-3 px-3 pb-1 sticky top-0 z-20 bg-background/95 backdrop-blur-sm pt-1">
-              <button
-                onClick={() => setSelectedServiceCategory(ALL_SERVICE_CATEGORIES)}
-                className={clsx(
-                  "px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap touch-target shrink-0",
-                  selectedServiceCategory === ALL_SERVICE_CATEGORIES
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                )}
-              >
-                {t("All")}
-              </button>
-              {[...new Set(services.map(s => s.categoryName).filter(Boolean) as string[])].map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedServiceCategory(cat)}
-                  className={clsx(
-                    "px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap touch-target shrink-0",
-                    selectedServiceCategory === cat
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 lg:min-h-0 px-4 lg:px-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-3 lg:gap-6 lg:min-h-0 px-0">
 
         {/* Left: Items Selection (Hidden on mobile if showing checkout) */}
         {(!isMobile || !showCheckoutSummary) && (
@@ -493,7 +462,7 @@ export default function PosInvoicesPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1">
                   <h2 className="text-lg lg:text-xl font-bold tracking-tight text-foreground">{t("Service Catalog")}</h2>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{t("Press F1 to search")}</p>
+                  <p className="hidden lg:block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{t("Press F1 to search")}</p>
                 </div>
                 <div className="flex bg-muted rounded-xl p-1 shadow-inner w-full sm:w-auto">
                   <button 
@@ -626,7 +595,7 @@ export default function PosInvoicesPage() {
                   initial={{ y: 100, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   onClick={() => setShowCheckoutSummary(true)}
-                  className="fixed bottom-24 right-4 z-40 h-14 px-4 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-3 touch-target active:scale-95 transition-transform"
+                  className="fixed end-4 above-bottom-nav z-40 h-14 px-4 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-3 touch-target active:scale-95 transition-transform"
                 >
                   <ShoppingCart className="h-5 w-5" />
                   <span className="font-bold">{cart.length} {t("Items")}</span>
@@ -733,7 +702,8 @@ export default function PosInvoicesPage() {
                         <span className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)}</span>
                         <button 
                           onClick={() => removeFromCart(item.cartId)} 
-                          className="h-7 w-7 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all"
+                          aria-label={t("Remove")}
+                          className="h-11 w-11 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all touch-target"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -905,8 +875,8 @@ export default function PosInvoicesPage() {
                       )}
                     >
                       <span className={clsx(
-                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-md",
-                        useLoyaltyPoints ? "translate-x-5" : "translate-x-1"
+                        "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-md",
+                        useLoyaltyPoints ? "translate-x-8" : "translate-x-1"
                       )} />
                     </button>
                   </motion.div>
@@ -923,8 +893,8 @@ export default function PosInvoicesPage() {
                 </div>
               </div>
 
-              {/* Summary & Checkout - sticky bottom */}
-              <div className="pt-3 border-t border-border space-y-3">
+              {/* Summary & Checkout — sticky in the thumb zone above the bottom nav */}
+              <div className="pt-3 border-t border-border space-y-3 sticky z-20 bg-muted/95 backdrop-blur-sm -mx-3 px-3 pb-3 lg:static lg:bg-transparent lg:backdrop-blur-none lg:mx-0 lg:px-0 lg:pb-0 above-bottom-nav lg:bottom-auto">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("Total")}</span>
                   <div>
@@ -936,7 +906,7 @@ export default function PosInvoicesPage() {
                 <button 
                   onClick={handleCheckout}
                   disabled={cart.length === 0 || !selectedCustomer || !selectedEmployee}
-                  className="group relative w-full rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm"
+                  className="group relative w-full min-h-12 rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm touch-target"
                 >
                   <CheckCircle2 className="h-5 w-5" />
                   <span>{t("Complete Payment")}</span>

@@ -133,7 +133,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border bg-transparent hover:bg-muted hover:text-foreground transition-all min-w-[90px] cursor-pointer"
+                  className="min-h-11 px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border bg-transparent hover:bg-muted hover:text-foreground transition-all min-w-[90px] cursor-pointer"
                 >
                   {state.options.cancelText || t("Cancel")}
                 </button>
@@ -141,7 +141,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={handleConfirm}
                   autoFocus
-                  className={`px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-primary-foreground min-w-[90px] transition-all shadow-md cursor-pointer ${
+                  className={`min-h-11 px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-primary-foreground min-w-[90px] transition-all shadow-md cursor-pointer ${
                     state.options.type === "danger"
                       ? "bg-destructive hover:bg-destructive/90 shadow-destructive/10"
                       : "bg-primary hover:bg-primary/90 shadow-primary/10"

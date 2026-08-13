@@ -225,7 +225,7 @@ export default function DashboardPage() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6 sm:space-y-8 pb-12"
+      className="space-y-6 sm:space-y-8 pb-12 min-w-0 overflow-x-clip"
     >
 
       {/* Welcome Header */}
@@ -238,7 +238,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tighter text-foreground leading-tight">
             {t("Welcome back")}, <span className="text-primary">{me?.username || 'admin'}</span>
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
+          <p className="hidden sm:block text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
             {t("Your center is performing optimally today. Here's a quick look at the latest metrics and activities.")}
           </p>
         </div>
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                   <button
                     key={a.id}
                     onClick={() => nav("/appointments")}
-                    className="w-full flex items-center gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-primary/30 transition-all"
+                    className="w-full min-h-11 flex items-center gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-primary/30 transition-all touch-target"
                   >
                     <div className="h-10 w-14 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                       {a.time}
@@ -425,7 +425,7 @@ export default function DashboardPage() {
           {/* Block-level wrapper (NOT flex) — ResponsiveContainer needs a
               definite width to measure on iOS Safari; flex centering on the
               direct parent made the chart collapse to 0px on iPhones. */}
-          <div className="p-4 sm:p-6 flex-1 min-h-[300px] w-full">
+          <div className="p-4 sm:p-6 flex-1 min-h-[200px] sm:min-h-[300px] w-full min-w-0">
             {loading ? (
               <div className="w-full h-full min-h-[260px] flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4">

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { 
-  History, X, Search, User, Phone, Coins, Calendar, 
-  Receipt, Plus, FileText, Save, CheckCircle2, UserPlus,
-  ChevronRight, MoreVertical, Mail, MapPin, Sparkles, XCircle,
-  ArrowUpRight, TrendingUp, Wallet, Pencil, Trash2,
-  Download, Star, Users, Crown, Copy
+  History, X, Search, User, Phone, Calendar, 
+  Receipt, FileText, Save, CheckCircle2, UserPlus,
+  MoreVertical, Sparkles,
+  TrendingUp, Pencil, Trash2,
+  Download, Star, Users, Crown
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
@@ -81,6 +81,7 @@ export default function CustomersPage() {
   const [editPhone, setEditPhone] = useState("");
 
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -390,15 +391,16 @@ export default function CustomersPage() {
           </table>
         </div>
 
-        {/* Mobile Cards - compact list with swipe actions */}
+        {/* Mobile cards — tap to open, explicit 44px menu. No swipe (accidental delete). */}
         <div className="lg:hidden">
           {/* Sticky Search Header */}
           <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-3 mb-2">
             <div className="relative group">
               <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
+                type="search"
                 className="w-full rounded-xl border border-border bg-card py-3 ps-11 pe-4 text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
-                placeholder={t("Search...")}
+                placeholder={t("Search by name or phone...")}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -408,33 +410,66 @@ export default function CustomersPage() {
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {filtered.map((c, idx) => (
-                <motion.button
+                <motion.div
                   layout
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   key={c.id}
-                  onClick={() => openHistory(c)}
-                  className="w-full min-w-0 rounded-xl border border-border bg-card p-3 shadow-sm flex items-center gap-3 text-start hover:shadow-md hover:border-primary/30 transition-all touch-target active:scale-[0.99]"
+                  className="relative w-full min-w-0 rounded-xl border border-border bg-card shadow-sm flex items-stretch hover:shadow-md hover:border-primary/30 transition-all"
                 >
-                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                    {getInitials(c, "·")}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="block truncate text-sm font-bold text-foreground">{c.name}</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-bold text-muted-foreground" dir="ltr">{c.phone ?? "—"}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setMenuId(null); openHistory(c); }}
+                    className="flex-1 min-w-0 min-h-[56px] p-3 flex items-center gap-3 text-start touch-target active:scale-[0.99]"
+                  >
+                    <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      {getInitials(c, "·")}
                     </div>
-                  </div>
-                  <div className="text-end shrink-0">
-                    <div className="text-sm font-bold text-foreground">{formatOMRAmount(c.totalSpent)}</div>
-                    <div className="flex items-center gap-1 text-[9px] font-bold text-warning">
-                      <Sparkles className="h-3 w-3" />
-                      {c.loyaltyPoints}
+                    <div className="flex-1 min-w-0">
+                      <span className="block truncate text-sm font-bold text-foreground">{c.name}</span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-bold text-muted-foreground" dir="ltr">{c.phone ?? "—"}</span>
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", i18n.language === "ar" && "rotate-180")} />
-                </motion.button>
+                    <div className="text-end shrink-0">
+                      <div className="text-sm font-bold text-foreground">{formatOMRAmount(c.totalSpent)}</div>
+                      <div className="flex items-center gap-1 text-[9px] font-bold text-warning">
+                        <Sparkles className="h-3 w-3" />
+                        {c.loyaltyPoints}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("Actions")}
+                    aria-expanded={menuId === c.id}
+                    onClick={(e) => { e.stopPropagation(); setMenuId(menuId === c.id ? null : c.id); }}
+                    className="shrink-0 h-auto min-h-[56px] w-11 flex items-center justify-center text-muted-foreground hover:text-foreground touch-target"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {menuId === c.id && (
+                    <div className="absolute end-2 top-14 z-30 min-w-[148px] rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => { setMenuId(null); openEdit(c); }}
+                        className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-foreground hover:bg-muted/60"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        {t("Edit")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setMenuId(null); void handleDeleteCustomer(c.id); }}
+                        className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {t("Delete")}
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
               ))}
             </AnimatePresence>
             {filtered.length === 0 && (
@@ -444,9 +479,9 @@ export default function CustomersPage() {
                 empty={filtered.length === 0} 
                 onRetry={load} 
                 loadingTitle={t("Loading...")} 
-                errorTitle={t("Failed")} 
-                emptyTitle={t("No Customers")} 
-                emptyDescription={q ? t("Try different term") : t("Add first customer")} 
+                errorTitle={t("Failed to load customers")} 
+                emptyTitle={t("No Customers Found")} 
+                emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} 
                 emptyIcon={<Users className="h-5 w-5" />} 
                 emptyActionLabel={t("Add Customer")} 
                 onEmptyAction={() => setShowAddModal(true)} 
@@ -459,7 +494,7 @@ export default function CustomersPage() {
 
       <AnimatePresence>
         {openId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 print:hidden">
+          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6 print:hidden">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -471,9 +506,9 @@ export default function CustomersPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-6xl rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden"
+              className="relative flex flex-col w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[90dvh] rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden max-h-[calc(100dvh-var(--keyboard-inset,0px))]"
             >
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
+              <div className="shrink-0 flex items-center justify-between border-b border-border px-4 sm:px-10 py-4 sm:py-8 bg-muted/20 pt-[max(1rem,env(safe-area-inset-top))]">
                 <div className="flex items-center gap-5">
                   <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                     <History className="h-7 w-7" />
@@ -491,7 +526,7 @@ export default function CustomersPage() {
                 </button>
               </div>
 
-              <div className="max-h-[80vh] overflow-auto p-5 sm:p-10 scrollbar-hide">
+              <div className="flex-1 min-h-0 overflow-auto p-4 sm:p-10 scrollbar-hide overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                 {!history ? (
                   <ScreenState state="loading" title={t("Fetching Data...")} compact />
                 ) : (
@@ -641,7 +676,7 @@ export default function CustomersPage() {
 
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -653,7 +688,7 @@ export default function CustomersPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
+              className="relative w-full max-w-md max-h-[calc(100dvh-var(--keyboard-inset,0px))] overflow-y-auto rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
@@ -691,6 +726,9 @@ export default function CustomersPage() {
                   <div className="relative">
                     <Phone className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-start shadow-inner"
                       dir="ltr"
                       placeholder="968XXXXXXXX"
@@ -716,7 +754,7 @@ export default function CustomersPage() {
       </AnimatePresence>
       <AnimatePresence>
         {editId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -728,7 +766,7 @@ export default function CustomersPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
+              className="relative w-full max-w-md max-h-[calc(100dvh-var(--keyboard-inset,0px))] overflow-y-auto rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
                 <div className="flex items-center gap-4">
@@ -766,6 +804,9 @@ export default function CustomersPage() {
                   <div className="relative">
                     <Phone className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-start shadow-inner"
                       dir="ltr"
                       placeholder="968XXXXXXXX"
