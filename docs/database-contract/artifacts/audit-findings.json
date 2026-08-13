@@ -1,0 +1,134 @@
+{
+  "summary": {
+    "generated_at": "2026-08-13T09:17:24.402Z",
+    "schema": {
+      "tables": 33,
+      "columns": 357,
+      "enum_types": 1,
+      "enum_labels": 4,
+      "constraints": 373,
+      "foreign_keys": 77,
+      "indexes": 95,
+      "triggers": 22,
+      "views": 0,
+      "functions": 38,
+      "policies": 66,
+      "grants": 1094
+    },
+    "frontend": {
+      "tables": 27,
+      "rpc": 20,
+      "storage": 1
+    },
+    "findings_by_severity": {
+      "high": 1,
+      "medium": 5,
+      "low": 0,
+      "info": 1
+    }
+  },
+  "findings": [
+    {
+      "id": "DB-003",
+      "severity": "high",
+      "status": "confirmed",
+      "needs": "type-update",
+      "title": "No committed Supabase-generated TypeScript types; client is untyped",
+      "category": "types-missing",
+      "evidence": "src/infrastructure/supabase/client.ts builds `createClient(...)` without a `Database` generic; repository results are read as `any` (no `.returns<T>()`/`.cast<T>()` anywhere in src/). No `Database` type is committed under src/ or a types module.",
+      "affected": {
+        "layer": "src/infrastructure/supabase/**",
+        "route": "all data access"
+      },
+      "remediation": "Generate and commit `supabase gen types` output and thread the `Database` generic through the client and repositories."
+    },
+    {
+      "id": "DB-001",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Non-idempotent migration: 20260628000012_customer_experience_forecasting_accounting_advanced.sql",
+      "category": "migration-idempotency",
+      "evidence": "policy \"customer_reviews_select_policy\" for table \"customer_reviews\" already exists",
+      "affected": {
+        "migration": "20260628000012_customer_experience_forecasting_accounting_advanced.sql",
+        "policy": "customer_reviews_select_policy",
+        "table": "customer_reviews"
+      },
+      "remediation": "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly."
+    },
+    {
+      "id": "DB-002",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Non-idempotent migration: 20260810000005_security_hardening_auth.sql",
+      "category": "migration-idempotency",
+      "evidence": "policy \"center_settings_insert\" for table \"center_settings\" already exists",
+      "affected": {
+        "migration": "20260810000005_security_hardening_auth.sql",
+        "policy": "center_settings_insert",
+        "table": "center_settings"
+      },
+      "remediation": "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly."
+    },
+    {
+      "id": "DB-004",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Foreign key marked NOT VALID: payments.payments_invoice_center_fk",
+      "category": "fk-not-valid",
+      "evidence": "FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT NOT VALID",
+      "affected": {
+        "table": "payments",
+        "constraint": "payments_invoice_center_fk"
+      },
+      "remediation": "Validate the constraint (`ALTER TABLE ... VALIDATE CONSTRAINT ...`) after confirming no orphaned rows; a NOT VALID FK does not protect pre-existing rows."
+    },
+    {
+      "id": "DB-005",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Foreign key marked NOT VALID: services.services_category_fk",
+      "category": "fk-not-valid",
+      "evidence": "FOREIGN KEY (category_id) REFERENCES service_categories(id) ON DELETE RESTRICT NOT VALID",
+      "affected": {
+        "table": "services",
+        "constraint": "services_category_fk"
+      },
+      "remediation": "Validate the constraint (`ALTER TABLE ... VALIDATE CONSTRAINT ...`) after confirming no orphaned rows; a NOT VALID FK does not protect pre-existing rows."
+    },
+    {
+      "id": "DB-006",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Duplicate foreign key pair: payments -> invoices",
+      "category": "fk-duplicate",
+      "evidence": "Two FKs reference the same target: FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT NOT VALID AND FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT",
+      "affected": {
+        "table": "payments",
+        "constraints": [
+          "payments_invoice_center_fk",
+          "payments_invoice_id_fkey"
+        ]
+      },
+      "remediation": "Keep the intended FK and drop the redundant one (a composite NOT VALID FK and a simple FK on the same column are usually the legacy + the fix)."
+    },
+    {
+      "id": "DB-007",
+      "severity": "info",
+      "status": "confirmed",
+      "needs": "no-code-change",
+      "title": "btree_gist exclusion constraint is canonical-only (replay surrogate)",
+      "category": "replay-compatibility",
+      "evidence": "appointments_no_scheduled_staff_overlap EXCLUDE requires btree_gist gist `=` opclass, unavailable in PGlite.",
+      "affected": {
+        "object": "public.appointments (EXCLUDE constraint)"
+      },
+      "remediation": "No code change. Constraint exists in canonical migration and applies in Supabase; PGlite replay records it as canonical-only."
+    }
+  ]
+}

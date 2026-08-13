@@ -1,0 +1,809 @@
+{
+  "tables": [
+    {
+      "table": "accounting_journal_entries",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "ai_booking_leads",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "appointments",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "customers",
+          "columns": [
+            "id",
+            "name",
+            "phone"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "id",
+            "name",
+            "category_id",
+            "price",
+            "duration_minutes"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        }
+      ]
+    },
+    {
+      "table": "attendance_records",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "center_memberships",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "centers",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        }
+      ]
+    },
+    {
+      "table": "center_settings",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "customer_entitlements",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "customer_reviews",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "customers",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "employee_advances",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "employees",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "entitlement_ledger",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "employees",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "invoices",
+          "columns": [
+            "serial_number"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        }
+      ]
+    },
+    {
+      "table": "expenses",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "gift_card_transactions",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "gift_cards",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "invoice_items",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "services",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "products",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "service_packages",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "gift_cards",
+          "columns": [
+            "code"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        }
+      ]
+    },
+    {
+      "table": "invoices",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "employees",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "invoice_items",
+          "columns": [
+            "id",
+            "invoice_id",
+            "service_id",
+            "product_id",
+            "package_id",
+            "gift_card_id",
+            "item_name",
+            "price",
+            "quantity",
+            "created_at",
+            "services (name)",
+            "products (name)",
+            "service_packages (name)",
+            "gift_cards (code)"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        }
+      ]
+    },
+    {
+      "table": "notification_settings",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "payment_gateway_settings",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "payments",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "payroll_line_items",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "payroll_runs",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "products",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "service_categories",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
+      "table": "service_files",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "service_file_images",
+          "columns": [
+            "*"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        }
+      ]
+    },
+    {
+      "table": "service_packages",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "service_package_items",
+          "columns": [
+            "*"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        }
+      ]
+    },
+    {
+      "table": "services",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "service_categories",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "service_categories",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "service_categories",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        }
+      ]
+    }
+  ],
+  "rpc": [
+    {
+      "name": "create_accounting_journal_entry_v1",
+      "exists": true,
+      "args": [
+        "p_amount",
+        "p_center_id",
+        "p_credit_account",
+        "p_currency",
+        "p_debit_account",
+        "p_description",
+        "p_entry_date",
+        "p_entry_type",
+        "p_reference_id",
+        "p_reference_type"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_entry_date",
+        "p_entry_type",
+        "p_reference_type",
+        "p_reference_id",
+        "p_description",
+        "p_debit_account",
+        "p_credit_account",
+        "p_amount",
+        "p_currency"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "create_ai_booking_lead_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_customer_name",
+        "p_customer_phone",
+        "p_preferred_date",
+        "p_preferred_service_id",
+        "p_source_channel",
+        "p_summary"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_name",
+        "p_customer_phone",
+        "p_preferred_service_id",
+        "p_preferred_date",
+        "p_source_channel",
+        "p_summary"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "create_customer_review_v1",
+      "exists": true,
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_comment",
+        "p_customer_id",
+        "p_is_published",
+        "p_rating"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_id",
+        "p_appointment_id",
+        "p_rating",
+        "p_comment",
+        "p_is_published"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "create_service_file_v1",
+      "exists": true,
+      "args": [
+        "p_after_images",
+        "p_appointment_id",
+        "p_before_images",
+        "p_center_id",
+        "p_customer_id",
+        "p_note",
+        "p_reference_images",
+        "p_service_id",
+        "p_title"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_id",
+        "p_appointment_id",
+        "p_service_id",
+        "p_title",
+        "p_note",
+        "p_before_images",
+        "p_after_images",
+        "p_reference_images"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "create_service_package_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_description",
+        "p_items",
+        "p_name",
+        "p_package_price"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_name",
+        "p_description",
+        "p_package_price",
+        "p_items"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "mark_appointment_no_show_v1",
+      "exists": true,
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_charge_no_show_fee",
+        "p_note"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_appointment_id",
+        "p_charge_no_show_fee",
+        "p_note"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "process_checkout_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_customer_id",
+        "p_discount_amount",
+        "p_employee_id",
+        "p_entitlement_redemptions",
+        "p_gift_card_code",
+        "p_items",
+        "p_payment_method",
+        "p_use_loyalty_points"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_id",
+        "p_employee_id",
+        "p_payment_method",
+        "p_discount_amount",
+        "p_use_loyalty_points",
+        "p_items",
+        "p_gift_card_code",
+        "p_entitlement_redemptions"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_cancel_booking_v1",
+      "exists": true,
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_phone",
+        "p_portal_token",
+        "p_reason"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_appointment_id",
+        "p_phone",
+        "p_portal_token",
+        "p_reason"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_center_info_v1",
+      "exists": true,
+      "args": [
+        "p_center_id"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_client_portal_login_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_phone",
+        "p_token"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_phone",
+        "p_token"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_client_portal_profile_v2",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_customer_id",
+        "p_phone",
+        "p_token"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_id",
+        "p_phone",
+        "p_token"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_create_booking_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_customer_name",
+        "p_customer_phone",
+        "p_date_time",
+        "p_employee_id",
+        "p_notes",
+        "p_service_id"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_service_id",
+        "p_employee_id",
+        "p_customer_name",
+        "p_customer_phone",
+        "p_date_time",
+        "p_notes"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_list_services_v1",
+      "exists": true,
+      "args": [
+        "p_center_id"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_list_staff_v1",
+      "exists": true,
+      "args": [
+        "p_center_id"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_reschedule_booking_v1",
+      "exists": true,
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_new_date_time",
+        "p_new_employee_id",
+        "p_phone",
+        "p_portal_token",
+        "p_reason"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_appointment_id",
+        "p_phone",
+        "p_portal_token",
+        "p_new_date_time",
+        "p_new_employee_id",
+        "p_reason"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "public_taken_slots_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_day"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_day"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "refund_entitlement_v1",
+      "exists": true,
+      "args": [
+        "p_actor_employee_id",
+        "p_amount",
+        "p_entitlement_id",
+        "p_reason"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_entitlement_id",
+        "p_amount",
+        "p_reason",
+        "p_actor_employee_id"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "rotate_customer_portal_token_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_customer_id"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_customer_id"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "upsert_notification_settings_v1",
+      "exists": true,
+      "args": [
+        "p_center_id",
+        "p_reminder_enabled",
+        "p_reminder_hours_before",
+        "p_sms_enabled",
+        "p_sms_sender_name",
+        "p_sms_template_reminder",
+        "p_whatsapp_enabled",
+        "p_whatsapp_sender_name",
+        "p_whatsapp_template_booking",
+        "p_whatsapp_template_reminder"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_whatsapp_enabled",
+        "p_sms_enabled",
+        "p_reminder_enabled",
+        "p_reminder_hours_before",
+        "p_whatsapp_sender_name",
+        "p_sms_sender_name",
+        "p_whatsapp_template_booking",
+        "p_whatsapp_template_reminder",
+        "p_sms_template_reminder"
+      ],
+      "extra": [],
+      "missing": []
+    },
+    {
+      "name": "upsert_payment_gateway_settings_v1",
+      "exists": true,
+      "args": [
+        "p_booking_deposit_enabled",
+        "p_booking_deposit_type",
+        "p_booking_deposit_value",
+        "p_cancel_url",
+        "p_center_id",
+        "p_is_enabled",
+        "p_is_sandbox",
+        "p_merchant_identifier",
+        "p_provider",
+        "p_public_key",
+        "p_success_url",
+        "p_webhook_secret_hint"
+      ],
+      "schema": "public",
+      "declared": [
+        "p_center_id",
+        "p_provider",
+        "p_is_enabled",
+        "p_is_sandbox",
+        "p_public_key",
+        "p_merchant_identifier",
+        "p_webhook_secret_hint",
+        "p_booking_deposit_enabled",
+        "p_booking_deposit_type",
+        "p_booking_deposit_value",
+        "p_success_url",
+        "p_cancel_url"
+      ],
+      "extra": [],
+      "missing": []
+    }
+  ],
+  "storage": [
+    {
+      "bucket": "center-assets",
+      "exists": true
+    }
+  ],
+  "embeds": []
+}
