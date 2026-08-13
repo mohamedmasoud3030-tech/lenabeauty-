@@ -268,26 +268,26 @@ export default function CustomersPage() {
         }
       />
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 print:hidden">
+      {/* Stats Cards - compact 2x2 on mobile */}
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4 print:hidden">
         {[
-          { label: t('Total Clients'), value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
-          { label: t('Total Revenue'), value: formatOMRAmount(stats.totalRevenue) + ' OMR', icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
-          { label: t('VIP Clients'), value: stats.vip, icon: Crown, color: 'text-warning', bg: 'bg-warning/10' },
-          { label: t('New Clients'), value: stats.newThisMonth, icon: Star, color: 'text-info', bg: 'bg-info/10' },
+          { label: t('Total'), value: stats.total, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: t('Revenue'), value: formatOMRAmount(stats.totalRevenue), icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
+          { label: t('VIP'), value: stats.vip, icon: Crown, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: t('New'), value: stats.newThisMonth, icon: Star, color: 'text-info', bg: 'bg-info/10' },
         ].map(({ label, value, icon: Icon, color, bg }, i) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            className="rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm hover:shadow-md transition-all"
+            className="rounded-xl sm:rounded-2xl border border-border bg-card p-3 sm:p-5 shadow-sm hover:shadow-md transition-all"
           >
-            <div className={`h-10 w-10 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-              <Icon className={`h-5 w-5 ${color}`} />
+            <div className={`h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl ${bg} flex items-center justify-center mb-2 sm:mb-3`}>
+              <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${color}`} />
             </div>
-            <div className={`text-xl sm:text-2xl font-bold ${color}`}>{value}</div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">{label}</div>
+            <div className={`text-base sm:text-xl font-bold ${color} truncate`}>{value}</div>
+            <div className="text-[9px] sm:text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
           </motion.div>
         ))}
       </div>
@@ -390,60 +390,69 @@ export default function CustomersPage() {
           </table>
         </div>
 
-        {/* Mobile Cards */}
-        <div className="lg:hidden grid grid-cols-2 gap-3">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((c, idx) => (
-              <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.03 } }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                key={c.id}
-                className="min-w-0 rounded-2xl border border-border bg-card p-3 shadow-sm flex flex-col gap-3"
-              >
-                <div className="min-w-0">
-                  <span className="block truncate text-sm font-bold text-foreground">{c.name}</span>
-                  <span className="block truncate text-[9px] font-bold text-muted-foreground" dir="ltr">{c.phone ?? "—"}</span>
-                </div>
-
-                <div className="mt-auto border-t border-border pt-2">
-                  <div className="text-base font-bold text-foreground">{formatOMRAmount(c.totalSpent)}</div>
-                  <div className="text-[9px] font-bold text-muted-foreground">{t("OMR Total")}</div>
-                  <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-warning">
-                    <Sparkles className="h-3 w-3" />
-                    {c.loyaltyPoints} {t("Pts")}
+        {/* Mobile Cards - compact list with swipe actions */}
+        <div className="lg:hidden">
+          {/* Sticky Search Header */}
+          <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-3 mb-2">
+            <div className="relative group">
+              <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                className="w-full rounded-xl border border-border bg-card py-3 ps-11 pe-4 text-sm font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
+                placeholder={t("Search...")}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((c, idx) => (
+                <motion.button
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.02 } }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  key={c.id}
+                  onClick={() => openHistory(c)}
+                  className="w-full min-w-0 rounded-xl border border-border bg-card p-3 shadow-sm flex items-center gap-3 text-start hover:shadow-md hover:border-primary/30 transition-all touch-target active:scale-[0.99]"
+                >
+                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    {getInitials(c, "·")}
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => openHistory(c)}
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-primary flex items-center justify-center"
-                    title={t("History")}
-                  >
-                    <History className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => openEdit(c)}
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-muted-foreground flex items-center justify-center"
-                    title={t("Edit")}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => void handleDeleteCustomer(c.id)}
-                    className="h-11 min-w-0 flex-1 rounded-xl border border-border text-destructive flex items-center justify-center"
-                    title={t("Delete")}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div className="col-span-2">
-            <ListState loading={loading && filtered.length === 0} error={loadError} empty={filtered.length === 0} onRetry={load} loadingTitle={t("Loading customers...")} errorTitle={t("Failed to load customers")} emptyTitle={t("No Customers Found")} emptyDescription={q ? t("Try a different search term") : t("Add your first customer to start selling")} emptyIcon={<Users className="h-6 w-6" />} emptyActionLabel="Add Customer" onEmptyAction={() => setShowAddModal(true)} compact />
+                  <div className="flex-1 min-w-0">
+                    <span className="block truncate text-sm font-bold text-foreground">{c.name}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-bold text-muted-foreground" dir="ltr">{c.phone ?? "—"}</span>
+                    </div>
+                  </div>
+                  <div className="text-end shrink-0">
+                    <div className="text-sm font-bold text-foreground">{formatOMRAmount(c.totalSpent)}</div>
+                    <div className="flex items-center gap-1 text-[9px] font-bold text-warning">
+                      <Sparkles className="h-3 w-3" />
+                      {c.loyaltyPoints}
+                    </div>
+                  </div>
+                  <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", i18n.language === "ar" && "rotate-180")} />
+                </motion.button>
+              ))}
+            </AnimatePresence>
+            {filtered.length === 0 && (
+              <ListState 
+                loading={loading && filtered.length === 0} 
+                error={loadError} 
+                empty={filtered.length === 0} 
+                onRetry={load} 
+                loadingTitle={t("Loading...")} 
+                errorTitle={t("Failed")} 
+                emptyTitle={t("No Customers")} 
+                emptyDescription={q ? t("Try different term") : t("Add first customer")} 
+                emptyIcon={<Users className="h-5 w-5" />} 
+                emptyActionLabel={t("Add Customer")} 
+                onEmptyAction={() => setShowAddModal(true)} 
+                compact 
+              />
+            )}
           </div>
         </div>
       </motion.div>

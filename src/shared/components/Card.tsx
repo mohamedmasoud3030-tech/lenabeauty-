@@ -1,19 +1,25 @@
 import { ReactNode } from 'react';
+import { clsx } from 'clsx';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   clickable?: boolean;
   onClick?: () => void;
+  /** Compact variant for mobile - smaller padding */
+  compact?: boolean;
 }
 
-export function Card({ children, className = '', clickable = false, onClick }: CardProps) {
+export function Card({ children, className = '', clickable = false, onClick, compact = false }: CardProps) {
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border border-border bg-card p-6 shadow-sm hover:shadow-md transition-shadow ${
-        clickable ? 'cursor-pointer hover:border-primary/30' : ''
-      } ${className}`}
+      className={clsx(
+        "rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm transition-shadow",
+        compact ? "p-3 sm:p-4" : "p-4 sm:p-6",
+        clickable && "cursor-pointer hover:shadow-md hover:border-primary/30 active:scale-[0.99]",
+        className
+      )}
     >
       {children}
     </div>
@@ -23,10 +29,19 @@ export function Card({ children, className = '', clickable = false, onClick }: C
 interface CardHeaderProps {
   children: ReactNode;
   className?: string;
+  compact?: boolean;
 }
 
-export function CardHeader({ children, className = '' }: CardHeaderProps) {
-  return <div className={`flex items-center justify-between mb-6 pb-4 border-b border-border/50 ${className}`}>{children}</div>;
+export function CardHeader({ children, className = '', compact = false }: CardHeaderProps) {
+  return (
+    <div className={clsx(
+      "flex items-center justify-between border-b border-border/50",
+      compact ? "mb-4 pb-3" : "mb-6 pb-4",
+      className
+    )}>
+      {children}
+    </div>
+  );
 }
 
 interface CardContentProps {
@@ -41,8 +56,17 @@ export function CardContent({ children, className = '' }: CardContentProps) {
 interface CardFooterProps {
   children: ReactNode;
   className?: string;
+  compact?: boolean;
 }
 
-export function CardFooter({ children, className = '' }: CardFooterProps) {
-  return <div className={`flex items-center gap-4 mt-6 pt-4 border-t border-border/50 ${className}`}>{children}</div>;
+export function CardFooter({ children, className = '', compact = false }: CardFooterProps) {
+  return (
+    <div className={clsx(
+      "flex items-center gap-4 border-t border-border/50",
+      compact ? "mt-4 pt-3" : "mt-6 pt-4",
+      className
+    )}>
+      {children}
+    </div>
+  );
 }

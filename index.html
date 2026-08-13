@@ -2,21 +2,37 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="HandheldFriendly" content="true" />
     <title>Lena Beauty</title>
     <!-- PWA & Mobile Web Capabilities -->
     <!-- Manifest is injected automatically by vite-plugin-pwa (/manifest.webmanifest) -->
-    <meta name="theme-color" content="#caa348" />
+    <meta name="theme-color" content="#caa348" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1e1b2e" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Lena Beauty" />
     <link rel="icon" href="/lena-mark.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS Splash Screens -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
+    <!-- Mobile loading screen with safe-area support -->
     <div id="root">
-      <div style="height:100vh;display:flex;align-items:center;justify-content:center;background:#1e293b;color:#e2e8f0;font-family:sans-serif">
-        جاري التحميل...
+      <div style="height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:#e2e8f0;font-family:sans-serif;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
+        <div style="text-align:center">
+          <div style="font-size:2rem;margin-bottom:0.5rem">💇‍♀️</div>
+          <div style="font-size:0.875rem;font-weight:500">Lena Beauty</div>
+          <div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.7">جاري التحميل...</div>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
