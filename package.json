@@ -11,6 +11,11 @@
     "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
     "ci:rpc-check": "node scripts/check-rpc-contracts.mjs",
     "ci:migrations": "node scripts/check-migration-chain.mjs",
+    "audit:replay": "node scripts/audit/replay-schema.mjs",
+    "audit:scan": "node scripts/audit/scan-frontend.mjs",
+    "audit:matrix": "node scripts/audit/build-matrix.mjs",
+    "audit:all": "npm run audit:replay && npm run audit:scan && npm run audit:matrix",
+    "audit:gate": "node scripts/audit/ci-gate.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
@@ -38,6 +43,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
