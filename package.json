@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
+    "ci:rpc-check": "node scripts/check-rpc-contracts.mjs",
+    "ci:migrations": "node scripts/check-migration-chain.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",
