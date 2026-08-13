@@ -89,7 +89,29 @@ BEGIN
 END;
 $$;
 
--- 10:30 for the same employee must overlap and fail.
+-- Same start must fail.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.appointments (
+      id, center_id, customer_id, employee_id, service_id, date_time, status
+    ) VALUES (
+      '10000000-0000-4000-8000-000000000020',
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      '10000000-0000-4000-8000-000000000004',
+      '10000000-0000-4000-8000-000000000007',
+      '2026-08-11 10:00:00+04',
+      'SCHEDULED'
+    );
+    RAISE EXCEPTION 'expected same-start overlap rejection';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+END;
+$$;
+
+-- Partial overlap must fail.
 DO $$
 BEGIN
   BEGIN
@@ -105,6 +127,50 @@ BEGIN
       'SCHEDULED'
     );
     RAISE EXCEPTION 'expected same-employee overlap rejection';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+END;
+$$;
+
+-- Contained interval (10:15–10:45) must fail.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.appointments (
+      id, center_id, customer_id, employee_id, service_id, date_time, status
+    ) VALUES (
+      '10000000-0000-4000-8000-000000000021',
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      '10000000-0000-4000-8000-000000000004',
+      '10000000-0000-4000-8000-000000000007',
+      '2026-08-11 10:15:00+04',
+      'SCHEDULED'
+    );
+    RAISE EXCEPTION 'expected contained overlap rejection';
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+END;
+$$;
+
+-- Containing interval (09:45–11:15) must fail.
+DO $$
+BEGIN
+  BEGIN
+    INSERT INTO public.appointments (
+      id, center_id, customer_id, employee_id, service_id, date_time, status
+    ) VALUES (
+      '10000000-0000-4000-8000-000000000022',
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      '10000000-0000-4000-8000-000000000004',
+      '10000000-0000-4000-8000-000000000008',
+      '2026-08-11 09:45:00+04',
+      'SCHEDULED'
+    );
+    RAISE EXCEPTION 'expected containing overlap rejection';
   EXCEPTION
     WHEN exclusion_violation THEN NULL;
   END;
@@ -180,6 +246,24 @@ BEGIN
 END;
 $$;
 
+-- Cancelling releases the interval because the exclusion predicate covers only SCHEDULED.
+UPDATE public.appointments
+SET status = 'CANCELLED'
+WHERE id = '10000000-0000-4000-8000-000000000010';
+
+INSERT INTO public.appointments (
+  id, center_id, customer_id, employee_id, service_id, date_time, status
+)
+VALUES (
+  '10000000-0000-4000-8000-000000000023',
+  '10000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000006',
+  '2026-08-11 10:00:00+04',
+  'SCHEDULED'
+);
+
 -- A catalog edit must not reinterpret the original booking snapshot.
 UPDATE public.services
 SET duration_minutes = 120
@@ -191,7 +275,7 @@ DECLARE
 BEGIN
   SELECT duration_minutes_snapshot INTO v_duration
   FROM public.appointments
-  WHERE id = '10000000-0000-4000-8000-000000000010';
+  WHERE id = '10000000-0000-4000-8000-000000000023';
   IF v_duration <> 60 THEN
     RAISE EXCEPTION 'catalog edit changed a historical appointment snapshot';
   END IF;
