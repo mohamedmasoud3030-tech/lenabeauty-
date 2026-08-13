@@ -881,15 +881,20 @@ export default function PosInvoicesPage() {
                       role="switch"
                       aria-checked={useLoyaltyPoints}
                       aria-label={t("Loyalty Points")}
-                      className={clsx(
-                        "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shrink-0",
-                        useLoyaltyPoints ? "bg-success" : "bg-muted"
-                      )}
+                      className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
-                      <span className={clsx(
-                        "inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-md",
-                        useLoyaltyPoints ? "translate-x-8" : "translate-x-1"
-                      )} />
+                      <span
+                        aria-hidden="true"
+                        className={clsx(
+                          "pointer-events-none inline-flex h-6 w-11 items-center rounded-full p-0.5 transition-colors",
+                          useLoyaltyPoints ? "bg-success" : "bg-muted"
+                        )}
+                      >
+                        <span className={clsx(
+                          "h-5 w-5 transform rounded-full bg-white shadow-md transition-transform",
+                          useLoyaltyPoints ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </span>
                     </button>
                   </motion.div>
                 )}
