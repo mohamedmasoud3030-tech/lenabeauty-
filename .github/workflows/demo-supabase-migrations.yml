@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "scripts/check-rpc-contracts.mjs"
+      - "scripts/check-migration-chain.mjs"
+      - "scripts/supabase-live-preflight.mjs"
+      - "src/infrastructure/supabase/**"
+      - "package.json"
   workflow_dispatch:
 
-# A migration must never run concurrently with another migration deployment.
-# `cancel-in-progress: false` preserves ordered, append-only application.
 concurrency:
   group: lena-demo-supabase-migrations
   cancel-in-progress: false
@@ -20,11 +24,18 @@ jobs:
   validate-and-apply:
     name: Validate and apply pending migrations to Demo
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DEMO_SUPABASE_PROJECT_REF: ${{ secrets.DEMO_SUPABASE_PROJECT_REF }}
+      VITE_DATA_BACKEND: supabase
+      VITE_BRANCH_MODE: single
+      VITE_SUPABASE_URL: ${{ secrets.DEMO_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.DEMO_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_CENTER_ID: ${{ secrets.DEMO_CENTER_ID }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEMO_SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -37,29 +48,57 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Do not apply a database change from a revision whose application contract
-      # has not passed its own checks.
-      - name: Validate application and migration contracts
+      - name: Validate application and static database contracts
         run: |
+          npm run ci:migrations
+          npm run ci:rpc-check
           npm test
           npm run typecheck
           npm run lint
           npm run build
 
-      - name: Verify deployment credentials are configured
+      - name: Verify explicit Demo deployment credentials
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_PROJECT_REF"
           test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$DEMO_SUPABASE_PROJECT_REF"
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          test -n "$VITE_CENTER_ID"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          if [ "$SUPABASE_PROJECT_REF" != "$DEMO_SUPABASE_PROJECT_REF" ]; then
+            echo "Refusing migration: configured target does not equal the explicit Demo project ref." >&2
+            exit 1
+          fi
 
       - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Link the Demo Supabase project
+      - name: Link explicit Demo Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      # `db push` reads Supabase's migration history and applies only pending,
-      # lexically ordered files. It never runs demo seeds.
-      - name: Apply pending migrations
-        run: supabase db push --linked
+      - name: Show remote migration state before apply
+        run: supabase migration list --linked
+
+      - name: Apply pending canonical migrations
+        run: supabase db push --linked --yes
+
+      - name: Verify remote migration state after apply
+        run: supabase migration list --linked
+
+      - name: Verify live Demo schema and center contract
+        run: npm run preflight:supabase
+
+      - name: Run transactional database acceptance tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:${SUPABASE_DB_PASSWORD}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+          for test_file in supabase/tests/*.sql; do
+            echo "Running ${test_file}"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$test_file"
+          done
