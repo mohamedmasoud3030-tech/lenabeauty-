@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { InvoicePrintData } from "../application/dto";
 import { ConfirmProvider } from "../shared/components/ConfirmDialog";
+import { ToastProvider } from "../shared/components/Toast";
 import i18n from "../i18n";
 
 const data: InvoicePrintData = {
@@ -36,9 +37,11 @@ const data: InvoicePrintData = {
 
 function renderModal(props: { data: InvoicePrintData | null }) {
   return render(
-    <ConfirmProvider>
-      <ReceiptPreviewModal data={props.data} onClose={() => {}} />
-    </ConfirmProvider>
+    <ToastProvider>
+      <ConfirmProvider>
+        <ReceiptPreviewModal data={props.data} onClose={() => {}} />
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
 

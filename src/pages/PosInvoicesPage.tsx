@@ -85,6 +85,10 @@ export default function PosInvoicesPage() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
+  // True while a checkout is in flight: guards against double-submit (a second
+  // tap on "Complete Payment" or Ctrl+Enter must never charge the same order
+  // twice).
+  const [checkingOut, setCheckingOut] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
@@ -305,6 +309,8 @@ export default function PosInvoicesPage() {
   const { subtotal, tierDiscount, loyaltyDiscount, giftCardDiscount, entitlementRedemption, tax, total } = checkoutTotals;
 
   async function handleCheckout() {
+    if (checkingOut) return;
+
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
       showToast('error', t("Error"), t("Please select a customer, employee, and add items to the cart"));
       return;
@@ -330,6 +336,7 @@ export default function PosInvoicesPage() {
       return;
     }
 
+    setCheckingOut(true);
     try {
       const payload = {
         customerId: selectedCustomer.id,
@@ -401,6 +408,8 @@ export default function PosInvoicesPage() {
       }
     } catch (err: any) {
       showToast('error', t("Error"), err.message || t("Payment failed"));
+    } finally {
+      setCheckingOut(false);
     }
   }
 
@@ -869,6 +878,9 @@ export default function PosInvoicesPage() {
                     </div>
                     <button 
                       onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                      role="switch"
+                      aria-checked={useLoyaltyPoints}
+                      aria-label={t("Loyalty Points")}
                       className={clsx(
                         "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shrink-0",
                         useLoyaltyPoints ? "bg-success" : "bg-muted"
@@ -905,11 +917,11 @@ export default function PosInvoicesPage() {
 
                 <button 
                   onClick={handleCheckout}
-                  disabled={cart.length === 0 || !selectedCustomer || !selectedEmployee}
+                  disabled={checkingOut || cart.length === 0 || !selectedCustomer || !selectedEmployee}
                   className="group relative w-full min-h-12 rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm touch-target"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  <span>{t("Complete Payment")}</span>
+                  <span>{checkingOut ? t("Processing...") : t("Complete Payment")}</span>
                 </button>
               </div>
             </div>
