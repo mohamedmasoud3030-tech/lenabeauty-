@@ -229,7 +229,7 @@ textarea {
   
   /* Horizontal scroll container for categories/filters */
   .mobile-scroll-x {
-    @apply overflow-x-auto scrollbar-hide;
+    @apply overflow-x-auto;
     -webkit-overflow-scrolling: touch;
     scroll-snap-type: x mandatory;
   }
