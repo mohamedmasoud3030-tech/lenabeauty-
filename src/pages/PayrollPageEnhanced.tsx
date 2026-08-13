@@ -66,11 +66,13 @@ export default function PayrollPageEnhanced() {
   }, [selectedMonth, runs]);
 
   const totals = useMemo(() => {
-    if (!selectedRun) return { base: 0, advances: 0, net: 0, count: 0 };
+    if (!selectedRun) return { base: 0, commission: 0, tips: 0, advances: 0, net: 0, count: 0 };
     const base = selectedRun.lines.reduce((s, l) => s + l.baseSalary, 0);
+    const commission = selectedRun.lines.reduce((s, l) => s + (l.commissionAmount || 0), 0);
+    const tips = selectedRun.lines.reduce((s, l) => s + (l.tipsAmount || 0), 0);
     const advances = selectedRun.lines.reduce((s, l) => s + l.advancesDeducted, 0);
     const net = selectedRun.lines.reduce((s, l) => s + l.netSalary, 0);
-    return { base, advances, net, count: selectedRun.lines.length };
+    return { base, commission, tips, advances, net, count: selectedRun.lines.length };
   }, [selectedRun]);
 
   async function handleCreate() {
@@ -106,6 +108,8 @@ export default function PayrollPageEnhanced() {
       <tr>
         <td>${employeeName(l.employeeId)}</td>
         <td class="text-right">${l.baseSalary.toFixed(3)}</td>
+        <td class="text-right">${(l.commissionAmount || 0).toFixed(3)}</td>
+        <td class="text-right">${(l.tipsAmount || 0).toFixed(3)}</td>
         <td class="text-right">${l.advancesDeducted.toFixed(3)}</td>
         <td class="text-right font-bold">${l.netSalary.toFixed(3)}</td>
       </tr>`).join("");
@@ -117,6 +121,8 @@ export default function PayrollPageEnhanced() {
           <thead><tr>
             <th>${isArabic ? "الموظف" : "Employee"}</th>
             <th>${isArabic ? "الأساسي" : "Base"}</th>
+            <th>${isArabic ? "العمولة" : "Commission"}</th>
+            <th>${isArabic ? "الإكرامية" : "Tips"}</th>
             <th>${isArabic ? "السلف المخصومة" : "Advances"}</th>
             <th>${isArabic ? "الصافي" : "Net"}</th>
           </tr></thead>
@@ -125,6 +131,8 @@ export default function PayrollPageEnhanced() {
             <tr style="background-color: var(--primary-color); color: white;">
               <td class="font-bold">${isArabic ? "الإجمالي" : "Total"}</td>
               <td class="text-right">${totals.base.toFixed(3)}</td>
+              <td class="text-right">${totals.commission.toFixed(3)}</td>
+              <td class="text-right">${totals.tips.toFixed(3)}</td>
               <td class="text-right">${totals.advances.toFixed(3)}</td>
               <td class="text-right font-bold">${totals.net.toFixed(3)}</td>
             </tr>
@@ -140,7 +148,7 @@ export default function PayrollPageEnhanced() {
           {isArabic ? "إدارة الرواتب" : "Payroll Management"}
         </h1>
         <p className="text-gray-400 mb-6">
-          {isArabic ? "الراتب الصافي = الأساسي − السلف المخصومة في نفس الشهر" : "Net salary = base − advances deducted in the same month"}
+          {isArabic ? "الصافي = الأساسي + العمولة + الإكرامية − السلف المخصومة" : "Net = base + commission + tips − advances deducted"}
         </p>
 
         {/* Controls */}
@@ -168,7 +176,7 @@ export default function PayrollPageEnhanced() {
 
         {/* Summary cards */}
         {selectedRun && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -185,6 +193,24 @@ export default function PayrollPageEnhanced() {
                   <p className="text-2xl font-bold text-white">{totals.base.toFixed(2)}</p>
                 </div>
                 <DollarSign className="w-10 h-10 text-green-400 opacity-50" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-fuchsia-500/20 to-fuchsia-600/20 border border-fuchsia-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">{isArabic ? "العمولات" : "Commissions"}</p>
+                  <p className="text-2xl font-bold text-white">{totals.commission.toFixed(2)}</p>
+                </div>
+                <DollarSign className="w-10 h-10 text-fuchsia-400 opacity-50" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 border border-cyan-500/30 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm">{isArabic ? "الإكراميات" : "Tips"}</p>
+                  <p className="text-2xl font-bold text-white">{totals.tips.toFixed(2)}</p>
+                </div>
+                <DollarSign className="w-10 h-10 text-cyan-400 opacity-50" />
               </div>
             </div>
             <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-4">
@@ -248,6 +274,8 @@ export default function PayrollPageEnhanced() {
                 <tr className="border-b border-white/20">
                   <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "الموظف" : "Employee"}</th>
                   <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "الأساسي" : "Base"}</th>
+                  <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "العمولة" : "Commission"}</th>
+                  <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "الإكرامية" : "Tips"}</th>
                   <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "السلف المخصومة" : "Advances"}</th>
                   <th className="text-right py-3 px-4 text-white font-bold">{isArabic ? "الصافي" : "Net"}</th>
                 </tr>
@@ -257,6 +285,8 @@ export default function PayrollPageEnhanced() {
                   <tr key={l.id} className="border-b border-white/10 hover:bg-white/5 transition">
                     <td className="py-3 px-4 text-white">{employeeName(l.employeeId)}</td>
                     <td className="py-3 px-4 text-right text-gray-300">{l.baseSalary.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-right text-fuchsia-300">{l.commissionAmount.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-right text-cyan-300">{l.tipsAmount.toFixed(3)}</td>
                     <td className="py-3 px-4 text-right text-orange-400">-{l.advancesDeducted.toFixed(3)}</td>
                     <td className="py-3 px-4 text-right text-white font-bold">{l.netSalary.toFixed(3)}</td>
                   </tr>
@@ -264,6 +294,8 @@ export default function PayrollPageEnhanced() {
                 <tr className="border-t-2 border-white/30 font-bold">
                   <td className="py-3 px-4 text-white">{isArabic ? "الإجمالي" : "Total"}</td>
                   <td className="py-3 px-4 text-right text-white">{totals.base.toFixed(3)}</td>
+                  <td className="py-3 px-4 text-right text-white">{totals.commission.toFixed(3)}</td>
+                  <td className="py-3 px-4 text-right text-white">{totals.tips.toFixed(3)}</td>
                   <td className="py-3 px-4 text-right text-orange-400">-{totals.advances.toFixed(3)}</td>
                   <td className="py-3 px-4 text-right text-white">{totals.net.toFixed(3)}</td>
                 </tr>

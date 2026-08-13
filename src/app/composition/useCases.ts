@@ -1,7 +1,7 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
 import { Result, BookingInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance } from "../../domain/entities";
-import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
+import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, CompleteAppointmentInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
@@ -32,6 +32,7 @@ export const useCases = {
     create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
     markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
+    complete: async (id: string, input: CompleteAppointmentInput) => getRepositoryBundle().appointmentAdapter.complete(id, input),
     delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
     sendReminder: async (_id: string): Promise<Result<void, any>> => ({ ok: true, data: undefined }),
   },

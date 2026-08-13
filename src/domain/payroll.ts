@@ -1,13 +1,17 @@
 /**
- * Payroll domain rules (Phase 1)
+ * Payroll domain rules (Phase 1 → Phase 2)
  * ---------------------------------
- * Single source of truth for salary math so the Supabase adapter and the
- * unit tests agree exactly. Mirrors the approach in pos.calculations.test.ts.
+ * Single source of truth for salary math so the Supabase adapter, the
+ * create_payroll_run_v1 RPC and the unit tests agree exactly.
  *
- * Model for a single salon (1-3 staff):
- *   net_salary = max(0, base_salary - advances_deducted)
+ * Model:
+ *   net_salary = max(0, base_salary + commission + tips - advances_deducted)
  *   advances_deducted = sum of APPROVED advance amounts for the employee
  *                       in the same YYYY-MM as the payroll run.
+ *   commission/tips    = ledger-derived totals for the same month (the DB
+ *                        commission_ledger and invoices.tips_amount are
+ *                        authoritative; these params are the rolled-up
+ *                        amounts the RPC already summed).
  */
 
 /** Round to 3 decimal places (OMR uses millis) to avoid float drift. */
@@ -16,13 +20,21 @@ function round3(n: number): number {
 }
 
 /**
- * Net salary after subtracting the advances deducted in the same month.
- * Never negative (a salary cannot go below zero).
+ * Net salary = base + commission + tips - advances, floored at zero.
+ * Commission and tips default to 0 so callers that only know base/advances
+ * keep working unchanged.
  */
-export function computePayrollNetSalary(baseSalary: number, advancesDeducted: number): number {
+export function computePayrollNetSalary(
+  baseSalary: number,
+  advancesDeducted: number,
+  commission: number = 0,
+  tips: number = 0
+): number {
   const base = Number(baseSalary) || 0;
   const deducted = Number(advancesDeducted) || 0;
-  return round3(Math.max(0, base - deducted));
+  const comm = Number(commission) || 0;
+  const gratuity = Number(tips) || 0;
+  return round3(Math.max(0, base + comm + gratuity - deducted));
 }
 
 /**

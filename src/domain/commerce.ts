@@ -76,7 +76,22 @@ export function validateCheckoutContract(payload: CheckoutPayload): string[] {
   if (typeof payload.employeeId !== "string" || payload.employeeId.trim().length === 0) {
     errors.push("Employee details are missing");
   }
-  if (!isPaymentMethod(payload.paymentMethod)) errors.push("Unsupported payment method");
+  // Split tenders supersede the single method; when absent the single method
+  // remains required (backward compatible with the v1 checkout contract).
+  if (Array.isArray(payload.payments) && payload.payments.length > 0) {
+    payload.payments.forEach((tender) => {
+      if (!tender || !isPaymentMethod(tender.method)) {
+        errors.push("Unsupported payment method");
+        return;
+      }
+      if (!isPositiveMoney(tender.amount)) errors.push("Split tender amount must be positive");
+      if (tender.tip !== undefined && !isNonNegativeMoney(tender.tip)) {
+        errors.push("Tip must be a non-negative finite amount");
+      }
+    });
+  } else if (!isPaymentMethod(payload.paymentMethod)) {
+    errors.push("Unsupported payment method");
+  }
   if (!isNonNegativeMoney(payload.discountAmount ?? 0)) errors.push("Discount must be a non-negative finite amount");
   if (!Array.isArray(payload.items) || payload.items.length === 0) {
     errors.push("Cart must not be empty");

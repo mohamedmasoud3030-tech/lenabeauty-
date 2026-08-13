@@ -4,7 +4,8 @@ import { resolve } from "node:path";
 const dir = resolve(process.cwd(), "supabase/migrations");
 const compareText = (left, right) => left.localeCompare(right);
 const MIGRATION_ID_PATTERN = /^\d{14}$/;
-const EXTENSION_PATTERN = /CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+([\w]+)/gi;
+// Extension names may be quoted (e.g. CREATE EXTENSION IF NOT EXISTS "pgcrypto").
+const EXTENSION_PATTERN = /CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+"?([\w]+)"?/gi;
 const files = readdirSync(dir).filter((file) => file.endsWith(".sql"));
 const sorted = [...files].sort(compareText);
 
@@ -37,9 +38,16 @@ for (const file of sorted) {
   }
 }
 
+// Extensions that MUST be explicitly created before they are used.
+//
+// `gen_random_uuid()` is intentionally NOT paired with pgcrypto: since
+// PostgreSQL 13 it is a core function (Supabase runs PG 15+), so it requires
+// no extension. Only functions that still live in the pgcrypto extension
+// (crypt(), pgp_sym_encrypt(), gen_salt(), ...) justify a pgcrypto ordering
+// requirement.
 const requiredPatterns = [
   ["btree_gist", /EXCLUDE\s+USING\s+gist|gist\s*\(/i],
-  ["pgcrypto", /gen_random_uuid\s*\(/i],
+  ["pgcrypto", /\bcrypt\s*\(|pgp_sym_encrypt\s*\(|gen_salt\s*\(/i],
   ["pg_trgm", /gin_trgm_ops|gist_trgm_ops|similarity\s*\(/i],
 ];
 

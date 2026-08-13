@@ -58,6 +58,10 @@ const canonicalMigrations = [
   "20260811004100_checkout_overload_repair.sql",
   "20260811004200_gift_card_redemption_units_repair.sql",
   "20260811004300_refund_status_repair.sql",
+  "20260813000001_payroll_rls_and_roles.sql",
+  "20260813000002_commission_and_atomic_payroll.sql",
+  "20260813000003_checkout_v2_and_service_execution.sql",
+  "20260813000004_spa_resource_booking.sql",
 ];
 
 function parseEnvFile(path) {

@@ -145,6 +145,11 @@ export default function AppointmentsPage() {
   const [noShowFeeAmount, setNoShowFeeAmount] = useState(0);
   const [chargeNoShowFee, setChargeNoShowFee] = useState(true);
   const [noShowNote, setNoShowNote] = useState("");
+  // "Complete Appointment" → atomic service-execution payment flow
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeMethod, setCompleteMethod] = useState<"cash" | "card" | "transfer">("cash");
+  const [completeDiscount, setCompleteDiscount] = useState(0);
+  const [completeBusy, setCompleteBusy] = useState(false);
 
   // Status filter: ALL | SCHEDULED | COMPLETED | CANCELLED | NO_SHOW
   const [statusFilter, setStatusFilter] = useState<"ALL" | AppointmentStatus>("ALL");
@@ -250,6 +255,40 @@ export default function AppointmentsPage() {
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * Completing an appointment is a service execution, not a bare status flip:
+   * the atomic RPC creates the invoice + payment, consumes package sessions,
+   * accrues staff commission and material usage, then marks the appointment
+   * COMPLETED — all in one transaction.
+   */
+  async function submitComplete() {
+    if (!editApptId) return;
+    if (isNaN(Number(completeDiscount)) || Number(completeDiscount) < 0) {
+      showToast('error', t("Error"), t("Discount cannot be negative"));
+      return;
+    }
+    setCompleteBusy(true);
+    try {
+      const res = await unwrap(useCases.appointments.complete(editApptId, {
+        paymentMethod: completeMethod,
+        discountAmount: Number(completeDiscount) || 0,
+      }));
+      showToast('success', t("Success"),
+        `${t("Appointment updated successfully")} — ${res.checkout.invoice.serialNumber || res.checkout.invoice.id}`);
+      setCompleteOpen(false);
+      setOpen(false);
+      await load();
+    } catch (err: any) {
+      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      } else {
+        showToast('error', t("Error"), err?.message || String(err));
+      }
+    } finally {
+      setCompleteBusy(false);
     }
   }
 
@@ -1099,7 +1138,7 @@ export default function AppointmentsPage() {
                   {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <div className="grid grid-cols-2 gap-3">
                       <button
-                        onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.COMPLETED); }}
+                        onClick={() => setCompleteOpen(true)}
                         disabled={busy}
                         className="h-12 rounded-2xl bg-success/10 text-success border border-success/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-success hover:text-white transition-all active:scale-95"
                       >
@@ -1138,6 +1177,85 @@ export default function AppointmentsPage() {
                     <CheckCircle2 className="h-6 w-6 relative z-10" />
                     <span className="text-base sm:text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
                   </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Complete appointment: collect payment then run the atomic service execution */}
+      <AnimatePresence>
+        {completeOpen && (
+          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setCompleteOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="relative w-full max-w-md rounded-[2rem] border border-border bg-card shadow-2xl p-6 space-y-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-success/10 flex items-center justify-center text-success">
+                  <CheckCircle2 className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">{t("Complete Appointment")}</h2>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    {t("Invoice, payment and entitlements are recorded atomically")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">
+                  {t("Payment Method")}
+                </label>
+                <select
+                  value={completeMethod}
+                  onChange={(e) => setCompleteMethod(e.target.value as "cash" | "card" | "transfer")}
+                  className="w-full appearance-none rounded-[1.5rem] border border-border bg-card px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all cursor-pointer"
+                >
+                  <option value="cash">{t("Cash")}</option>
+                  <option value="card">{t("Card")}</option>
+                  <option value="transfer">{t("Transfer")}</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">
+                  {t("Discount Amount")}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  className="w-full rounded-[1.5rem] border border-border bg-card px-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 outline-none transition-all"
+                  value={completeDiscount}
+                  onChange={(e) => setCompleteDiscount(Number(e.target.value) || 0)}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setCompleteOpen(false)}
+                  className="flex-1 h-12 rounded-2xl bg-muted text-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-muted/70 transition-all"
+                >
+                  {t("Cancel")}
+                </button>
+                <button
+                  onClick={() => void submitComplete()}
+                  disabled={completeBusy}
+                  className="flex-1 h-12 rounded-2xl bg-success text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-all active:scale-95"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {completeBusy ? t("Processing...") : t("Confirm & Complete")}
+                </button>
               </div>
             </motion.div>
           </div>

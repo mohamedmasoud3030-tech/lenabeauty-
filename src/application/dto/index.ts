@@ -2,6 +2,17 @@ import { Appointment, Customer, Employee, Expense, Invoice, Product, Service, Ce
 
 export type PaymentMethod = "cash" | "card" | "transfer";
 
+/**
+ * A single tender within a split payment. `amount` is the cash value of this
+ * tender (they must sum to the invoice total); `tip` is optional gratuity on
+ * top of the service amount and is never commissioned.
+ */
+export interface SplitTender {
+  method: PaymentMethod;
+  amount: number;
+  tip?: number;
+}
+
 export interface ServiceCheckoutItem {
   type: "service";
   serviceId: string;
@@ -63,6 +74,29 @@ export interface CheckoutPayload {
   items: CheckoutItem[];
   /** Optional customer-owned entitlement redemptions (packages / gift cards). */
   entitlementRedemptions?: EntitlementRedemptionInput[];
+  /**
+   * Optional split tenders. When supplied they replace the single
+   * `paymentMethod` tender and MUST sum to the invoice total; each may carry
+   * an optional `tip`. The database enforces the full-balance rule.
+   */
+  payments?: SplitTender[];
+}
+
+/** Input for completing an appointment through the atomic service-execution RPC. */
+export interface CompleteAppointmentInput {
+  /** Set by the repository from the method argument; optional for callers. */
+  appointmentId?: string;
+  /** Acting employee for the checkout (defaults to the appointment's employee). */
+  employeeId?: string;
+  paymentMethod?: PaymentMethod;
+  discountAmount?: number;
+  useLoyaltyPoints?: boolean;
+  giftCardCode?: string;
+  entitlementRedemptions?: EntitlementRedemptionInput[];
+  /** Split tenders (sum must equal the service total after discounts). */
+  payments?: SplitTender[];
+  /** Final price override for STARTING_FROM services. */
+  finalPrice?: number;
 }
 
 export interface InvoicePrintData {

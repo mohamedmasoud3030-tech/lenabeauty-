@@ -1,6 +1,6 @@
 import {
   AuthRepository, CustomerRepository, EmployeeRepository, ServiceRepository,
-  AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository,
+  AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository, CheckoutResult,
   SettingsRepository, DashboardRepository, ReportRepository, Result, DomainError, AuthError,
   BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository,
   EntitlementRepository,
@@ -25,13 +25,12 @@ import {
   mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
-import { computePayrollNetSalary, sumAdvancesForMonth, parsePeriodMonth } from "../../domain/payroll";
 import {
   requiredText, optionalText, nonNegativeNumber, positiveNumber, positiveInteger, nonNegativeInteger,
   percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField,
   DomainValidationError, ValidationIssue, FieldResult,
 } from "../../domain/validation";
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload, EntitlementSummary } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload, EntitlementSummary, CompleteAppointmentInput } from "../../application/dto";
 import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 import { validateCheckoutContract } from "../../domain/commerce";
 import { localDateRangeISO } from "../../shared/dateRange";
@@ -809,6 +808,70 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     }
   }
 
+  async complete(id: string, input: CompleteAppointmentInput): Promise<Result<{ appointment: Appointment; checkout: CheckoutResult }, DomainError>> {
+    const centerRes = getCenterIdFor("Appointment.complete");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const splitPayments = Array.isArray(input.payments) && input.payments.length > 0
+        ? input.payments.map((t) => ({ method: t.method, amount: t.amount, tip: t.tip ?? 0 }))
+        : null;
+
+      const { data, error } = await getSupabaseClient().rpc('complete_appointment_v1', {
+        p_center_id: centerRes.data,
+        p_appointment_id: input.appointmentId,
+        p_payment_method: input.paymentMethod ?? 'cash',
+        p_discount_amount: input.discountAmount ?? 0,
+        p_use_loyalty_points: input.useLoyaltyPoints || false,
+        p_gift_card_code: input.giftCardCode || null,
+        p_entitlement_redemptions: input.entitlementRedemptions?.length ? input.entitlementRedemptions : null,
+        p_payments: splitPayments,
+        p_final_price: input.finalPrice ?? null,
+      });
+
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Appointment.complete") };
+        }
+        return { ok: false, error: createQueryError("Appointment.complete", error.message) };
+      }
+
+      const row = (data || {}) as any;
+      if (!row.appointment) {
+        return { ok: false, error: createQueryError("Appointment.complete", "Invalid response from service-execution RPC") };
+      }
+      const checkout = row.checkout || {};
+      return {
+        ok: true,
+        data: {
+          appointment: mapAppointment(row.appointment),
+          checkout: {
+            invoice: mapInvoice(checkout.invoice),
+            total: Number(checkout.total) || 0,
+            earned: Number(checkout.earned) || 0,
+            giftCardRedeemed: Number(checkout.gift_card_redeemed) || 0,
+            entitlementRedeemed: Number(checkout.entitlement_redeemed) || 0,
+            giftCardsIssued: Array.isArray(checkout.gift_cards_issued) ? checkout.gift_cards_issued : [],
+            packageEntitlements: Array.isArray(checkout.package_entitlements) ? checkout.package_entitlements : [],
+            tips: Number(checkout.tips) || 0,
+            cogs: Number(checkout.cogs) || 0,
+            commission: Number(checkout.commission) || 0,
+            payments: Array.isArray(checkout.payments)
+              ? checkout.payments.map((p: any) => ({
+                  id: String(p.id),
+                  amount: Number(p.amount) || 0,
+                  method: String(p.method),
+                  tip: Number(p.tip) || 0,
+                  status: String(p.status),
+                }))
+              : [],
+          },
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Appointment.complete", (e as Error).message) };
+    }
+  }
+
   async delete(id: string): Promise<Result<void, DomainError>> {
     const centerRes = getCenterIdFor("Appointment.delete");
     if (!centerRes.ok) return centerRes as any;
@@ -1068,7 +1131,7 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
 }
 
 class SupabaseInvoiceAdapter implements InvoiceRepository {
-  async checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number, giftCardRedeemed?: number, entitlementRedeemed?: number, giftCardsIssued?: { code: string; gift_card_id: string; value: number }[], packageEntitlements?: string[] }, DomainError>> {
+  async checkout(payload: CheckoutPayload): Promise<Result<CheckoutResult, DomainError>> {
     const contractErrors = validateCheckoutContract(payload);
     if (contractErrors.length > 0) {
       return {
@@ -1083,9 +1146,74 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
     const centerRes = getCenterIdFor("Invoice.checkout");
     if (!centerRes.ok) return centerRes as any;
 
+    const splitPayments = Array.isArray(payload.payments) && payload.payments.length > 0
+      ? payload.payments.map((t) => ({ method: t.method, amount: t.amount, tip: t.tip ?? 0 }))
+      : null;
+
+    try {
+      // Prefer the v2 checkout (split tenders + tips + commission + BOM); fall
+      // back to the v1 pipeline when v2 has not been deployed yet, so a
+      // partially-migrated backend never bricks the POS.
+      const { data, error } = await getSupabaseClient().rpc('process_checkout_v2', {
+        p_center_id: centerRes.data,
+        p_customer_id: payload.customerId,
+        p_employee_id: payload.employeeId,
+        p_payment_method: payload.paymentMethod,
+        p_discount_amount: payload.discountAmount ?? 0,
+        p_use_loyalty_points: payload.useLoyaltyPoints || false,
+        p_items: payload.items,
+        p_gift_card_code: payload.giftCardCode || null,
+        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? payload.entitlementRedemptions : null,
+        p_payments: splitPayments,
+        p_appointment_id: null,
+      });
+
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return this.checkoutV1Fallback(payload, centerRes.data);
+        }
+        return { ok: false, error: createQueryError("Invoice.checkout", error.message) };
+      }
+
+      if (!data || typeof data !== 'object') {
+        return { ok: false, error: createQueryError("Invoice.checkout", "Invalid response from checkout RPC") };
+      }
+
+      const row = data as any;
+      return {
+        ok: true,
+        data: {
+          invoice: mapInvoice(row.invoice),
+          total: Number(row.total) || 0,
+          earned: Number(row.earned) || 0,
+          giftCardRedeemed: Number(row.gift_card_redeemed) || 0,
+          entitlementRedeemed: Number(row.entitlement_redeemed) || 0,
+          giftCardsIssued: Array.isArray(row.gift_cards_issued) ? row.gift_cards_issued : [],
+          packageEntitlements: Array.isArray(row.package_entitlements) ? row.package_entitlements : [],
+          tips: Number(row.tips) || 0,
+          cogs: Number(row.cogs) || 0,
+          commission: Number(row.commission) || 0,
+          payments: Array.isArray(row.payments)
+            ? row.payments.map((p: any) => ({
+                id: String(p.id),
+                amount: Number(p.amount) || 0,
+                method: String(p.method),
+                tip: Number(p.tip) || 0,
+                status: String(p.status),
+              }))
+            : [],
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Invoice.checkout", (e as Error).message) };
+    }
+  }
+
+  /** Backward-compatible single-tender path for pre-v2 backends. */
+  private async checkoutV1Fallback(payload: CheckoutPayload, centerId: string): Promise<Result<CheckoutResult, DomainError>> {
     try {
       const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {
-        p_center_id: centerRes.data,
+        p_center_id: centerId,
         p_customer_id: payload.customerId,
         p_employee_id: payload.employeeId,
         p_payment_method: payload.paymentMethod,
@@ -1095,23 +1223,18 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
         p_gift_card_code: payload.giftCardCode || null,
         p_entitlement_redemptions: payload.entitlementRedemptions?.length ? payload.entitlementRedemptions : null
       });
-      
       if (error) {
-        // Handle missing RPC function specifically.
-        // PostgREST returns PGRST202 or Postgres returns 42883 if not found.
         if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
-           return { ok: false, error: createUnsupportedWriteError("Invoice.checkout") };
+          return { ok: false, error: createUnsupportedWriteError("Invoice.checkout") };
         }
         return { ok: false, error: createQueryError("Invoice.checkout", error.message) };
       }
-      
       if (!data || typeof data !== 'object') {
-         return { ok: false, error: createQueryError("Invoice.checkout", "Invalid response from checkout RPC") };
+        return { ok: false, error: createQueryError("Invoice.checkout", "Invalid response from checkout RPC") };
       }
-
       const row = data as any;
-      return { 
-        ok: true, 
+      return {
+        ok: true,
         data: {
           invoice: mapInvoice(row.invoice),
           total: Number(row.total) || 0,
@@ -1122,7 +1245,6 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
           packageEntitlements: Array.isArray(row.package_entitlements) ? row.package_entitlements : []
         }
       };
-
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Invoice.checkout", (e as Error).message) };
     }
@@ -3078,89 +3200,31 @@ class SupabasePayrollAdapter implements PayrollRepository {
   async createRun(input: { periodMonth: string; notes?: string }): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>> {
     const centerRes = getCenterIdFor("Payroll.createRun");
     if (!centerRes.ok) return centerRes as any;
-    const centerId = centerRes.data;
     try {
-      const { year, month } = parsePeriodMonth(input.periodMonth);
-      const monthStart = new Date(Date.UTC(year, month - 1, 1));
-      const monthEnd = new Date(Date.UTC(year, month, 1));
-
-      const client = getSupabaseClient();
-
-      // Active employees for this center
-      const { data: employees, error: empErr } = await client
-        .from('employees')
-        .select('*')
-        .eq('center_id', centerId)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      if (empErr) return { ok: false, error: createQueryError("Payroll.createRun", empErr.message) };
-
-      // APPROVED advances in the same month (candidates to deduct)
-      const { data: advances, error: advErr } = await client
-        .from('employee_advances')
-        .select('*')
-        .eq('center_id', centerId)
-        .eq('status', 'APPROVED')
-        .gte('advance_date', monthStart.toISOString())
-        .lt('advance_date', monthEnd.toISOString());
-      if (advErr) return { ok: false, error: createQueryError("Payroll.createRun", advErr.message) };
-
-      const advanceRows = (advances || []) as any[];
-
-      // Build the payroll run
-      const { data: runRow, error: runErr } = await client
-        .from('payroll_runs')
-        .insert({ center_id: centerId, period_month: input.periodMonth, notes: input.notes || null })
-        .select()
-        .maybeSingle();
-      if (runErr) {
-        const msg = runErr.code === '23505'
+      // Atomic: the RPC creates the run, its line items and marks the deducted
+      // advances in a single transaction — no partially-applied payroll.
+      const { data, error } = await getSupabaseClient().rpc('create_payroll_run_v1', {
+        p_center_id: centerRes.data,
+        p_period_month: input.periodMonth,
+        p_notes: input.notes || null,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Payroll.createRun") };
+        }
+        const msg = error.code === '23505'
           ? 'A payroll run for this month already exists.'
-          : runErr.message;
+          : error.message;
         return { ok: false, error: createQueryError("Payroll.createRun", msg) };
       }
-      if (!runRow) return { ok: false, error: createQueryError("Payroll.createRun", "No data returned after insert") };
-
-      const lineRows = (employees || []).map((emp: any) => {
-        const empAdvances = advanceRows.filter((a) => a.employee_id === emp.id);
-        const advancesDeducted = sumAdvancesForMonth(
-          empAdvances.map((a: any) => ({ amount: a.amount, advanceDate: a.advance_date })),
-          year,
-          month
-        );
-        const netSalary = computePayrollNetSalary(Number(emp.base_salary) || 0, advancesDeducted);
-        return {
-          center_id: centerId,
-          payroll_run_id: runRow.id,
-          employee_id: emp.id,
-          base_salary: Number(emp.base_salary) || 0,
-          advances_deducted: advancesDeducted,
-          net_salary: netSalary
-        };
-      });
-
-      const { data: insertedLines, error: lineErr } = await client
-        .from('payroll_line_items')
-        .insert(lineRows)
-        .select();
-      if (lineErr) return { ok: false, error: createQueryError("Payroll.createRun", lineErr.message) };
-
-      // Mark the deducted advances so they are not double-counted.
-      const deductedIds = advanceRows.map((a) => a.id);
-      if (deductedIds.length > 0) {
-        await client
-          .from('employee_advances')
-          .update({ status: 'DEDUCTED', deducted_in_run_id: runRow.id })
-          .eq('center_id', centerId)
-          .in('id', deductedIds);
-      }
-
+      const row = (data || {}) as any;
+      if (!row.run) return { ok: false, error: createQueryError("Payroll.createRun", "Invalid response from payroll RPC") };
       return {
         ok: true,
         data: {
-          run: mapPayrollRun(runRow),
-          lines: (insertedLines || []).map(mapPayrollLineItem)
-        }
+          run: mapPayrollRun(row.run),
+          lines: Array.isArray(row.lines) ? row.lines.map(mapPayrollLineItem) : [],
+        },
       };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Payroll.createRun", (e as Error).message) };
@@ -3170,22 +3234,19 @@ class SupabasePayrollAdapter implements PayrollRepository {
   async deleteRun(id: string): Promise<Result<void, DomainError>> {
     const centerRes = getCenterIdFor("Payroll.deleteRun");
     if (!centerRes.ok) return centerRes as any;
-    const centerId = centerRes.data;
     try {
-      const client = getSupabaseClient();
-      // Release the advances tied to this run so a corrected run can re-deduct them.
-      await client
-        .from('employee_advances')
-        .update({ status: 'APPROVED', deducted_in_run_id: null })
-        .eq('center_id', centerId)
-        .eq('deducted_in_run_id', id);
-
-      const { error } = await client
-        .from('payroll_runs')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerId);
-      if (error) return { ok: false, error: createQueryError("Payroll.deleteRun", error.message) };
+      // Atomic: releases the deducted advances and removes the run + lines in
+      // one transaction.
+      const { error } = await getSupabaseClient().rpc('delete_payroll_run_v1', {
+        p_center_id: centerRes.data,
+        p_run_id: id,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Payroll.deleteRun") };
+        }
+        return { ok: false, error: createQueryError("Payroll.deleteRun", error.message) };
+      }
       return { ok: true, data: undefined };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Payroll.deleteRun", (e as Error).message) };

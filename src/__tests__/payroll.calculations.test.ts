@@ -2,17 +2,25 @@ import { describe, expect, it } from "vitest";
 import { computePayrollNetSalary, sumAdvancesForMonth, parsePeriodMonth } from "../domain/payroll";
 
 /**
- * Payroll calculation invariants — must mirror the Supabase adapter
- * (SupabasePayrollAdapter.createRun) which calls these exact functions.
+ * Payroll calculation invariants — must mirror the create_payroll_run_v1 RPC:
  *
- *   net_salary        = max(0, base_salary - advances_deducted)
+ *   net_salary        = max(0, base_salary + commission + tips - advances)
  *   advances_deducted = SUM(amount) of APPROVED advances for the employee
  *                       in the same YYYY-MM as the payroll run.
  */
-describe("Payroll calculations (mirror Supabase adapter)", () => {
+describe("Payroll calculations (mirror the atomic payroll RPC)", () => {
   it("net salary = base - advances", () => {
     expect(computePayrollNetSalary(500, 100)).toBe(400);
     expect(computePayrollNetSalary(450, 50)).toBe(400);
+  });
+
+  it("adds commission and tips on top of base before advances", () => {
+    expect(computePayrollNetSalary(500, 100, 50, 20)).toBe(470);
+    expect(computePayrollNetSalary(500, 0, 50, 0)).toBe(550);
+  });
+
+  it("floors at zero even with negative advances", () => {
+    expect(computePayrollNetSalary(300, 500, 0, 0)).toBe(0);
   });
 
   it("net salary never goes negative when advances exceed base", () => {

@@ -76,8 +76,7 @@ export function mapEmployee(row: unknown): Employee {
     isActive: typeof row.is_active === "boolean" ? row.is_active : true,
     createdAt: parseDate(row.created_at, "created_at", "mapEmployee"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapEmployee"),
-    // Missing from schema but required by domain optionally
-    monthCommissionTotal: 0 
+    monthCommissionTotal: Number(row.month_commission_total) || 0,
   };
 }
 
@@ -753,6 +752,8 @@ export function mapPayrollLineItem(row: unknown): PayrollLineItem {
     employeeId: row.employee_id,
     employeeName: typeof row.employee_name === "string" ? row.employee_name : undefined,
     baseSalary: Number(row.base_salary) || 0,
+    commissionAmount: Number(row.commission_amount) || 0,
+    tipsAmount: Number(row.tips_amount) || 0,
     advancesDeducted: Number(row.advances_deducted) || 0,
     netSalary: Number(row.net_salary) || 0,
     notes: typeof row.notes === "string" ? row.notes : undefined,

@@ -53,6 +53,13 @@ export interface AppointmentRepository {
   create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   update(id: string, data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   markNoShow(id: string, input?: { chargeNoShowFee?: boolean; note?: string }): Promise<Result<{ appointment: Appointment; chargedAmount: number }, DomainError>>;
+  /**
+   * Execute the appointment's service atomically: creates the invoice +
+   * payment(s), consumes package sessions, accrues commission and material
+   * usage, then marks the appointment COMPLETED. Never leaves a COMPLETED
+   * appointment without its checkout.
+   */
+  complete(id: string, input: CompleteAppointmentInput): Promise<Result<{ appointment: Appointment; checkout: CheckoutResult }, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
@@ -71,18 +78,28 @@ export interface ExpenseRepository {
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, InventoryForecastRow, FinancialForecastSummary, EntitlementSummary } from "../../application/dto";
+import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, ClientPortalSession, ClientPortalProfile, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput, InventoryForecastRow, FinancialForecastSummary, EntitlementSummary, CompleteAppointmentInput } from "../../application/dto";
+
+export interface CheckoutResult {
+  invoice: Invoice;
+  total: number;
+  earned: number;
+  giftCardRedeemed?: number;
+  entitlementRedeemed?: number;
+  giftCardsIssued?: { code: string; gift_card_id: string; value: number }[];
+  packageEntitlements?: string[];
+  /** Gratuity collected (never commissioned). */
+  tips?: number;
+  /** Cost of materials consumed (service BOM). */
+  cogs?: number;
+  /** Service commission accrued on net paid service revenue. */
+  commission?: number;
+  /** Split tenders recorded for this invoice. */
+  payments?: { id: string; amount: number; method: string; tip: number; status: string }[];
+}
 
 export interface InvoiceRepository {
-  checkout(payload: CheckoutPayload): Promise<Result<{
-    invoice: Invoice;
-    total: number;
-    earned: number;
-    giftCardRedeemed?: number;
-    entitlementRedeemed?: number;
-    giftCardsIssued?: { code: string; gift_card_id: string; value: number }[];
-    packageEntitlements?: string[];
-  }, DomainError>>;
+  checkout(payload: CheckoutPayload): Promise<Result<CheckoutResult, DomainError>>;
   getForPrint(id: string): Promise<Result<InvoicePrintData, DomainError>>;
 }
 

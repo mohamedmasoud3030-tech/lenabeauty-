@@ -467,6 +467,8 @@ export interface PayrollLineItem {
   employeeId: string;
   employeeName?: string;
   baseSalary: number;
+  commissionAmount: number;
+  tipsAmount: number;
   advancesDeducted: number;
   netSalary: number;
   notes?: string;

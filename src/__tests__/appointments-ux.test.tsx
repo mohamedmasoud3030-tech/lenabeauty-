@@ -105,7 +105,13 @@ describe("Appointments operational UX", () => {
         },
       ],
     } as any);
-    const updateSpy = vi.spyOn(useCases.appointments, "update").mockResolvedValue({ ok: true, data: {} } as any);
+    const completeSpy = vi.spyOn(useCases.appointments, "complete").mockResolvedValue({
+      ok: true,
+      data: {
+        appointment: { id: "a1", status: "COMPLETED" },
+        checkout: { invoice: { id: "inv-1", serialNumber: "INV-1" }, total: 5, earned: 5 },
+      },
+    } as any);
 
     renderPage();
 
@@ -117,9 +123,15 @@ describe("Appointments operational UX", () => {
     expect(screen.getByText(i18n.t("Complete Appointment"))).toBeInTheDocument();
     expect(screen.getByText(i18n.t("Cancel Appointment"))).toBeInTheDocument();
 
+    // Completion is a service execution: it collects payment, then runs the
+    // atomic RPC (never a bare status flip).
     fireEvent.click(screen.getByText(i18n.t("Complete Appointment")));
+    fireEvent.click(screen.getByText(i18n.t("Confirm & Complete")));
 
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith("a1", { status: "COMPLETED" }));
+    await waitFor(() => expect(completeSpy).toHaveBeenCalledWith("a1", {
+      paymentMethod: "cash",
+      discountAmount: 0,
+    }));
   });
 
   it("cancels a scheduled appointment from the edit dialog", async () => {
