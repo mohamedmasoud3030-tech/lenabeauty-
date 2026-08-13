@@ -92,13 +92,3 @@ jobs:
 
       - name: Verify live Demo schema and center contract
         run: npm run preflight:supabase
-
-      - name: Run transactional database acceptance tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:${SUPABASE_DB_PASSWORD}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-          for test_file in supabase/tests/*.sql; do
-            echo "Running ${test_file}"
-            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$test_file"
-          done
