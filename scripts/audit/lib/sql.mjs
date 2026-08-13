@@ -1,6 +1,6 @@
 // Shared helpers for the Lena Beauty database contract audit.
 //
-// This module contains *only* deterministic, side-effect-free utilities:
+// This module contains only deterministic, side-effect-free utilities:
 // migration discovery, canonical ordering, a dollar-quote-aware SQL statement
 // splitter, the PGlite compatibility preamble, and the documented translation
 // layer for constructs that PGlite cannot natively execute.
@@ -30,14 +30,67 @@ export function automatedMigrations(migrations = discoverMigrations()) {
   return migrations.filter((m) => m.file !== MANUAL_BOOTSTRAP_FILE);
 }
 
+// --- statement splitting ---------------------------------------------------
+
+const isWordChar = (c) => (c >= "0" && c <= "9") || (c >= "A" && c <= "Z") || (c >= "a" && c <= "z") || c === "_";
+
+/** If `sql[i]` starts a skip-able token, return the index just past it; else -1. */
+function skipTokenEnd(sql, i, n) {
+  const ch = sql[i];
+  const next = sql[i + 1];
+
+  if (ch === "-" && next === "-") {
+    let j = i;
+    while (j < n && sql[j] !== "\n") j += 1;
+    return j;
+  }
+  if (ch === "/" && next === "*") {
+    let j = i + 2;
+    while (j < n && !(sql[j] === "*" && sql[j + 1] === "/")) j += 1;
+    return Math.min(n, j + 2);
+  }
+  if (ch === "$") {
+    return dollarQuoteEnd(sql, i, n);
+  }
+  if (ch === "'") {
+    return singleQuoteEnd(sql, i, n);
+  }
+  if (ch === '"') {
+    let j = i + 1;
+    while (j < n && sql[j] !== '"') j += 1;
+    return Math.min(n, j + 1);
+  }
+  return -1;
+}
+
+/** End index of a dollar-quoted string starting at `sql[i] === "$"`, or -1 if not a tag. */
+function dollarQuoteEnd(sql, i, n) {
+  let j = i + 1;
+  while (j < n && isWordChar(sql[j])) j += 1;
+  if (sql[j] !== "$") return -1;
+  const tag = sql.slice(i, j + 1);
+  const close = sql.indexOf(tag, j + 1);
+  return close === -1 ? n : close + tag.length;
+}
+
+/** End index of a single-quoted string starting at `sql[i] === "'"`. */
+function singleQuoteEnd(sql, i, n) {
+  let j = i + 1;
+  while (j < n) {
+    if (sql[j] === "'" && sql[j + 1] === "'") {
+      j += 2;
+      continue;
+    }
+    if (sql[j] === "'") return j + 1;
+    j += 1;
+  }
+  return n;
+}
+
 /**
- * Split a SQL script into top-level statements on `;`, honouring:
- *   - single-quoted strings ('' escape),
- *   - double-quoted identifiers,
- *   - line comments (`--`) and block comments (/* ... *​/),
- *   - dollar-quoted bodies (`$$ ... $$`, `$tag$ ... $tag$`).
- *
- * Returns non-empty, trimmed statements (without the trailing `;`).
+ * Split a SQL script into top-level statements on `;`, honouring single-quoted
+ * strings, double-quoted identifiers, line/block comments, and dollar-quoted
+ * bodies. Returns non-empty, trimmed statements (without the trailing `;`).
  */
 export function splitStatements(sql) {
   const statements = [];
@@ -47,78 +100,21 @@ export function splitStatements(sql) {
 
   while (i < n) {
     const ch = sql[i];
-    const next = sql[i + 1];
-
-    // Line comment.
-    if (ch === "-" && next === "-") {
-      const start = i;
-      while (i < n && sql[i] !== "\n") i++;
-      current += sql.slice(start, i);
+    const skipEnd = skipTokenEnd(sql, i, n);
+    if (skipEnd !== -1) {
+      current += sql.slice(i, skipEnd);
+      i = skipEnd;
       continue;
     }
-
-    // Block comment.
-    if (ch === "/" && next === "*") {
-      const start = i;
-      i += 2;
-      while (i < n && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
-      i = Math.min(n, i + 2);
-      current += sql.slice(start, i);
-      continue;
-    }
-
-    // Dollar-quoted string.
-    if (ch === "$") {
-      const tag = /^\$[A-Za-z0-9_]*\$/.exec(sql.slice(i));
-      if (tag) {
-        const start = i;
-        i += tag[0].length;
-        while (i < n && sql.slice(i, i + tag[0].length) !== tag[0]) i++;
-        i = Math.min(n, i + tag[0].length);
-        current += sql.slice(start, i);
-        continue;
-      }
-    }
-
-    // Single-quoted string.
-    if (ch === "'") {
-      const start = i;
-      i++;
-      while (i < n) {
-        if (sql[i] === "'" && sql[i + 1] === "'") {
-          i += 2;
-          continue;
-        }
-        if (sql[i] === "'") {
-          i++;
-          break;
-        }
-        i++;
-      }
-      current += sql.slice(start, i);
-      continue;
-    }
-
-    // Double-quoted identifier.
-    if (ch === '"') {
-      const start = i;
-      i++;
-      while (i < n && sql[i] !== '"') i++;
-      i = Math.min(n, i + 1);
-      current += sql.slice(start, i);
-      continue;
-    }
-
     if (ch === ";") {
       const stmt = current.trim();
       if (stmt) statements.push(stmt);
       current = "";
-      i++;
+      i += 1;
       continue;
     }
-
     current += ch;
-    i++;
+    i += 1;
   }
 
   const tail = current.trim();
@@ -130,17 +126,11 @@ export function splitStatements(sql) {
  * Compatibility preamble executed before replay so the canonical migrations
  * resolve against PGlite, which ships a bare PostgreSQL (no Supabase auth /
  * storage schemas, no `anon` / `authenticated` roles).
- *
- * These stubs mirror ONLY the subset of the Supabase-managed schema that the
- * canonical migrations reference (auth.users, auth.uid(), storage.buckets,
- * storage.objects). They are deterministic and are never persisted anywhere.
  */
 export function compatPreamble() {
   return [
-    // Roles referenced by GRANT / REVOKE in canonical migrations.
     "CREATE ROLE anon",
     "CREATE ROLE authenticated",
-    // auth schema: only what migrations reference (auth.users + auth.uid()).
     "CREATE SCHEMA IF NOT EXISTS auth",
     `CREATE TABLE IF NOT EXISTS auth.users (
        id uuid PRIMARY KEY,
@@ -150,7 +140,6 @@ export function compatPreamble() {
      RETURNS uuid
      LANGUAGE sql STABLE
      AS $$ SELECT '00000000-0000-0000-0000-000000000000'::uuid $$`,
-    // storage schema: only what migrations reference.
     "CREATE SCHEMA IF NOT EXISTS storage",
     `CREATE TABLE IF NOT EXISTS storage.buckets (
        id text PRIMARY KEY,
@@ -169,51 +158,50 @@ export function compatPreamble() {
   ];
 }
 
-/** Statements that must be skipped because PGlite lacks the host extension. */
-const SKIPPABLE_EXTENSION = /^\s*CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS/i;
+// --- translation layer -----------------------------------------------------
+
+const CREATE_EXTENSION_RE = /\bCREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+"?(\w+)"?/i;
+
+// The exclusion constraint depends on btree_gist's gist `=` operator class,
+// which PGlite does not bundle. `[^;]*?` and `[^)]*` are bounded (cannot cross
+// `;` or `)`), so this replacement is linear with respect to the input.
+const EXCLUDE_RE =
+  /ALTER\s+TABLE\s+(?:public\.)?appointments\s+ADD\s+CONSTRAINT\s+appointments_no_scheduled_staff_overlap\s+EXCLUDE\s+USING\s+gist\s*\([^;]*?WHERE\s*\([^)]*\)\s*;/is;
 
 /**
  * Documented, deterministic translation of canonical migration text so it can
  * be replayed against PGlite:
  *
- *  1. `CREATE EXTENSION IF NOT EXISTS "pgcrypto"` — skipped: `gen_random_uuid()`
- *     is a PostgreSQL-core function since PG13 (PGlite ships PG 18.3), so no
- *     pgcrypto is required by any canonical migration.
- *  2. `CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions` —
- *     skipped: btree_gist is a Supabase-hosted contrib extension that PGlite
- *     does not bundle.
- *  3. The `appointments_no_scheduled_staff_overlap` EXCLUDE constraint depends
- *     on btree_gist's gist operator class for `=`; it is replaced with a
- *     NOTICE surrogate so the enclosing DO block still executes. The canonical
- *     EXCLUDE DDL is preserved verbatim in the schema inventory with
- *     `replayable: false`.
+ *  1. `CREATE EXTENSION IF NOT EXISTS ...` is skipped (logged, not run):
+ *     `gen_random_uuid()` is PostgreSQL-core since PG13, and `btree_gist` is a
+ *     Supabase-hosted contrib extension.
+ *  2. The `appointments_no_scheduled_staff_overlap` EXCLUDE constraint is
+ *     replaced with a `RAISE NOTICE` surrogate inside its enclosing DO block;
+ *     the canonical DDL is preserved verbatim in the inventory.
  *
- * Returns `{ sql, translations }` where `translations` is a list of
- * `{ type, file, detail }` records for the report.
+ * Returns `{ sql, translations }`.
  */
 export function translateMigration(content) {
   const translations = [];
-  let sql = content;
+  const statements = splitStatements(content);
 
-  // 1 + 2: strip extension creation statements (they are logged, not run).
-  sql = sql.replace(
-    /^\s*CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+[^;]+;\s*$/gim,
-    (m) => {
-      const ext = /([A-Za-z0-9_"]+)\s*;?\s*$/.exec(m.trim())?.[1] ?? "unknown";
+  const kept = [];
+  for (const stmt of statements) {
+    const extMatch = CREATE_EXTENSION_RE.exec(stmt);
+    if (extMatch) {
       translations.push({
         type: "extension-skipped",
-        detail: `CREATE EXTENSION ${ext} (provided by Supabase host; not bundled in PGlite)`,
+        detail: `CREATE EXTENSION ${extMatch[1]} (provided by Supabase host; not bundled in PGlite)`,
       });
-      return "";
-    },
-  );
+      continue;
+    }
+    kept.push(stmt);
+  }
 
-  // 3: EXCLUDE constraint (btree_gist gist `=` operator class unavailable).
-  const excludePattern =
-    /ALTER\s+TABLE\s+(?:public\.)?appointments\s+ADD\s+CONSTRAINT\s+appointments_no_scheduled_staff_overlap\s+EXCLUDE\s+USING\s+gist\s*\([\s\S]*?\)\s*WHERE\s*\([^)]*\)\s*;/i;
-  if (excludePattern.test(sql)) {
+  let sql = kept.join(";\n") + ";\n";
+  if (EXCLUDE_RE.test(sql)) {
     sql = sql.replace(
-      excludePattern,
+      EXCLUDE_RE,
       "RAISE NOTICE 'replay: appointments_no_scheduled_staff_overlap EXCLUDE constraint preserved from canonical SQL (btree_gist unavailable in PGlite)';",
     );
     translations.push({

@@ -4,6 +4,57 @@ import { discoverMigrations, automatedMigrations, compatPreamble, translateMigra
 // @ts-ignore — PGlite ships its own types; relaxed here for the WASM import
 import { PGlite } from "@electric-sql/pglite";
 
+const KNOWN_NON_IDEMPOTENT = [
+  { file: "20260628000012_customer_experience_forecasting_accounting_advanced.sql", policy: "customer_reviews_select_policy" },
+  { file: "20260810000005_security_hardening_auth.sql", policy: "center_settings_insert" },
+];
+
+function hasExplicitTransaction(sql: string): boolean {
+  return /^\s*BEGIN\s*;/m.test(sql) && /^\s*COMMIT\s*;/m.test(sql);
+}
+
+async function replayInto(db: PGlite) {
+  for (const stmt of compatPreamble()) await db.exec(stmt);
+  const failures: string[] = [];
+  const nonIdem: string[] = [];
+  for (const m of automatedMigrations(discoverMigrations())) {
+    const { sql } = translateMigration(m.content);
+    const wrapped = !hasExplicitTransaction(sql);
+    if (wrapped) await db.exec("BEGIN");
+    try {
+      await db.exec(sql);
+      if (wrapped) await db.exec("COMMIT");
+    } catch (e: any) {
+      try { await db.exec("ROLLBACK"); } catch { /* no tx */ }
+      failures.push(`${m.file}: ${String(e?.message ?? e).split("\n")[0]}`);
+    }
+  }
+  // idempotency pass
+  for (const m of automatedMigrations(discoverMigrations())) {
+    const { sql } = translateMigration(m.content);
+    const wrapped = !hasExplicitTransaction(sql);
+    if (wrapped) await db.exec("BEGIN");
+    try {
+      await db.exec(sql);
+      if (wrapped) await db.exec("COMMIT");
+    } catch (e: any) {
+      try { await db.exec("ROLLBACK"); } catch { /* no tx */ }
+      nonIdem.push(`${m.file}: ${String(e?.message ?? e).split("\n")[0]}`);
+    }
+  }
+  return { failures, nonIdem };
+}
+
+async function functionSignatureSet(db: PGlite): Promise<string[]> {
+  const r = await db.query(
+    `SELECT n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' AS sig
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname IN ('public','app_private') AND p.prokind = 'f'
+     ORDER BY sig`,
+  );
+  return r.rows.map((x) => (x as { sig: string }).sig);
+}
+
 /**
  * Integration test: the canonical migrations must replay deterministically
  * against PGlite (bare PostgreSQL), with exactly one documented manual
@@ -13,59 +64,36 @@ describe("audit: deterministic migration replay (PGlite)", () => {
   it("replays 28 automated migrations; excludes 1 manual bootstrap; surfaces only known idempotency gaps", async () => {
     const all = discoverMigrations();
     expect(all).toHaveLength(29);
-
     const automated = automatedMigrations(all);
     expect(automated).toHaveLength(28);
 
     const db = new PGlite();
-    for (const stmt of compatPreamble()) {
-      await db.exec(stmt);
-    }
+    const { failures, nonIdem } = await replayInto(db);
 
-    // Replay pass.
-    const failures = [];
-    for (const m of automated) {
-      const { sql } = translateMigration(m.content);
-      try {
-        await db.exec(sql);
-      } catch (e: any) {
-        failures.push({ file: m.file, error: String(e?.message ?? e).split("\n")[0] });
-        try { await db.exec("ROLLBACK"); } catch { /* no tx */ }
-      }
-    }
     expect(failures).toEqual([]);
-
-    // Idempotency pass.
-    const nonIdempotent = [];
-    for (const m of automated) {
-      const { sql } = translateMigration(m.content);
-      try {
-        await db.exec(sql);
-      } catch (e: any) {
-        nonIdempotent.push({ file: m.file, error: String(e?.message ?? e).split("\n")[0] });
-        try { await db.exec("ROLLBACK"); } catch { /* no tx */ }
-      }
-    }
-
-    // The only expected idempotency gaps are two policies created without a
-    // DROP POLICY IF EXISTS guard. Assert exactly those.
-    const known = [
-      { file: "20260628000012_customer_experience_forecasting_accounting_advanced.sql", policy: "customer_reviews_select_policy" },
-      { file: "20260810000005_security_hardening_auth.sql", policy: "center_settings_insert" },
-    ];
-    expect(nonIdempotent).toHaveLength(known.length);
-    for (const k of known) {
-      const found = nonIdempotent.find((n) => n.file === k.file);
+    expect(nonIdem).toHaveLength(KNOWN_NON_IDEMPOTENT.length);
+    for (const k of KNOWN_NON_IDEMPOTENT) {
+      const found = nonIdem.find((n) => n.startsWith(k.file));
       expect(found, `expected idempotency gap in ${k.file}`).toBeTruthy();
-      expect(found!.error).toContain(`policy "${k.policy}"`);
+      expect(found).toContain(`policy "${k.policy}"`);
     }
 
-    // Sanity: the replayed catalog has the expected core tables.
     const r = await db.query(
       "SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'",
     );
     expect((r.rows[0] as { n: number }).n).toBeGreaterThanOrEqual(30);
-
     await db.close();
   }, 60_000);
+
+  it("replay is deterministic: two fresh replays produce the same catalog signature", async () => {
+    const dbA = new PGlite();
+    const dbB = new PGlite();
+    await replayInto(dbA);
+    await replayInto(dbB);
+    const sigA = await functionSignatureSet(dbA);
+    const sigB = await functionSignatureSet(dbB);
+    expect(sigA).toEqual(sigB);
+    await dbA.close();
+    await dbB.close();
+  }, 120_000);
 });

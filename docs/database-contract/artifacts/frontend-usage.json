@@ -1,6 +1,5 @@
 {
-  "generated_at": "2026-08-13T09:12:27.295Z",
-  "files": 191,
+  "files": 193,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -16,8 +15,8 @@
       ],
       "filters": [
         "center_id",
-        "entry_date",
-        "created_at"
+        "created_at",
+        "entry_date"
       ],
       "single": []
     },
@@ -61,7 +60,8 @@
                 "id",
                 "name",
                 "phone"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "employees",
@@ -69,7 +69,8 @@
               "columns": [
                 "id",
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "services",
@@ -80,9 +81,20 @@
                 "category_id",
                 "price",
                 "duration_minutes"
-              ]
+              ],
+              "embeds": []
             }
           ]
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         },
         {
           "hasStar": true,
@@ -110,33 +122,35 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "employees",
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "services",
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         }
       ],
       "filters": [
-        "customer_id",
         "center_id",
+        "customer_id",
         "date_time",
         "id"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -160,6 +174,16 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
@@ -169,7 +193,6 @@
         "id"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -190,7 +213,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         }
@@ -218,15 +242,17 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
         "center_id"
       ],
       "single": [
-        "maybeSingle",
-        "maybeSingle",
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -236,6 +262,128 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "service_packages",
+              "join": "default",
+              "columns": [
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "gift_cards",
+              "join": "default",
+              "columns": [
+                "code"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "invoices",
+              "join": "default",
+              "columns": [
+                "serial_number"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "package_entitlement_units",
+              "join": "default",
+              "columns": [
+                "id",
+                "center_id",
+                "entitlement_id",
+                "service_id",
+                "total_units",
+                "used_units",
+                "created_at"
+              ],
+              "embeds": [
+                {
+                  "relation": "services",
+                  "join": "default",
+                  "columns": [
+                    "name"
+                  ],
+                  "embeds": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "service_packages",
+              "join": "default",
+              "columns": [
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "gift_cards",
+              "join": "default",
+              "columns": [
+                "code"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "invoices",
+              "join": "default",
+              "columns": [
+                "serial_number"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "package_entitlement_units",
+              "join": "default",
+              "columns": [
+                "id",
+                "center_id",
+                "entitlement_id",
+                "service_id",
+                "total_units",
+                "used_units",
+                "created_at"
+              ],
+              "embeds": [
+                {
+                  "relation": "services",
+                  "join": "default",
+                  "columns": [
+                    "name"
+                  ],
+                  "embeds": []
+                }
+              ]
+            }
+          ]
+        },
         {
           "hasStar": false,
           "columns": [
@@ -247,8 +395,8 @@
       ],
       "filters": [
         "center_id",
-        "customer_id",
-        "created_at"
+        "created_at",
+        "customer_id"
       ],
       "single": []
     },
@@ -305,6 +453,16 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
@@ -313,9 +471,6 @@
         "id"
       ],
       "single": [
-        "maybeSingle",
-        "maybeSingle",
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -344,18 +499,27 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
-        "center_id",
         "advance_date",
+        "center_id",
+        "deducted_in_run_id",
         "employee_id",
         "id",
-        "status",
-        "deducted_in_run_id"
+        "status"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -365,6 +529,16 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
         {
           "hasStar": true,
           "columns": [],
@@ -393,12 +567,11 @@
       ],
       "filters": [
         "center_id",
-        "name",
         "id",
-        "is_active"
+        "is_active",
+        "name"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -425,14 +598,16 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "invoices",
               "join": "default",
               "columns": [
                 "serial_number"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -448,10 +623,10 @@
       ],
       "filters": [
         "center_id",
-        "entry_type",
-        "invoice_id",
+        "created_at",
         "entitlement_id",
-        "created_at"
+        "entry_type",
+        "invoice_id"
       ],
       "single": []
     },
@@ -461,6 +636,16 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
         {
           "hasStar": true,
           "columns": [],
@@ -489,12 +674,11 @@
       ],
       "filters": [
         "center_id",
+        "created_at",
         "date",
-        "id",
-        "created_at"
+        "id"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -512,8 +696,8 @@
       ],
       "filters": [
         "center_id",
-        "gift_card_id",
-        "created_at"
+        "created_at",
+        "gift_card_id"
       ],
       "single": []
     },
@@ -558,28 +742,32 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "products",
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "service_packages",
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "gift_cards",
               "join": "default",
               "columns": [
                 "code"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -594,8 +782,8 @@
         }
       ],
       "filters": [
-        "invoice_id",
-        "created_at"
+        "created_at",
+        "invoice_id"
       ],
       "single": []
     },
@@ -619,7 +807,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -659,7 +848,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             },
             {
               "relation": "invoice_items",
@@ -674,11 +864,41 @@
                 "item_name",
                 "price",
                 "quantity",
-                "created_at",
-                "services (name)",
-                "products (name)",
-                "service_packages (name)",
-                "gift_cards (code)"
+                "created_at"
+              ],
+              "embeds": [
+                {
+                  "relation": "services",
+                  "join": "default",
+                  "columns": [
+                    "name"
+                  ],
+                  "embeds": []
+                },
+                {
+                  "relation": "products",
+                  "join": "default",
+                  "columns": [
+                    "name"
+                  ],
+                  "embeds": []
+                },
+                {
+                  "relation": "service_packages",
+                  "join": "default",
+                  "columns": [
+                    "name"
+                  ],
+                  "embeds": []
+                },
+                {
+                  "relation": "gift_cards",
+                  "join": "default",
+                  "columns": [
+                    "code"
+                  ],
+                  "embeds": []
+                }
               ]
             }
           ]
@@ -704,12 +924,12 @@
         }
       ],
       "filters": [
-        "customer_id",
         "center_id",
-        "status",
+        "created_at",
+        "customer_id",
         "date",
         "id",
-        "created_at"
+        "status"
       ],
       "single": [
         "maybeSingle"
@@ -788,12 +1008,17 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
         "center_id",
-        "payroll_run_id",
-        "created_at"
+        "created_at",
+        "payroll_run_id"
       ],
       "single": []
     },
@@ -817,15 +1042,19 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
         "center_id",
-        "run_date",
-        "id"
+        "id",
+        "run_date"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -835,6 +1064,16 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
         {
           "hasStar": true,
           "columns": [],
@@ -869,14 +1108,13 @@
       ],
       "filters": [
         "center_id",
-        "name",
         "id",
         "is_active",
-        "track_inventory",
-        "stock_quantity"
+        "name",
+        "stock_quantity",
+        "track_inventory"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -902,11 +1140,10 @@
         }
       ],
       "filters": [
-        "id",
-        "center_id"
+        "center_id",
+        "id"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     },
@@ -925,7 +1162,8 @@
               "join": "default",
               "columns": [
                 "*"
-              ]
+              ],
+              "embeds": []
             }
           ]
         }
@@ -952,7 +1190,8 @@
               "join": "default",
               "columns": [
                 "*"
-              ]
+              ],
+              "embeds": []
             }
           ]
         }
@@ -978,7 +1217,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -991,7 +1231,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -1004,7 +1245,8 @@
               "join": "default",
               "columns": [
                 "name"
-              ]
+              ],
+              "embeds": []
             }
           ]
         },
@@ -1016,11 +1258,10 @@
       ],
       "filters": [
         "center_id",
-        "name",
-        "id"
+        "id",
+        "name"
       ],
       "single": [
-        "maybeSingle",
         "maybeSingle"
       ]
     }
@@ -1102,6 +1343,13 @@
         "p_name",
         "p_package_price"
       ]
+    },
+    {
+      "name": "expire_entitlement_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": []
     },
     {
       "name": "mark_appointment_no_show_v1",
@@ -1294,9 +1542,25 @@
         "p_success_url",
         "p_webhook_secret_hint"
       ]
+    },
+    {
+      "name": "void_entitlement_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": []
     }
   ],
   "storage": [
     "center-assets"
+  ],
+  "manual_review": [
+    {
+      "key": "dynamic-from",
+      "reason": "non-literal .from() argument (non-Supabase or dynamic)",
+      "files": [
+        "src/infrastructure/services/printService.ts"
+      ]
+    }
   ]
 }

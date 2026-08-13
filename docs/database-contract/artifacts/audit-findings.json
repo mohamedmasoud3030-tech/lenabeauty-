@@ -1,6 +1,5 @@
 {
   "summary": {
-    "generated_at": "2026-08-13T09:17:24.402Z",
     "schema": {
       "tables": 33,
       "columns": 357,
@@ -12,19 +11,19 @@
       "triggers": 22,
       "views": 0,
       "functions": 38,
-      "policies": 66,
-      "grants": 1094
+      "policies": 65,
+      "grants": 1095
     },
     "frontend": {
       "tables": 27,
-      "rpc": 20,
+      "rpc": 22,
       "storage": 1
     },
     "findings_by_severity": {
-      "high": 1,
+      "high": 4,
       "medium": 5,
-      "low": 0,
-      "info": 1
+      "low": 1,
+      "info": 3
     }
   },
   "findings": [
@@ -32,15 +31,77 @@
       "id": "DB-003",
       "severity": "high",
       "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Re-application rolls back SECURITY DEFINER search_path hardening (fingerprint drift)",
+      "category": "replay-fingerprint-drift",
+      "evidence": "Fingerprints differ (after_first=465cafc48d2bb664e8c2be9fd562247d96659e42631a49380ff9701a9f63417b vs after_repeat=f19b4fddfef00f96b322a13e4e8deda0b0722e33fa55f00953a18af35861f7b6); changed sections: functions, function_acl, policies, grants. 7 SECURITY DEFINER functions revert to unpinned/loose search_path.",
+      "affected": {
+        "functions": [
+          "app_private.is_center_member(_center_id uuid)",
+          "app_private.tier_discount_percent(_total_spent numeric)",
+          "app_private.user_center_ids()",
+          "public.public_center_info_v1(p_center_id uuid)",
+          "public.public_list_services_v1(p_center_id uuid)",
+          "public.public_list_staff_v1(p_center_id uuid)",
+          "public.public_taken_slots_v1(p_center_id uuid, p_day date)"
+        ]
+      },
+      "remediation": "Make the non-idempotent migrations idempotent (DROP POLICY IF EXISTS) so their `SET search_path` hardening survives re-application; then re-verify the fingerprint is stable."
+    },
+    {
+      "id": "DB-004",
+      "severity": "high",
+      "status": "confirmed",
       "needs": "type-update",
       "title": "No committed Supabase-generated TypeScript types; client is untyped",
       "category": "types-missing",
-      "evidence": "src/infrastructure/supabase/client.ts builds `createClient(...)` without a `Database` generic; repository results are read as `any` (no `.returns<T>()`/`.cast<T>()` anywhere in src/). No `Database` type is committed under src/ or a types module.",
+      "evidence": "src/infrastructure/supabase/client.ts builds `createClient(...)` without a `Database` generic; repository results are read as `any`; no `.returns<T>()`/`.cast<T>()` anywhere in src/; no `Database` type is committed.",
       "affected": {
         "layer": "src/infrastructure/supabase/**",
         "route": "all data access"
       },
-      "remediation": "Generate and commit `supabase gen types` output and thread the `Database` generic through the client and repositories."
+      "remediation": "Generate `supabase gen types` against the canonical verified schema (NOT a possibly drifted hosted DB), commit it, thread the `Database` generic through the client, and add typed DTO/mapper + runtime contract tests for non-table (jsonb/record) RPC return shapes, which generated types cannot fully guarantee."
+    },
+    {
+      "id": "DB-005",
+      "severity": "high",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Sensitive payroll tables writable by any center member (no governed role)",
+      "category": "rls-role-governance",
+      "evidence": "attendance_records (policy \"attendance_tenant\" FOR ALL USING app_private.is_center_member(center_id)); employee_advances (policy \"advances_tenant\" FOR ALL USING app_private.is_center_member(center_id)); payroll_line_items (policy \"payroll_lines_tenant\" FOR ALL USING app_private.is_center_member(center_id)); payroll_runs (policy \"payroll_runs_tenant\" FOR ALL USING app_private.is_center_member(center_id))",
+      "affected": {
+        "tables": [
+          "attendance_records",
+          "employee_advances",
+          "payroll_line_items",
+          "payroll_runs"
+        ]
+      },
+      "remediation": "Split into per-operation policies and gate payroll writes (attendance_records, employee_advances, payroll_runs, payroll_line_items) on a governed role check (user_metadata.role IN ADMIN/MANAGER), not center membership alone."
+    },
+    {
+      "id": "DB-006",
+      "severity": "high",
+      "status": "confirmed",
+      "needs": "manual-review",
+      "title": "Frontend-referenced RPCs with no client-role EXECUTE grant",
+      "category": "rpc-grant-missing",
+      "evidence": "public_cancel_booking_v1, public_center_info_v1, public_client_portal_login_v1, public_client_portal_profile_v2, public_create_booking_v1, public_list_services_v1, public_list_staff_v1, public_reschedule_booking_v1, public_taken_slots_v1 have EXECUTE only for the owner (postgres); no anon/authenticated grant. The security-grant-repair migration deliberately left the public booking/portal RPCs un-granted; the frontend still references them.",
+      "affected": {
+        "rpcs": [
+          "public_cancel_booking_v1",
+          "public_center_info_v1",
+          "public_client_portal_login_v1",
+          "public_client_portal_profile_v2",
+          "public_create_booking_v1",
+          "public_list_services_v1",
+          "public_list_staff_v1",
+          "public_reschedule_booking_v1",
+          "public_taken_slots_v1"
+        ]
+      },
+      "remediation": "For each: grant EXECUTE to the intended client role (if the feature should be live) OR mark the frontend call as not-yet-enabled and remove it from the live surface."
     },
     {
       "id": "DB-001",
@@ -73,7 +134,7 @@
       "remediation": "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly."
     },
     {
-      "id": "DB-004",
+      "id": "DB-008",
       "severity": "medium",
       "status": "confirmed",
       "needs": "future-migration",
@@ -84,10 +145,10 @@
         "table": "payments",
         "constraint": "payments_invoice_center_fk"
       },
-      "remediation": "Validate the constraint (`ALTER TABLE ... VALIDATE CONSTRAINT ...`) after confirming no orphaned rows; a NOT VALID FK does not protect pre-existing rows."
+      "remediation": "Query for orphaned/cross-center rows, then `ALTER TABLE ... VALIDATE CONSTRAINT ...` to extend protection to existing rows."
     },
     {
-      "id": "DB-005",
+      "id": "DB-009",
       "severity": "medium",
       "status": "confirmed",
       "needs": "future-migration",
@@ -98,16 +159,16 @@
         "table": "services",
         "constraint": "services_category_fk"
       },
-      "remediation": "Validate the constraint (`ALTER TABLE ... VALIDATE CONSTRAINT ...`) after confirming no orphaned rows; a NOT VALID FK does not protect pre-existing rows."
+      "remediation": "Query for orphaned/cross-center rows, then `ALTER TABLE ... VALIDATE CONSTRAINT ...` to extend protection to existing rows."
     },
     {
-      "id": "DB-006",
+      "id": "DB-010",
       "severity": "medium",
       "status": "confirmed",
-      "needs": "future-migration",
-      "title": "Duplicate foreign key pair: payments -> invoices",
+      "needs": "manual-review",
+      "title": "Overlapping foreign keys on the same target: payments -> invoices",
       "category": "fk-duplicate",
-      "evidence": "Two FKs reference the same target: FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT NOT VALID AND FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT",
+      "evidence": "Two FKs reference the same target: FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT NOT VALID AND FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT. The composite (invoice_id, center_id) FK enforces tenant integrity and is NOT redundant.",
       "affected": {
         "table": "payments",
         "constraints": [
@@ -115,10 +176,40 @@
           "payments_invoice_id_fkey"
         ]
       },
-      "remediation": "Keep the intended FK and drop the redundant one (a composite NOT VALID FK and a simple FK on the same column are usually the legacy + the fix)."
+      "remediation": "1) Query orphaned/cross-center payment rows; 2) validate payments_invoice_center_fk; 3) inspect PostgREST relationship behaviour and every frontend embed; 4) only then decide whether the simple invoice_id FK can be removed. Do not remove either FK until API relationship behaviour is verified."
     },
     {
       "id": "DB-007",
+      "severity": "low",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Internal app_private routines retain PUBLIC EXECUTE: app_private.maintain_entitlement_balance_v1",
+      "category": "internal-routine-exposure",
+      "evidence": "These app_private routines keep the default PostgreSQL PUBLIC EXECUTE grant (created after the least-privilege repair).",
+      "affected": {
+        "functions": [
+          "app_private.maintain_entitlement_balance_v1"
+        ]
+      },
+      "remediation": "REVOKE EXECUTE ... FROM PUBLIC on internal routines; ensure default privileges suppress PUBLIC for the creating role."
+    },
+    {
+      "id": "DB-011",
+      "severity": "info",
+      "status": "confirmed",
+      "needs": "manual-review",
+      "title": "Scanner limitation (manual review): dynamic-from",
+      "category": "scanner-limitation",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts",
+      "affected": {
+        "files": [
+          "src/infrastructure/services/printService.ts"
+        ]
+      },
+      "remediation": "Manually confirm this construct against the canonical schema."
+    },
+    {
+      "id": "DB-012",
       "severity": "info",
       "status": "confirmed",
       "needs": "no-code-change",
@@ -128,7 +219,20 @@
       "affected": {
         "object": "public.appointments (EXCLUDE constraint)"
       },
-      "remediation": "No code change. Constraint exists in canonical migration and applies in Supabase; PGlite replay records it as canonical-only."
+      "remediation": "No code change; the constraint exists in the canonical migration and applies in Supabase."
+    },
+    {
+      "id": "DB-013",
+      "severity": "info",
+      "status": "confirmed",
+      "needs": "manual-review",
+      "title": "RPC return shapes (jsonb/record) are untyped at rest",
+      "category": "rpc-return-shape",
+      "evidence": "Several RPCs return jsonb or record (e.g. process_checkout_v1, public_*_v1) and the frontend reads specific fields; generated types cannot fully guarantee these shapes.",
+      "affected": {
+        "layer": "RPC results"
+      },
+      "remediation": "Add typed DTO/mapper + runtime contract tests for non-table RPC results."
     }
   ]
 }

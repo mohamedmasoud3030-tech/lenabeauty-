@@ -6,6 +6,12 @@
 // filters (.eq/.in/.order/...), and single/maybe-single row expectations.
 //
 // Emits docs/database-contract/artifacts/frontend-usage.json. No network, no DB.
+//
+// LIMITATIONS (see `manual_review` + docs/database-contract/02): the scanner
+// matches static string literals only. Dynamic/variable table or RPC names,
+// computed keys, and non-literal arguments are recorded as manual-review items
+// and are NOT proven. RPC overloads are matched by name only; RPC return shapes
+// (jsonb/record) and storage bucket policies are not statically resolved.
 
 import { readdirSync, readFileSync, statSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, relative, dirname } from "node:path";
@@ -16,6 +22,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ARTIFACTS_DIR = resolve(ROOT, "docs/database-contract/artifacts");
 const SRC_DIR = resolve(ROOT, "src");
 
+const isSpace = (c) => c === " " || c === "\t" || c === "\n" || c === "\r";
+const byLocale = (a, b) => a.localeCompare(b);
+
 function walk(dir) {
   return readdirSync(dir).flatMap((entry) => {
     const p = resolve(dir, entry);
@@ -25,141 +34,286 @@ function walk(dir) {
 
 const sourceFiles = walk(SRC_DIR).filter((p) => /\.(ts|tsx)$/.test(p));
 
-const STRING_RE = /(["'`])((?:(?!\1)[\s\S])*)\1/g;
-
-/** Capture a string literal argument to a named chain method. */
-function chainString(source, method) {
-  const re = new RegExp(`\\.${method}\\s*\\(\\s*(["'\`])((?:(?!\\1)[\\s\\S])*?)\\1`, "g");
-  const out = [];
-  let m;
-  while ((m = re.exec(source)) !== null) {
-    out.push({ index: m.index, value: m[2] });
+/** Find every `.method(` occurrence; returns `[{start, argsStart}]`. */
+function findMethodCalls(source, method) {
+  const needle = `.${method}`;
+  const results = [];
+  let i = 0;
+  while (i < source.length) {
+    const idx = source.indexOf(needle, i);
+    if (idx === -1) break;
+    let j = idx + needle.length;
+    while (j < source.length && isSpace(source[j])) j += 1;
+    if (source[j] === "(") results.push({ start: idx, argsStart: j + 1 });
+    i = idx + needle.length;
   }
-  return out;
+  return results;
 }
 
+/** Read a quoted string literal at argsStart; returns {value, end} or null. */
+function readStringArg(source, argsStart) {
+  let j = argsStart;
+  while (j < source.length && isSpace(source[j])) j += 1;
+  const q = source[j];
+  if (q !== "'" && q !== '"' && q !== "`") return null;
+  return readQuoted(source, j, q);
+}
 
+function readQuoted(source, start, q) {
+  let j = start + 1;
+  let value = "";
+  while (j < source.length) {
+    const c = source[j];
+    if (c === "\\") {
+      value += source[j + 1] ?? "";
+      j += 2;
+      continue;
+    }
+    if (c === q) return { value, end: j + 1 };
+    value += c;
+    j += 1;
+  }
+  return { value, end: j };
+}
+
+/** Read a balanced `{ ... }` starting at `source[i] === "{"`; returns body or null. */
+function readBracedBody(source, i) {
+  if (source[i] !== "{") return null;
+  let depth = 0;
+  let j = i;
+  const n = source.length;
+  while (j < n) {
+    const c = source[j];
+    if (c === "'" || c === '"' || c === "`") {
+      j = readQuoted(source, j, c).end;
+      continue;
+    }
+    if (c === "{") depth += 1;
+    if (c === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(i + 1, j);
+    }
+    j += 1;
+  }
+  return null;
+}
+
+/** Resolve a TS union of string literals declared for identifier `ident`. */
+function resolveRpcUnion(source, ident) {
+  const re = new RegExp(`\\b${ident}\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"(?:\\s*\\|\\s*"(?:[^"\\\\]|\\\\.)*")*)`);
+  const m = re.exec(source);
+  if (!m) return null;
+  return [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
+}
 
 const usage = {
-  generated_at: new Date().toISOString(),
   files: sourceFiles.length,
   tables: [],
   rpc: [],
   storage: [],
+  manual_review: [],
 };
 
 const tableMap = new Map();
 const rpcMap = new Map();
 const storageSet = new Set();
+const manualReview = new Map();
+
+function noteManualReview(key, reason, rel) {
+  if (!manualReview.has(key)) manualReview.set(key, { reason, files: [] });
+  const entry = manualReview.get(key);
+  if (!entry.files.includes(rel)) entry.files.push(rel);
+}
+
+function registerTable(name, rel) {
+  if (!tableMap.has(name)) tableMap.set(name, { table: name, files: [], selects: [], filters: [], single: [] });
+  const entry = tableMap.get(name);
+  if (!entry.files.includes(rel)) entry.files.push(rel);
+  return entry;
+}
+
+function registerRpc(name, args, rel) {
+  if (!rpcMap.has(name)) rpcMap.set(name, { name, files: [], args: new Set() });
+  const entry = rpcMap.get(name);
+  if (!entry.files.includes(rel)) entry.files.push(rel);
+  for (const a of args) entry.args.add(a);
+  return entry;
+}
+
+/** True if the token immediately before `.from` is `Array` or `Buffer`. */
+function isArrayOrBufferFrom(source, start) {
+  let j = start - 1;
+  let word = "";
+  while (j >= 0 && /\w/.test(source[j])) {
+    word = source[j] + word;
+    j -= 1;
+  }
+  return word === "Array" || word === "Buffer";
+}
+
+/** Index of the previous non-whitespace char before `i`, or -1. */
+function prevNonSpace(source, i) {
+  let j = i;
+  while (j >= 0 && isSpace(source[j])) j -= 1;
+  return j >= 0 ? source[j] : "";
+}
+
+/** Resolve a `const NAME = 'literal'` / template-literal in the same file. */
+function resolveConstTemplate(source, ident) {
+  const re = new RegExp(`\\b${ident}\\s*=\\s*`);
+  const m = re.exec(source);
+  if (!m) return null;
+  const pos = m.index + m[0].length;
+  const q = source[pos];
+  if (q !== "'" && q !== '"' && q !== "`") return null;
+  return readQuoted(source, pos, q).value;
+}
 
 for (const path of sourceFiles) {
   const rel = relative(ROOT, path);
   const source = readFileSync(path, "utf8");
 
-  // --- tables: .from('x') excluding .storage.from('x') -------------------
-  for (const { index, value } of chainString(source, "from")) {
-    const before = source.slice(Math.max(0, index - 10), index);
-    if (/\.storage\s*$/.test(before)) continue; // storage bucket, not a table
-    const table = value.trim();
+  // --- tables + storage buckets: .from('x') --------------------------------
+  const froms = [];
+  for (const call of findMethodCalls(source, "from")) {
+    const arg = readStringArg(source, call.argsStart);
+    if (arg === null) {
+      if (!isArrayOrBufferFrom(source, call.start)) {
+        noteManualReview("dynamic-from", "non-literal .from() argument (non-Supabase or dynamic)", rel);
+      }
+      continue;
+    }
+    const isStorage = source.slice(call.start - ".storage".length, call.start) === ".storage";
+    if (isStorage) {
+      storageSet.add(arg.value.trim());
+      continue;
+    }
+    const table = arg.value.trim();
     if (!table || table.includes(" ")) continue;
-    if (!tableMap.has(table)) tableMap.set(table, { table, files: [], selects: [], filters: [], single: [] });
-    const entry = tableMap.get(table);
-    if (!entry.files.includes(rel)) entry.files.push(rel);
+    registerTable(table, rel);
+    froms.push({ index: call.start, table });
   }
 
-  // --- select payloads (associate to nearest preceding .from) ------------
-  const froms = [];
-  for (const m of source.matchAll(/\.from\s*\(\s*(["'`])((?:(?!\1)[\s\S])*?)\1/g)) {
-    const before = source.slice(Math.max(0, m.index - 10), m.index);
-    if (/\.storage\s*$/.test(before)) continue;
-    froms.push({ index: m.index, table: m[2].trim() });
+  // --- select payloads -----------------------------------------------------
+  for (const call of findMethodCalls(source, "select")) {
+    const arg = readStringArg(source, call.argsStart);
+    if (arg === null) {
+      // Empty `.select()`: chained Supabase (preceded by `)`) => all columns;
+      // otherwise a DOM `.select()` (e.g. textarea.select()) => ignore.
+      let j = call.argsStart;
+      while (j < source.length && isSpace(source[j])) j += 1;
+      if (source[j] === ")") {
+        if (prevNonSpace(source, call.start - 1) === ")") {
+          const table = nearestTable(froms, call.start);
+          if (table) registerTable(table, rel).selects.push(parseSelect("*"));
+        }
+        continue;
+      }
+      const identMatch = /^(\w+)/.exec(source.slice(j));
+      if (identMatch) {
+        const resolved = resolveConstTemplate(source, identMatch[1]);
+        if (resolved !== null) {
+          const table = nearestTable(froms, call.start);
+          if (table) registerTable(table, rel).selects.push(parseSelect(resolved));
+          continue;
+        }
+      }
+      noteManualReview("dynamic-select", "non-literal .select() argument", rel);
+      continue;
+    }
+    const table = nearestTable(froms, call.start);
+    if (table) registerTable(table, rel).selects.push(parseSelect(arg.value));
   }
-  for (const { index, value } of chainString(source, "select")) {
-    // nearest preceding from
-    let table = null;
-    for (let i = froms.length - 1; i >= 0; i--) {
-      if (froms[i].index < index) {
-        table = froms[i].table;
-        break;
+
+  // --- filters -------------------------------------------------------------
+  const filterMethods = ["eq", "neq", "gt", "gte", "lt", "lte", "in", "is", "ilike", "like", "contains", "order", "match", "filter"];
+  for (const method of filterMethods) {
+    for (const call of findMethodCalls(source, method)) {
+      const arg = readStringArg(source, call.argsStart);
+      if (arg === null) continue;
+      const col = arg.value.split(",")[0].split("::")[0].trim();
+      if (!col || col.includes(" ")) continue;
+      const table = nearestTable(froms, call.start);
+      if (table) {
+        const f = registerTable(table, rel).filters;
+        if (!f.includes(col)) f.push(col);
       }
     }
-    if (table && tableMap.has(table)) {
-      tableMap.get(table).selects.push(parseSelect(value));
+  }
+
+  // --- single / maybeSingle ------------------------------------------------
+  for (const method of ["maybeSingle", "single"]) {
+    for (const call of findMethodCalls(source, method)) {
+      const table = nearestTable(froms, call.start);
+      if (table) registerTable(table, rel).single.push(method);
     }
   }
 
-  // --- filters ------------------------------------------------------------
-  const filterRe = /\.(eq|neq|gt|gte|lt|lte|in|is|ilike|like|contains|order|match|filter)\s*\(\s*(["'`])((?:(?!\2)[\s\S])*?)\2/g;
-  let fm;
-  while ((fm = filterRe.exec(source)) !== null) {
-    const col = fm[3].split(",")[0].trim().split("::")[0].trim();
-    if (!col || col.includes(" ")) continue;
-    let table = null;
-    for (let i = froms.length - 1; i >= 0; i--) {
-      if (froms[i].index < fm.index) { table = froms[i].table; break; }
+  // --- RPC calls -----------------------------------------------------------
+  for (const call of findMethodCalls(source, "rpc")) {
+    const nameArg = readStringArg(source, call.argsStart);
+    if (nameArg === null) {
+      // dynamic `.rpc(ident, ...)`: try to resolve a union-of-literals type.
+      let j = call.argsStart;
+      while (j < source.length && isSpace(source[j])) j += 1;
+      const identMatch = /^(\w+)/.exec(source.slice(j));
+      if (identMatch) {
+        const names = resolveRpcUnion(source, identMatch[1]);
+        if (names && names.length) {
+          for (const name of names) registerRpc(name, [], rel);
+          continue;
+        }
+      }
+      noteManualReview("dynamic-rpc", "non-literal .rpc() name", rel);
+      continue;
     }
-    if (table && tableMap.has(table)) {
-      const f = tableMap.get(table).filters;
-      if (!f.includes(col)) f.push(col);
-    }
-  }
-
-  // --- single / maybeSingle ----------------------------------------------
-  const singleRe = /\.(maybeSingle|single)\s*\(\s*\)/g;
-  let sm;
-  while ((sm = singleRe.exec(source)) !== null) {
-    let table = null;
-    for (let i = froms.length - 1; i >= 0; i--) {
-      if (froms[i].index < sm.index) { table = froms[i].table; break; }
-    }
-    if (table && tableMap.has(table)) tableMap.get(table).single.push(sm[1]);
-  }
-
-  // --- RPC calls + argument names ----------------------------------------
-  const rpcRe = /\.rpc\s*\(\s*(["'`])([^"'`]+)\1\s*,\s*\{([\s\S]*?)\}/g;
-  let rm;
-  while ((rm = rpcRe.exec(source)) !== null) {
-    const name = rm[2].trim();
-    const args = topLevelObjectKeys(rm[3]);
-    if (!rpcMap.has(name)) rpcMap.set(name, { name, files: [], args: new Set() });
-    const entry = rpcMap.get(name);
-    if (!entry.files.includes(rel)) entry.files.push(rel);
-    args.forEach((a) => entry.args.add(a));
-  }
-  // .rpc('name') without an args object
-  for (const { index, value } of chainString(source, "rpc")) {
-    const name = value.trim();
+    const name = nameArg.value.trim();
     if (!name || name.includes(" ")) continue;
-    if (!rpcMap.has(name)) rpcMap.set(name, { name, files: [], args: new Set() });
-    if (!rpcMap.get(name).files.includes(rel)) rpcMap.get(name).files.push(rel);
-  }
-
-  // --- storage buckets ----------------------------------------------------
-  for (const { index, value } of chainString(source, "from")) {
-    const before = source.slice(Math.max(0, index - 10), index);
-    if (/\.storage\s*$/.test(before)) storageSet.add(value.trim());
+    const args = [];
+    let j = nameArg.end;
+    while (j < source.length && isSpace(source[j])) j += 1;
+    if (source[j] === ",") {
+      j += 1;
+      while (j < source.length && isSpace(source[j])) j += 1;
+      if (source[j] === "{") {
+        const body = readBracedBody(source, j);
+        if (body !== null) args.push(...topLevelObjectKeys(body));
+        else noteManualReview(`rpc-args:${name}`, "unbalanced .rpc() args object", rel);
+      } else {
+        noteManualReview(`rpc-args:${name}`, "non-literal .rpc() args", rel);
+      }
+    }
+    registerRpc(name, args, rel);
   }
 }
 
+/** Nearest preceding `.from(table)` before `index`; returns table or null. */
+function nearestTable(froms, index) {
+  for (let i = froms.length - 1; i >= 0; i -= 1) {
+    if (froms[i].index < index) return froms[i].table;
+  }
+  return null;
+}
+
 usage.tables = [...tableMap.values()]
-  .map((t) => ({ ...t, selects: t.selects, filters: [...new Set(t.filters)] }))
+  .map((t) => ({ table: t.table, files: t.files, selects: t.selects, filters: [...new Set(t.filters)].sort(byLocale), single: [...new Set(t.single)] }))
   .sort((a, b) => a.table.localeCompare(b.table));
 usage.rpc = [...rpcMap.values()]
-  .map((r) => ({ name: r.name, files: r.files, args: [...r.args].sort() }))
+  .map((r) => ({ name: r.name, files: r.files, args: [...r.args].sort(byLocale) }))
   .sort((a, b) => a.name.localeCompare(b.name));
-usage.storage = [...storageSet].sort();
+usage.storage = [...storageSet].sort(byLocale);
+usage.manual_review = [...manualReview.entries()]
+  .map(([key, v]) => ({ key, reason: v.reason, files: v.files }))
+  .sort((a, b) => a.key.localeCompare(b.key));
 
 mkdirSync(ARTIFACTS_DIR, { recursive: true });
 writeFileSync(resolve(ARTIFACTS_DIR, "frontend-usage.json"), JSON.stringify(usage, null, 2) + "\n");
 
-console.log(
-  `scanned ${usage.files} source files; tables=${usage.tables.length} rpc=${usage.rpc.length} storage_buckets=${usage.storage.length}`,
-);
+console.log(`scanned ${usage.files} source files; tables=${usage.tables.length} rpc=${usage.rpc.length} storage_buckets=${usage.storage.length} manual_review=${usage.manual_review.length}`);
 for (const t of usage.tables) {
-  const embeds = t.selects.flatMap((s) => s.embeds.map((e) => e.relation));
-  console.log(
-    `  table ${t.table}: ${t.files.length} file(s), embeds=[${[...new Set(embeds)].join(", ")}]`,
-  );
+  const embeds = [...new Set(t.selects.flatMap((s) => s.embeds.map((e) => e.relation)))];
+  console.log(`  table ${t.table}: ${t.files.length} file(s), embeds=[${embeds.join(", ")}]`);
 }
 for (const r of usage.rpc) console.log(`  rpc ${r.name}: args=[${r.args.join(", ")}]`);
 for (const b of usage.storage) console.log(`  storage bucket: ${b}`);
+for (const m of usage.manual_review) console.log(`  manual_review ${m.key}: ${m.reason} (${m.files.join(", ")})`);

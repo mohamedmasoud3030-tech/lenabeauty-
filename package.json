@@ -15,6 +15,7 @@
     "audit:scan": "node scripts/audit/scan-frontend.mjs",
     "audit:matrix": "node scripts/audit/build-matrix.mjs",
     "audit:all": "npm run audit:replay && npm run audit:scan && npm run audit:matrix",
+    "audit:gate": "node scripts/audit/ci-gate.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test": "vitest run",

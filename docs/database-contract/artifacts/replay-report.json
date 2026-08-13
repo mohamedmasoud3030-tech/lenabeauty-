@@ -11,212 +11,142 @@
     {
       "file": "20260623000001_initial_schema.sql",
       "status": "ok",
-      "statements": 48,
-      "error": null,
-      "translations": [
-        {
-          "type": "extension-skipped",
-          "detail": "CREATE EXTENSION \"pgcrypto\" (provided by Supabase host; not bundled in PGlite)"
-        }
-      ]
+      "error": null
     },
     {
       "file": "20260623000002_enable_rls_and_policies.sql",
       "status": "ok",
-      "statements": 1,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000001_enable_rls.sql",
       "status": "ok",
-      "statements": 52,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000003_checkout_rpc.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000004_vat_support.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000005_tier_discount.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000006_public_booking.sql",
       "status": "ok",
-      "statements": 15,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000007_gift_cards.sql",
       "status": "ok",
-      "statements": 28,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000008_packages_bundles.sql",
       "status": "ok",
-      "statements": 31,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000009_no_show_protection.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000010_notifications_payment_gateway.sql",
       "status": "ok",
-      "statements": 30,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000011_client_portal.sql",
       "status": "ok",
-      "statements": 12,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000012_customer_experience_forecasting_accounting_advanced.sql",
       "status": "ok",
-      "statements": 65,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000013_booking_reschedule_cancel.sql",
       "status": "ok",
-      "statements": 10,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000014_client_portal_lockout.sql",
       "status": "ok",
-      "statements": 8,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000015_attendance_advances_payroll.sql",
       "status": "ok",
-      "statements": 31,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260628000016_validation_constraints.sql",
       "status": "ok",
-      "statements": 26,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260809000001_delivery_security_hardening.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260810000001_fix_invoice_items_packages.sql",
       "status": "ok",
-      "statements": 6,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260810000002_operational_data_integrity.sql",
       "status": "ok",
-      "statements": 54,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260810000003_appointment_overlap_integrity.sql",
       "status": "ok",
-      "statements": 11,
-      "error": null,
-      "translations": [
-        {
-          "type": "extension-skipped",
-          "detail": "CREATE EXTENSION extensions (provided by Supabase host; not bundled in PGlite)"
-        },
-        {
-          "type": "exclude-constraint-surrogated",
-          "detail": "appointments_no_scheduled_staff_overlap EXCLUDE (btree_gist gist `=` opclass) recorded as canonical-only"
-        }
-      ]
+      "error": null
     },
     {
       "file": "20260810000004_btree_gist_extension_schema.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260810000005_security_hardening_auth.sql",
       "status": "ok",
-      "statements": 34,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260810000006_security_grant_repair.sql",
       "status": "ok",
-      "statements": 24,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260811004000_financial_entitlements.sql",
       "status": "ok",
-      "statements": 70,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260811004100_checkout_overload_repair.sql",
       "status": "ok",
-      "statements": 4,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260811004200_gift_card_redemption_units_repair.sql",
       "status": "ok",
-      "statements": 3,
-      "error": null,
-      "translations": []
+      "error": null
     },
     {
       "file": "20260811004300_refund_status_repair.sql",
       "status": "ok",
-      "statements": 3,
-      "error": null,
-      "translations": []
+      "error": null
     }
   ],
   "idempotency": [
@@ -365,17 +295,135 @@
     {
       "file": "20260623000001_initial_schema.sql",
       "type": "extension-skipped",
-      "detail": "CREATE EXTENSION \"pgcrypto\" (provided by Supabase host; not bundled in PGlite)"
+      "detail": "CREATE EXTENSION pgcrypto (provided by Supabase host; not bundled in PGlite)"
     },
     {
       "file": "20260810000003_appointment_overlap_integrity.sql",
       "type": "extension-skipped",
-      "detail": "CREATE EXTENSION extensions (provided by Supabase host; not bundled in PGlite)"
+      "detail": "CREATE EXTENSION btree_gist (provided by Supabase host; not bundled in PGlite)"
     },
     {
       "file": "20260810000003_appointment_overlap_integrity.sql",
       "type": "exclude-constraint-surrogated",
       "detail": "appointments_no_scheduled_staff_overlap EXCLUDE (btree_gist gist `=` opclass) recorded as canonical-only"
     }
-  ]
+  ],
+  "fingerprints": {
+    "after_first_replay": "465cafc48d2bb664e8c2be9fd562247d96659e42631a49380ff9701a9f63417b",
+    "after_repeat": "f19b4fddfef00f96b322a13e4e8deda0b0722e33fa55f00953a18af35861f7b6",
+    "identical": false,
+    "diff": {
+      "changed_sections": [
+        "functions",
+        "function_acl",
+        "policies",
+        "grants"
+      ],
+      "functions": [
+        {
+          "function": "app_private.is_center_member(_center_id uuid)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public, auth"
+            ],
+            "security_definer": true
+          }
+        },
+        {
+          "function": "app_private.tier_discount_percent(_total_spent numeric)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": false
+          },
+          "after": {
+            "config": null,
+            "security_definer": false
+          }
+        },
+        {
+          "function": "app_private.user_center_ids()",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public, auth"
+            ],
+            "security_definer": true
+          }
+        },
+        {
+          "function": "public.public_center_info_v1(p_center_id uuid)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public"
+            ],
+            "security_definer": true
+          }
+        },
+        {
+          "function": "public.public_list_services_v1(p_center_id uuid)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public"
+            ],
+            "security_definer": true
+          }
+        },
+        {
+          "function": "public.public_list_staff_v1(p_center_id uuid)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public"
+            ],
+            "security_definer": true
+          }
+        },
+        {
+          "function": "public.public_taken_slots_v1(p_center_id uuid, p_day date)",
+          "before": {
+            "config": [
+              "search_path=pg_catalog, public, app_private"
+            ],
+            "security_definer": true
+          },
+          "after": {
+            "config": [
+              "search_path=public"
+            ],
+            "security_definer": true
+          }
+        }
+      ]
+    }
+  }
 }

@@ -1,25 +1,23 @@
 # 02 — Contract Matrix
 
-Cross-reference of frontend/application database usage against the replayed schema.
-Machine-readable source: `artifacts/contract-matrix.json` + `artifacts/frontend-usage.json`.
+Cross-reference of frontend/application database usage against the replayed schema, plus
+the RLS operation matrix and the RPC privilege/grant matrix. Machine-readable source:
+`artifacts/contract-matrix.json` + `artifacts/frontend-usage.json`.
 
 ## Frontend usage summary
 
-Scanned 191 `src/**/*.{ts,tsx}` files:
+Scanned 193 `src/**/*.{ts,tsx}` files:
 
 | Surface | Count |
 | --- | --- |
 | Tables read/written via `.from()` | 27 |
-| RPCs invoked via `.rpc()` | 20 |
+| RPCs invoked via `.rpc()` | 22 (20 static + 2 dynamic-dispatch) |
 | Storage buckets via `.storage.from()` | 1 (`center-assets`) |
+| Manual-review items | 1 (documented non-Supabase `.from()` match) |
 
 ## Table resolution
 
-All 27 referenced tables exist in the replayed schema. No missing tables.
-
-| Table | Status |
-| --- | --- |
-| `accounting_journal_entries`, `ai_booking_leads`, `appointments`, `attendance_records`, `center_memberships`, `center_settings`, `customer_entitlements`, `customer_reviews`, `customers`, `employee_advances`, `employees`, `entitlement_ledger`, `expenses`, `gift_card_transactions`, `gift_cards`, `invoice_items`, `invoices`, `notification_settings`, `payment_gateway_settings`, `payments`, `payroll_line_items`, `payroll_runs`, `products`, `service_categories`, `service_files`, `service_packages`, `services` | ✅ resolved |
+All 27 referenced tables exist in the replayed schema. No missing tables or columns.
 
 ## Nested embed FK resolvability (PostgREST)
 
@@ -29,6 +27,7 @@ Every nested embed the frontend requests resolves against a real foreign key.
 | --- | --- | --- |
 | `appointments` → `customers` / `employees` / `services` | to-one | ✅ |
 | `center_memberships` → `centers` | to-one | ✅ |
+| `customer_entitlements` → `customers` / `service_packages` / `gift_cards` / `invoices` / `package_entitlement_units` | to-one/to-many | ✅ |
 | `entitlement_ledger` → `employees` / `invoices` | to-one | ✅ |
 | `invoice_items` → `services` / `products` / `service_packages` / `gift_cards` | to-one | ✅ |
 | `invoices` → `employees` / `customers` | to-one | ✅ |
@@ -37,53 +36,77 @@ Every nested embed the frontend requests resolves against a real foreign key.
 | `service_files` → `service_file_images` | to-many | ✅ |
 | `service_packages` → `service_package_items` | to-many | ✅ |
 
-Two-level embeds (`invoices → invoice_items → {services, products, service_packages,
-gift_cards}`) also resolve: `invoice_items` carries FKs to all four.
+Nested (depth-2) embeds — e.g. `customer_entitlements → package_entitlement_units →
+services`, and `invoices → invoice_items → {services, products, service_packages,
+gift_cards}` — are also parsed and resolve.
 
-Notable syntax handled (and verified) by the scanner:
-- star selects `'*'`
-- `'*, relation(col)'`
-- column-alias embed `'*, images:service_file_images(*)'`
-- join hints `relation!inner(col)` (not currently used, but supported)
-- `::cast` column suffixes
+Notable syntax handled (and verified) by the scanner: `'*'`, `'*, relation(col)'`,
+column-alias embed `'*, images:service_file_images(*)'`, join hints `relation!inner(col)`,
+`::cast` suffixes, constant-backed selects (`ENTITLEMENT_SELECT`), and a TypeScript
+string-literal-union dynamic RPC dispatcher (`runGovernedRpc` → `void_entitlement_v1` /
+`expire_entitlement_v1`).
 
-## RPC contract
+## RLS operation matrix (summary)
 
-All 20 RPCs invoked by the frontend have canonical `SECURITY DEFINER` definitions, and
-every top-level argument the frontend passes matches a declared parameter name
-(`p_*` convention). No missing or extra arguments were found.
+For every frontend-used table, `contract-matrix.json → rls` records `rls_enabled`,
+`rls_forced`, per-operation policies (SELECT/INSERT/UPDATE/DELETE/ALL) with their `using`
+and `with_check` expressions, `membership_only` classification, and `missing_operations`.
 
-| RPC | Args (frontend) | Declared | Result |
+| Table | RLS | Policy model |
+| --- | --- | --- |
+| `appointments`, `customers`, `employees`, `services`, `products`, `expenses` | ✅ | single `FOR ALL TO public` + `is_center_member(center_id)` |
+| `invoices`, `payments`, `gift_cards`, `service_packages` | ✅ | `FOR ... TO authenticated` per operation |
+| `center_settings` | ✅ | SELECT `TO public` + INSERT/UPDATE `TO authenticated` + `ALL` |
+| **`attendance_records`, `employee_advances`, `payroll_runs`, `payroll_line_items`** | ✅ | **single `FOR ALL` + `is_center_member` (any center member can mutate payroll — DB-005)** |
+
+Key gap: most tenant policies authorize by **center membership only**
+(`app_private.is_center_member(center_id)`) and do not require a **governed role**
+(ADMIN/MANAGER). This is acceptable for ordinary business data but is an unresolved security
+gap for the four sensitive payroll tables (DB-005).
+
+## RPC grant matrix (role names)
+
+All 22 frontend-referenced RPCs are `SECURITY DEFINER` with a pinned `search_path`. EXECUTE
+grants are resolved to role names:
+
+| Group | RPCs | EXECUTE roles | Verdict |
 | --- | --- | --- | --- |
-| `process_checkout_v1` | 9 (`p_center_id` … `p_entitlement_redemptions`) | 9 | ✅ |
-| `upsert_payment_gateway_settings_v1` | 12 | 12 | ✅ |
-| `upsert_notification_settings_v1` | 10 | 10 | ✅ |
-| `create_service_file_v1` | 9 | 9 | ✅ |
-| `create_accounting_journal_entry_v1` | 10 | 10 | ✅ |
-| `create_ai_booking_lead_v1` | 7 | 7 | ✅ |
-| `create_customer_review_v1` | 6 | 6 | ✅ |
-| `create_service_package_v1` | 5 | 5 | ✅ |
-| `mark_appointment_no_show_v1` | 4 | 4 | ✅ |
-| `refund_entitlement_v1` | 4 | 4 | ✅ |
-| `rotate_customer_portal_token_v1` | 2 | 2 | ✅ |
-| `public_*` (7 portal RPCs) | 1–7 each | match | ✅ |
+| Staff UI | `process_checkout_v1`, `upsert_*`, `create_*`, `mark_appointment_no_show_v1`, `issue_gift_card_v1`, `refund_entitlement_v1`, `void_entitlement_v1`, `expire_entitlement_v1`, `rotate_customer_portal_token_v1`, `create_accounting_journal_entry_v1`, `create_ai_booking_lead_v1` | `authenticated` | ✅ |
+| Public booking/portal | `public_*_v1` (9 RPCs) | owner only (no `anon`/`authenticated`) | ⚠️ **no client grant (DB-006)** |
 
-### RPC return-shape assumption (manual review)
-
-Several RPCs return opaque `jsonb` or `record` and the frontend reads specific fields
-(`row.invoice`, `row.total`, `row.earned`, `row.gift_card_redeemed`,
-`row.entitlement_redeemed`, portal `record` shapes). These shapes are **not** captured by
-any committed type. This is recorded as finding `DB-003` (untyped client), not as a
-confirmed defect in any individual RPC — the shape can only be verified at runtime today.
+`process_checkout_v1` and the public/portal functions are checked **per overload**
+(signature-level), matching the explicit grants in `20260810000006_security_grant_repair.sql`.
 
 ## Storage contract
 
 - Bucket `center-assets` — referenced by `Settings.uploadLogo`; exists in the canonical
   seed (`INSERT INTO storage.buckets`). ✅
 - Storage RLS policies `center_assets_read/write/update` exist on `storage.objects`. ✅
+  (Storage **policy/bucket contracts** are only confirmed against the canonical SQL, not a
+  live bucket — see scanner limitations below.)
 
 ## Data-layer typing
 
 `src/infrastructure/supabase/client.ts` constructs the client **without** a `Database`
-generic, and repository results are consumed as `any`. There are no `.returns<T>()`,
-`.cast<T>()`, or committed generated types. See `03_VERIFIED_DRIFT_REGISTER.md` (`DB-003`).
+generic, and repository results are consumed as `any`. No committed generated types. See
+`03` (DB-004).
+
+## Scanner limitations (manual-review / unresolved bucket)
+
+`frontend-usage.json → manual_review` lists constructs the scanner cannot prove, and these
+surface as INFO findings in `03`. Confirmed limitations:
+
+- **Dynamic table/RPC names** — `.from(<variable>)` / `.rpc(<variable>)` are not resolvable
+  statically. (One non-Supabase `html2pdf .from(element)` match is recorded as a documented
+  false positive; a genuine TS union dispatcher was resolved.)
+- **Aliases / multiple clients** — the scanner follows `.from/.select/.rpc` chains and
+  resolves `supabase.storage.from`; it does not distinguish multiple client *instances*.
+- **PostgREST embedded relationships** — resolved via FK lookup (depth 1 and 2).
+- **Exact RPC overloads** — matched by name + signature; the frontend calls by name, and the
+  matrix reports each overload's grants.
+- **Storage policies / bucket contracts** — only the bucket *name* is scanned; bucket
+  policies are confirmed against canonical SQL, not a live bucket.
+- **RPC return shapes** — `jsonb`/`record` returns are untyped at rest (DB-013).
+
+The audit therefore **does not claim complete frontend coverage**; regex/tokenizer matching
+is bounded by these documented limitations.

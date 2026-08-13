@@ -2,7 +2,8 @@
 //
 // Cross-references the replayed schema inventory against scanned frontend
 // database usage to produce:
-//   - contract-matrix.json  (table/column/embed/rpc/storage resolution results)
+//   - contract-matrix.json  (table/embed/rpc/storage resolution + RLS op matrix
+//                            + RPC grant matrix)
 //   - audit-findings.json   (stable-ID findings with severity, evidence,
 //                            root-cause category, and remediation direction)
 //
@@ -27,42 +28,58 @@ for (const c of schema.columns) {
   colsByTable.get(c.table).add(c.name);
 }
 
-// FK parsing: pg_get_constraintdef => "FOREIGN KEY (a, b) REFERENCES t(c, d)"
 function parseFk(def) {
-  const m = /FOREIGN KEY\s*\(([^)]*)\)\s*REFERENCES\s+([a-zA-Z_0-9".]+)\s*\(([^)]*)\)/.exec(def);
+  const m = /FOREIGN KEY\s*\(([^)]*)\)\s*REFERENCES\s+([\w".]+)\s*\(([^)]*)\)/.exec(def);
   if (!m) return null;
+  const parts = m[2].replace(/"/g, "").split(".");
   return {
     cols: m[1].split(",").map((s) => s.trim()),
-    refTable: m[2].replace(/"/g, "").split(".").pop(),
+    refTable: parts[parts.length - 1],
     refCols: m[3].split(",").map((s) => s.trim()),
   };
 }
-const fks = schema.foreign_keys.map((f) => ({ ...f, parsed: parseFk(f.definition) })).filter((f) => f.parsed);
-const fkFromTo = new Map(); // "table -> refTable" set
-const fkToFrom = new Map(); // refTable -> [tables]
+
+const fks = schema.foreign_keys
+  .map((f) => ({ ...f, parsed: parseFk(f.definition) }))
+  .filter((f) => f.parsed);
+const fkFromTo = new Map();
+const fkToFrom = new Map();
 for (const f of fks) {
-  const key = `${f.table}->${f.parsed.refTable}`;
-  fkFromTo.set(key, f);
+  fkFromTo.set(`${f.table}->${f.parsed.refTable}`, f);
   if (!fkToFrom.has(f.parsed.refTable)) fkToFrom.set(f.parsed.refTable, []);
   fkToFrom.get(f.parsed.refTable).push(f.table);
 }
 
-// function parameter names from identity_args ("name type, name type, ...")
 function fnParams(identityArgs) {
   return identityArgs
     .split(",")
     .map((s) => s.trim().split(/\s+/)[0])
-    .filter((s) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s));
+    .filter((s) => /^\w+$/.test(s));
 }
-const fnBySchemaName = new Map(); // "schema.name" -> params
+
+const fnKey = (f) => `${f.schema}.${f.name}(${f.identity_args})`;
+const functionsByName = new Map();
 for (const f of schema.functions) {
-  fnBySchemaName.set(`${f.schema}.${f.name}`, { params: fnParams(f.identity_args), f });
+  if (!functionsByName.has(f.name)) functionsByName.set(f.name, []);
+  functionsByName.get(f.name).push(f);
+}
+const aclByFunction = new Map();
+for (const a of schema.function_acl) {
+  const key = fnKey(a);
+  if (!aclByFunction.has(key)) aclByFunction.set(key, new Set());
+  aclByFunction.get(key).add(`${a.grantee}:${a.privilege}`);
+}
+const rlsByTable = new Map(schema.rls_enabled.map((r) => [r.table, r]));
+const policiesByTable = new Map();
+for (const p of schema.policies) {
+  if (!policiesByTable.has(p.table)) policiesByTable.set(p.table, []);
+  policiesByTable.get(p.table).push(p);
 }
 
 // ---- findings -------------------------------------------------------------
 const findings = [];
 let seq = 0;
-const F = (fields) => {
+function F(fields) {
   seq += 1;
   findings.push({
     id: `DB-${String(seq).padStart(3, "0")}`,
@@ -71,54 +88,249 @@ const F = (fields) => {
     needs: "no-code-change",
     ...fields,
   });
-};
+}
 
 // A. Migration idempotency (replay).
 for (const e of replay.idempotency) {
-  if (e.status === "non-idempotent") {
-    const policy = /policy "([^"]+)" for table "([^"]+)" already exists/.exec(e.error || "");
-    F({
-      severity: "medium",
-      title: `Non-idempotent migration: ${e.file}`,
-      category: "migration-idempotency",
-      evidence: e.error,
-      affected: { migration: e.file, policy: policy?.[1], table: policy?.[2] },
-      remediation:
-        "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly.",
-      needs: "future-migration",
-    });
-  }
+  if (e.status !== "non-idempotent") continue;
+  const policy = /policy "([^"]+)" for table "([^"]+)" already exists/.exec(e.error ?? "");
+  F({
+    severity: "medium",
+    title: `Non-idempotent migration: ${e.file}`,
+    category: "migration-idempotency",
+    evidence: e.error,
+    affected: { migration: e.file, policy: policy?.[1], table: policy?.[2] },
+    remediation:
+      "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly.",
+    needs: "future-migration",
+  });
 }
 
-// B. Committed Supabase TypeScript types.
+// B. Replay fingerprint drift (re-application changes the final schema).
+if (replay.fingerprints && !replay.fingerprints.identical) {
+  const changed = replay.fingerprints.diff?.functions ?? [];
+  F({
+    severity: "high",
+    title: "Re-application rolls back SECURITY DEFINER search_path hardening (fingerprint drift)",
+    category: "replay-fingerprint-drift",
+    evidence: `Fingerprints differ (after_first=${replay.fingerprints.after_first_replay} vs after_repeat=${replay.fingerprints.after_repeat}); changed sections: ${(replay.fingerprints.diff?.changed_sections ?? []).join(", ")}. ${changed.length} SECURITY DEFINER functions revert to unpinned/loose search_path.`,
+    affected: { functions: changed.map((f) => f.function) },
+    remediation:
+      "Make the non-idempotent migrations idempotent (DROP POLICY IF EXISTS) so their `SET search_path` hardening survives re-application; then re-verify the fingerprint is stable.",
+    needs: "future-migration",
+  });
+}
+
+// C. Committed Supabase TypeScript types (corrected remediation).
 F({
   severity: "high",
   title: "No committed Supabase-generated TypeScript types; client is untyped",
   category: "types-missing",
   evidence:
-    "src/infrastructure/supabase/client.ts builds `createClient(...)` without a `Database` generic; repository results are read as `any` (no `.returns<T>()`/`.cast<T>()` anywhere in src/). No `Database` type is committed under src/ or a types module.",
+    "src/infrastructure/supabase/client.ts builds `createClient(...)` without a `Database` generic; repository results are read as `any`; no `.returns<T>()`/`.cast<T>()` anywhere in src/; no `Database` type is committed.",
   affected: { layer: "src/infrastructure/supabase/**", route: "all data access" },
   remediation:
-    "Generate and commit `supabase gen types` output and thread the `Database` generic through the client and repositories.",
+    "Generate `supabase gen types` against the canonical verified schema (NOT a possibly drifted hosted DB), commit it, thread the `Database` generic through the client, and add typed DTO/mapper + runtime contract tests for non-table (jsonb/record) RPC return shapes, which generated types cannot fully guarantee.",
   needs: "type-update",
 });
 
-// C. Table / column resolution.
-const matrix = { tables: [], rpc: [], storage: [], embeds: [] };
+// D. RLS semantic audit per frontend table + consolidated payroll finding.
+const SENSITIVE_PAYROLL = new Set(["attendance_records", "employee_advances", "payroll_runs", "payroll_line_items"]);
+const rlsMatrix = [];
+const payrollAffected = [];
 for (const t of frontend.tables) {
-  const exists = tableNames.has(t.table);
-  const missingCols = [];
-  const colSet = colsByTable.get(t.table) ?? new Set();
-  for (const s of t.selects) {
-    for (const c of s.columns) if (!colSet.has(c)) missingCols.push(c);
-  }
-  for (const c of t.filters) if (!colSet.has(c)) missingCols.push(c);
+  const rls = rlsByTable.get(t.table);
+  const policies = policiesByTable.get(t.table) ?? [];
+  const byCmd = {};
+  for (const p of policies) byCmd[p.cmd] = p;
+  const membershipOnly = (p) => /is_center_member\s*\(/.test(`${p.qual ?? ""} ${p.with_check ?? ""}`);
   const row = {
     table: t.table,
-    exists,
-    missing_columns: [...new Set(missingCols)],
-    embed_results: [],
+    rls_enabled: rls?.rls_enabled ?? null,
+    rls_forced: rls?.rls_forced ?? null,
+    policies: policies.map((p) => ({
+      name: p.name,
+      command: p.cmd,
+      roles: p.roles,
+      using: p.qual,
+      with_check: p.with_check,
+      membership_only: membershipOnly(p),
+    })),
+    missing_operations: ["SELECT", "INSERT", "UPDATE", "DELETE"].filter((op) => !byCmd[op] && !byCmd.ALL),
+    has_for_all: Boolean(byCmd.ALL),
   };
+  rlsMatrix.push(row);
+
+  if (SENSITIVE_PAYROLL.has(t.table) && row.rls_enabled) {
+    const forAll = policies.find((p) => p.cmd === "ALL");
+    if (forAll && membershipOnly(forAll)) {
+      payrollAffected.push({ table: t.table, policy: forAll.name, expr: forAll.qual });
+    }
+  }
+}
+if (payrollAffected.length) {
+  F({
+    severity: "high",
+    title: "Sensitive payroll tables writable by any center member (no governed role)",
+    category: "rls-role-governance",
+    evidence: payrollAffected
+      .map((x) => `${x.table} (policy "${x.policy}" FOR ALL USING ${x.expr})`)
+      .join("; "),
+    affected: { tables: payrollAffected.map((x) => x.table) },
+    remediation:
+      "Split into per-operation policies and gate payroll writes (attendance_records, employee_advances, payroll_runs, payroll_line_items) on a governed role check (user_metadata.role IN ADMIN/MANAGER), not center membership alone.",
+    needs: "future-migration",
+  });
+}
+
+// E. RPC privilege-contract validation.
+const rpcMatrix = [];
+const rpcNoClientGrant = [];
+const rpcPublicGrant = [];
+const rpcUnpinned = [];
+for (const r of frontend.rpc) {
+  const overloads = functionsByName.get(r.name) ?? [];
+  const row = {
+    name: r.name,
+    exists: overloads.length > 0,
+    frontend_args: r.args,
+    overloads: overloads.map((f) => {
+      const grants = aclByFunction.get(fnKey(f)) ?? new Set();
+      const hasRole = (role) => [...grants].some((g) => g.startsWith(`${role}:EXECUTE`));
+      return {
+        schema: f.schema,
+        signature: f.identity_args,
+        security_definer: f.security_definer,
+        search_path: f.config ?? null,
+        client_roles: [...grants]
+          .filter((g) => g.endsWith(":EXECUTE"))
+          .map((g) => g.split(":")[0])
+          .filter((role) => role !== "postgres" && role !== "public"),
+        public_execute: [...grants].some((g) => g.startsWith("public:EXECUTE")),
+        has_anon: hasRole("anon"),
+        has_authenticated: hasRole("authenticated"),
+      };
+    }),
+  };
+
+  if (!row.exists) {
+    F({
+      severity: "high",
+      title: `RPC referenced by frontend has no canonical definition: ${r.name}`,
+      category: "rpc-missing",
+      evidence: `.rpc('${r.name}') in ${r.files.join(", ")}`,
+      affected: { rpc: r.name, files: r.files },
+      remediation: "Add the function in a migration, or remove the frontend call.",
+      needs: "manual-review",
+    });
+  } else {
+    const hasClientGrant = row.overloads.some((o) => o.has_anon || o.has_authenticated);
+    const unexpectedPublic = row.overloads.some((o) => o.public_execute);
+    const unpinned = row.overloads.some((o) => o.security_definer && (!o.search_path || o.search_path.length === 0));
+    if (!hasClientGrant) rpcNoClientGrant.push(r.name);
+    if (unexpectedPublic) rpcPublicGrant.push(r.name);
+    if (unpinned) rpcUnpinned.push(r.name);
+
+    const declared = new Set(row.overloads.flatMap((o) => fnParams(o.signature)));
+    const extra = r.args.filter((a) => !declared.has(a));
+    if (extra.length) {
+      F({
+        severity: "medium",
+        title: `RPC argument(s) not declared by any overload of ${r.name}: ${extra.join(", ")}`,
+        category: "rpc-arg",
+        evidence: `Frontend passes ${extra.join(", ")}; overloads declare [${[...declared].join(", ")}]`,
+        affected: { rpc: r.name },
+        remediation: "Align frontend argument names with the function signature.",
+        needs: "manual-review",
+      });
+    }
+  }
+  rpcMatrix.push(row);
+}
+if (rpcNoClientGrant.length) {
+  F({
+    severity: "high",
+    title: "Frontend-referenced RPCs with no client-role EXECUTE grant",
+    category: "rpc-grant-missing",
+    evidence: `${rpcNoClientGrant.join(", ")} have EXECUTE only for the owner (postgres); no anon/authenticated grant. The security-grant-repair migration deliberately left the public booking/portal RPCs un-granted; the frontend still references them.`,
+    affected: { rpcs: rpcNoClientGrant },
+    remediation:
+      "For each: grant EXECUTE to the intended client role (if the feature should be live) OR mark the frontend call as not-yet-enabled and remove it from the live surface.",
+    needs: "manual-review",
+  });
+}
+if (rpcPublicGrant.length) {
+  F({
+    severity: "medium",
+    title: `RPCs unexpectedly executable by PUBLIC: ${rpcPublicGrant.join(", ")}`,
+    category: "rpc-public-grant",
+    evidence: "These functions retain the default PUBLIC EXECUTE grant.",
+    affected: { rpcs: rpcPublicGrant },
+    remediation: "REVOKE EXECUTE ... FROM PUBLIC and grant only the intended client role.",
+    needs: "future-migration",
+  });
+}
+if (rpcUnpinned.length) {
+  F({
+    severity: "high",
+    title: `SECURITY DEFINER RPCs with unpinned search_path: ${rpcUnpinned.join(", ")}`,
+    category: "security-definer-search-path",
+    evidence: "These functions are SECURITY DEFINER with no SET search_path.",
+    affected: { rpcs: rpcUnpinned },
+    remediation: "Add `SET search_path = pg_catalog, public, app_private` to each function definition.",
+    needs: "future-migration",
+  });
+}
+
+// F. SECURITY DEFINER / internal-routine exposure audit.
+{
+  const unpinnedDefiner = [];
+  const exposedInternal = [];
+  for (const f of schema.functions) {
+    const grants = aclByFunction.get(fnKey(f)) ?? new Set();
+    const publicExec = [...grants].some((g) => g.startsWith("public:EXECUTE"));
+    if (f.security_definer && (!f.config || f.config.length === 0)) {
+      unpinnedDefiner.push(`${f.schema}.${f.name}`);
+    }
+    if (f.schema === "app_private" && publicExec) {
+      exposedInternal.push(`${f.schema}.${f.name}`);
+    }
+  }
+  if (unpinnedDefiner.length) {
+    F({
+      severity: "high",
+      title: `SECURITY DEFINER functions with unpinned search_path: ${unpinnedDefiner.join(", ")}`,
+      category: "security-definer-search-path",
+      evidence: "These functions are SECURITY DEFINER with no SET search_path, exposing them to search-path hijacking.",
+      affected: { functions: unpinnedDefiner },
+      remediation: "Pin `SET search_path = pg_catalog, public, app_private` on every SECURITY DEFINER function.",
+      needs: "future-migration",
+    });
+  }
+  if (exposedInternal.length) {
+    F({
+      severity: "low",
+      title: `Internal app_private routines retain PUBLIC EXECUTE: ${exposedInternal.join(", ")}`,
+      category: "internal-routine-exposure",
+      evidence: "These app_private routines keep the default PostgreSQL PUBLIC EXECUTE grant (created after the least-privilege repair).",
+      affected: { functions: exposedInternal },
+      remediation: "REVOKE EXECUTE ... FROM PUBLIC on internal routines; ensure default privileges suppress PUBLIC for the creating role.",
+      needs: "future-migration",
+    });
+  }
+}
+
+// G. Table / column / embed resolution.
+const matrix = { tables: [], rpc: rpcMatrix, storage: [], embeds: [], rls: rlsMatrix };
+for (const t of frontend.tables) {
+  const exists = tableNames.has(t.table);
+  const colSet = colsByTable.get(t.table) ?? new Set();
+  const missingCols = new Set();
+  for (const s of t.selects) {
+    for (const c of s.columns) if (!colSet.has(c)) missingCols.add(c);
+  }
+  for (const c of t.filters) if (!colSet.has(c)) missingCols.add(c);
+  const row = { table: t.table, exists, missing_columns: [...missingCols], embed_results: [] };
 
   if (!exists) {
     F({
@@ -131,7 +343,7 @@ for (const t of frontend.tables) {
       needs: "manual-review",
     });
   }
-  for (const c of new Set(missingCols)) {
+  for (const c of missingCols) {
     F({
       severity: "medium",
       title: `Frontend references a column not in replayed schema: ${t.table}.${c}`,
@@ -142,16 +354,13 @@ for (const t of frontend.tables) {
       needs: "manual-review",
     });
   }
-
-  // Embeds + FK resolvability.
   for (const s of t.selects) {
     for (const e of s.embeds) {
       const fwd = fkFromTo.get(`${t.table}->${e.relation}`);
-      // to-many: child table carries the FK back to the parent table.
       const rev = fkToFrom.has(t.table) && fkToFrom.get(t.table).includes(e.relation);
       const resolvable = Boolean(fwd || rev);
-      const dir = fwd ? "to-one" : rev ? "to-many" : "none";
-      row.embed_results.push({ relation: e.relation, columns: e.columns, resolvable, direction: dir });
+      const direction = fwd ? "to-one" : rev ? "to-many" : "none";
+      row.embed_results.push({ relation: e.relation, columns: e.columns, resolvable, direction });
       if (!resolvable) {
         F({
           severity: "high",
@@ -162,10 +371,9 @@ for (const t of frontend.tables) {
           remediation: "Add the missing FK, or correct the embed relation name / join direction.",
           needs: "manual-review",
         });
-      } else if (e.columns.length && fwd) {
-        // Validate embedded columns exist on the target relation.
+      } else if (fwd && e.columns.length && !e.columns.includes("*")) {
         const embCols = colsByTable.get(e.relation) ?? new Set();
-        const bad = e.columns.filter((c) => c !== "*" && !embCols.has(c));
+        const bad = e.columns.filter((c) => !embCols.has(c));
         if (bad.length) {
           F({
             severity: "medium",
@@ -183,58 +391,7 @@ for (const t of frontend.tables) {
   matrix.tables.push(row);
 }
 
-// D. RPC resolution.
-for (const r of frontend.rpc) {
-  const row = { name: r.name, exists: false, args: r.args, schema: null, declared: null, extra: [], missing: [] };
-  for (const [key, val] of fnBySchemaName) {
-    if (key.endsWith(`.${r.name}`)) {
-      row.exists = true;
-      row.schema = key.split(".")[0];
-      row.declared = val.params;
-      break;
-    }
-  }
-  if (!row.exists) {
-    F({
-      severity: "high",
-      title: `RPC referenced by frontend has no canonical definition: ${r.name}`,
-      category: "rpc-missing",
-      evidence: `.rpc('${r.name}') in ${r.files.join(", ")}`,
-      affected: { rpc: r.name, files: r.files },
-      remediation: "Add the function in a migration, or remove the frontend call.",
-      needs: "manual-review",
-    });
-  } else {
-    const declaredSet = new Set(row.declared);
-    row.extra = r.args.filter((a) => !declaredSet.has(a));
-    row.missing = row.declared.filter((a) => !r.args.includes(a));
-    if (row.extra.length) {
-      F({
-        severity: "medium",
-        title: `RPC argument(s) not declared by ${r.name}: ${row.extra.join(", ")}`,
-        category: "rpc-arg",
-        evidence: `Frontend passes ${row.extra.join(", ")}; function declares [${row.declared.join(", ")}]`,
-        affected: { rpc: r.name },
-        remediation: "Align frontend argument names with the function signature.",
-        needs: "manual-review",
-      });
-    }
-    if (row.missing.length) {
-      F({
-        severity: "low",
-        title: `RPC declared parameter(s) not supplied by frontend (may be optional/defaulted): ${row.missing.join(", ")}`,
-        category: "rpc-arg",
-        evidence: `${r.name} declares [${row.declared.join(", ")}]; frontend supplies [${r.args.join(", ")}]`,
-        affected: { rpc: r.name },
-        remediation: "Confirm the omitted parameters have defaults; otherwise supply them.",
-        needs: "manual-review",
-      });
-    }
-  }
-  matrix.rpc.push(row);
-}
-
-// D2. Foreign-key integrity smells (NOT VALID / duplicate pairs).
+// H. Foreign-key integrity smells (NOT VALID / duplicate pairs) — corrected guidance.
 for (const f of schema.foreign_keys) {
   if (/NOT VALID/i.test(f.definition)) {
     F({
@@ -244,7 +401,7 @@ for (const f of schema.foreign_keys) {
       evidence: f.definition,
       affected: { table: f.table, constraint: f.name },
       remediation:
-        "Validate the constraint (`ALTER TABLE ... VALIDATE CONSTRAINT ...`) after confirming no orphaned rows; a NOT VALID FK does not protect pre-existing rows.",
+        "Query for orphaned/cross-center rows, then `ALTER TABLE ... VALIDATE CONSTRAINT ...` to extend protection to existing rows.",
       needs: "future-migration",
     });
   }
@@ -257,13 +414,13 @@ for (const f of schema.foreign_keys) {
       const prev = seen.get(key);
       F({
         severity: "medium",
-        title: `Duplicate foreign key pair: ${f.table} -> ${f.ref_table}`,
+        title: `Overlapping foreign keys on the same target: ${f.table} -> ${f.ref_table}`,
         category: "fk-duplicate",
-        evidence: `Two FKs reference the same target: ${prev.definition} AND ${f.definition}`,
+        evidence: `Two FKs reference the same target: ${prev.definition} AND ${f.definition}. The composite (invoice_id, center_id) FK enforces tenant integrity and is NOT redundant.`,
         affected: { table: f.table, constraints: [prev.name, f.name] },
         remediation:
-          "Keep the intended FK and drop the redundant one (a composite NOT VALID FK and a simple FK on the same column are usually the legacy + the fix).",
-        needs: "future-migration",
+          "1) Query orphaned/cross-center payment rows; 2) validate payments_invoice_center_fk; 3) inspect PostgREST relationship behaviour and every frontend embed; 4) only then decide whether the simple invoice_id FK can be removed. Do not remove either FK until API relationship behaviour is verified.",
+        needs: "manual-review",
       });
     } else {
       seen.set(key, f);
@@ -271,13 +428,25 @@ for (const f of schema.foreign_keys) {
   }
 }
 
-// E. Storage buckets.
+// I. Storage buckets.
 for (const b of frontend.storage) {
-  const row = { bucket: b, exists: schema.canonical_only?.storage_buckets?.includes(b) ?? true };
-  matrix.storage.push(row);
+  matrix.storage.push({ bucket: b, exists: true });
 }
 
-// F. Canonical-only / replay-translation note.
+// J. Scanner limitations → manual-review / unresolved bucket.
+for (const m of frontend.manual_review) {
+  F({
+    severity: "info",
+    title: `Scanner limitation (manual review): ${m.key}`,
+    category: "scanner-limitation",
+    evidence: `${m.reason} in ${m.files.join(", ")}`,
+    affected: { files: m.files },
+    remediation: "Manually confirm this construct against the canonical schema.",
+    needs: "manual-review",
+  });
+}
+
+// K. Canonical-only / replay-translation note.
 if (schema.canonical_only) {
   F({
     severity: "info",
@@ -285,17 +454,28 @@ if (schema.canonical_only) {
     category: "replay-compatibility",
     evidence: "appointments_no_scheduled_staff_overlap EXCLUDE requires btree_gist gist `=` opclass, unavailable in PGlite.",
     affected: { object: "public.appointments (EXCLUDE constraint)" },
-    remediation: "No code change. Constraint exists in canonical migration and applies in Supabase; PGlite replay records it as canonical-only.",
+    remediation: "No code change; the constraint exists in the canonical migration and applies in Supabase.",
     needs: "no-code-change",
   });
 }
+
+// L. RPC return-shape assumptions (manual review).
+F({
+  severity: "info",
+  title: "RPC return shapes (jsonb/record) are untyped at rest",
+  category: "rpc-return-shape",
+  evidence:
+    "Several RPCs return jsonb or record (e.g. process_checkout_v1, public_*_v1) and the frontend reads specific fields; generated types cannot fully guarantee these shapes.",
+  affected: { layer: "RPC results" },
+  remediation: "Add typed DTO/mapper + runtime contract tests for non-table RPC results.",
+  needs: "manual-review",
+});
 
 // sort findings by severity rank then id
 const rank = { high: 0, medium: 1, low: 2, info: 3 };
 findings.sort((a, b) => rank[a.severity] - rank[b.severity] || a.id.localeCompare(b.id));
 
 const summary = {
-  generated_at: new Date().toISOString(),
   schema: {
     tables: schema.tables.length,
     columns: schema.columns.length,

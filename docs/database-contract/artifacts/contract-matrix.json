@@ -105,7 +105,100 @@
       "table": "customer_entitlements",
       "exists": true,
       "missing_columns": [],
-      "embed_results": []
+      "embed_results": [
+        {
+          "relation": "customers",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "service_packages",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "gift_cards",
+          "columns": [
+            "code"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "invoices",
+          "columns": [
+            "serial_number"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "package_entitlement_units",
+          "columns": [
+            "id",
+            "center_id",
+            "entitlement_id",
+            "service_id",
+            "total_units",
+            "used_units",
+            "created_at"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        },
+        {
+          "relation": "customers",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "service_packages",
+          "columns": [
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "gift_cards",
+          "columns": [
+            "code"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "invoices",
+          "columns": [
+            "serial_number"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "package_entitlement_units",
+          "columns": [
+            "id",
+            "center_id",
+            "entitlement_id",
+            "service_id",
+            "total_units",
+            "used_units",
+            "created_at"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        }
+      ]
     },
     {
       "table": "customer_reviews",
@@ -244,11 +337,7 @@
             "item_name",
             "price",
             "quantity",
-            "created_at",
-            "services (name)",
-            "products (name)",
-            "service_packages (name)",
-            "gift_cards (code)"
+            "created_at"
           ],
           "resolvable": true,
           "direction": "to-many"
@@ -363,7 +452,7 @@
     {
       "name": "create_accounting_journal_entry_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_amount",
         "p_center_id",
         "p_credit_account",
@@ -375,26 +464,27 @@
         "p_reference_id",
         "p_reference_type"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_entry_date",
-        "p_entry_type",
-        "p_reference_type",
-        "p_reference_id",
-        "p_description",
-        "p_debit_account",
-        "p_credit_account",
-        "p_amount",
-        "p_currency"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "create_ai_booking_lead_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_customer_name",
         "p_customer_phone",
@@ -403,23 +493,27 @@
         "p_source_channel",
         "p_summary"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_name",
-        "p_customer_phone",
-        "p_preferred_service_id",
-        "p_preferred_date",
-        "p_source_channel",
-        "p_summary"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "create_customer_review_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_appointment_id",
         "p_center_id",
         "p_comment",
@@ -427,22 +521,27 @@
         "p_is_published",
         "p_rating"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_id",
-        "p_appointment_id",
-        "p_rating",
-        "p_comment",
-        "p_is_published"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "create_service_file_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_after_images",
         "p_appointment_id",
         "p_before_images",
@@ -453,65 +552,101 @@
         "p_service_id",
         "p_title"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_id",
-        "p_appointment_id",
-        "p_service_id",
-        "p_title",
-        "p_note",
-        "p_before_images",
-        "p_after_images",
-        "p_reference_images"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[], p_after_images text[], p_reference_images text[]",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "create_service_package_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_description",
         "p_items",
         "p_name",
         "p_package_price"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_name",
-        "p_description",
-        "p_package_price",
-        "p_items"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_name text, p_description text, p_package_price numeric, p_items jsonb",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "expire_entitlement_v1",
+      "exists": true,
+      "frontend_args": [],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "mark_appointment_no_show_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_appointment_id",
         "p_center_id",
         "p_charge_no_show_fee",
         "p_note"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_appointment_id",
-        "p_charge_no_show_fee",
-        "p_note"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean, p_note text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "process_checkout_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_customer_id",
         "p_discount_amount",
@@ -522,95 +657,120 @@
         "p_payment_method",
         "p_use_loyalty_points"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_id",
-        "p_employee_id",
-        "p_payment_method",
-        "p_discount_amount",
-        "p_use_loyalty_points",
-        "p_items",
-        "p_gift_card_code",
-        "p_entitlement_redemptions"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "public_cancel_booking_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_appointment_id",
         "p_center_id",
         "p_phone",
         "p_portal_token",
         "p_reason"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_appointment_id",
-        "p_phone",
-        "p_portal_token",
-        "p_reason"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_reason text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_center_info_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_client_portal_login_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_phone",
         "p_token"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_phone",
-        "p_token"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_phone text, p_token text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_client_portal_profile_v2",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_customer_id",
         "p_phone",
         "p_token"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_id",
-        "p_phone",
-        "p_token"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid, p_phone text, p_token text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_create_booking_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_customer_name",
         "p_customer_phone",
@@ -619,49 +779,67 @@
         "p_notes",
         "p_service_id"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_service_id",
-        "p_employee_id",
-        "p_customer_name",
-        "p_customer_phone",
-        "p_date_time",
-        "p_notes"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_list_services_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_list_staff_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_reschedule_booking_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_appointment_id",
         "p_center_id",
         "p_new_date_time",
@@ -670,72 +848,97 @@
         "p_portal_token",
         "p_reason"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_appointment_id",
-        "p_phone",
-        "p_portal_token",
-        "p_new_date_time",
-        "p_new_employee_id",
-        "p_reason"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_new_date_time timestamp with time zone, p_new_employee_id uuid, p_reason text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "public_taken_slots_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_day"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_day"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_day date",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": false
+        }
+      ]
     },
     {
       "name": "refund_entitlement_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_actor_employee_id",
         "p_amount",
         "p_entitlement_id",
         "p_reason"
       ],
-      "schema": "public",
-      "declared": [
-        "p_entitlement_id",
-        "p_amount",
-        "p_reason",
-        "p_actor_employee_id"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "rotate_customer_portal_token_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_customer_id"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_customer_id"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "upsert_notification_settings_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_center_id",
         "p_reminder_enabled",
         "p_reminder_hours_before",
@@ -747,26 +950,27 @@
         "p_whatsapp_template_booking",
         "p_whatsapp_template_reminder"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_whatsapp_enabled",
-        "p_sms_enabled",
-        "p_reminder_enabled",
-        "p_reminder_hours_before",
-        "p_whatsapp_sender_name",
-        "p_sms_sender_name",
-        "p_whatsapp_template_booking",
-        "p_whatsapp_template_reminder",
-        "p_sms_template_reminder"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     },
     {
       "name": "upsert_payment_gateway_settings_v1",
       "exists": true,
-      "args": [
+      "frontend_args": [
         "p_booking_deposit_enabled",
         "p_booking_deposit_type",
         "p_booking_deposit_value",
@@ -780,23 +984,43 @@
         "p_success_url",
         "p_webhook_secret_hint"
       ],
-      "schema": "public",
-      "declared": [
-        "p_center_id",
-        "p_provider",
-        "p_is_enabled",
-        "p_is_sandbox",
-        "p_public_key",
-        "p_merchant_identifier",
-        "p_webhook_secret_hint",
-        "p_booking_deposit_enabled",
-        "p_booking_deposit_type",
-        "p_booking_deposit_value",
-        "p_success_url",
-        "p_cancel_url"
-      ],
-      "extra": [],
-      "missing": []
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "void_entitlement_v1",
+      "exists": true,
+      "frontend_args": [],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
     }
   ],
   "storage": [
@@ -805,5 +1029,768 @@
       "exists": true
     }
   ],
-  "embeds": []
+  "embeds": [],
+  "rls": [
+    {
+      "table": "accounting_journal_entries",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "accounting_journal_entries_delete_policy",
+          "command": "DELETE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "accounting_journal_entries_insert_policy",
+          "command": "INSERT",
+          "roles": [
+            "public"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "accounting_journal_entries_select_policy",
+          "command": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "accounting_journal_entries_update_policy",
+          "command": "UPDATE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "ai_booking_leads",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "ai_booking_leads_delete_policy",
+          "command": "DELETE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "ai_booking_leads_insert_policy",
+          "command": "INSERT",
+          "roles": [
+            "public"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "ai_booking_leads_select_policy",
+          "command": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "ai_booking_leads_update_policy",
+          "command": "UPDATE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "appointments",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "appointments_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "attendance_records",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "attendance_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "center_memberships",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "memberships_self_select",
+          "command": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "using": "(profile_id = auth.uid())",
+          "with_check": null,
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "center_settings",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "center_settings_insert",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        },
+        {
+          "name": "center_settings_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": null,
+          "membership_only": false
+        },
+        {
+          "name": "center_settings_update",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "customer_entitlements",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "customer_entitlements_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "customer_reviews",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "customer_reviews_delete_policy",
+          "command": "DELETE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "customer_reviews_insert_policy",
+          "command": "INSERT",
+          "roles": [
+            "public"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "customer_reviews_select_policy",
+          "command": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "customer_reviews_update_policy",
+          "command": "UPDATE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "customers",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "customers_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "employee_advances",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "advances_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "employees",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "employees_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "entitlement_ledger",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "entitlement_ledger_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "expenses",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "expenses_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "gift_card_transactions",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "gift_card_transactions_select_member",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "gift_cards",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "gift_cards_select_member",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "invoice_items",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "invoice_items_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "(EXISTS ( SELECT 1\n   FROM invoices i\n  WHERE ((i.id = invoice_items.invoice_id) AND app_private.is_center_member(i.center_id))))",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "invoices",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "invoices_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "notification_settings",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "notification_settings_insert_member",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "notification_settings_select_member",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "notification_settings_update_member",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "payment_gateway_settings",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "payment_gateway_settings_insert_member",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "payment_gateway_settings_select_member",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "payment_gateway_settings_update_member",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "payments",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "payments_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
+      "table": "payroll_line_items",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "payroll_lines_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "payroll_runs",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "payroll_runs_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "products",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "products_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "service_categories",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "service_categories_member",
+          "command": "ALL",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    },
+    {
+      "table": "service_files",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "service_files_delete_policy",
+          "command": "DELETE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "service_files_insert_policy",
+          "command": "INSERT",
+          "roles": [
+            "public"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "service_files_select_policy",
+          "command": "SELECT",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "service_files_update_policy",
+          "command": "UPDATE",
+          "roles": [
+            "public"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "service_packages",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "service_packages_delete_member",
+          "command": "DELETE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "service_packages_insert_member",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "service_packages_select_member",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "service_packages_update_member",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "services",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "services_tenant",
+          "command": "ALL",
+          "roles": [
+            "public"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": true
+    }
+  ]
 }

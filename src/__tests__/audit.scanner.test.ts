@@ -46,26 +46,28 @@ describe("audit: migration discovery", () => {
 });
 
 describe("audit: translation layer", () => {
-  it("strips CREATE EXTENSION statements with a logged translation", () => {
-    const { sql, translations } = translateMigration('CREATE EXTENSION IF NOT EXISTS "pgcrypto";\nSELECT 1;');
+  it("strips CREATE EXTENSION statements (even after a leading comment header) with a logged translation", () => {
+    const { sql, translations } = translateMigration('-- header\nCREATE EXTENSION IF NOT EXISTS "pgcrypto";\nSELECT 1;');
     expect(sql).not.toMatch(/CREATE EXTENSION/i);
     expect(sql).toContain("SELECT 1;");
     expect(translations.some((t) => t.type === "extension-skipped")).toBe(true);
   });
 
-  it("surrogates the btree_gist EXCLUDE constraint and logs it", () => {
+  it("surrogates the btree_gist EXCLUDE constraint inside its DO block and logs it", () => {
     const source = `
-      ALTER TABLE public.appointments
-        ADD CONSTRAINT appointments_no_scheduled_staff_overlap
-        EXCLUDE USING gist (
-          center_id WITH =,
-          employee_id WITH =
-        )
-        WHERE (status = 'SCHEDULED');
+      DO $$
+      BEGIN
+        ALTER TABLE public.appointments
+          ADD CONSTRAINT appointments_no_scheduled_staff_overlap
+          EXCLUDE USING gist (center_id WITH =, employee_id WITH =)
+          WHERE (status = 'SCHEDULED');
+      END;
+      $$;
     `;
     const { sql, translations } = translateMigration(source);
     expect(sql).not.toMatch(/EXCLUDE USING gist/);
     expect(sql).toMatch(/RAISE NOTICE/);
+    expect(sql).toMatch(/DO \$\$/);
     expect(translations.some((t) => t.type === "exclude-constraint-surrogated")).toBe(true);
   });
 
@@ -84,24 +86,34 @@ describe("audit: PostgREST select parser", () => {
   });
 
   it("parses a to-one embed with explicit columns", () => {
-    const r = parseSelect("*, service_categories(name)");
+    const r: any = parseSelect("*, service_categories(name)");
     expect(r.hasStar).toBe(true);
-    expect(r.embeds).toEqual([{ relation: "service_categories", join: "default", columns: ["name"] }]);
+    expect(r.embeds).toEqual([{ relation: "service_categories", join: "default", columns: ["name"], embeds: [] }]);
   });
 
   it("parses an aliased embed (alias:relation(cols))", () => {
-    const r = parseSelect("*, images:service_file_images(*)");
-    expect(r.embeds).toEqual([{ relation: "service_file_images", join: "default", columns: ["*"] }]);
+    const r: any = parseSelect("*, images:service_file_images(*)");
+    expect(r.embeds[0].relation).toBe("service_file_images");
+    expect(r.embeds[0].columns).toEqual(["*"]);
   });
 
   it("parses a hint-qualified embed (relation!inner(cols))", () => {
-    const r = parseSelect("invoice_items!inner(id)");
-    expect(r.embeds).toEqual([{ relation: "invoice_items", join: "inner", columns: ["id"] }]);
+    const r: any = parseSelect("invoice_items!inner(id)");
+    expect(r.embeds).toEqual([{ relation: "invoice_items", join: "inner", columns: ["id"], embeds: [] }]);
   });
 
-  it("strips ::casts from column names", () => {
-    const r = parseSelect("id, total::numeric");
+  it("resolves nested embeds (depth 2) recursively", () => {
+    const r: any = parseSelect("*, package_entitlement_units (id, services (name))");
+    expect(r.embeds[0].relation).toBe("package_entitlement_units");
+    expect(r.embeds[0].columns).toContain("id");
+    expect(r.embeds[0].embeds).toEqual([{ relation: "services", join: "default", columns: ["name"], embeds: [] }]);
+  });
+
+  it("strips ::casts and alias prefixes from column names", () => {
+    const r: any = parseSelect("id, total::numeric, source_invoice:invoices(serial_number)");
+    expect(r.columns).toContain("id");
     expect(r.columns).toContain("total");
+    expect(r.embeds[0].relation).toBe("invoices");
   });
 });
 
