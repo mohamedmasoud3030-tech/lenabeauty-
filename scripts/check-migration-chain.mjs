@@ -1,0 +1,57 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const dir = resolve(process.cwd(), "supabase/migrations");
+const files = readdirSync(dir).filter((f) => f.endsWith(".sql"));
+const sorted = [...files].sort();
+
+if (files.join("\n") !== sorted.join("\n")) {
+  console.log("INFO filesystem enumeration is not lexical; canonical order is lexical filename order");
+}
+
+const ids = new Map();
+let failed = false;
+for (const file of sorted) {
+  const id = file.split("_")[0];
+  if (!/^\d{14}$/.test(id)) {
+    console.error(`FAIL invalid migration prefix: ${file}`);
+    failed = true;
+  }
+  if (ids.has(id)) {
+    console.error(`FAIL duplicate migration id ${id}: ${ids.get(id)} and ${file}`);
+    failed = true;
+  } else ids.set(id, file);
+}
+
+const sqlByFile = new Map(sorted.map((file) => [file, readFileSync(resolve(dir, file), "utf8")]));
+const extensionCreation = new Map();
+for (const file of sorted) {
+  for (const match of sqlByFile.get(file).matchAll(/CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+([a-zA-Z0-9_]+)/gi)) {
+    if (!extensionCreation.has(match[1].toLowerCase())) extensionCreation.set(match[1].toLowerCase(), file);
+  }
+}
+
+const requiredPatterns = [
+  ["btree_gist", /EXCLUDE\s+USING\s+gist|gist\s*\(/i],
+  ["pgcrypto", /gen_random_uuid\s*\(/i],
+  ["pg_trgm", /gin_trgm_ops|gist_trgm_ops|similarity\s*\(/i],
+];
+
+for (const [extension, pattern] of requiredPatterns) {
+  const firstUse = sorted.find((file) => pattern.test(sqlByFile.get(file)));
+  if (!firstUse) continue;
+  const createdIn = extensionCreation.get(extension);
+  if (!createdIn) {
+    console.error(`FAIL ${extension} is used in ${firstUse} but never explicitly created`);
+    failed = true;
+  } else if (sorted.indexOf(createdIn) > sorted.indexOf(firstUse)) {
+    console.error(`FAIL ${extension} is first created in ${createdIn}, after first use in ${firstUse}`);
+    failed = true;
+  } else {
+    console.log(`PASS ${extension} created in ${createdIn} before first use ${firstUse}`);
+  }
+}
+
+console.log(`Canonical migration count: ${sorted.length}`);
+if (failed) process.exit(1);
+console.log("PASS canonical migration identifiers and extension ordering are valid");
