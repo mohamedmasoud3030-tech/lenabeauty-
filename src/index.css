@@ -145,6 +145,207 @@ body {
   @apply bg-background text-foreground;
 }
 
+/* ========================================
+   MOBILE-FIRST UX IMPROVEMENTS
+   ======================================== */
+
+/* Safe-area support for iPhone notch/home indicator */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Minimum touch target size (44x44px per Apple HIG) */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Compact spacing for mobile to reduce scrolling */
+@media (max-width: 640px) {
+  .mobile-compact {
+    @apply p-3 gap-3;
+  }
+  
+  .mobile-compact-card {
+    @apply p-3 rounded-xl;
+  }
+  
+  .mobile-compact-text {
+    @apply text-xs;
+  }
+  
+  .mobile-compact-heading {
+    @apply text-sm;
+  }
+  
+  .mobile-bottom-sheet {
+    @apply rounded-t-3xl;
+  }
+  
+  /* Sticky header on mobile */
+  .mobile-sticky-header {
+    @apply sticky top-0 z-30 backdrop-blur-xl bg-background/80;
+  }
+  
+  /* Sticky footer action bar */
+  .mobile-sticky-footer {
+    @apply fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border;
+  }
+  
+  /* Horizontal scroll container for categories/filters */
+  .mobile-scroll-x {
+    @apply overflow-x-auto scrollbar-hide;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+  }
+  
+  .mobile-scroll-x > * {
+    scroll-snap-align: start;
+  }
+  
+  /* Timeline connector line */
+  .timeline-line::before {
+    content: '';
+    @apply absolute left-4 top-0 bottom-0 w-0.5 bg-border;
+  }
+  
+  /* Compact form inputs */
+  .mobile-input {
+    @apply py-3 text-base; /* Larger touch target + readable font */
+  }
+  
+  /* Action button in footer */
+  .mobile-footer-action {
+    @apply fixed bottom-0 inset-x-0 z-40 p-4 bg-gradient-to-t from-background via-background to-transparent;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Visual hierarchy - color for status/action only */
+.status-indicator {
+  @apply font-bold uppercase tracking-wider;
+}
+
+/* Optimized animations for mobile performance */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   PWA FEEL IMPROVEMENTS
+   ======================================== */
+
+/* Connection status banner - mobile optimized */
+.offline-banner {
+  @apply fixed top-0 inset-x-0 z-[var(--z-overlay-top)] bg-warning text-warning-foreground;
+  @apply px-4 py-2 text-center text-xs font-bold;
+  @apply transform translate-y-0;
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+/* Full-screen offline overlay */
+.offline-overlay {
+  @apply fixed inset-0 z-[var(--z-overlay-top)] bg-background;
+  @apply flex flex-col items-center justify-center gap-4 p-6 text-center;
+}
+
+/* Install prompt - mobile friendly */
+.install-prompt {
+  @apply fixed bottom-24 left-4 right-4 z-50;
+  @apply bg-card border border-border rounded-2xl shadow-2xl p-4;
+  @apply flex items-center gap-4;
+}
+
+.install-prompt button {
+  @apply flex-shrink-0 h-12 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm;
+}
+
+/* Touch feedback - ripple effect */
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+.touch-feedback::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, currentColor 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(2);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.touch-feedback:active::after {
+  opacity: 0.1;
+  transform: scale(0);
+}
+
+/* ========================================
+   FORM OPTIMIZATIONS FOR MOBILE
+   ======================================== */
+
+/* Better keyboard/input types for mobile */
+input[type="tel"],
+input[type="phone"] {
+  inputmode: tel;
+}
+
+input[type="email"] {
+  inputmode: email;
+}
+
+input[type="number"] {
+  inputmode: decimal;
+}
+
+input[type="search"] {
+  inputmode: search;
+}
+
+/* Number pad for quantity inputs */
+.quantity-input {
+  @apply w-full rounded-lg border border-border bg-card px-3 py-3 text-center text-sm font-bold;
+  @apply focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none;
+  /* Prevent zoom on iOS */
+  font-size: 16px;
+}
+
+/* Inline validation feedback */
+.field-error {
+  @apply text-[10px] font-bold text-destructive mt-1;
+}
+
+.field-hint {
+  @apply text-[10px] font-medium text-muted-foreground mt-1;
+}
+
+/* Section dividers for forms */
+.form-section {
+  @apply border-t border-border pt-4 mt-4;
+}
+
+.form-section-title {
+  @apply text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3;
+}
+
 @layer components {
   .ui-card {
     @apply rounded-2xl border border-border bg-card shadow-sm;

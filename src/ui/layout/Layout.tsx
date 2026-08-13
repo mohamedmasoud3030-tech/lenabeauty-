@@ -1,8 +1,8 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, ChevronRight, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { Menu, Bell, ChevronRight, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut, MoreHorizontal, Scissors, Package, Gift, BarChart3, Settings2, DollarSign } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -17,7 +17,31 @@ export default function Layout() {
   const { t, i18n } = useTranslation();
   const [showSidebar, setShowSidebar] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close more menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    if (showMoreMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMoreMenu]);
 
   // Dynamically sync language and direction on document element
   useEffect(() => {
@@ -29,6 +53,7 @@ export default function Layout() {
   // Close sidebar on route change (mobile)
   useEffect(() => {
     setShowSidebar(false);
+    setShowMoreMenu(false);
   }, [location.pathname]);
 
   const pageTitle = useMemo(() => {
@@ -63,15 +88,27 @@ export default function Layout() {
 
   const isRtl = i18n.language === "ar";
 
+  // Mobile bottom navigation - 5 key daily functions
   const bottomNavItems = [
     { to: "/dashboard", labelKey: "Home", Icon: LayoutDashboard },
     { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
     { to: "/pos", labelKey: "POS", Icon: Receipt },
     { to: "/customers", labelKey: "Customers", Icon: Users },
+    { labelKey: "More", Icon: MoreHorizontal, action: () => setShowMoreMenu(!showMoreMenu) },
+  ];
+
+  // More menu items
+  const moreMenuItems = [
+    { to: "/services", labelKey: "Services", Icon: Scissors },
+    { to: "/inventory", labelKey: "Inventory", Icon: Package },
+    { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
+    { to: "/reports", labelKey: "Reports", Icon: BarChart3 },
+    { to: "/employees", labelKey: "Employees", Icon: Users },
+    { to: "/settings", labelKey: "Settings", Icon: Settings2 },
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-[320px_1fr] relative">
         
         {/* Mobile Sidebar Overlay */}
@@ -196,50 +233,117 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - compact, safe-area aware */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[var(--z-bottom-nav)] bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-4px_20px_rgb(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] print:hidden">
-        <nav className="flex items-stretch justify-around h-16 px-0.5">
-          {bottomNavItems.map(({ to, labelKey, Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/dashboard"}
-              className={({ isActive }) =>
-                clsx(
-                  "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 min-h-[44px]",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <div className={clsx(
-                    "flex items-center justify-center h-8 w-12 rounded-lg transition-all duration-300",
-                    isActive ? "bg-primary/15 scale-105" : "bg-transparent scale-100"
-                  )}>
-                    <Icon className={clsx("h-5 w-5", isActive && "stroke-[2px]")} />
-                  </div>
-                  <span className={clsx(
-                    "text-[9px] font-bold tracking-wider leading-tight",
-                    isActive && "text-primary"
-                  )}>
-                    {t(labelKey)}
-                  </span>
-                </>
-              )}
-            </NavLink>
+      {/* Mobile Bottom Navigation - 5 key daily functions, safe-area aware */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[var(--z-bottom-nav)] bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-4px_20px_rgb(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] print:hidden safe-area-bottom">
+        <nav className="flex items-stretch justify-around h-[64px] px-1">
+          {bottomNavItems.map(({ to, labelKey, Icon, action }, index) => (
+            action ? (
+              <button
+                key="more"
+                onClick={action}
+                ref={index === 4 ? moreMenuRef as any : undefined}
+                className={clsx(
+                  "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 touch-target relative",
+                  showMoreMenu ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <div className={clsx(
+                  "flex items-center justify-center h-9 w-14 rounded-xl transition-all duration-300",
+                  showMoreMenu ? "bg-primary/15" : "bg-transparent"
+                )}>
+                  <Icon className={clsx("h-5 w-5", showMoreMenu && "stroke-[2.5]")} />
+                </div>
+                <span className={clsx(
+                  "text-[10px] font-bold tracking-wide leading-tight",
+                  showMoreMenu && "text-primary"
+                )}>
+                  {t(labelKey)}
+                </span>
+              </button>
+            ) : (
+              <NavLink
+                key={to}
+                to={to!}
+                end={to === "/dashboard"}
+                className={({ isActive }) =>
+                  clsx(
+                    "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 touch-target",
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className={clsx(
+                      "flex items-center justify-center h-9 w-14 rounded-xl transition-all duration-300",
+                      isActive ? "bg-primary/15 scale-105" : "bg-transparent scale-100"
+                    )}>
+                      <Icon className={clsx("h-5 w-5", isActive && "stroke-[2.5]")} />
+                    </div>
+                    <span className={clsx(
+                      "text-[10px] font-bold tracking-wide leading-tight",
+                      isActive && "text-primary"
+                    )}>
+                      {t(labelKey)}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            )
           ))}
-          <button
-            onClick={() => setShowSidebar(true)}
-            className="flex flex-col items-center justify-center flex-1 gap-0.5 text-muted-foreground hover:text-foreground transition-all duration-200 min-h-[44px]"
-            aria-label={t("Open menu")}
-          >
-            <div className="flex items-center justify-center h-8 w-12 rounded-lg bg-transparent hover:bg-muted/30 transition-all">
-              <Menu className="h-5 w-5" />
-            </div>
-            <span className="text-[9px] font-bold tracking-wider leading-tight">{t("Menu")}</span>
-          </button>
         </nav>
+
+        {/* More Menu Dropup */}
+        <AnimatePresence>
+          {showMoreMenu && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-30 bg-black/40"
+                onClick={() => setShowMoreMenu(false)}
+              />
+              <motion.div
+                ref={moreMenuRef}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className="absolute bottom-full mb-2 inset-x-2 z-50 rounded-2xl bg-card border border-border shadow-2xl overflow-hidden"
+              >
+                <div className="grid grid-cols-3 gap-1 p-2">
+                  {moreMenuItems.map(({ to, labelKey, Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        clsx(
+                          "flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all touch-target min-h-[72px]",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        )
+                      }
+                    >
+                      <Icon className="h-5 w-5" />
+                      <span className="text-[10px] font-bold text-center leading-tight">{t(labelKey)}</span>
+                    </NavLink>
+                  ))}
+                </div>
+                <div className="border-t border-border p-2">
+                  <button
+                    onClick={() => { setShowSidebar(true); setShowMoreMenu(false); }}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all"
+                  >
+                    <Menu className="h-4 w-4" />
+                    {t("All Menu Items")}
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
     </div>

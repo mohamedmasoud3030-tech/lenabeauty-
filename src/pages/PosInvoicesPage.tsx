@@ -416,36 +416,70 @@ export default function PosInvoicesPage() {
       {/* Receipt preview — shared overlay above all chrome, sticky Print/Close */}
       <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
 
-      {/* Mobile: Toggle between catalog and checkout */}
+      {/* Mobile: Quick Catalog/Cart Toggle + Sticky categories */}
       {isMobile && (
-        <div className="flex gap-2 px-4 pt-4">
-          <button
-            onClick={() => setShowCheckoutSummary(false)}
-            className={clsx(
-              "flex-1 py-3 rounded-xl font-bold text-sm transition-all",
-              !showCheckoutSummary 
-                ? "bg-primary text-primary-foreground shadow-lg" 
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            {t("Catalog")}
-          </button>
-          <button
-            onClick={() => setShowCheckoutSummary(true)}
-            className={clsx(
-              "flex-1 py-3 rounded-xl font-bold text-sm transition-all relative",
-              showCheckoutSummary 
-                ? "bg-primary text-primary-foreground shadow-lg" 
-                : "bg-muted text-muted-foreground"
-            )}
-          >
-            {t("Cart")}
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-destructive text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                {cart.length}
-              </span>
-            )}
-          </button>
+        <div className="space-y-3 px-3 pt-3">
+          {/* Toggle */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowCheckoutSummary(false)}
+              className={clsx(
+                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all touch-target",
+                !showCheckoutSummary 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {t("Catalog")}
+            </button>
+            <button
+              onClick={() => setShowCheckoutSummary(true)}
+              className={clsx(
+                "flex-1 py-2.5 rounded-xl font-bold text-xs transition-all relative touch-target",
+                showCheckoutSummary 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              {t("Cart")}
+              {cart.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-destructive text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {cart.length}
+                </span>
+              )}
+            </button>
+          </div>
+          
+          {/* Sticky category tabs - horizontal scroll */}
+          {activeTab === "SERVICES" && !showCheckoutSummary && (
+            <div className="mobile-scroll-x flex gap-2 -mx-3 px-3 pb-1 sticky top-0 z-20 bg-background/95 backdrop-blur-sm pt-1">
+              <button
+                onClick={() => setSelectedServiceCategory(ALL_SERVICE_CATEGORIES)}
+                className={clsx(
+                  "px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap touch-target shrink-0",
+                  selectedServiceCategory === ALL_SERVICE_CATEGORIES
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {t("All")}
+              </button>
+              {[...new Set(services.map(s => s.categoryName).filter(Boolean) as string[])].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedServiceCategory(cat)}
+                  className={clsx(
+                    "px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap touch-target shrink-0",
+                    selectedServiceCategory === cat
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -514,14 +548,14 @@ export default function PosInvoicesPage() {
               )}
             </div>
 
-            <div className="flex-1 overflow-auto p-4 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0">
+            <div className="flex-1 overflow-auto p-3 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0 safe-area-bottom">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40 py-20">
                   <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
                   <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Catalog...")}</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-4">
                   <AnimatePresence mode="popLayout">
                     {filteredItems.map((it, idx) => (
                       <motion.button
@@ -533,40 +567,40 @@ export default function PosInvoicesPage() {
                         onClick={() => addToCart(it as any, activeTab === "SERVICES" ? "service" : activeTab === "PRODUCTS" ? "product" : "package")}
                         disabled={activeTab === "PRODUCTS" && (it as Product).trackInventory && (it as Product).stockQuantity <= 0}
                         className={clsx(
-                          "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-3 lg:p-4 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 hover:border-primary/50 flex flex-col items-start gap-3 text-start",
+                          "group relative rounded-xl lg:rounded-2xl border border-border bg-card p-2.5 lg:p-4 shadow-sm transition-all hover:shadow-lg hover:border-primary/50 flex flex-col items-start gap-2 text-start touch-target active:scale-[0.98]",
                           activeTab === "PRODUCTS" && (it as Product).trackInventory && (it as Product).stockQuantity <= 0 && "opacity-50 grayscale pointer-events-none"
                         )}
                       >
                         <div className="flex items-start justify-between w-full gap-2">
-                          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                          <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-all">
                             {activeTab === "SERVICES" ? <Scissors className="h-4 w-4" /> : activeTab === "PRODUCTS" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                           </div>
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm">
                             <Plus className="h-4 w-4" />
                           </div>
                         </div>
                         
-                        <div className="flex-1 w-full">
-                          <h3 className="text-sm font-bold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">{it.name}</h3>
+                        <div className="flex-1 w-full min-w-0">
+                          <h3 className="text-xs lg:text-sm font-bold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">{it.name}</h3>
                           {activeTab === "PRODUCTS" && (
                             <div className={clsx(
-                              "mt-1 text-[10px] font-bold uppercase tracking-wider",
+                              "mt-0.5 text-[9px] lg:text-[10px] font-bold uppercase tracking-wider",
                               (it as Product).stockQuantity > 5 ? "text-success" : "text-destructive"
                             )}>
                               {(it as Product).stockQuantity} {t("Stock")}
                             </div>
                           )}
                           {activeTab === "PACKAGES" && (
-                            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-info">
-                              {(it as any).items?.length || 0} {t("Included Services")}
+                            <div className="mt-0.5 text-[9px] lg:text-[10px] font-bold uppercase tracking-wider text-info">
+                              {(it as any).items?.length || 0} {t("Included")}
                             </div>
                           )}
                         </div>
 
-                        <div className="w-full pt-2 border-t border-border/50 flex items-baseline justify-between">
-                          <span className="text-base lg:text-lg font-bold text-foreground">{formatOMRAmount(it.price)}</span>
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                            {activeTab === "SERVICES" && (it as Service).pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
+                        <div className="w-full pt-1.5 lg:pt-2 border-t border-border/50 flex items-baseline justify-between">
+                          <span className="text-sm lg:text-lg font-bold text-foreground">{formatOMRAmount(it.price)}</span>
+                          <span className="text-[9px] lg:text-[10px] font-bold text-muted-foreground uppercase">
+                            {activeTab === "SERVICES" && (it as Service).pricingMode === "STARTING_FROM" ? `${t("From")} · ` : ""}{t("OMR")}
                           </span>
                         </div>
                       </motion.button>
@@ -584,6 +618,20 @@ export default function PosInvoicesPage() {
                     </div>
                   )}
                 </div>
+              )}
+              
+              {/* Floating Cart Preview on Mobile */}
+              {isMobile && cart.length > 0 && !showCheckoutSummary && (
+                <motion.button
+                  initial={{ y: 100, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  onClick={() => setShowCheckoutSummary(true)}
+                  className="fixed bottom-24 right-4 z-40 h-14 px-4 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-3 touch-target active:scale-95 transition-transform"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className="font-bold">{cart.length} {t("Items")}</span>
+                  <span className="text-sm font-bold opacity-80">{formatOMRAmount(total)}</span>
+                </motion.button>
               )}
 
               {activeTab === "PACKAGES" && (
@@ -627,16 +675,16 @@ export default function PosInvoicesPage() {
 
         {/* Right: Checkout Panel (Hidden on mobile if showing catalog) */}
         {(!isMobile || showCheckoutSummary) && (
-          <div className="w-full lg:w-[420px] flex flex-col rounded-2xl lg:rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full">
+          <div className="w-full lg:w-[420px] flex flex-col rounded-2xl lg:rounded-[2.5rem] border border-border bg-card shadow-2xl overflow-hidden print:hidden lg:h-full safe-area-bottom">
             
             {/* Header */}
-            <div className="p-4 lg:p-6 border-b border-border flex items-center justify-between bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <div className="p-3 lg:p-6 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                   <ShoppingCart className="h-5 w-5" />
                 </div>
-                <div className="space-y-0.5">
-                  <h2 className="text-lg font-bold">{t("Order")}</h2>
+                <div className="space-y-0">
+                  <h2 className="text-sm lg:text-lg font-bold">{t("Order")}</h2>
                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{cart.length} {t("Items")}</p>
                 </div>
               </div>
@@ -646,7 +694,7 @@ export default function PosInvoicesPage() {
                   initial={{ scale: 1.2 }}
                   animate={{ scale: 1 }}
                   onClick={clearCart}
-                  className="h-8 w-8 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center"
+                  className="h-9 w-9 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center touch-target"
                   title={t("Clear cart")}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -654,8 +702,8 @@ export default function PosInvoicesPage() {
               )}
             </div>
 
-            {/* Cart Items */}
-            <div className="flex-1 overflow-auto p-4 lg:p-6 space-y-2 scrollbar-hide">
+            {/* Cart Items - compact list */}
+            <div className="flex-1 overflow-auto p-3 lg:p-6 space-y-1.5 scrollbar-hide">
               <AnimatePresence initial={false} mode="popLayout">
                 {cart.length === 0 ? (
                   <ScreenState
@@ -673,24 +721,21 @@ export default function PosInvoicesPage() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20, scale: 0.95 }}
                       key={item.cartId} 
-                      className="group flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:bg-muted/30 hover:shadow-inner"
+                      className="group flex items-center gap-2.5 rounded-lg border border-border p-2.5 transition-all hover:bg-muted/30 touch-target"
                     >
-                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors text-sm font-bold">
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors text-xs font-bold">
                         {item.type === "service" ? <Scissors className="h-4 w-4" /> : item.type === "product" ? <Package className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate text-foreground leading-tight">{item.name}</p>
-                        <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">
-                          {item.type === "service" ? t("Service") : item.type === "product" ? t("Product") : t("Package")}
-                        </p>
                       </div>
-                      <div className="text-end space-y-1">
-                        <p className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)} <span className="text-[9px] opacity-50">{t("OMR")}</span></p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)}</span>
                         <button 
                           onClick={() => removeFromCart(item.cartId)} 
-                          className="h-6 w-6 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all opacity-0 group-hover:opacity-100"
+                          className="h-7 w-7 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </motion.div>
@@ -699,13 +744,13 @@ export default function PosInvoicesPage() {
               </AnimatePresence>
             </div>
 
-            {/* Checkout Form */}
-            <div className="p-4 lg:p-6 bg-muted/30 border-t border-border space-y-6">
-              <div className="space-y-4">
+            {/* Checkout Form - compact, optimized for mobile */}
+            <div className="p-3 lg:p-6 bg-muted/30 border-t border-border space-y-4">
+              <div className="space-y-3">
                 
-                {/* Customer Search */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                {/* Customer Search - compact */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                     <User className="h-3 w-3" />
                     {t("Customer")}
                   </label>
@@ -715,15 +760,14 @@ export default function PosInvoicesPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 shadow-inner"
+                        className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-2.5"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-lg">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center text-primary-foreground text-[10px] font-bold">
                             {getInitials(selectedCustomer, "·")}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <span className="text-xs font-bold text-foreground block truncate">{getDisplayName(selectedCustomer, t("Unnamed"))}</span>
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest truncate">{selectedCustomer.phone}</span>
                           </div>
                         </div>
                         <button 
@@ -738,18 +782,17 @@ export default function PosInvoicesPage() {
                         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <input
                           ref={searchInputRef}
-                          className="w-full rounded-lg border border-border bg-card ps-10 pe-10 py-2.5 text-xs font-medium outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                          className="w-full rounded-lg border border-border bg-card ps-9 pe-9 py-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-primary/20 transition-all mobile-input"
                           placeholder={t("Search customer...")}
                           value={searchQ}
                           onChange={(e) => searchCustomers(e.target.value)}
                         />
                         <button
                           onClick={() => { setShowNewCustomer(v => !v); setCustomers([]); }}
-                          className="absolute end-1.5 top-1/2 -translate-y-1/2 h-7 px-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-1 text-[10px] font-bold"
+                          className="absolute end-1 top-1/2 -translate-y-1/2 h-8 px-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-1 text-[10px] font-bold touch-target"
                           title={t("New customer")}
                         >
                           <UserPlus className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">{t("New")}</span>
                         </button>
                         <AnimatePresence>
                           {customers.length > 0 && (
@@ -757,18 +800,17 @@ export default function PosInvoicesPage() {
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -10 }}
-                              className="absolute bottom-full inset-x-0 mb-2 rounded-lg border border-border bg-card shadow-2xl max-h-48 overflow-auto z-50 p-1"
+                              className="absolute bottom-full inset-x-0 mb-2 rounded-lg border border-border bg-card shadow-xl max-h-44 overflow-auto z-50 p-1"
                             >
                               {customers.map(c => (
                                 <button 
                                   key={c.id} 
                                   onClick={() => { void selectCustomer(c); }}
-                                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted rounded-lg text-start transition-all group/item"
+                                  className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-muted rounded-lg text-start transition-all touch-target"
                                 >
-                                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-xs font-bold group-hover/item:bg-primary group-hover/item:text-primary-foreground transition-colors shrink-0">{getInitials(c, "·")}</div>
+                                  <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center text-[10px] font-bold shrink-0">{getInitials(c, "·")}</div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-xs font-bold text-foreground truncate">{getDisplayName(c, t("Unnamed"))}</p>
-                                    <p className="text-[9px] text-muted-foreground font-bold tracking-widest truncate">{c.phone}</p>
                                   </div>
                                 </button>
                               ))}
@@ -784,24 +826,16 @@ export default function PosInvoicesPage() {
                         exit={{ opacity: 0, y: 8 }}
                         className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2"
                       >
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("New customer")}</p>
                         <input
-                          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                           placeholder={t("Customer name")}
                           value={newCustomerName}
                           onChange={(e) => setNewCustomerName(e.target.value)}
                         />
-                        <input
-                          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all text-start"
-                          placeholder={t("Phone (optional)")}
-                          dir="ltr"
-                          value={newCustomerPhone}
-                          onChange={(e) => setNewCustomerPhone(e.target.value)}
-                        />
                         <button
                           onClick={() => void handleCreateCustomer()}
                           disabled={creatingCustomer || !newCustomerName.trim()}
-                          className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 shadow-md hover:brightness-110 transition-all"
+                          className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 touch-target"
                         >
                           <UserPlus className="h-4 w-4" />
                           {creatingCustomer ? t("Creating...") : t("Create & select")}
@@ -811,35 +845,33 @@ export default function PosInvoicesPage() {
                   </AnimatePresence>
                 </div>
 
-                {/* Employee Select */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    <Scissors className="h-3 w-3" />
-                    {t("Specialist")}
-                  </label>
-                  <div className="relative">
-                    <select 
-                      className="w-full rounded-lg border border-border bg-card ps-3 pe-8 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
-                      value={selectedEmployee}
-                      onChange={(e) => setSelectedEmployee(e.target.value)}
-                    >
-                      <option value="">{t("Choose specialist")}</option>
-                      {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
-                    </select>
-                    <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
+                {/* Employee Select - compact */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                      <Scissors className="h-3 w-3" />
+                      {t("Specialist")}
+                    </label>
+                    <div className="relative">
+                      <select 
+                        className="w-full rounded-lg border border-border bg-card px-2 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer touch-target"
+                        value={selectedEmployee}
+                        onChange={(e) => setSelectedEmployee(e.target.value)}
+                      >
+                        <option value="">{t("Select")}</option>
+                        {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                      </select>
+                      <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none rotate-90" />
+                    </div>
                   </div>
-                </div>
-
-                {/* Payment & Discount */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
                       <Wallet className="h-3 w-3" />
                       {t("Payment")}
                     </label>
                     <div className="relative">
                       <select 
-                        className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
+                        className="w-full rounded-lg border border-border bg-card px-2 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none cursor-pointer touch-target"
                         value={paymentMethod}
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       >
@@ -847,47 +879,28 @@ export default function PosInvoicesPage() {
                         <option value="CARD">{t("Card")}</option>
                         <option value="TRANSFER">{t("Transfer")}</option>
                       </select>
-                      <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none rotate-90" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                      <Minus className="h-3 w-3" />
-                      {t("Discount")}
-                    </label>
-                    <div className="relative">
-                      <input 
-                        type="number" 
-                        className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                        value={discount}
-                        onChange={(e) => setDiscount(Number(e.target.value))}
-                        placeholder="0.00"
-                      />
-                      <div className="absolute end-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-muted-foreground uppercase pointer-events-none">{t("OMR")}</div>
+                      <ChevronRight className="absolute end-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none rotate-90" />
                     </div>
                   </div>
                 </div>
 
-                {/* Loyalty Points */}
+                {/* Loyalty Points - compact toggle */}
                 {selectedCustomer && selectedCustomer.loyaltyPoints > 0 && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-between rounded-lg border border-success/20 bg-success/5 p-3 shadow-inner"
+                    className="flex items-center justify-between rounded-lg border border-success/20 bg-success/5 p-2.5"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-success/20 flex items-center justify-center text-success shrink-0">
-                        <Sparkles className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-bold text-success uppercase tracking-widest">{selectedCustomer.loyaltyPoints} {t("Points")}</p>
-                        <p className="text-[8px] font-bold text-muted-foreground uppercase">{formatOMRAmount(loyaltyDiscount)} {t("OMR Discount")}</p>
-                      </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Sparkles className="h-4 w-4 text-success shrink-0" />
+                      <p className="text-[9px] font-bold text-success uppercase tracking-widest truncate">
+                        {selectedCustomer.loyaltyPoints} {t("Points")} (-{formatOMRAmount(loyaltyDiscount)})
+                      </p>
                     </div>
                     <button 
                       onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
                       className={clsx(
-                        "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shadow-inner shrink-0",
+                        "relative inline-flex h-6 w-10 items-center rounded-full transition-colors focus:outline-none shrink-0",
                         useLoyaltyPoints ? "bg-success" : "bg-muted"
                       )}
                     >
@@ -899,154 +912,34 @@ export default function PosInvoicesPage() {
                   </motion.div>
                 )}
 
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    <CreditCard className="h-3 w-3" />
-                    {t("Gift Card")}
-                  </label>
+                {/* Gift Card - inline */}
+                <div className="space-y-1.5">
                   <input
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                    placeholder={t("Enter gift card code")}
+                    className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    placeholder={t("Gift card code")}
                     value={giftCardCode}
                     onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
                   />
-                  {selectedGiftCard && (
-                    <p className="text-[9px] font-bold text-info uppercase tracking-widest">
-                      {t("Available Balance")}: {formatOMRAmount(selectedGiftCard.currentBalance)} {t("OMR")} · {t("Redeem for")} {formatOMRAmount(giftCardDiscount)} {t("OMR")}
-                    </p>
-                  )}
                 </div>
-
-                {selectedCustomer && entitlements.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                      <Boxes className="h-3 w-3" />
-                      {t("Customer Packages")}
-                    </label>
-                    <div className="space-y-2">
-                      {entitlements.map((ent) => {
-                        const eligible = (ent.units || []).filter((unit) => {
-                          const remaining = unit.totalUnits - unit.usedUnits;
-                          const inCart = cart.some((it) => it.type === "service" && it.id === unit.serviceId);
-                          return remaining > 0 && inCart && ent.status === "ACTIVE";
-                        });
-                        const alreadyApplied = entitlementRedemptions.find((r) => r.entitlementId === ent.id);
-                        return (
-                          <div key={ent.id} className="rounded-lg border border-border/60 bg-muted/30 p-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-[10px] font-bold truncate">{ent.instrumentName || t("Package")}</p>
-                              <span className="shrink-0 text-[9px] font-bold text-muted-foreground">{formatOMRAmount(ent.remainingValue)} {t("OMR")} {t("left")}</span>
-                            </div>
-                            {alreadyApplied ? (
-                              <div className="mt-1.5 flex items-center justify-between gap-2">
-                                <p className="text-[10px] font-bold text-info">
-                                  {t("Applied")}: {alreadyApplied.units} {t("sessions")} · {t("est")}. {formatOMRAmount(entitlementRedemptionPreview)} {t("OMR")}
-                                </p>
-                                <button
-                                  onClick={() => setEntitlementRedemptions((prev) => prev.filter((r) => r.entitlementId !== ent.id))}
-                                  className="shrink-0 rounded-md bg-muted px-2 py-1 text-[9px] font-bold text-destructive"
-                                >
-                                  {t("Remove")}
-                                </button>
-                              </div>
-                            ) : eligible.length > 0 ? (
-                              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                {eligible.map((unit) => {
-                                  const remaining = unit.totalUnits - unit.usedUnits;
-                                  const cartQty = cart
-                                    .filter((it) => it.type === "service" && it.id === unit.serviceId)
-                                    .reduce((sum, it) => sum + Number(it.qty ?? 1), 0);
-                                  const maxUnits = Math.min(remaining, cartQty);
-                                  if (maxUnits <= 0) return null;
-                                  return (
-                                    <button
-                                      key={unit.id}
-                                      onClick={() => setEntitlementRedemptions((prev) => [...prev, {
-                                        entitlementId: ent.id,
-                                        type: "units",
-                                        serviceId: unit.serviceId,
-                                        units: 1,
-                                      }])}
-                                      className="rounded-md bg-primary/10 px-2 py-1 text-[9px] font-bold text-primary"
-                                    >
-                                      {unit.serviceName || t("Service")}: {t("Apply")} 1 {t("session")} ({remaining} {t("left")})
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <p className="mt-1 text-[9px] font-bold text-muted-foreground">
-                                {t("Add an included service to the cart to redeem sessions")}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Summary & Checkout */}
-              <div className="pt-4 border-t border-border space-y-4">
-                <div className="space-y-2 bg-muted/50 rounded-lg p-3">
-                  <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                    <span>{t("Subtotal")}</span>
-                    <span>{formatOMRAmount(subtotal)} OMR</span>
+              {/* Summary & Checkout - sticky bottom */}
+              <div className="pt-3 border-t border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("Total")}</span>
+                  <div>
+                    <span className="text-2xl font-bold tracking-tight text-primary">{formatOMRAmount(total)}</span>
+                    <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
                   </div>
-                  {tierDiscount > 0 && tierInfo && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-success uppercase tracking-widest">
-                      <span>{tierInfo.icon} {t(tierInfo.labelKey)} ({tierPercent}%)</span>
-                      <span>-{formatOMRAmount(tierDiscount)} OMR</span>
-                    </div>
-                  )}
-                  {(discount > 0 || loyaltyDiscount > 0) && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-destructive uppercase tracking-widest">
-                      <span>{t("Discounts")}</span>
-                      <span>-{formatOMRAmount(discount + loyaltyDiscount)} OMR</span>
-                    </div>
-                  )}
-                  {giftCardDiscount > 0 && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-info uppercase tracking-widest">
-                      <span>{t("Gift Card Redemption")}</span>
-                      <span>-{formatOMRAmount(giftCardDiscount)} OMR</span>
-                    </div>
-                  )}
-                  {entitlementRedemption > 0 && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-info uppercase tracking-widest">
-                      <span>{t("Package Redemption")}</span>
-                      <span>-{formatOMRAmount(entitlementRedemption)} OMR</span>
-                    </div>
-                  )}
-                  {taxRate > 0 && (
-                    <div className="flex items-center justify-between text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                      <span>{t("VAT")} ({taxRate}%)</span>
-                      <span>{formatOMRAmount(tax)} OMR</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <span className="text-xs font-bold text-foreground uppercase tracking-[0.1em]">{t("Total")}</span>
-                    <div className="text-end">
-                      <span className="text-2xl lg:text-3xl font-bold tracking-tighter text-primary">{formatOMRAmount(total)}</span>
-                      <span className="text-[9px] font-bold text-muted-foreground ms-1 uppercase">{t("OMR")}</span>
-                    </div>
-                  </div>
-                  {(giftCardDiscount > 0 || entitlementRedemption > 0) && (
-                    <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {t("Remaining payable after redemptions — the server caps amounts at the available balance")}
-                    </p>
-                  )}
                 </div>
 
                 <button 
                   onClick={handleCheckout}
                   disabled={cart.length === 0 || !selectedCustomer || !selectedEmployee}
-                  className="group relative w-full rounded-lg bg-primary py-3 lg:py-4 font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 overflow-hidden text-sm lg:text-base"
+                  className="group relative w-full rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <CheckCircle2 className="h-5 w-5 relative z-10" />
-                  <span className="relative z-10">{t("Complete Payment")}</span>
-                  <span className="text-[7px] lg:text-[8px] font-bold">(Ctrl+Enter)</span>
+                  <CheckCircle2 className="h-5 w-5" />
+                  <span>{t("Complete Payment")}</span>
                 </button>
               </div>
             </div>

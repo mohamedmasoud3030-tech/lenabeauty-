@@ -8,9 +8,8 @@ import { clsx } from "clsx";
  * ScreenState — the app-wide, reusable pattern for the three data states:
  * loading / empty / error.
  *
- * Every screen that fetches data should render exactly one of these so users
- * never see a blank card, a dead space, or an untranslated spinner. Titles and
- * descriptions are i18n keys (Arabic + English provided app-wide).
+ * Mobile-optimized: smaller padding, touch-friendly retry button,
+ * lighter visual weight for better mobile UX.
  */
 interface ScreenStateProps {
   state: "loading" | "empty" | "error";
@@ -46,17 +45,17 @@ export function ScreenState({
     loading: {
       title: t("Loading"),
       description: t("Please wait a moment"),
-      icon: <Loader2 className="h-6 w-6 animate-spin" />,
+      icon: <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />,
     },
     empty: {
       title: t("No data yet"),
       description: t("There is nothing to show here yet"),
-      icon: <Inbox className="h-6 w-6" />,
+      icon: <Inbox className="h-5 w-5 sm:h-6 sm:w-6" />,
     },
     error: {
       title: t("Failed to load data"),
       description: t("Something went wrong while loading. Try again."),
-      icon: <AlertCircle className="h-6 w-6" />,
+      icon: <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6" />,
     },
   } as const;
 
@@ -68,18 +67,22 @@ export function ScreenState({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.2 }}
       role={state === "error" ? "alert" : "status"}
       className={clsx(
-        "flex flex-col items-center justify-center text-center gap-4",
-        compact ? "py-10 px-4" : "py-16 px-6 sm:py-20",
+        "flex flex-col items-center justify-center text-center",
+        // Mobile: tighter spacing, desktop: more breathing room
+        compact 
+          ? "py-6 px-3 gap-2 sm:py-8 sm:gap-3" 
+          : "py-10 px-4 gap-3 sm:py-16 sm:px-6 sm:gap-4",
         className
       )}
     >
       <div
         className={clsx(
-          "flex items-center justify-center rounded-2xl border",
-          compact ? "h-12 w-12" : "h-16 w-16",
+          "flex items-center justify-center rounded-xl border",
+          // Mobile: smaller icons
+          compact ? "h-10 w-10 sm:h-12 sm:w-12" : "h-12 w-12 sm:h-16 sm:w-16",
           state === "error"
             ? "bg-destructive/10 text-destructive border-destructive/20"
             : "bg-primary/10 text-primary border-primary/10"
@@ -88,13 +91,21 @@ export function ScreenState({
         {resolvedIcon}
       </div>
 
-      <div className="space-y-2 max-w-md">
-        <h3 className={clsx("font-bold text-foreground", compact ? "text-sm" : "text-lg")}>
+      <div className={clsx("space-y-1 sm:space-y-2 max-w-xs sm:max-w-md")}>
+        <h3 className={clsx(
+          "font-bold text-foreground",
+          compact ? "text-xs sm:text-sm" : "text-sm sm:text-lg"
+        )}>
           {resolvedTitle}
         </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{resolvedDescription}</p>
+        <p className={clsx(
+          "text-muted-foreground leading-relaxed",
+          compact ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
+        )}>
+          {resolvedDescription}
+        </p>
         {state === "error" && errorDetail && (
-          <p className="text-xs text-muted-foreground/60 font-mono break-words bg-muted/40 rounded-lg p-2">
+          <p className="text-[10px] sm:text-xs text-muted-foreground/60 font-mono break-words bg-muted/40 rounded-lg p-2 max-h-16 overflow-auto">
             {errorDetail}
           </p>
         )}
@@ -103,7 +114,14 @@ export function ScreenState({
       {actionLabel && onAction && (
         <button
           onClick={onAction}
-          className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-primary font-bold text-sm text-primary-foreground shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all"
+          className={clsx(
+            "inline-flex items-center gap-2 font-bold shadow-lg shadow-primary/20",
+            "hover:brightness-110 active:scale-95 transition-all touch-target",
+            // Mobile: smaller button
+            compact 
+              ? "h-10 px-4 rounded-lg text-xs sm:h-11 sm:px-6 sm:rounded-xl sm:text-sm" 
+              : "h-11 px-6 rounded-xl text-sm"
+          )}
         >
           {state === "error" ? <RefreshCw className="h-4 w-4" /> : null}
           {t(actionLabel)}

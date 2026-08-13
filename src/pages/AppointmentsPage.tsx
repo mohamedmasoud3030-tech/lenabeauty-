@@ -114,7 +114,8 @@ function statusClass(s: AppointmentStatus | string) {
 export default function AppointmentsPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRtl = i18n.language === "ar";
   const [mode, setMode] = useState<"day" | "week">("week");
   const [anchor, setAnchor] = useState<Date>(() => new Date());
 
@@ -650,14 +651,14 @@ export default function AppointmentsPage() {
           )}
         </div>
 
-        {/* Mobile View */}
-        <div className="lg:hidden space-y-6">
+        {/* Mobile View - Timeline style for today */}
+        <div className="lg:hidden space-y-4">
           {loading ? (
-            <div className="rounded-[2rem] border border-border bg-card/50">
+            <div className="rounded-2xl border border-border bg-card/50">
               <ScreenState state="loading" title={t("Loading appointments...")} compact />
             </div>
           ) : loadError ? (
-            <div className="rounded-[2rem] border border-border bg-card/50">
+            <div className="rounded-2xl border border-border bg-card/50">
               <ScreenState
                 state="error"
                 title={t("Failed to load appointments")}
@@ -669,7 +670,7 @@ export default function AppointmentsPage() {
               />
             </div>
           ) : Array.from(apptsByDay.values()).flat().length === 0 ? (
-            <div className="rounded-[2rem] border border-border bg-card/50">
+            <div className="rounded-2xl border border-border bg-card/50">
               <ScreenState
                 state="empty"
                 icon={<CalendarIcon className="h-6 w-6" />}
@@ -684,64 +685,116 @@ export default function AppointmentsPage() {
             range.days.map((day) => {
               const dayKey = startOfDay(day).toISOString();
               const dayAppts = (apptsByDay.get(dayKey) ?? []).sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+              const isToday = startOfDay(new Date()).toISOString() === dayKey;
 
               return (
                 <div key={`mobile-${dayKey}`} className="space-y-3">
-                  <div className="flex items-center justify-between px-2">
-                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                      {fmtDayHeader(day)}
-                    </h3>
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className={clsx(
+                        "font-bold uppercase tracking-wider",
+                        isToday ? "text-primary text-sm" : "text-muted-foreground text-xs"
+                      )}>
+                        {fmtDayHeader(day)}
+                      </h3>
+                      {isToday && (
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[9px] font-bold">
+                          {t("Today")}
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => openBooking(slotToDate(day, 9 * 2))}
-                      className="min-h-11 px-2 text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                      className="h-10 px-3 text-xs font-bold text-primary flex items-center gap-1.5 hover:bg-primary/10 rounded-lg transition-all"
                     >
-                      <Plus className="h-3.5 w-3.5" />
-                      {t("Add")}
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden sm:inline">{t("Add")}</span>
                     </button>
                   </div>
 
                   {dayAppts.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border bg-card/40 px-4 py-5 text-center">
+                    <div className="rounded-xl border border-dashed border-border bg-card/40 px-4 py-6 text-center">
                       <p className="text-xs font-bold text-muted-foreground">{t("No appointments for this day")}</p>
                     </div>
+                  ) : isToday ? (
+                    // Today's Timeline View - vertical timeline with clear time/employee/status
+                    <div className="relative">
+                      {dayAppts.map((a, idx) => {
+                        const dt = new Date(a.dateTime);
+                        const isFirst = idx === 0;
+                        const isLast = idx === dayAppts.length - 1;
+                        return (
+                          <div key={`m-${a.id}`} className="flex gap-3">
+                            {/* Timeline connector */}
+                            <div className="flex flex-col items-center">
+                              <div className={clsx(
+                                "h-10 w-10 rounded-xl flex items-center justify-center text-[10px] font-bold shadow-sm z-10",
+                                statusClass(a.status)
+                              )}>
+                                {a.status === AppointmentStatus.SCHEDULED ? (
+                                  <Clock className="h-4 w-4" />
+                                ) : a.status === AppointmentStatus.COMPLETED ? (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                ) : (
+                                  <XCircle className="h-4 w-4" />
+                                )}
+                              </div>
+                              {!isLast && <div className="w-0.5 flex-1 bg-border/50 my-1" />}
+                            </div>
+                            
+                            {/* Card content */}
+                            <motion.button
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
+                              onClick={() => openEditBooking(a)}
+                              className="flex-1 bg-card border border-border rounded-xl p-3 mb-3 text-start shadow-sm hover:shadow-md hover:border-primary/30 transition-all touch-target"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-bold text-foreground truncate">{a.customer?.name}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">{a.service?.name}</p>
+                                </div>
+                                <span className={clsx("px-2 py-1 rounded-lg text-[9px] font-bold shrink-0", statusClass(a.status))}>
+                                  {t(a.status)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-primary" />
+                                  {fmtTime(dt)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <User className="h-3 w-3 text-primary" />
+                                  {a.employee?.name || "—"}
+                                </span>
+                              </div>
+                            </motion.button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3">
+                    // Other days - compact list
+                    <div className="space-y-2">
                       {dayAppts.map(a => {
                         const dt = new Date(a.dateTime);
                         return (
-                          <motion.div
+                          <motion.button
                             key={`m-${a.id}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             onClick={() => openEditBooking(a)}
-                            className="min-w-0 bg-card border border-border rounded-2xl p-3 sm:p-5 shadow-sm flex flex-col gap-2 relative overflow-hidden cursor-pointer"
+                            className="w-full flex items-center gap-3 bg-card border border-border rounded-xl p-3 text-start shadow-sm hover:shadow-md hover:border-primary/30 transition-all touch-target"
                           >
-                            <div className={clsx("absolute top-0 inset-x-0 h-1.5", statusClass(a.status).split(" ")[0])} />
-
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1 min-w-0">
-                                <span className="font-bold text-foreground text-base sm:text-lg block truncate">{a.customer?.name}</span>
-                                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground truncate">
-                                  <Scissors className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{a.service?.name}</span>
-                                </div>
-                              </div>
-                              <span className={clsx("rounded-xl px-3 py-1 text-[10px] font-bold shadow-sm shrink-0", statusClass(a.status))}>
-                                {t(a.status)}
-                              </span>
+                            <div className={clsx("h-10 w-14 rounded-lg flex items-center justify-center text-xs font-bold", statusClass(a.status))}>
+                              {fmtTime(dt)}
                             </div>
-
-                            <div className="grid grid-cols-2 gap-1 border-t border-border pt-2 text-[10px] font-bold text-muted-foreground">
-                              <div className="flex items-center gap-1 bg-muted/50 px-2 py-2 rounded-lg min-w-0">
-                                <Clock className="h-3 w-3 text-primary shrink-0" />
-                                {fmtTime(dt)}
-                              </div>
-                              <div className="flex items-center gap-1 bg-muted/50 px-2 py-2 rounded-lg min-w-0">
-                                <User className="h-3 w-3 text-primary shrink-0" />
-                                <span className="truncate">{a.employee?.name || "—"}</span>
-                              </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-foreground truncate">{a.customer?.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{a.service?.name}</p>
                             </div>
-                          </motion.div>
+                            <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", isRtl && "rotate-180")} />
+                          </motion.button>
                         );
                       })}
                     </div>
@@ -750,6 +803,14 @@ export default function AppointmentsPage() {
               );
             })
           )}
+          
+          {/* Sticky Quick Book FAB */}
+          <button
+            onClick={() => openBooking()}
+            className="fixed right-4 bottom-24 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all lg:hidden"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
         </div>
       </motion.div>
 

@@ -5,10 +5,8 @@ import { clsx } from "clsx";
 /**
  * PageHeader — the app-wide, reusable page header.
  *
- * Unified pattern for every operational page: icon tile + Arabic title +
- * short subtitle on the right, and the page's primary actions / search /
- * filters in the `actions` slot. Keeps the existing visual identity
- * (rounded tile, gradient accents) without per-page variations.
+ * Mobile-optimized: compact on mobile, icon + title always visible,
+ * actions can be made sticky on mobile for better UX.
  */
 interface PageHeaderProps {
   icon: ReactNode;
@@ -17,33 +15,42 @@ interface PageHeaderProps {
   /** Primary actions, search inputs, filters… rendered on the opposite side. */
   actions?: ReactNode;
   className?: string;
+  /** Make actions sticky on mobile - useful for search/filter bars */
+  stickyActions?: boolean;
 }
 
-export function PageHeader({ icon, title, subtitle, actions, className }: PageHeaderProps) {
+export function PageHeader({ icon, title, subtitle, actions, className, stickyActions = false }: PageHeaderProps) {
   const { t } = useTranslation();
   return (
     <div
       className={clsx(
-        "flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-8",
+        "flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6",
+        stickyActions && "lg:static",
         className,
       )}
     >
-      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
-        <div className="h-11 w-11 sm:h-16 sm:w-16 rounded-xl sm:rounded-[2rem] bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-shrink-0">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
           {icon}
         </div>
-        <div className="space-y-1 min-w-0">
-          <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-foreground tracking-tight truncate">
+        <div className="space-y-0.5 sm:space-y-1 min-w-0">
+          <h1 className={clsx(
+            "font-bold text-foreground tracking-tight truncate",
+            "text-lg sm:text-2xl lg:text-3xl"
+          )}>
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">{subtitle}</p>
           )}
         </div>
       </div>
 
       {actions && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
+        <div className={clsx(
+          "flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0",
+          stickyActions && "lg:flex-wrap"
+        )}>
           {actions}
         </div>
       )}

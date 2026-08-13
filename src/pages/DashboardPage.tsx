@@ -262,43 +262,47 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-4">
+      {/* Key Metrics Grid - 2x2 on mobile, 4 columns on desktop */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
         <StatCard 
           variants={item}
           title={t("Today's Revenue")} 
           value={loading ? "…" : summary?.canViewRevenue ? formatOMRAmount(summary?.todayRevenue) : "—"}
-          subValue={summary?.canViewRevenue ? t("Total Invoices Today") : t("No data")}
-          icon={<DollarSign className="h-5 w-5" />}
+          subValue={summary?.canViewRevenue ? t("Invoices") : t("No data")}
+          icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />}
           trend={summary?.canViewRevenue ? "+0%" : "—"}
           color="emerald"
+          compact
         />
         <StatCard 
           variants={item}
           title={t("Appointments")} 
           value={loading ? "…" : summary?.appointments ?? 0}
-          subValue={t("Scheduled")}
-          icon={<CalendarDays className="h-5 w-5" />}
+          subValue={t("Today")}
+          icon={<CalendarDays className="h-4 w-4 sm:h-5 sm:w-5" />}
           trend={`+${summary?.todayAppointments || 0}`}
           color="blue"
+          compact
         />
         <StatCard 
           variants={item}
           title={t("Customers")} 
           value={loading ? "…" : summary?.customers ?? 0}
-          subValue={`+${summary?.newCustomersThisMonth || 0} ${t("This Month")}`}
-          icon={<Users className="h-5 w-5" />}
+          subValue={`+${summary?.newCustomersThisMonth || 0} ${t("New")}`}
+          icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
           trend={`+${summary?.newCustomersThisMonth || 0}`}
           color="purple"
+          compact
         />
         <StatCard 
           variants={item}
           title={t("Low Stock")} 
           value={loading ? "…" : summary?.lowStockCount ?? 0}
-          subValue={t("Items need attention")}
-          icon={<AlertTriangle className="h-5 w-5" />}
-          trend={(summary?.lowStockCount && summary.lowStockCount > 0) ? "⚠️ Action" : "✓ Clear"}
+          subValue={t("Items")}
+          icon={<AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />}
+          trend={(summary?.lowStockCount && summary.lowStockCount > 0) ? "⚠️" : "✓"}
           color={summary?.lowStockCount && summary.lowStockCount > 0 ? "rose" : "emerald"}
+          compact
         />
       </div>
 
@@ -675,7 +679,7 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ title, value, subValue, icon, trend, color, variants }: {
+function StatCard({ title, value, subValue, icon, trend, color, variants, compact = false }: {
   title: string
   value: string | number
   subValue: string
@@ -683,6 +687,7 @@ function StatCard({ title, value, subValue, icon, trend, color, variants }: {
   trend: string
   color: string
   variants: import("motion/react").Variants
+  compact?: boolean
 }) {
   const colorMap: Record<string, string> = {
     emerald: "bg-success/10 text-success",
@@ -694,21 +699,39 @@ function StatCard({ title, value, subValue, icon, trend, color, variants }: {
   return (
     <motion.div 
       variants={variants}
-      className="group relative rounded-xl sm:rounded-2xl border border-border bg-card p-3 sm:p-6 shadow-sm transition-all hover:shadow-md overflow-hidden"
+      className={clsx(
+        "group relative rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md overflow-hidden",
+        compact ? "p-2.5 sm:p-3" : "p-3 sm:p-6"
+      )}
     >
       <div className="flex items-start justify-between relative z-10">
-        <div className={clsx("rounded-lg p-2.5 sm:p-3 transition-all group-hover:scale-110 shadow-sm", colorMap[color])}>
+        <div className={clsx(
+          "rounded-lg transition-all group-hover:scale-110 shadow-sm",
+          compact ? "p-1.5 sm:p-2" : "p-2.5 sm:p-3",
+          colorMap[color]
+        )}>
           {icon}
         </div>
-        <div className={clsx("flex items-center gap-1 rounded-lg px-2 sm:px-3 py-1 text-[9px] font-bold uppercase tracking-widest shadow-sm", colorMap[color])}>
-          <ArrowUpRight className="h-3 w-3" />
+        <div className={clsx(
+          "flex items-center gap-0.5 rounded-lg px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider shadow-sm",
+          colorMap[color]
+        )}>
           {trend}
         </div>
       </div>
-      <div className="mt-4 sm:mt-6 relative z-10">
-        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.3em]">{title}</p>
-        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-1 sm:mt-2 tracking-tighter truncate">{value}</h3>
-        <p className="text-[9px] text-muted-foreground mt-1 sm:mt-2 font-bold uppercase tracking-[0.2em] opacity-60 truncate">{subValue}</p>
+      <div className={clsx("relative z-10", compact ? "mt-2 sm:mt-4" : "mt-4 sm:mt-6")}>
+        <p className={clsx(
+          "font-bold text-muted-foreground uppercase tracking-wider",
+          compact ? "text-[8px] sm:text-[9px]" : "text-[9px]"
+        )}>{title}</p>
+        <h3 className={clsx(
+          "font-bold text-foreground tracking-tighter truncate",
+          compact ? "text-lg sm:text-2xl mt-0.5" : "text-2xl sm:text-3xl mt-1 sm:mt-2"
+        )}>{value}</h3>
+        <p className={clsx(
+          "text-muted-foreground font-bold uppercase tracking-wider opacity-60 truncate",
+          compact ? "text-[8px] sm:text-[9px] mt-0.5" : "text-[9px] mt-1 sm:mt-2"
+        )}>{subValue}</p>
       </div>
     </motion.div>
   );

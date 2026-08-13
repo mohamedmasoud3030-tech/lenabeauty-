@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
+import { clsx } from 'clsx';
 
 export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -36,11 +37,13 @@ export function NetworkStatus() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed top-0 inset-x-0 z-40 bg-destructive/10 border-b border-destructive/20 backdrop-blur-sm"
+          transition={{ duration: 0.2 }}
+          className="fixed top-0 inset-x-0 z-[var(--z-overlay-top)] bg-destructive text-destructive-foreground"
+          style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
         >
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
-            <WifiOff className="h-5 w-5 text-destructive animate-pulse" />
-            <span className="text-sm font-bold text-destructive">{t('No internet connection')}</span>
+          <div className="px-4 py-2.5 flex items-center justify-center gap-2">
+            <WifiOff className="h-4 w-4" />
+            <span className="text-xs sm:text-sm font-bold">{t('No internet connection')}</span>
           </div>
         </motion.div>
       )}
@@ -49,11 +52,13 @@ export function NetworkStatus() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed top-0 inset-x-0 z-40 bg-success/10 border-b border-success/20 backdrop-blur-sm"
+          transition={{ duration: 0.2 }}
+          className="fixed top-0 inset-x-0 z-[var(--z-overlay-top)] bg-success text-success-foreground"
+          style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
         >
-          <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-center gap-3">
-            <Wifi className="h-5 w-5 text-success" />
-            <span className="text-sm font-bold text-success">{t('Connection restored')}</span>
+          <div className="px-4 py-2.5 flex items-center justify-center gap-2">
+            <Wifi className="h-4 w-4" />
+            <span className="text-xs sm:text-sm font-bold">{t('Back online')}</span>
           </div>
         </motion.div>
       )}
