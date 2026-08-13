@@ -175,8 +175,8 @@ function diffInventories(a, b) {
 }
 
 function hasExplicitTransaction(sql) {
-  const statements = splitStatements(sql).map((s) => s.trim().toUpperCase());
-  return statements.includes("BEGIN") && statements.includes("COMMIT");
+  const statements = new Set(splitStatements(sql).map((s) => s.trim().toUpperCase()));
+  return statements.has("BEGIN") && statements.has("COMMIT");
 }
 
 function firstLine(err) {
