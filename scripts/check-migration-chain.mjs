@@ -2,8 +2,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const dir = resolve(process.cwd(), "supabase/migrations");
-const files = readdirSync(dir).filter((f) => f.endsWith(".sql"));
-const sorted = [...files].sort();
+const compareText = (left, right) => left.localeCompare(right);
+const MIGRATION_ID_PATTERN = /^\d{14}$/;
+const EXTENSION_PATTERN = /CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+([\w]+)/gi;
+const files = readdirSync(dir).filter((file) => file.endsWith(".sql"));
+const sorted = [...files].sort(compareText);
 
 if (files.join("\n") !== sorted.join("\n")) {
   console.log("INFO filesystem enumeration is not lexical; canonical order is lexical filename order");
@@ -13,21 +16,24 @@ const ids = new Map();
 let failed = false;
 for (const file of sorted) {
   const id = file.split("_")[0];
-  if (!/^\d{14}$/.test(id)) {
+  if (!MIGRATION_ID_PATTERN.test(id)) {
     console.error(`FAIL invalid migration prefix: ${file}`);
     failed = true;
   }
   if (ids.has(id)) {
     console.error(`FAIL duplicate migration id ${id}: ${ids.get(id)} and ${file}`);
     failed = true;
-  } else ids.set(id, file);
+  } else {
+    ids.set(id, file);
+  }
 }
 
 const sqlByFile = new Map(sorted.map((file) => [file, readFileSync(resolve(dir, file), "utf8")]));
 const extensionCreation = new Map();
 for (const file of sorted) {
-  for (const match of sqlByFile.get(file).matchAll(/CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+([a-zA-Z0-9_]+)/gi)) {
-    if (!extensionCreation.has(match[1].toLowerCase())) extensionCreation.set(match[1].toLowerCase(), file);
+  for (const match of sqlByFile.get(file).matchAll(EXTENSION_PATTERN)) {
+    const extension = match[1].toLowerCase();
+    if (!extensionCreation.has(extension)) extensionCreation.set(extension, file);
   }
 }
 
