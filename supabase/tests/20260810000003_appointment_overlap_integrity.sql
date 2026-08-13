@@ -62,6 +62,36 @@ VALUES
     '90 minute service', 15.000, 90, 'FIXED', true
   );
 
+CREATE OR REPLACE FUNCTION pg_temp.expect_overlap_rejection(
+  p_id UUID,
+  p_employee_id UUID,
+  p_service_id UUID,
+  p_date_time TIMESTAMPTZ,
+  p_message TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public.appointments (
+      id, center_id, customer_id, employee_id, service_id, date_time, status
+    ) VALUES (
+      p_id,
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      p_employee_id,
+      p_service_id,
+      p_date_time,
+      'SCHEDULED'
+    );
+    RAISE EXCEPTION '%', p_message;
+  EXCEPTION
+    WHEN exclusion_violation THEN NULL;
+  END;
+END;
+$$;
+
 -- Baseline: employee one is occupied from 10:00 through 11:00.
 INSERT INTO public.appointments (
   id, center_id, customer_id, employee_id, service_id, date_time, status
@@ -89,27 +119,37 @@ BEGIN
 END;
 $$;
 
--- 10:30 for the same employee must overlap and fail.
-DO $$
-BEGIN
-  BEGIN
-    INSERT INTO public.appointments (
-      id, center_id, customer_id, employee_id, service_id, date_time, status
-    ) VALUES (
-      '10000000-0000-4000-8000-000000000011',
-      '10000000-0000-4000-8000-000000000001',
-      '10000000-0000-4000-8000-000000000003',
-      '10000000-0000-4000-8000-000000000004',
-      '10000000-0000-4000-8000-000000000007',
-      '2026-08-11 10:30:00+04',
-      'SCHEDULED'
-    );
-    RAISE EXCEPTION 'expected same-employee overlap rejection';
-  EXCEPTION
-    WHEN exclusion_violation THEN NULL;
-  END;
-END;
-$$;
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000020',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:00:00+04',
+  'expected same-start overlap rejection'
+);
+
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000011',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:30:00+04',
+  'expected same-employee overlap rejection'
+);
+
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000021',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000007',
+  '2026-08-11 10:15:00+04',
+  'expected contained overlap rejection'
+);
+
+SELECT pg_temp.expect_overlap_rejection(
+  '10000000-0000-4000-8000-000000000022',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000008',
+  '2026-08-11 09:45:00+04',
+  'expected containing overlap rejection'
+);
 
 -- The half-open range permits the same employee exactly at 11:00.
 INSERT INTO public.appointments (
@@ -180,6 +220,24 @@ BEGIN
 END;
 $$;
 
+-- Cancelling releases the interval because the exclusion predicate covers only SCHEDULED.
+UPDATE public.appointments
+SET status = 'CANCELLED'
+WHERE id = '10000000-0000-4000-8000-000000000010';
+
+INSERT INTO public.appointments (
+  id, center_id, customer_id, employee_id, service_id, date_time, status
+)
+VALUES (
+  '10000000-0000-4000-8000-000000000023',
+  '10000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000003',
+  '10000000-0000-4000-8000-000000000004',
+  '10000000-0000-4000-8000-000000000006',
+  '2026-08-11 10:00:00+04',
+  'SCHEDULED'
+);
+
 -- A catalog edit must not reinterpret the original booking snapshot.
 UPDATE public.services
 SET duration_minutes = 120
@@ -191,7 +249,7 @@ DECLARE
 BEGIN
   SELECT duration_minutes_snapshot INTO v_duration
   FROM public.appointments
-  WHERE id = '10000000-0000-4000-8000-000000000010';
+  WHERE id = '10000000-0000-4000-8000-000000000023';
   IF v_duration <> 60 THEN
     RAISE EXCEPTION 'catalog edit changed a historical appointment snapshot';
   END IF;
