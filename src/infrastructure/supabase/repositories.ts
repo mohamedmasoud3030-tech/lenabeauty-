@@ -818,7 +818,7 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
 
       const { data, error } = await getSupabaseClient().rpc('complete_appointment_v1', {
         p_center_id: centerRes.data,
-        p_appointment_id: input.appointmentId,
+        p_appointment_id: id,
         p_payment_method: input.paymentMethod ?? 'cash',
         p_discount_amount: input.discountAmount ?? 0,
         p_use_loyalty_points: input.useLoyaltyPoints || false,
