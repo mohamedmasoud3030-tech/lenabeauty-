@@ -14,7 +14,7 @@
 // The two known idempotency gaps are the ONLY documented exclusions.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,7 +37,7 @@ const BLOCKING_CATEGORIES = new Set([
   "rls-role-governance",
 ]);
 
-function run(script) {
+function runAudit(script) {
   const res = spawnSync(process.execPath, [resolve(ROOT, script)], {
     cwd: ROOT,
     stdio: "pipe",
@@ -46,14 +46,23 @@ function run(script) {
   return { script, status: res.status, stdout: res.stdout, stderr: res.stderr };
 }
 
+/** Snapshot current artifact contents (before regeneration). */
+function snapshotArtifacts() {
+  const files = readdirSync(ARTIFACTS).filter((f) => f.endsWith(".json")).sort();
+  const map = new Map();
+  for (const f of files) map.set(f, readFileSync(resolve(ARTIFACTS, f), "utf8"));
+  return map;
+}
+
 const violations = [];
+const before = snapshotArtifacts();
 
 for (const script of [
   "scripts/audit/replay-schema.mjs",
   "scripts/audit/scan-frontend.mjs",
   "scripts/audit/build-matrix.mjs",
 ]) {
-  const r = run(script);
+  const r = runAudit(script);
   if (r.status !== 0) {
     violations.push(`audit step failed (exit ${r.status}): ${script}\n${r.stderr ?? r.stdout}`);
   }
@@ -77,16 +86,13 @@ for (const f of findings) {
   }
 }
 
-// Stale-artifact check: the scripts above just regenerated the artifacts, so
-// any diff against the committed versions means the committed ones were stale.
-const diff = spawnSync("git", ["diff", "--exit-code", "--", "docs/database-contract/artifacts"], {
-  cwd: ROOT,
-  stdio: "pipe",
-  encoding: "utf8",
-});
-if (diff.status !== 0) {
-  violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
+// Stale-artifact check: compare committed (pre-regeneration) vs fresh artifacts.
+const after = snapshotArtifacts();
+let stale = false;
+for (const [name, content] of before) {
+  if (after.get(name) !== content) stale = true;
 }
+if (stale) violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
 
 // Documented (not fatal): the two known idempotency gaps drive a fingerprint
 // drift on re-application. Reported here for visibility; it is not a new drift.

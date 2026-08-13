@@ -31,10 +31,10 @@ for (const c of schema.columns) {
 function parseFk(def) {
   const m = /FOREIGN KEY\s*\(([^)]*)\)\s*REFERENCES\s+([\w".]+)\s*\(([^)]*)\)/.exec(def);
   if (!m) return null;
-  const parts = m[2].replace(/"/g, "").split(".");
+  const parts = m[2].replaceAll('"', "").split(".");
   return {
     cols: m[1].split(",").map((s) => s.trim()),
-    refTable: parts[parts.length - 1],
+    refTable: parts.at(-1),
     refCols: m[3].split(",").map((s) => s.trim()),
   };
 }
@@ -359,7 +359,9 @@ for (const t of frontend.tables) {
       const fwd = fkFromTo.get(`${t.table}->${e.relation}`);
       const rev = fkToFrom.has(t.table) && fkToFrom.get(t.table).includes(e.relation);
       const resolvable = Boolean(fwd || rev);
-      const direction = fwd ? "to-one" : rev ? "to-many" : "none";
+      let direction = "none";
+      if (fwd) direction = "to-one";
+      else if (rev) direction = "to-many";
       row.embed_results.push({ relation: e.relation, columns: e.columns, resolvable, direction });
       if (!resolvable) {
         F({
@@ -499,6 +501,7 @@ const summary = {
   },
 };
 
+mkdirSync(A, { recursive: true });
 writeFileSync(resolve(A, "contract-matrix.json"), JSON.stringify(matrix, null, 2) + "\n");
 writeFileSync(resolve(A, "audit-findings.json"), JSON.stringify({ summary, findings }, null, 2) + "\n");
 

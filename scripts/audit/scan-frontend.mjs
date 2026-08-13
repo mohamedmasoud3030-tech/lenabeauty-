@@ -100,7 +100,7 @@ function readBracedBody(source, i) {
 
 /** Resolve a TS union of string literals declared for identifier `ident`. */
 function resolveRpcUnion(source, ident) {
-  const re = new RegExp(`\\b${ident}\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"(?:\\s*\\|\\s*"(?:[^"\\\\]|\\\\.)*")*)`);
+  const re = new RegExp(String.raw`\b${ident}\s*:\s*("(?:[^"\\]|\\.)*"(?:\s*\|\s*"(?:[^"\\]|\\.)*")*)`);
   const m = re.exec(source);
   if (!m) return null;
   return [...m[1].matchAll(/"([^"]*)"/g)].map((x) => x[1]);
@@ -160,7 +160,7 @@ function prevNonSpace(source, i) {
 
 /** Resolve a `const NAME = 'literal'` / template-literal in the same file. */
 function resolveConstTemplate(source, ident) {
-  const re = new RegExp(`\\b${ident}\\s*=\\s*`);
+  const re = new RegExp(String.raw`\b${ident}\s*=\s*`);
   const m = re.exec(source);
   if (!m) return null;
   const pos = m.index + m[0].length;
@@ -259,7 +259,7 @@ for (const path of sourceFiles) {
       const identMatch = /^(\w+)/.exec(source.slice(j));
       if (identMatch) {
         const names = resolveRpcUnion(source, identMatch[1]);
-        if (names && names.length) {
+        if (names?.length) {
           for (const name of names) registerRpc(name, [], rel);
           continue;
         }

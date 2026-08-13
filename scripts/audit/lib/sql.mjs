@@ -37,30 +37,30 @@ const isWordChar = (c) => (c >= "0" && c <= "9") || (c >= "A" && c <= "Z") || (c
 /** If `sql[i]` starts a skip-able token, return the index just past it; else -1. */
 function skipTokenEnd(sql, i, n) {
   const ch = sql[i];
-  const next = sql[i + 1];
-
-  if (ch === "-" && next === "-") {
-    let j = i;
-    while (j < n && sql[j] !== "\n") j += 1;
-    return j;
-  }
-  if (ch === "/" && next === "*") {
-    let j = i + 2;
-    while (j < n && !(sql[j] === "*" && sql[j + 1] === "/")) j += 1;
-    return Math.min(n, j + 2);
-  }
-  if (ch === "$") {
-    return dollarQuoteEnd(sql, i, n);
-  }
-  if (ch === "'") {
-    return singleQuoteEnd(sql, i, n);
-  }
-  if (ch === '"') {
-    let j = i + 1;
-    while (j < n && sql[j] !== '"') j += 1;
-    return Math.min(n, j + 1);
-  }
+  if (ch === "-" && sql[i + 1] === "-") return lineCommentEnd(sql, i, n);
+  if (ch === "/" && sql[i + 1] === "*") return blockCommentEnd(sql, i, n);
+  if (ch === "$") return dollarQuoteEnd(sql, i, n);
+  if (ch === "'") return singleQuoteEnd(sql, i, n);
+  if (ch === '"') return doubleQuoteEnd(sql, i, n);
   return -1;
+}
+
+function lineCommentEnd(sql, i, n) {
+  let j = i;
+  while (j < n && sql[j] !== "\n") j += 1;
+  return j;
+}
+
+function blockCommentEnd(sql, i, n) {
+  let j = i + 2;
+  while (j < n && !(sql[j] === "*" && sql[j + 1] === "/")) j += 1;
+  return Math.min(n, j + 2);
+}
+
+function doubleQuoteEnd(sql, i, n) {
+  let j = i + 1;
+  while (j < n && sql[j] !== '"') j += 1;
+  return Math.min(n, j + 1);
 }
 
 /** End index of a dollar-quoted string starting at `sql[i] === "$"`, or -1 if not a tag. */

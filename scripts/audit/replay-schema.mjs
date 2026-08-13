@@ -22,6 +22,7 @@ import {
   MANUAL_BOOTSTRAP_FILE,
   compatPreamble,
   translateMigration,
+  splitStatements,
 } from "./lib/sql.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -91,6 +92,7 @@ report.fingerprints.diff = diffInventories(inventoryAfterFirst, inventoryAfterRe
 // Canonical-only objects captured from SQL text that PGlite cannot execute.
 inventoryAfterFirst.canonical_only = canonicalOnlyObjects();
 
+mkdirSync(ARTIFACTS_DIR, { recursive: true });
 writeFileSync(resolve(ARTIFACTS_DIR, "replay-report.json"), JSON.stringify(report, null, 2) + "\n");
 writeFileSync(resolve(ARTIFACTS_DIR, "schema-inventory.json"), JSON.stringify(inventoryAfterFirst, null, 2) + "\n");
 
@@ -173,7 +175,8 @@ function diffInventories(a, b) {
 }
 
 function hasExplicitTransaction(sql) {
-  return /^\s*BEGIN\s*;/m.test(sql) && /^\s*COMMIT\s*;/m.test(sql);
+  const statements = splitStatements(sql).map((s) => s.trim().toUpperCase());
+  return statements.includes("BEGIN") && statements.includes("COMMIT");
 }
 
 function firstLine(err) {
