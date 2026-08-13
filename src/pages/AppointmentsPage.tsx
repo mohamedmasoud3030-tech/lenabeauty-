@@ -116,8 +116,12 @@ export default function AppointmentsPage() {
   const { confirm } = useConfirm();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
-  const [mode, setMode] = useState<"day" | "week">("week");
+  // Portrait phones: day first. Week view on a 320–360px screen is unreadable.
+  const [mode, setMode] = useState<"day" | "week">(() =>
+    typeof window !== "undefined" && window.innerWidth < 1024 ? "day" : "week"
+  );
   const [anchor, setAnchor] = useState<Date>(() => new Date());
+
 
   const [appts, setAppts] = useState<Appt[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -496,8 +500,8 @@ export default function AppointmentsPage() {
         ))}
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+      {/* Stats — horizontal chips on small phones so the timeline stays above the fold */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4">
         {[
           { label: t('Total'), value: apptStats.total, color: 'text-primary', bg: 'bg-primary/10', icon: CalendarDays },
           { label: t('Scheduled'), value: apptStats.scheduled, color: 'text-warning', bg: 'bg-warning/10', icon: Clock },
@@ -511,7 +515,7 @@ export default function AppointmentsPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="rounded-2xl border border-border bg-card p-3 sm:p-5 shadow-sm hover:shadow-md transition-all"
+            className="min-w-[132px] shrink-0 sm:min-w-0 rounded-2xl border border-border bg-card p-3 sm:p-5 shadow-sm hover:shadow-md transition-all"
           >
             <div className={`h-9 w-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
               <Icon className={`h-4 w-4 ${color}`} />
@@ -682,7 +686,13 @@ export default function AppointmentsPage() {
               />
             </div>
           ) : (
-            range.days.map((day) => {
+            range.days.filter((day) => {
+              // Week-on-phone: skip empty days so the timeline is not a wall of blanks.
+              if (mode === "day" || window.innerWidth >= 1024) return true;
+              const key = startOfDay(day).toISOString();
+              const isToday = startOfDay(new Date()).toISOString() === key;
+              return isToday || (apptsByDay.get(key)?.length ?? 0) > 0;
+            }).map((day) => {
               const dayKey = startOfDay(day).toISOString();
               const dayAppts = (apptsByDay.get(dayKey) ?? []).sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
               const isToday = startOfDay(new Date()).toISOString() === dayKey;
@@ -747,7 +757,7 @@ export default function AppointmentsPage() {
                               initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.05 } }}
                               onClick={() => openEditBooking(a)}
-                              className="flex-1 bg-card border border-border rounded-xl p-3 mb-3 text-start shadow-sm hover:shadow-md hover:border-primary/30 transition-all touch-target"
+                              className="flex-1 min-h-[72px] bg-card border border-border rounded-xl p-3 mb-3 text-start shadow-sm hover:shadow-md hover:border-primary/30 transition-all touch-target"
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
@@ -807,7 +817,7 @@ export default function AppointmentsPage() {
           {/* Sticky Quick Book FAB */}
           <button
             onClick={() => openBooking()}
-            className="fixed right-4 bottom-24 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all lg:hidden"
+            className="fixed end-4 above-bottom-nav z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all lg:hidden touch-target"
           >
             <Plus className="h-6 w-6" />
           </button>
@@ -816,7 +826,7 @@ export default function AppointmentsPage() {
 
       <AnimatePresence>
         {open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -828,9 +838,9 @@ export default function AppointmentsPage() {
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl"
+              className="relative flex flex-col w-full max-w-2xl h-[100dvh] sm:h-auto overflow-hidden rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl max-h-[calc(100dvh-var(--keyboard-inset,0px))] sm:max-h-[90dvh]"
             >
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20 backdrop-blur-xl">
+              <div className="shrink-0 flex items-center justify-between border-b border-border px-4 sm:px-10 py-4 sm:py-8 bg-muted/20 backdrop-blur-xl pt-[max(1rem,env(safe-area-inset-top))]">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                     <CalendarIcon className="h-7 w-7" />
@@ -848,8 +858,8 @@ export default function AppointmentsPage() {
                 </button>
               </div>
 
-              <div className="p-5 sm:p-10 space-y-6 sm:space-y-8">
-                <div className="grid grid-cols-2 gap-6 p-6 rounded-[2rem] bg-muted/30 border border-border shadow-inner">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-10 space-y-6 sm:space-y-8">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-6 rounded-[2rem] bg-muted/30 border border-border shadow-inner">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Date")}</label>
                     <div className="relative">
@@ -1107,11 +1117,13 @@ export default function AppointmentsPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-4">
+                </div>
+              </div>
+              <div className="shrink-0 flex gap-3 border-t border-border bg-card/95 backdrop-blur-sm p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <button
                       onClick={() => void deleteAppt(editApptId)}
-                      className="w-16 h-16 shrink-0 rounded-[2rem] bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center flex-col gap-1 border border-destructive/20 active:scale-95"
+                      className="w-14 h-14 shrink-0 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center border border-destructive/20 active:scale-95 touch-target"
                       title={t("Delete")}
                     >
                       <XCircle className="h-6 w-6" />
@@ -1120,14 +1132,12 @@ export default function AppointmentsPage() {
                   <button
                     disabled={busy || !customerId || (!!editApptId && status !== AppointmentStatus.SCHEDULED)}
                     onClick={submitBooking}
-                    className="group relative flex-1 h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden"
+                    className="group relative flex-1 min-h-14 rounded-2xl bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden touch-target"
                   >
                     <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                     <CheckCircle2 className="h-6 w-6 relative z-10" />
-                    <span className="text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
+                    <span className="text-base sm:text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
                   </button>
-                  </div>
-                </div>
               </div>
             </motion.div>
           </div>

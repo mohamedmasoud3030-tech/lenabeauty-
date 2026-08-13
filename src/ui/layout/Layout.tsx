@@ -10,6 +10,7 @@ import { GlobalSearch } from "../../shared/components/GlobalSearch";
 import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
+import { useKeyboardInset, useScrollFieldIntoView } from "../../shared/hooks/useKeyboardInset";
 
 export default function Layout() {
   const nav = useNavigate();
@@ -20,7 +21,10 @@ export default function Layout() {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
+  const { isOpen: isKeyboardOpen } = useKeyboardInset();
+  useScrollFieldIntoView();
 
   // Detect mobile
   useEffect(() => {
@@ -30,18 +34,27 @@ export default function Layout() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Close more menu on click outside
+  // Close more menu on click/tap outside (touch-first: mousedown alone misses taps).
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
-      }
+    const handlePointerOutside = (e: Event) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (moreMenuRef.current?.contains(target) || moreButtonRef.current?.contains(target)) return;
+      setShowMoreMenu(false);
     };
     if (showMoreMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handlePointerOutside);
+      document.addEventListener("touchstart", handlePointerOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerOutside);
+      document.removeEventListener("touchstart", handlePointerOutside);
+    };
   }, [showMoreMenu]);
+
+  useEffect(() => {
+    if (isKeyboardOpen) setShowMoreMenu(false);
+  }, [isKeyboardOpen]);
 
   // Dynamically sync language and direction on document element
   useEffect(() => {
@@ -233,15 +246,22 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation - 5 key daily functions, safe-area aware */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-[var(--z-bottom-nav)] bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-4px_20px_rgb(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] print:hidden safe-area-bottom">
+      {/* Mobile Bottom Navigation — hidden while the keyboard is open so it never covers fields */}
+      <div
+        className={clsx(
+          "lg:hidden fixed bottom-0 inset-x-0 z-[var(--z-bottom-nav)] bg-card/95 backdrop-blur-3xl border-t border-border shadow-[0_-4px_20px_rgb(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] print:hidden safe-area-bottom transition-transform duration-200",
+          isKeyboardOpen && "translate-y-full pointer-events-none",
+        )}
+        aria-hidden={isKeyboardOpen}
+      >
         <nav className="flex items-stretch justify-around h-[64px] px-1">
-          {bottomNavItems.map(({ to, labelKey, Icon, action }, index) => (
+          {bottomNavItems.map(({ to, labelKey, Icon, action }) => (
             action ? (
               <button
                 key="more"
+                type="button"
                 onClick={action}
-                ref={index === 4 ? moreMenuRef as any : undefined}
+                ref={moreButtonRef}
                 className={clsx(
                   "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 touch-target relative",
                   showMoreMenu ? "text-primary" : "text-muted-foreground hover:text-foreground"

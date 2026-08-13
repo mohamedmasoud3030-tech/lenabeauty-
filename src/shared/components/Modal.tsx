@@ -191,6 +191,7 @@ export function Modal({
             className={clsx(
               "relative z-10 flex flex-col w-full bg-card text-card-foreground shadow-2xl outline-none",
               "h-[100dvh] sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl",
+              "max-h-[calc(100dvh-var(--keyboard-inset,0px))]",
               SIZE_MAX_WIDTH[size],
               className
             )}

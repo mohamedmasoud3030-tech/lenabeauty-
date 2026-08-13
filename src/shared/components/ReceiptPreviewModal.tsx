@@ -66,37 +66,41 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
       size="md"
       className="bg-white"
       footer={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={handleDownload}
-            className="flex-1 h-11 px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target"
+            aria-label={t("Save")}
+            className="flex-1 min-w-0 h-11 px-2 sm:px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">{t("Save")}</span>
           </button>
           {'share' in navigator && (
             <button
               type="button"
               onClick={handleShare}
-              className="flex-1 h-11 px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target"
+              aria-label={t("Share")}
+              className="flex-1 min-w-0 h-11 px-2 sm:px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target"
             >
-              <Share2 className="h-4 w-4" />
+              <Share2 className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">{t("Share")}</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex-1 h-11 px-4 rounded-xl bg-primary font-bold text-sm text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-2 touch-target"
+            aria-label={t("Print Invoice")}
+            className="flex-1 min-w-0 h-11 px-2 sm:px-4 rounded-xl bg-primary font-bold text-sm text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-2 touch-target"
           >
-            <Printer className="h-4 w-4" />
+            <Printer className="h-4 w-4 shrink-0" />
             <span className="hidden sm:inline">{t("Print")}</span>
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="h-11 px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target"
+            aria-label={t("Close")}
+            className="h-11 w-11 shrink-0 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center touch-target"
           >
             <X className="h-4 w-4" />
           </button>
