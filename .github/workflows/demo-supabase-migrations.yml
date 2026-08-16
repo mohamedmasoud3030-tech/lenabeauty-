@@ -84,11 +84,55 @@ jobs:
       - name: Show remote migration state before apply
         run: supabase migration list --linked
 
+      - name: Mark manual admin bootstrap as handled out-of-band
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(supabase migration list --linked)"
+          if printf '%s\n' "$history" | awk -F '│' '
+            NF >= 2 {
+              local_version=$1
+              remote_version=$2
+              gsub(/[[:space:]]/, "", local_version)
+              gsub(/[[:space:]]/, "", remote_version)
+              if (local_version == "20260628000002" && remote_version == "20260628000002") found=1
+            }
+            END { exit(found ? 0 : 1) }
+          '; then
+            echo "Manual admin bootstrap is already recorded in remote migration history."
+          else
+            echo "Recording manual admin bootstrap as applied without executing its placeholder SQL."
+            supabase migration repair 20260628000002 --status applied
+          fi
+
       - name: Apply pending canonical migrations
         run: supabase db push --linked --yes
 
-      - name: Verify remote migration state after apply
-        run: supabase migration list --linked
+      - name: Verify remote migration history is fully aligned
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(supabase migration list --linked)"
+          printf '%s\n' "$history"
+          drift="$(printf '%s\n' "$history" | awk -F '│' '
+            NF >= 2 {
+              local_version=$1
+              remote_version=$2
+              gsub(/[[:space:]]/, "", local_version)
+              gsub(/[[:space:]]/, "", remote_version)
+              local_is_version=(local_version ~ /^[0-9]+$/ && length(local_version) == 14)
+              remote_is_version=(remote_version ~ /^[0-9]+$/ && length(remote_version) == 14)
+              if ((local_is_version || remote_is_version) && local_version != remote_version) {
+                print local_version " != " remote_version
+              }
+            }
+          ')"
+          if [ -n "$drift" ]; then
+            echo "Migration history drift remains after db push:" >&2
+            printf '%s\n' "$drift" >&2
+            exit 1
+          fi
+          echo "PASS local and remote migration histories are aligned."
 
       - name: Verify live Demo schema and center contract
         run: npm run preflight:supabase
