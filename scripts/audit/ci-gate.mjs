@@ -21,8 +21,6 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ARTIFACTS = resolve(ROOT, "docs/database-contract/artifacts");
 
-const KNOWN_NON_IDEMPOTENT = new Set();
-
 const BLOCKING_CATEGORIES = new Set([
   "table-missing",
   "rpc-missing",
@@ -73,7 +71,7 @@ for (const f of replay.replay) {
   if (f.status === "failed") violations.push(`replay failure: ${f.file}: ${f.error}`);
 }
 for (const f of replay.idempotency) {
-  if (f.status === "non-idempotent" && !KNOWN_NON_IDEMPOTENT.has(f.file)) {
+  if (f.status === "non-idempotent") {
     violations.push(`unexpected non-idempotent migration: ${f.file}: ${f.error}`);
   }
 }

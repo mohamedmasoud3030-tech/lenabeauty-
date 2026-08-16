@@ -34,7 +34,8 @@ BEGIN
       UPDATE auth.users
       SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb)
         || jsonb_build_object('role', upper(raw_user_meta_data->>'role'))
-      WHERE upper(COALESCE(raw_app_meta_data->>'role', '')) NOT IN ('ADMIN', 'MANAGER', 'STAFF')
+      -- NOSONAR: role literals are intentionally repeated inside isolated dynamic SQL and RLS expressions.
+      WHERE upper(COALESCE(raw_app_meta_data->>'role', '')) NOT IN ('ADMIN', 'MANAGER', 'STAFF') -- NOSONAR
         AND upper(COALESCE(raw_user_meta_data->>'role', '')) IN ('ADMIN', 'MANAGER', 'STAFF')
     $promote_role$;
 

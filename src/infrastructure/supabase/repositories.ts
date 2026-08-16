@@ -1985,7 +1985,7 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
     }
 
     const fingerprint = JSON.stringify(input);
-    if (!this.pendingIssue || this.pendingIssue.fingerprint !== fingerprint) {
+    if (this.pendingIssue?.fingerprint !== fingerprint) {
       this.pendingIssue = { fingerprint, requestId: createOperationId() };
     }
 

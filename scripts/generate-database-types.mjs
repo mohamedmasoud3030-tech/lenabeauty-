@@ -80,7 +80,7 @@ ${indent(relationships, 4)}
 
 function parseArgs(identityArgs) {
   if (!identityArgs.trim()) return "Record<string, never>";
-  const args = identityArgs.split(/,\s*(?=\w+\s)/).map((arg) => {
+  const args = identityArgs.split(",").map((arg) => {
     const match = /^(\w+)\s+(.+)$/.exec(arg.trim());
     if (!match) throw new Error(`Cannot parse function argument: ${arg}`);
     return `${q(match[1])}: ${scalar(match[2])} | null`;

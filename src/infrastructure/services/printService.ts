@@ -25,7 +25,7 @@ export function sanitizePrintHTML(html: string): string {
   const document = new DOMParser().parseFromString(html, 'text/html');
   document.querySelectorAll('script, iframe, object, embed, base, link, meta[http-equiv], style:not([data-lb-print-style])').forEach((node) => node.remove());
   document.querySelectorAll('*').forEach((element) => {
-    for (const attribute of [...element.attributes]) {
+    for (const attribute of element.attributes) {
       const name = attribute.name.toLowerCase();
       const value = attribute.value.trim().toLowerCase();
       if (name.startsWith('on') || name === 'srcdoc') element.removeAttribute(attribute.name);
