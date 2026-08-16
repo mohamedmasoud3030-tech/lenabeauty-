@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/demo-supabase-migrations.yml"
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "scripts/check-rpc-contracts.mjs"
@@ -73,6 +74,27 @@ jobs:
             echo "Refusing migration: configured target does not equal the explicit Demo project ref." >&2
             exit 1
           fi
+
+      - name: Enforce hosted Demo Auth password protections
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_config_url="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth"
+          curl --fail-with-body --silent --show-error \
+            -X PATCH "$auth_config_url" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"password_hibp_enabled":true,"security_update_password_require_reauthentication":true}' \
+            >/tmp/lena-auth-config-patch.json
+          curl --fail-with-body --silent --show-error \
+            "$auth_config_url" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            >/tmp/lena-auth-config.json
+          jq -e '
+            .password_hibp_enabled == true and
+            .security_update_password_require_reauthentication == true
+          ' /tmp/lena-auth-config.json >/dev/null
+          echo "PASS hosted Demo Auth leaked-password protection and password-change reauthentication are enabled."
 
       - uses: supabase/setup-cli@v1
         with:
