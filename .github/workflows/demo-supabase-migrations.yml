@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/demo-supabase-migrations.yml"
+      - "vercel.json"
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "scripts/check-rpc-contracts.mjs"
