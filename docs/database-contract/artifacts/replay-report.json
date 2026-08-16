@@ -1,9 +1,9 @@
 {
   "engine": "PGlite",
-  "postgres": "PostgreSQL 18.3 (PGlite 0.5.4) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
+  "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 29,
-    "automated": 28,
+    "total": 31,
+    "automated": 30,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -147,6 +147,16 @@
       "file": "20260811004300_refund_status_repair.sql",
       "status": "ok",
       "error": null
+    },
+    {
+      "file": "20260816000001_production_integrity_hardening.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260816000002_checkout_idempotency.sql",
+      "status": "ok",
+      "error": null
     }
   ],
   "idempotency": [
@@ -212,8 +222,8 @@
     },
     {
       "file": "20260628000012_customer_experience_forecasting_accounting_advanced.sql",
-      "status": "non-idempotent",
-      "error": "policy \"customer_reviews_select_policy\" for table \"customer_reviews\" already exists"
+      "status": "idempotent",
+      "error": null
     },
     {
       "file": "20260628000013_booking_reschedule_cancel.sql",
@@ -262,8 +272,8 @@
     },
     {
       "file": "20260810000005_security_hardening_auth.sql",
-      "status": "non-idempotent",
-      "error": "policy \"center_settings_insert\" for table \"center_settings\" already exists"
+      "status": "idempotent",
+      "error": null
     },
     {
       "file": "20260810000006_security_grant_repair.sql",
@@ -289,6 +299,16 @@
       "file": "20260811004300_refund_status_repair.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260816000001_production_integrity_hardening.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260816000002_checkout_idempotency.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -309,121 +329,12 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "465cafc48d2bb664e8c2be9fd562247d96659e42631a49380ff9701a9f63417b",
-    "after_repeat": "f19b4fddfef00f96b322a13e4e8deda0b0722e33fa55f00953a18af35861f7b6",
-    "identical": false,
+    "after_first_replay": "8d553ebcf47e0b834ad60d54718b5617332f27dbc1d861cf6703745a8fcee442",
+    "after_repeat": "8d553ebcf47e0b834ad60d54718b5617332f27dbc1d861cf6703745a8fcee442",
+    "identical": true,
     "diff": {
-      "changed_sections": [
-        "functions",
-        "function_acl",
-        "policies",
-        "grants"
-      ],
-      "functions": [
-        {
-          "function": "app_private.is_center_member(_center_id uuid)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public, auth"
-            ],
-            "security_definer": true
-          }
-        },
-        {
-          "function": "app_private.tier_discount_percent(_total_spent numeric)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": false
-          },
-          "after": {
-            "config": null,
-            "security_definer": false
-          }
-        },
-        {
-          "function": "app_private.user_center_ids()",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public, auth"
-            ],
-            "security_definer": true
-          }
-        },
-        {
-          "function": "public.public_center_info_v1(p_center_id uuid)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public"
-            ],
-            "security_definer": true
-          }
-        },
-        {
-          "function": "public.public_list_services_v1(p_center_id uuid)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public"
-            ],
-            "security_definer": true
-          }
-        },
-        {
-          "function": "public.public_list_staff_v1(p_center_id uuid)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public"
-            ],
-            "security_definer": true
-          }
-        },
-        {
-          "function": "public.public_taken_slots_v1(p_center_id uuid, p_day date)",
-          "before": {
-            "config": [
-              "search_path=pg_catalog, public, app_private"
-            ],
-            "security_definer": true
-          },
-          "after": {
-            "config": [
-              "search_path=public"
-            ],
-            "security_definer": true
-          }
-        }
-      ]
+      "changed_sections": [],
+      "functions": []
     }
   }
 }

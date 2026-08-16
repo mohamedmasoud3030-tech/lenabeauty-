@@ -4,8 +4,8 @@
 -- After RLS is enabled, a user sees NOTHING unless they have:
 --   1) a row in profiles
 --   2) a row in center_memberships linking them to the center
---   3) user_metadata.role set to ADMIN / MANAGER / STAFF
---      (the frontend mapAuthSession reads user_metadata.role and
+--   3) server-owned app_metadata.role set to ADMIN / MANAGER / STAFF
+--      (the frontend mapAuthSession reads app_metadata.role and
 --       refuses to default-escalate — no role => unauthorized).
 --
 -- HOW TO USE:
@@ -34,17 +34,17 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   -- 2. link to the center
-  INSERT INTO public.center_memberships (profile_id, center_id)
-  VALUES (v_admin_uid, v_center_id)
-  ON CONFLICT (profile_id, center_id) DO NOTHING;
+  INSERT INTO public.center_memberships (profile_id, center_id, role)
+  VALUES (v_admin_uid, v_center_id, 'ADMIN')
+  ON CONFLICT (profile_id, center_id) DO UPDATE SET role = EXCLUDED.role;
 
-  -- 3. set the app role in auth metadata (read by mapAuthSession)
+  -- 3. set the role in server-owned app metadata (read by mapAuthSession)
   UPDATE auth.users
-  SET raw_user_meta_data =
-    COALESCE(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('role', 'ADMIN')
+  SET raw_app_meta_data =
+    COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('role', 'ADMIN')
   WHERE id = v_admin_uid;
 END $$;
 
 -- VERIFY:
---   SELECT raw_user_meta_data->>'role' FROM auth.users WHERE id = '<uid>';
+--   SELECT raw_app_meta_data->>'role' FROM auth.users WHERE id = '<uid>';
 --   SELECT * FROM public.center_memberships WHERE profile_id = '<uid>';

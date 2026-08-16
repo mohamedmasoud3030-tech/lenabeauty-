@@ -59,7 +59,7 @@ describe("Supabase Repository Tests", () => {
             expect(state.status).toBe("anonymous");
         });
 
-        it("mapAuthSession fails closed if role is missing in user_metadata", () => {
+        it("mapAuthSession fails closed if role is missing in app_metadata", () => {
             const mockSession = {
                 user: {
                     id: "u123",
@@ -75,12 +75,12 @@ describe("Supabase Repository Tests", () => {
             }
         });
 
-        it("mapAuthSession fails closed if role is invalid in user_metadata", () => {
+        it("mapAuthSession ignores a user-editable user_metadata role", () => {
             const mockSession = {
                 user: {
                     id: "u123",
                     email: "test@example.com",
-                    user_metadata: { role: "HACKER" }
+                    user_metadata: { role: "ADMIN" }
                 }
             } as any;
             
@@ -103,14 +103,15 @@ describe("Supabase Repository Tests", () => {
             expect(state.status).toBe("error");
         });
 
-        it("mapAuthSession honors structural user_metadata role and name", () => {
+        it("mapAuthSession honors server-owned app_metadata role and user profile name", () => {
             const mockSession = {
                 user: {
                     id: "u123",
                     email: "manager@example.com",
+                    app_metadata: { role: "MANAGER" },
                     user_metadata: {
                         name: "Big Boss",
-                        role: "MANAGER"
+                        role: "STAFF"
                     }
                 }
             } as any;

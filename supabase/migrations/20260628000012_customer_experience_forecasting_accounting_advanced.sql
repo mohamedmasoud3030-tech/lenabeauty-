@@ -42,13 +42,17 @@ CREATE INDEX IF NOT EXISTS idx_customer_reviews_center_customer
 
 ALTER TABLE public.customer_reviews ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS customer_reviews_select_policy ON public.customer_reviews;
 CREATE POLICY customer_reviews_select_policy ON public.customer_reviews
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_reviews_insert_policy ON public.customer_reviews;
 CREATE POLICY customer_reviews_insert_policy ON public.customer_reviews
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_reviews_update_policy ON public.customer_reviews;
 CREATE POLICY customer_reviews_update_policy ON public.customer_reviews
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_reviews_delete_policy ON public.customer_reviews;
 CREATE POLICY customer_reviews_delete_policy ON public.customer_reviews
   FOR DELETE USING (app_private.is_center_member(center_id));
 
@@ -70,13 +74,17 @@ CREATE INDEX IF NOT EXISTS idx_service_files_center_customer
 
 ALTER TABLE public.service_files ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS service_files_select_policy ON public.service_files;
 CREATE POLICY service_files_select_policy ON public.service_files
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_files_insert_policy ON public.service_files;
 CREATE POLICY service_files_insert_policy ON public.service_files
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_files_update_policy ON public.service_files;
 CREATE POLICY service_files_update_policy ON public.service_files
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_files_delete_policy ON public.service_files;
 CREATE POLICY service_files_delete_policy ON public.service_files
   FOR DELETE USING (app_private.is_center_member(center_id));
 
@@ -95,13 +103,17 @@ CREATE INDEX IF NOT EXISTS idx_service_file_images_file
 
 ALTER TABLE public.service_file_images ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS service_file_images_select_policy ON public.service_file_images;
 CREATE POLICY service_file_images_select_policy ON public.service_file_images
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_file_images_insert_policy ON public.service_file_images;
 CREATE POLICY service_file_images_insert_policy ON public.service_file_images
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_file_images_update_policy ON public.service_file_images;
 CREATE POLICY service_file_images_update_policy ON public.service_file_images
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS service_file_images_delete_policy ON public.service_file_images;
 CREATE POLICY service_file_images_delete_policy ON public.service_file_images
   FOR DELETE USING (app_private.is_center_member(center_id));
 
@@ -124,13 +136,17 @@ CREATE INDEX IF NOT EXISTS idx_customer_notification_timeline_customer
 
 ALTER TABLE public.customer_notification_timeline ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS customer_notification_timeline_select_policy ON public.customer_notification_timeline;
 CREATE POLICY customer_notification_timeline_select_policy ON public.customer_notification_timeline
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_notification_timeline_insert_policy ON public.customer_notification_timeline;
 CREATE POLICY customer_notification_timeline_insert_policy ON public.customer_notification_timeline
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_notification_timeline_update_policy ON public.customer_notification_timeline;
 CREATE POLICY customer_notification_timeline_update_policy ON public.customer_notification_timeline
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS customer_notification_timeline_delete_policy ON public.customer_notification_timeline;
 CREATE POLICY customer_notification_timeline_delete_policy ON public.customer_notification_timeline
   FOR DELETE USING (app_private.is_center_member(center_id));
 
@@ -156,13 +172,17 @@ CREATE INDEX IF NOT EXISTS idx_accounting_journal_entries_center_date
 
 ALTER TABLE public.accounting_journal_entries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS accounting_journal_entries_select_policy ON public.accounting_journal_entries;
 CREATE POLICY accounting_journal_entries_select_policy ON public.accounting_journal_entries
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS accounting_journal_entries_insert_policy ON public.accounting_journal_entries;
 CREATE POLICY accounting_journal_entries_insert_policy ON public.accounting_journal_entries
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS accounting_journal_entries_update_policy ON public.accounting_journal_entries;
 CREATE POLICY accounting_journal_entries_update_policy ON public.accounting_journal_entries
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS accounting_journal_entries_delete_policy ON public.accounting_journal_entries;
 CREATE POLICY accounting_journal_entries_delete_policy ON public.accounting_journal_entries
   FOR DELETE USING (app_private.is_center_member(center_id));
 
@@ -185,13 +205,17 @@ CREATE INDEX IF NOT EXISTS idx_ai_booking_leads_center_status
 
 ALTER TABLE public.ai_booking_leads ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS ai_booking_leads_select_policy ON public.ai_booking_leads;
 CREATE POLICY ai_booking_leads_select_policy ON public.ai_booking_leads
   FOR SELECT USING (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS ai_booking_leads_insert_policy ON public.ai_booking_leads;
 CREATE POLICY ai_booking_leads_insert_policy ON public.ai_booking_leads
   FOR INSERT WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS ai_booking_leads_update_policy ON public.ai_booking_leads;
 CREATE POLICY ai_booking_leads_update_policy ON public.ai_booking_leads
   FOR UPDATE USING (app_private.is_center_member(center_id))
   WITH CHECK (app_private.is_center_member(center_id));
+DROP POLICY IF EXISTS ai_booking_leads_delete_policy ON public.ai_booking_leads;
 CREATE POLICY ai_booking_leads_delete_policy ON public.ai_booking_leads
   FOR DELETE USING (app_private.is_center_member(center_id));
 

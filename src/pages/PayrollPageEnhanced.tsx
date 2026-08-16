@@ -6,7 +6,7 @@ import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { Download, Printer, Trash2, FileText, Users, DollarSign, TrendingDown, CalendarClock } from "lucide-react";
 import { PayrollRun, PayrollLineItem, Employee } from "../domain/entities";
-import printService from "../infrastructure/services/printService";
+import printService, { escapePrintText } from "../infrastructure/services/printService";
 
 export default function PayrollPageEnhanced() {
   const { t, i18n } = useTranslation();
@@ -104,7 +104,7 @@ export default function PayrollPageEnhanced() {
     if (!selectedRun) return "";
     const lines = selectedRun.lines.map((l) => `
       <tr>
-        <td>${employeeName(l.employeeId)}</td>
+        <td>${escapePrintText(employeeName(l.employeeId))}</td>
         <td class="text-right">${l.baseSalary.toFixed(3)}</td>
         <td class="text-right">${l.advancesDeducted.toFixed(3)}</td>
         <td class="text-right font-bold">${l.netSalary.toFixed(3)}</td>
@@ -112,7 +112,7 @@ export default function PayrollPageEnhanced() {
     return `
       <div class="section">
         <h2 class="text-lg font-bold mb-3">${isArabic ? "كشف الرواتب" : "Payroll Report"}</h2>
-        <p class="mb-3">${isArabic ? "الفترة" : "Period"}: ${selectedRun.run.periodMonth}</p>
+        <p class="mb-3">${isArabic ? "الفترة" : "Period"}: ${escapePrintText(selectedRun.run.periodMonth)}</p>
         <table>
           <thead><tr>
             <th>${isArabic ? "الموظف" : "Employee"}</th>

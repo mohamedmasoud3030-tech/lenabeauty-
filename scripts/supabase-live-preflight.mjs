@@ -58,6 +58,8 @@ const canonicalMigrations = [
   "20260811004100_checkout_overload_repair.sql",
   "20260811004200_gift_card_redemption_units_repair.sql",
   "20260811004300_refund_status_repair.sql",
+  "20260816000001_production_integrity_hardening.sql",
+  "20260816000002_checkout_idempotency.sql",
 ];
 
 function parseEnvFile(path) {
@@ -184,10 +186,16 @@ if (!rls.includes("WHERE profile_id = auth.uid()")) fail("canonical RLS must use
 else pass("canonical RLS uses center_memberships.profile_id");
 
 const checkout = readFileSync(resolve(migrationsDir, "20260810000002_operational_data_integrity.sql"), "utf8");
-if (!checkout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_v1")) fail("final checkout RPC is missing");
-else pass("final checkout RPC exists");
+if (!checkout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_v1")) fail("internal atomic checkout RPC is missing");
+else pass("internal atomic checkout RPC exists");
 if (!checkout.includes("CREATE TABLE IF NOT EXISTS public.payments")) fail("canonical payments ledger is missing");
 else pass("canonical payments ledger exists");
+
+const idempotentCheckout = readFileSync(resolve(migrationsDir, "20260816000002_checkout_idempotency.sql"), "utf8");
+if (!idempotentCheckout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1")) fail("client idempotent checkout RPC is missing");
+else pass("client idempotent checkout RPC exists");
+if (!idempotentCheckout.includes("REVOKE ALL ON FUNCTION public.process_checkout_v1")) fail("internal checkout RPC remains client-executable");
+else pass("internal checkout RPC is behind the idempotent client boundary");
 
 const entitlements = readFileSync(resolve(migrationsDir, "20260811004000_financial_entitlements.sql"), "utf8");
 if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.customer_entitlements")) fail("entitlement tables are missing");

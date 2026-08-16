@@ -1,64 +1,39 @@
 # Production Readiness — LenaBeauty
 
-**Updated:** 2026-08-11
+**Repository contract updated:** 2026-08-16
 
-This checklist reflects the current staff-only release and the live demo/staging Supabase verification performed during PR #19.
+**Release boundary:** staff-only Web/PWA; public booking and customer portal remain disabled.
 
-## Verified backend state
+## Repository-verified state
 
-The current Lena Supabase project still contains demo/staging data and is the environment used for release verification. The latest applied hardening migrations are:
+- Canonical migrations replay from empty state and repeat idempotently with an identical catalog fingerprint.
+- Tenant RLS and storage policies scope data by center membership.
+- Payroll, advances, attendance, and staff analytics data are ADMIN-only in both routes and database policies.
+- Authorization roles are server-governed (`center_memberships.role` and Auth `app_metadata.role`); user-editable metadata grants nothing.
+- Tenant-scoped payroll, service-category, and payment references are validated.
+- Financial tables are not directly client-writable. `process_checkout_idempotent_v1` is the only client checkout entry point; the internal posting RPC is ungranted.
+- Checkout uses exact PostgreSQL numeric arithmetic, transactional invoice/payment/stock/entitlement posting, and a center/request unique key for retry/concurrency duplicate prevention.
+- Public booking/portal RPCs have zero client grants.
+- SECURITY DEFINER functions used by clients have fixed search paths and explicit grants.
+- Print HTML is sanitized/escaped and production CSP no longer allows inline scripts.
+- Canonical database types are generated from deterministic replay and checked in CI.
+- The existing Demo workflow runs migration/RPC checks, tests, typecheck, lint, and build. Adding the new audit/type/dependency PR gates is pending a GitHub credential with workflow-write permission.
 
-- `20260810000005_security_hardening_auth.sql`
-- `20260810000006_security_grant_repair.sql`
+See `docs/database-contract/artifacts/` for generated catalog evidence and `docs/OPERATIONAL_DATA_CONTRACT.md` for the financial contract.
 
-Live PostgreSQL verification confirms:
+## Live-environment acceptance still required
 
-- tenant RLS hides other-center rows while preserving own-center access;
-- cross-center writes are rejected;
-- checkout rejects a caller-supplied other center;
-- review/service-file RPCs reject cross-center references;
-- `anon` has zero direct table privileges in `public`;
-- `center-assets` storage policies require path center membership;
-- `center_settings` has SELECT/INSERT/UPDATE policies only;
-- public booking/client-portal RPCs have zero `anon` and zero `authenticated` EXECUTE grants;
-- the legacy seven-argument checkout overload has zero client-role EXECUTE grants;
-- only the current eight-argument checkout overload used by the shipped UI is granted;
-- all eleven client-executable staff SECURITY DEFINER RPCs are membership-gated and have fixed `search_path`.
+Repository-local checks do not establish hosted Demo/Production state. Before a production pilot:
 
-See `docs/SECURITY_HARDENING_REPORT_2026-08-10.md` for the evidence and rationale.
+1. Apply all pending canonical migrations through `20260816000002_checkout_idempotency.sql` to Demo/staging, without production seeds.
+2. Run the committed SQL acceptance tests, including idempotent checkout retry evidence.
+3. Run `npm run preflight:supabase` with temporary server-only credentials.
+4. Enable and verify **Supabase Leaked Password Protection** in managed Auth settings; the 2026-08-10 live snapshot reported it disabled.
+5. Complete the operator browser checklist in `docs/SUPABASE_LIVE_QA_RUNBOOK.md`.
+6. Provision or explicitly designate the production-data environment before introducing real customer data.
 
-## Staff-only release boundary
-
-Public booking and the customer portal are intentionally disabled for this release. Their database routines remain installed for the future customer-booking phase but are not executable by client roles.
-
-The current delivery target is the Web/PWA staff application. No second Supabase production-data environment is created by PR #19.
-
-## Environment separation
-
-`VITE_ENVIRONMENT` explicitly distinguishes development, staging, and production behavior. Demo seeds remain outside the canonical migration chain. Production bootstrap must not contain demo users, services, appointments, invoices, or transactions.
-
-## Current code gates
-
-Arena's pre-live-verification HEAD reported:
-
-- typecheck: pass;
-- Vitest: 397/397 pass;
-- production build: pass;
-- npm audit: 0 vulnerabilities.
-
-Live verification subsequently added the grant-repair migration and strengthened the SQL/static regression tests. The updated PR HEAD must run the normal final CI/typecheck/test/build gate before merge.
-
-## Remaining production-pilot blockers
-
-1. **Supabase Leaked Password Protection is still disabled.** `auth.config` is not exposed in the managed database, so this cannot be truthfully marked fixed by SQL. Enable it through Supabase Auth settings / Management API, then confirm the Security Advisor warning disappears.
-2. Run final CI/typecheck/full tests/build on the updated PR #19 HEAD.
-3. Complete live browser acceptance with operator credentials when browser execution is available.
-4. Before real customer data is introduced, provision or explicitly designate the production-data environment and apply the canonical migrations without demo seeds.
-
-The repository contains publishable/anon client configuration by design; publishable keys are not service secrets. No service-role key, database password, or private key should be committed.
+No service-role key, database password, or private key is committed. Browser publishable/anon configuration is public by design.
 
 ## Verdict
 
-**NOT YET READY FOR PRODUCTION PILOT.**
-
-The live database security defects found during PR #19 are closed on demo/staging. The remaining blockers are the managed Auth leaked-password setting, final updated-HEAD CI, and live browser acceptance. PR #19 should remain unmerged until these gates are closed.
+**REPOSITORY READY; HOSTED ENVIRONMENT ACCEPTANCE PENDING.**

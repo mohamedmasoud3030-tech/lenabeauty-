@@ -30,6 +30,10 @@
     },
     {
       "schema": "public",
+      "name": "checkout_idempotency"
+    },
+    {
+      "schema": "public",
       "name": "customer_entitlements"
     },
     {
@@ -747,12 +751,22 @@
     {
       "schema": "public",
       "table": "center_memberships",
+      "name": "role",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": "'STAFF'::text",
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "center_memberships",
       "name": "created_at",
       "type": "timestamp with time zone",
       "udt": "timestamptz",
       "nullable": "NO",
       "default": "now()",
-      "position": 4
+      "position": 5
     },
     {
       "schema": "public",
@@ -1023,6 +1037,66 @@
       "nullable": "NO",
       "default": "now()",
       "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "request_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "invoice_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "result",
+      "type": "jsonb",
+      "udt": "jsonb",
+      "nullable": "YES",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "YES",
+      "default": null,
+      "position": 6
     },
     {
       "schema": "public",
@@ -4154,6 +4228,20 @@
     },
     {
       "schema": "public",
+      "table": "center_memberships",
+      "name": "center_memberships_role_not_null",
+      "type": "n",
+      "definition": "NOT NULL role"
+    },
+    {
+      "schema": "public",
+      "table": "center_memberships",
+      "name": "center_memberships_role_valid",
+      "type": "c",
+      "definition": "CHECK ((role = ANY (ARRAY['ADMIN'::text, 'MANAGER'::text, 'STAFF'::text])))"
+    },
+    {
+      "schema": "public",
       "table": "center_settings",
       "name": "center_settings_center_id_key",
       "type": "u",
@@ -4256,6 +4344,41 @@
       "name": "centers_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (center_id, request_id)"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_request_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL request_id"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_result_consistent",
+      "type": "c",
+      "definition": "CHECK ((((result IS NULL) AND (invoice_id IS NULL) AND (completed_at IS NULL)) OR ((result IS NOT NULL) AND (invoice_id IS NOT NULL) AND (completed_at IS NOT NULL))))"
     },
     {
       "schema": "public",
@@ -6420,18 +6543,18 @@
     {
       "schema": "public",
       "table": "attendance_records",
-      "name": "attendance_records_center_id_fkey",
-      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "name": "attendance_employee_center_fk",
+      "definition": "FOREIGN KEY (employee_id, center_id) REFERENCES employees(id, center_id) ON DELETE CASCADE",
       "ref_schema": "public",
-      "ref_table": "centers"
+      "ref_table": "employees"
     },
     {
       "schema": "public",
       "table": "attendance_records",
-      "name": "attendance_records_employee_id_fkey",
-      "definition": "FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE",
+      "name": "attendance_records_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
       "ref_schema": "public",
-      "ref_table": "employees"
+      "ref_table": "centers"
     },
     {
       "schema": "public",
@@ -6456,6 +6579,22 @@
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE RESTRICT",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_invoice_id_fkey",
+      "definition": "FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT",
+      "ref_schema": "public",
+      "ref_table": "invoices"
     },
     {
       "schema": "public",
@@ -6564,6 +6703,14 @@
     {
       "schema": "public",
       "table": "employee_advances",
+      "name": "advances_employee_center_fk",
+      "definition": "FOREIGN KEY (employee_id, center_id) REFERENCES employees(id, center_id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "employees"
+    },
+    {
+      "schema": "public",
+      "table": "employee_advances",
       "name": "employee_advances_center_id_fkey",
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
       "ref_schema": "public",
@@ -6576,14 +6723,6 @@
       "definition": "FOREIGN KEY (deducted_in_run_id) REFERENCES payroll_runs(id) ON DELETE SET NULL",
       "ref_schema": "public",
       "ref_table": "payroll_runs"
-    },
-    {
-      "schema": "public",
-      "table": "employee_advances",
-      "name": "employee_advances_employee_id_fkey",
-      "definition": "FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE",
-      "ref_schema": "public",
-      "ref_table": "employees"
     },
     {
       "schema": "public",
@@ -6797,15 +6936,7 @@
       "schema": "public",
       "table": "payments",
       "name": "payments_invoice_center_fk",
-      "definition": "FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT NOT VALID",
-      "ref_schema": "public",
-      "ref_table": "invoices"
-    },
-    {
-      "schema": "public",
-      "table": "payments",
-      "name": "payments_invoice_id_fkey",
-      "definition": "FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT",
+      "definition": "FOREIGN KEY (invoice_id, center_id) REFERENCES invoices(id, center_id) ON DELETE RESTRICT",
       "ref_schema": "public",
       "ref_table": "invoices"
     },
@@ -6820,16 +6951,16 @@
     {
       "schema": "public",
       "table": "payroll_line_items",
-      "name": "payroll_line_items_employee_id_fkey",
-      "definition": "FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE",
+      "name": "payroll_lines_employee_center_fk",
+      "definition": "FOREIGN KEY (employee_id, center_id) REFERENCES employees(id, center_id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "employees"
     },
     {
       "schema": "public",
       "table": "payroll_line_items",
-      "name": "payroll_line_items_payroll_run_id_fkey",
-      "definition": "FOREIGN KEY (payroll_run_id) REFERENCES payroll_runs(id) ON DELETE CASCADE",
+      "name": "payroll_lines_run_center_fk",
+      "definition": "FOREIGN KEY (payroll_run_id, center_id) REFERENCES payroll_runs(id, center_id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "payroll_runs"
     },
@@ -6948,8 +7079,8 @@
     {
       "schema": "public",
       "table": "services",
-      "name": "services_category_fk",
-      "definition": "FOREIGN KEY (category_id) REFERENCES service_categories(id) ON DELETE RESTRICT NOT VALID",
+      "name": "services_category_center_fk",
+      "definition": "FOREIGN KEY (category_id, center_id) REFERENCES service_categories(id, center_id) ON DELETE RESTRICT",
       "ref_schema": "public",
       "ref_table": "service_categories"
     },
@@ -7115,6 +7246,15 @@
       "primary": true,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX centers_pkey ON public.centers USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
+      "name": "checkout_idempotency_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX checkout_idempotency_pkey ON public.checkout_idempotency USING btree (center_id, request_id)"
     },
     {
       "schema": "public",
@@ -7304,6 +7444,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_employees_center ON public.employees USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "employees",
+      "name": "idx_employees_id_center_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX idx_employees_id_center_unique ON public.employees USING btree (id, center_id)"
     },
     {
       "schema": "public",
@@ -7641,6 +7790,15 @@
     {
       "schema": "public",
       "table": "payroll_runs",
+      "name": "idx_payroll_runs_id_center_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX idx_payroll_runs_id_center_unique ON public.payroll_runs USING btree (id, center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "payroll_runs",
       "name": "payroll_runs_center_id_period_month_key",
       "unique": true,
       "primary": false,
@@ -7691,6 +7849,15 @@
       "primary": true,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_categories",
+      "name": "idx_service_categories_id_center_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX idx_service_categories_id_center_unique ON public.service_categories USING btree (id, center_id)"
     },
     {
       "schema": "public",
@@ -7886,6 +8053,13 @@
     {
       "schema": "public",
       "table": "employee_advances",
+      "name": "enforce_advance_payroll_center_v1",
+      "definition": "CREATE TRIGGER enforce_advance_payroll_center_v1 BEFORE INSERT OR UPDATE OF deducted_in_run_id, center_id ON public.employee_advances FOR EACH ROW EXECUTE FUNCTION app_private.enforce_advance_payroll_center_v1()",
+      "enabled": true
+    },
+    {
+      "schema": "public",
+      "table": "employee_advances",
       "name": "set_updated_at",
       "definition": "CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.employee_advances FOR EACH ROW EXECUTE FUNCTION trigger_set_updated_at()",
       "enabled": true
@@ -7979,6 +8153,19 @@
   "functions": [
     {
       "schema": "app_private",
+      "name": "enforce_advance_payroll_center_v1",
+      "identity_args": "",
+      "result": "trigger",
+      "security_definer": false,
+      "volatility": "v",
+      "return_type": "trigger",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION app_private.enforce_advance_payroll_center_v1()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF NEW.deducted_in_run_id IS NOT NULL AND NOT EXISTS (\n    SELECT 1 FROM public.payroll_runs AS run\n    WHERE run.id = NEW.deducted_in_run_id AND run.center_id = NEW.center_id\n  ) THEN\n    RAISE EXCEPTION 'advance_payroll_run_center_mismatch' USING ERRCODE = '23503';\n  END IF;\n  RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "app_private",
       "name": "enforce_appointment_integrity_v1",
       "identity_args": "",
       "result": "trigger",
@@ -8002,6 +8189,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION app_private.enforce_appointment_integrity_v2()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_service_duration INTEGER;\nBEGIN\n  IF TG_OP = 'DELETE' THEN\n    IF OLD.status IN ('COMPLETED', 'CANCELLED', 'NO_SHOW') THEN\n      RAISE EXCEPTION 'terminal_appointment_cannot_be_deleted' USING ERRCODE = '23514';\n    END IF;\n    RETURN OLD;\n  END IF;\n\n  IF TG_OP = 'INSERT' AND NEW.status <> 'SCHEDULED' THEN\n    RAISE EXCEPTION 'new_appointment_must_be_scheduled' USING ERRCODE = '23514';\n  END IF;\n\n  IF TG_OP = 'UPDATE' THEN\n    IF OLD.status IN ('COMPLETED', 'CANCELLED', 'NO_SHOW') AND NEW IS DISTINCT FROM OLD THEN\n      RAISE EXCEPTION 'terminal_appointment_cannot_be_changed' USING ERRCODE = '23514';\n    END IF;\n    IF OLD.status = 'SCHEDULED' AND NEW.status NOT IN ('SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW') THEN\n      RAISE EXCEPTION 'invalid_appointment_status_transition' USING ERRCODE = '23514';\n    END IF;\n  END IF;\n\n  IF NEW.customer_id IS NULL OR NEW.employee_id IS NULL OR NEW.service_id IS NULL OR NEW.date_time IS NULL THEN\n    RAISE EXCEPTION 'appointment_customer_service_staff_time_required' USING ERRCODE = '23502';\n  END IF;\n\n  PERFORM 1 FROM public.customers AS customer\n  WHERE customer.id = NEW.customer_id\n    AND customer.center_id = NEW.center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'appointment_customer_wrong_center' USING ERRCODE = '23503';\n  END IF;\n\n  PERFORM 1 FROM public.employees AS employee\n  WHERE employee.id = NEW.employee_id\n    AND employee.center_id = NEW.center_id\n    AND (NEW.status <> 'SCHEDULED' OR employee.is_active = true);\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'appointment_employee_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  SELECT service.duration_minutes\n  INTO v_service_duration\n  FROM public.services AS service\n  WHERE service.id = NEW.service_id\n    AND service.center_id = NEW.center_id\n    AND (NEW.status <> 'SCHEDULED' OR service.is_active = true);\n  IF NOT FOUND OR v_service_duration IS NULL OR v_service_duration <= 0 THEN\n    RAISE EXCEPTION 'appointment_service_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  -- The database, not the client, owns the duration snapshot. Catalog edits do\n  -- not reinterpret an existing booking; selecting a different service does.\n  IF TG_OP = 'INSERT' THEN\n    NEW.duration_minutes_snapshot := v_service_duration;\n  ELSIF NEW.service_id IS DISTINCT FROM OLD.service_id\n        OR OLD.duration_minutes_snapshot IS NULL THEN\n    NEW.duration_minutes_snapshot := v_service_duration;\n  ELSE\n    NEW.duration_minutes_snapshot := OLD.duration_minutes_snapshot;\n  END IF;\n\n  RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "app_private",
+      "name": "has_center_role",
+      "identity_args": "_center_id uuid, _allowed_roles text[]",
+      "result": "boolean",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "boolean",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION app_private.has_center_role(_center_id uuid, _allowed_roles text[])\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\n  SELECT EXISTS (\n    SELECT 1\n    FROM public.center_memberships AS membership\n    WHERE membership.profile_id = auth.uid()\n      AND membership.center_id = _center_id\n      AND membership.role = ANY (_allowed_roles)\n  );\n$function$\n"
     },
     {
       "schema": "app_private",
@@ -8236,6 +8436,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.mark_appointment_no_show_v1(p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean DEFAULT true, p_note text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_appt public.appointments%ROWTYPE;\n  v_charge NUMERIC(12,3) := 0;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized appointment center' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT *\n  INTO v_appt\n  FROM public.appointments\n  WHERE id = p_appointment_id\n    AND center_id = p_center_id\n  FOR UPDATE;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'Appointment is not available for this center' USING ERRCODE = '23503';\n  END IF;\n\n  v_charge := CASE\n    WHEN COALESCE(p_charge_no_show_fee, TRUE)\n      THEN GREATEST(COALESCE(v_appt.deposit_amount, 0), COALESCE(v_appt.no_show_fee_amount, 0))\n    ELSE 0\n  END;\n\n  UPDATE public.appointments\n  SET status = 'NO_SHOW',\n      no_show_fee_charged = v_charge,\n      no_show_marked_at = now(),\n      no_show_note = COALESCE(NULLIF(trim(p_note), ''), no_show_note),\n      updated_at = now()\n  WHERE id = p_appointment_id\n    AND center_id = p_center_id;\n\n  RETURN jsonb_build_object(\n    'appointment', (\n      SELECT to_jsonb(a)\n      FROM public.appointments a\n      WHERE a.id = p_appointment_id\n    ),\n    'charged_amount', v_charge\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "process_checkout_idempotent_v1",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1(p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text DEFAULT NULL::text, p_entitlement_redemptions jsonb DEFAULT NULL::jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_result JSONB;\n  v_invoice_id UUID;\nBEGIN\n  IF p_request_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_request_id_required' USING ERRCODE = '22023';\n  END IF;\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  -- The unique key serializes concurrent requests carrying the same operation\n  -- identity. PostgreSQL waits for an in-flight conflicting INSERT before the\n  -- following SELECT, so the loser observes the winner's committed result.\n  INSERT INTO public.checkout_idempotency(center_id, request_id)\n  VALUES (p_center_id, p_request_id)\n  ON CONFLICT (center_id, request_id) DO NOTHING;\n\n  SELECT record.result\n  INTO v_result\n  FROM public.checkout_idempotency AS record\n  WHERE record.center_id = p_center_id AND record.request_id = p_request_id\n  FOR UPDATE;\n\n  IF v_result IS NOT NULL THEN\n    RETURN v_result;\n  END IF;\n\n  v_result := public.process_checkout_v1(\n    p_center_id,\n    p_customer_id,\n    p_employee_id,\n    p_payment_method,\n    p_discount_amount,\n    p_use_loyalty_points,\n    p_items,\n    p_gift_card_code,\n    p_entitlement_redemptions\n  );\n\n  v_invoice_id := (v_result->'invoice'->>'id')::UUID;\n  IF v_invoice_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_result_missing_invoice' USING ERRCODE = 'P0001';\n  END IF;\n\n  UPDATE public.checkout_idempotency\n  SET result = v_result, invoice_id = v_invoice_id, completed_at = now()\n  WHERE center_id = p_center_id AND request_id = p_request_id;\n\n  RETURN v_result;\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8475,6 +8688,13 @@
   "function_acl": [
     {
       "schema": "app_private",
+      "name": "enforce_advance_payroll_center_v1",
+      "identity_args": "",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "app_private",
       "name": "enforce_appointment_integrity_v1",
       "identity_args": "",
       "grantee": "postgres",
@@ -8484,6 +8704,20 @@
       "schema": "app_private",
       "name": "enforce_appointment_integrity_v2",
       "identity_args": "",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "app_private",
+      "name": "has_center_role",
+      "identity_args": "_center_id uuid, _allowed_roles text[]",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "app_private",
+      "name": "has_center_role",
+      "identity_args": "_center_id uuid, _allowed_roles text[]",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -8506,13 +8740,6 @@
       "name": "maintain_entitlement_balance_v1",
       "identity_args": "",
       "grantee": "postgres",
-      "privilege": "EXECUTE"
-    },
-    {
-      "schema": "app_private",
-      "name": "maintain_entitlement_balance_v1",
-      "identity_args": "",
-      "grantee": "public",
       "privilege": "EXECUTE"
     },
     {
@@ -8699,9 +8926,16 @@
     },
     {
       "schema": "public",
-      "name": "process_checkout_v1",
-      "identity_args": "p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "name": "process_checkout_idempotent_v1",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
       "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "process_checkout_idempotent_v1",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "grantee": "postgres",
       "privilege": "EXECUTE"
     },
     {
@@ -8978,14 +9212,14 @@
     {
       "schema": "public",
       "table": "attendance_records",
-      "name": "attendance_tenant",
+      "name": "attendance_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
       "cmd": "ALL",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9170,14 +9404,14 @@
     {
       "schema": "public",
       "table": "employee_advances",
-      "name": "advances_tenant",
+      "name": "advances_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
       "cmd": "ALL",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9362,26 +9596,26 @@
     {
       "schema": "public",
       "table": "payroll_line_items",
-      "name": "payroll_lines_tenant",
+      "name": "payroll_lines_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
       "cmd": "ALL",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
       "table": "payroll_runs",
-      "name": "payroll_runs_tenant",
+      "name": "payroll_runs_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
       "cmd": "ALL",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -10548,6 +10782,118 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "checkout_idempotency_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "customer_entitlements",
       "grantee": "authenticated",
       "privilege": "SELECT"
@@ -12970,6 +13316,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_employees_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_entitlement_ledger_center",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -14258,6 +14660,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_payroll_runs_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_products_center",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -14364,6 +14822,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_products_stock",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_categories_id_center_unique",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -16886,6 +17400,13 @@
       "object": "services_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
+      "object": "enforce_advance_payroll_center_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
     },
     {
       "kind": "routine",
@@ -16904,6 +17425,20 @@
     {
       "kind": "routine",
       "schema": "app_private",
+      "object": "has_center_role",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
+      "object": "has_center_role",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
       "object": "is_center_member",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -16920,13 +17455,6 @@
       "schema": "app_private",
       "object": "maintain_entitlement_balance_v1",
       "grantee": "postgres",
-      "privilege": "EXECUTE"
-    },
-    {
-      "kind": "routine",
-      "schema": "app_private",
-      "object": "maintain_entitlement_balance_v1",
-      "grantee": "public",
       "privilege": "EXECUTE"
     },
     {
@@ -17114,8 +17642,15 @@
     {
       "kind": "routine",
       "schema": "public",
-      "object": "process_checkout_v1",
+      "object": "process_checkout_idempotent_v1",
       "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "process_checkout_idempotent_v1",
+      "grantee": "postgres",
       "privilege": "EXECUTE"
     },
     {
@@ -17355,6 +17890,12 @@
     {
       "schema": "public",
       "table": "centers",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "checkout_idempotency",
       "rls_enabled": true,
       "rls_forced": false
     },

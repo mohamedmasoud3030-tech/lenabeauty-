@@ -46,7 +46,7 @@ DECLARE
     'public.public_reschedule_booking_v1(uuid, uuid, text, text, timestamptz, uuid, text)'
   ];
   staff_rpcs text[] := ARRAY[
-    'public.process_checkout_v1(uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)',
+    'public.process_checkout_idempotent_v1(uuid, uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)',
     'public.refund_entitlement_v1(uuid, numeric, text, uuid)',
     'public.void_entitlement_v1(uuid, text, uuid)',
     'public.expire_entitlement_v1(uuid, text, uuid)',
@@ -108,7 +108,8 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 
   BEGIN
-    PERFORM public.process_checkout_v1(
+    PERFORM public.process_checkout_idempotent_v1(
+      '70000000-0000-4000-8000-000000000001'::uuid,
       '20000000-0000-4000-8000-000000000002'::uuid,
       '40000000-0000-4000-8000-000000000002'::uuid,
       NULL::uuid,'cash'::text,0::numeric,false,'[]'::jsonb,NULL::text);

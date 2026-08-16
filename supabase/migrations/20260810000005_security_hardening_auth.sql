@@ -603,10 +603,12 @@ CREATE POLICY center_settings_select ON public.center_settings
   FOR SELECT TO authenticated
   USING (center_id = ANY (app_private.user_center_ids()));
 
+DROP POLICY IF EXISTS center_settings_insert ON public.center_settings;
 CREATE POLICY center_settings_insert ON public.center_settings
   FOR INSERT TO authenticated
   WITH CHECK (center_id = ANY (app_private.user_center_ids()));
 
+DROP POLICY IF EXISTS center_settings_update ON public.center_settings;
 CREATE POLICY center_settings_update ON public.center_settings
   FOR UPDATE TO authenticated
   USING (center_id = ANY (app_private.user_center_ids()))

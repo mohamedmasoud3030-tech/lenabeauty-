@@ -42,7 +42,7 @@ The preflight verifies required env values, rejects non-`supabase` backend mode,
 - App starts with `VITE_DATA_BACKEND=supabase`.
 - Missing env values show a blocking configuration error.
 - Login works for the seeded admin user.
-- Unknown or missing role metadata fails closed.
+- Unknown or missing server-owned `app_metadata.role` fails closed; a forged `user_metadata.role` grants nothing.
 - STAFF login is blocked from `/reports`, `/settings`, `/accounting`, `/branding`.
 - Customers list/create/update/delete works and survives reload.
 - Appointments list/create/update/delete works and survives reload.

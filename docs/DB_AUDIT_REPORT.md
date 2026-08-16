@@ -1,3 +1,5 @@
+> **Superseded baseline:** This report predates the canonical migration chain and retains historical setup notes. Do not follow its `user_metadata` or migration instructions. Use [`../README.md`](../README.md), [`MEMBERSHIP_BOOTSTRAP.md`](./MEMBERSHIP_BOOTSTRAP.md), and `supabase/migrations/` instead.
+
 # تقرير تدقيق توافق قاعدة البيانات — LenaBeauty v1.1
 **التاريخ:** 2026-06-23  
 **المصدر:** قراءة كاملة لـ repositories.ts + mappers.ts مقابل Supabase project: YOUR_PROJECT_REF

@@ -1,5 +1,5 @@
 {
-  "files": 193,
+  "files": 196,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1364,7 +1364,7 @@
       ]
     },
     {
-      "name": "process_checkout_v1",
+      "name": "process_checkout_idempotent_v1",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
       ],
@@ -1377,6 +1377,7 @@
         "p_gift_card_code",
         "p_items",
         "p_payment_method",
+        "p_request_id",
         "p_use_loyalty_points"
       ]
     },

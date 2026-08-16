@@ -114,7 +114,7 @@ describe("financial entitlements migration (gift cards + packages)", () => {
 
 describe("live security test stays aligned with the new RPC signatures", () => {
   it("checks the extended checkout and the governed entitlement RPCs", () => {
-    expect(securityTest).toContain("'public.process_checkout_v1(uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)'");
+    expect(securityTest).toContain("'public.process_checkout_idempotent_v1(uuid, uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)'");
     expect(securityTest).toContain("'public.refund_entitlement_v1(uuid, numeric, text, uuid)'");
     expect(securityTest).toContain("'public.void_entitlement_v1(uuid, text, uuid)'");
     expect(securityTest).toContain("'public.expire_entitlement_v1(uuid, text, uuid)'");

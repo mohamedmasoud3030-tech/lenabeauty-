@@ -17,6 +17,7 @@ import {
   createUnsupportedWriteError, createUnsupportedReadError, createQueryError, createUnsupportedAuthError
 } from "./errors";
 import { getSupabaseClient } from "./client";
+import type { Json, TablesInsert, TablesUpdate } from "./database.types";
 import { 
   mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings,
   mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
@@ -81,6 +82,30 @@ function isMissingBackendFeature(error: { code?: string; message?: string } | nu
     || message.includes("could not find the function")
     || message.includes("could not find the table")
     || message.includes("does not exist");
+}
+
+function createOperationId(): string {
+  if (!globalThis.crypto?.randomUUID) {
+    throw new Error("Secure UUID generation is unavailable in this runtime");
+  }
+  return globalThis.crypto.randomUUID();
+}
+
+function toJson(value: unknown): Json {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("JSON payload contains a non-finite number");
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(toJson);
+  if (typeof value === "object") {
+    const output: { [key: string]: Json | undefined } = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (child !== undefined) output[key] = toJson(child);
+    }
+    return output;
+  }
+  throw new Error("JSON payload contains an unsupported value");
 }
 
 function toDateOnly(date: Date): string {
@@ -279,7 +304,7 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"customers"> = {
         center_id: centerRes.data,
         name: okValue(nameR),
         category: data.category,
@@ -319,7 +344,7 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"customers"> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.category !== undefined) payload.category = data.category;
       if (data.phone !== undefined) payload.phone = okValue(phoneR);
@@ -447,7 +472,7 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"employees"> = {
         center_id: centerRes.data,
         name: okValue(nameR),
         phone: data.phone,
@@ -488,7 +513,7 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"employees"> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.phone !== undefined) payload.phone = data.phone;
       if (data.role !== undefined) payload.role = data.role;
@@ -569,7 +594,7 @@ class SupabaseServiceAdapter implements ServiceRepository {
 
     try {
       const categoryId = await resolveServiceCategoryId(centerRes.data, okValue(categoryR));
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"services"> = {
         center_id: centerRes.data,
         name: okValue(nameR),
         category_id: categoryId,
@@ -611,7 +636,7 @@ class SupabaseServiceAdapter implements ServiceRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"services"> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
       if (categoryR) payload.category_id = await resolveServiceCategoryId(centerRes.data, okValue(categoryR));
       if (data.price !== undefined) payload.price = okValue(priceR);
@@ -702,7 +727,7 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"appointments"> = {
         center_id: centerRes.data,
         customer_id: okValue(customerR),
         employee_id: okValue(employeeR),
@@ -748,7 +773,7 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"appointments"> = {};
       if (data.customerId !== undefined) payload.customer_id = okValue(customerR);
       if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
       if (data.serviceId !== undefined) payload.service_id = data.serviceId;
@@ -868,7 +893,7 @@ class SupabaseProductAdapter implements ProductRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"products"> = {
         center_id: centerRes.data,
         name: okValue(nameR),
         barcode: data.barcode,
@@ -913,7 +938,7 @@ class SupabaseProductAdapter implements ProductRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"products"> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.barcode !== undefined) payload.barcode = data.barcode;
       if (data.stockQuantity !== undefined) payload.stock_quantity = okValue(stockR);
@@ -990,7 +1015,7 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"expenses"> = {
         center_id: centerRes.data,
         amount: okValue(amountR),
         category: okValue(categoryR),
@@ -1025,7 +1050,7 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"expenses"> = {};
       if (data.amount !== undefined) payload.amount = okValue(amountR);
       if (data.category !== undefined) payload.category = okValue(categoryR);
       if (data.description !== undefined) payload.description = data.description;
@@ -1068,6 +1093,8 @@ class SupabaseExpenseAdapter implements ExpenseRepository {
 }
 
 class SupabaseInvoiceAdapter implements InvoiceRepository {
+  private pendingCheckout: { fingerprint: string; requestId: string } | null = null;
+
   async checkout(payload: CheckoutPayload): Promise<Result<{ invoice: Invoice, total: number, earned: number, giftCardRedeemed?: number, entitlementRedeemed?: number, giftCardsIssued?: { code: string; gift_card_id: string; value: number }[], packageEntitlements?: string[] }, DomainError>> {
     const contractErrors = validateCheckoutContract(payload);
     if (contractErrors.length > 0) {
@@ -1083,17 +1110,23 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
     const centerRes = getCenterIdFor("Invoice.checkout");
     if (!centerRes.ok) return centerRes as any;
 
+    const fingerprint = JSON.stringify(payload);
+    if (!this.pendingCheckout || this.pendingCheckout.fingerprint !== fingerprint) {
+      this.pendingCheckout = { fingerprint, requestId: createOperationId() };
+    }
+
     try {
-      const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {
+      const { data, error } = await getSupabaseClient().rpc('process_checkout_idempotent_v1', {
+        p_request_id: this.pendingCheckout.requestId,
         p_center_id: centerRes.data,
         p_customer_id: payload.customerId,
         p_employee_id: payload.employeeId,
         p_payment_method: payload.paymentMethod,
         p_discount_amount: payload.discountAmount ?? 0,
         p_use_loyalty_points: payload.useLoyaltyPoints || false,
-        p_items: payload.items,
+        p_items: toJson(payload.items),
         p_gift_card_code: payload.giftCardCode || null,
-        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? payload.entitlementRedemptions : null
+        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? toJson(payload.entitlementRedemptions) : null
       });
       
       if (error) {
@@ -1110,18 +1143,17 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
       }
 
       const row = data as any;
-      return { 
-        ok: true, 
-        data: {
-          invoice: mapInvoice(row.invoice),
-          total: Number(row.total) || 0,
-          earned: Number(row.earned) || 0,
-          giftCardRedeemed: Number(row.gift_card_redeemed) || 0,
-          entitlementRedeemed: Number(row.entitlement_redeemed) || 0,
-          giftCardsIssued: Array.isArray(row.gift_cards_issued) ? row.gift_cards_issued : [],
-          packageEntitlements: Array.isArray(row.package_entitlements) ? row.package_entitlements : []
-        }
+      const result = {
+        invoice: mapInvoice(row.invoice),
+        total: Number(row.total) || 0,
+        earned: Number(row.earned) || 0,
+        giftCardRedeemed: Number(row.gift_card_redeemed) || 0,
+        entitlementRedeemed: Number(row.entitlement_redeemed) || 0,
+        giftCardsIssued: Array.isArray(row.gift_cards_issued) ? row.gift_cards_issued : [],
+        packageEntitlements: Array.isArray(row.package_entitlements) ? row.package_entitlements : []
       };
+      this.pendingCheckout = null;
+      return { ok: true, data: result };
 
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Invoice.checkout", (e as Error).message) };
@@ -1235,7 +1267,7 @@ class SupabaseSettingsAdapter implements SettingsRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"center_settings"> = {};
       if (data.name !== undefined) payload.name = okValue(nameR);
       if (data.currency !== undefined) payload.currency = data.currency;
       if (data.taxRate !== undefined) payload.tax_rate = okValue(taxR);
@@ -1921,6 +1953,7 @@ class SupabaseReportAdapter implements ReportRepository {
 }
 
 class SupabaseGiftCardAdapter implements GiftCardRepository {
+  private pendingIssue: { fingerprint: string; requestId: string } | null = null;
   async list(): Promise<Result<any[], DomainError>> {
     const centerRes = getCenterIdFor("GiftCard.list");
     if (!centerRes.ok) return centerRes as any;
@@ -1951,24 +1984,30 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
       return { ok: false, error: createQueryError("GiftCard.issue", "Gift card value must be positive") };
     }
 
+    const fingerprint = JSON.stringify(input);
+    if (this.pendingIssue?.fingerprint !== fingerprint) {
+      this.pendingIssue = { fingerprint, requestId: createOperationId() };
+    }
+
     try {
       // Sell through the atomic checkout pipeline: the payment collection and
       // the deferred entitlement obligation are recorded in one transaction.
-      const { data, error } = await getSupabaseClient().rpc('process_checkout_v1', {
+      const { data, error } = await getSupabaseClient().rpc('process_checkout_idempotent_v1', {
+        p_request_id: this.pendingIssue.requestId,
         p_center_id: centerRes.data,
         p_customer_id: input.customerId,
         p_employee_id: input.employeeId,
         p_payment_method: input.paymentMethod,
         p_discount_amount: 0,
         p_use_loyalty_points: false,
-        p_items: [{
+        p_items: toJson([{
           type: "gift_card",
           code: input.code.trim().toUpperCase(),
           price: value,
           qty: 1,
           note: input.note || null,
           expiresAtISO: input.expiresAtISO || null,
-        }],
+        }]),
         p_gift_card_code: null,
         p_entitlement_redemptions: null,
       });
@@ -1991,7 +2030,9 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
         .maybeSingle();
       if (cardRes.error) return { ok: false, error: createQueryError("GiftCard.issue", cardRes.error.message) };
       if (!cardRes.data) return { ok: false, error: createQueryError("GiftCard.issue", "Issued card not found") };
-      return { ok: true, data: mapGiftCard(cardRes.data) };
+      const card = mapGiftCard(cardRes.data);
+      this.pendingIssue = null;
+      return { ok: true, data: card };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("GiftCard.issue", (e as Error).message) };
     }
@@ -2151,7 +2192,7 @@ export class SupabaseEntitlementAdapter implements EntitlementRepository {
 
   private async runGovernedRpc(
     rpcName: "void_entitlement_v1" | "expire_entitlement_v1",
-    args: Record<string, unknown>,
+    args: { p_entitlement_id: string; p_reason: string; p_actor_employee_id: string },
     label: string,
   ): Promise<Result<{ entitlementId: string; status: string }, DomainError>> {
     if (typeof args.p_entitlement_id !== "string" || !args.p_entitlement_id || typeof args.p_actor_employee_id !== "string" || !args.p_actor_employee_id || typeof args.p_reason !== "string" || !args.p_reason.trim()) {
@@ -2279,7 +2320,7 @@ class SupabaseServicePackageAdapter implements ServicePackageRepository {
         p_name: okValue(nameR),
         p_description: input.description || null,
         p_package_price: okValue(priceR),
-        p_items: input.items.map((item) => ({ serviceId: item.serviceId, quantity: okValue(positiveInteger(item.quantity)) })),
+        p_items: toJson(input.items.map((item) => ({ serviceId: item.serviceId, quantity: okValue(positiveInteger(item.quantity)) }))),
       });
       if (error) {
         if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
@@ -2847,7 +2888,7 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
     }
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"attendance_records"> = {
         center_id: centerRes.data,
         employee_id: okValue(employeeR),
         date: toDateOnly((okValue(dateR) as Date)),
@@ -2875,7 +2916,7 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
     const centerRes = getCenterIdFor("Attendance.update");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"attendance_records"> = {};
       if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
       if (data.date !== undefined) payload.date = toDateOnly(new Date(data.date));
       if (data.checkInTime !== undefined) payload.check_in_time = data.checkInTime || null;
@@ -2966,7 +3007,7 @@ class SupabaseAdvanceAdapter implements AdvanceRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: Record<string, unknown> = {
+      const payload: TablesInsert<"employee_advances"> = {
         center_id: centerRes.data,
         employee_id: okValue(employeeR),
         amount: okValue(amountR),
@@ -2992,7 +3033,7 @@ class SupabaseAdvanceAdapter implements AdvanceRepository {
     const centerRes = getCenterIdFor("Advance.update");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const payload: Record<string, unknown> = {};
+      const payload: TablesUpdate<"employee_advances"> = {};
       if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
       if (data.amount !== undefined) payload.amount = data.amount;
       if (data.reason !== undefined) payload.reason = data.reason;

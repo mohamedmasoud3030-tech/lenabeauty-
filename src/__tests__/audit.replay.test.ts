@@ -4,10 +4,7 @@ import { discoverMigrations, automatedMigrations, compatPreamble, translateMigra
 // @ts-ignore — PGlite ships its own types; relaxed here for the WASM import
 import { PGlite } from "@electric-sql/pglite";
 
-const KNOWN_NON_IDEMPOTENT = [
-  { file: "20260628000012_customer_experience_forecasting_accounting_advanced.sql", policy: "customer_reviews_select_policy" },
-  { file: "20260810000005_security_hardening_auth.sql", policy: "center_settings_insert" },
-];
+const KNOWN_NON_IDEMPOTENT: { file: string; policy: string }[] = [];
 
 function hasExplicitTransaction(sql: string): boolean {
   return /^\s*BEGIN\s*;/m.test(sql) && /^\s*COMMIT\s*;/m.test(sql);
@@ -61,11 +58,11 @@ async function functionSignatureSet(db: PGlite): Promise<string[]> {
  * bootstrap excluded, and only the two *known* idempotency gaps may surface.
  */
 describe("audit: deterministic migration replay (PGlite)", () => {
-  it("replays 28 automated migrations; excludes 1 manual bootstrap; surfaces only known idempotency gaps", async () => {
+  it("replays 30 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(29);
+    expect(all).toHaveLength(31);
     const automated = automatedMigrations(all);
-    expect(automated).toHaveLength(28);
+    expect(automated).toHaveLength(30);
 
     const db = new PGlite();
     const { failures, nonIdem } = await replayInto(db);

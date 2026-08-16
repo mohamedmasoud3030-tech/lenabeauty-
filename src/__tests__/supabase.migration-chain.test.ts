@@ -1,4 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -87,11 +88,30 @@ describe("canonical Supabase migration chain", () => {
       "20260811004100_checkout_overload_repair.sql",
       "20260811004200_gift_card_redemption_units_repair.sql",
       "20260811004300_refund_status_repair.sql",
+      "20260816000001_production_integrity_hardening.sql",
+      "20260816000002_checkout_idempotency.sql",
     ];
     const present = readdirSync(resolve(process.cwd(), "supabase/migrations")).filter((f) => f.endsWith(".sql"));
     for (const name of canonical) {
       expect(present).toContain(name);
     }
     expect([...canonical].sort()).toEqual(canonical);
+  });
+
+  it("allows deployment checks only for the authoritative Lena Demo ref", () => {
+    const script = resolve(process.cwd(), "scripts/check-migration-chain.mjs");
+    const run = (target: string, demo: string) => spawnSync(process.execPath, [script], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: { ...process.env, SUPABASE_PROJECT_REF: target, DEMO_SUPABASE_PROJECT_REF: demo },
+    });
+
+    const allowed = run("tuzzvqsnbtzvkffmazyf", "tuzzvqsnbtzvkffmazyf");
+    expect(allowed.status).toBe(0);
+    expect(allowed.stdout).toContain("explicit Lena Demo/Staging target verified");
+
+    expect(run("livpmxwwxsfnaceczyth", "livpmxwwxsfnaceczyth").status).not.toBe(0);
+    expect(run("tuzzvqsnbtzvkffmazyf", "livpmxwwxsfnaceczyth").status).not.toBe(0);
+    expect(run("", "").status).not.toBe(0);
   });
 });

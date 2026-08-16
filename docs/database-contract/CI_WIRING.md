@@ -1,72 +1,19 @@
-# CI Wiring for the Contract Audit
+# CI Wiring for the Database Contract
 
-The audit gate logic lives in `scripts/audit/ci-gate.mjs` and is exposed as
-`npm run audit:gate` (and `npm run audit:all`). It is fully self-contained and can be run
-locally or in any CI runner.
+The executable checks are available locally:
 
-## GitHub Actions workflow (owner action required)
+- `npm run audit:gate`
+- `npm run db:types:check`
+- `npm run ci:migrations`
+- `npm run ci:rpc-check`
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
 
-The Arena GitHub App that authored this PR does **not** have the `workflows` write
-permission, so it cannot create `.github/workflows/*.yml`. To wire the gate into CI, the
-repository owner should add the following file as `.github/workflows/audit.yml`:
+## GitHub Actions access limitation
 
-```yaml
-name: Database contract audit
+The repository's current GitHub App token cannot create or modify workflow files (`workflows` permission is missing). A push containing `.github/workflows/ci.yml` was rejected by GitHub on 2026-08-16. Therefore the new PR gate could not be activated from this session.
 
-on:
-  pull_request:
-    paths:
-      - "supabase/migrations/**"
-      - "src/**"
-      - "scripts/audit/**"
-      - "docs/database-contract/**"
-      - "package.json"
-      - "package-lock.json"
-  workflow_dispatch:
+The owner should add a pull-request workflow with Node 22, `npm ci`, `npm audit --audit-level=high`, the four contract commands above, typecheck/lint/tests, and the production build. The existing Demo migration workflow should run `audit:gate` and `db:types:check` before `supabase db push`.
 
-concurrency:
-  group: lena-db-contract-audit
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-
-jobs:
-  audit:
-    name: Replay + scan + contract gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Run reproducible contract audit + gate
-        run: node scripts/audit/ci-gate.mjs
-      - name: Focused audit tests
-        run: npx vitest run src/__tests__/audit.scanner.test.ts src/__tests__/audit.replay.test.ts
-      - name: Typecheck
-        run: npm run typecheck
-```
-
-## What the gate fails on
-
-`scripts/audit/ci-gate.mjs` re-runs the audit (replay → scan → matrix) and fails the build
-on:
-
-- any migration replay failure (expected: 0);
-- any idempotency failure **beyond** the two documented duplicate-policy gaps
-  (`20260628000012…`, `20260810000005…`);
-- unresolved frontend table/RPC existence or argument mismatches;
-- missing client-role EXECUTE grants on frontend-referenced RPCs;
-- unpinned SECURITY DEFINER `search_path`;
-- unexpected broad sensitive-table write policies (payroll);
-- stale generated audit artifacts (committed artifacts differ from freshly generated).
-
-The two known idempotency gaps and their fingerprint drift are reported as a NOTE (not a
-fatal gate failure), since they are documented exclusions. The gate is therefore expected to
-be **red** on the current baseline (payroll governance + un-granted public RPCs are still
-unresolved), correctly signalling **NOT FROZEN** until those findings are remediated.
+Until those changes are made with a workflow-authorized credential, the existing Demo workflow still runs migration/RPC checks, tests, typecheck, lint, and build, but the new deterministic audit and generated-type checks are manual release gates.

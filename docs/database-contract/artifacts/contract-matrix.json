@@ -644,7 +644,7 @@
       ]
     },
     {
-      "name": "process_checkout_v1",
+      "name": "process_checkout_idempotent_v1",
       "exists": true,
       "frontend_args": [
         "p_center_id",
@@ -655,12 +655,13 @@
         "p_gift_card_code",
         "p_items",
         "p_payment_method",
+        "p_request_id",
         "p_use_loyalty_points"
       ],
       "overloads": [
         {
           "schema": "public",
-          "signature": "p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+          "signature": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
           "security_definer": true,
           "search_path": [
             "search_path=pg_catalog, public, app_private"
@@ -1154,14 +1155,14 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "attendance_tenant",
+          "name": "attendance_admin",
           "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
@@ -1328,14 +1329,14 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "advances_tenant",
+          "name": "advances_admin",
           "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
@@ -1605,14 +1606,14 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "payroll_lines_tenant",
+          "name": "payroll_lines_admin",
           "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
@@ -1624,14 +1625,14 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "payroll_runs_tenant",
+          "name": "payroll_runs_admin",
           "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],

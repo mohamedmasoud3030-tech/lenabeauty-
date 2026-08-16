@@ -17,8 +17,8 @@
 
 -- ------------------------------------------------------------
 -- 1. Helper: centers the current authenticated user belongs to
---    Matches the ACTUAL center_memberships shape:
---    (id, profile_id, center_id, created_at) — no role/is_active.
+--    Matches the canonical center_memberships shape:
+--    (id, profile_id, center_id, role, created_at).
 -- ------------------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS app_private;
 
