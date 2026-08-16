@@ -9,6 +9,29 @@ const EXTENSION_PATTERN = /CREATE\s+EXTENSION\s+IF\s+NOT\s+EXISTS\s+"?([\w]+)"?/
 const files = readdirSync(dir).filter((file) => file.endsWith(".sql"));
 const sorted = [...files].sort(compareText);
 
+// When deployment variables are present (GitHub Actions), this check runs
+// before `supabase link` and `supabase db push`. The current authorized Lena
+// target is the existing Demo/Staging project; no fallback or alternate ref is
+// accepted.
+const EXPECTED_DEMO_PROJECT_REF = "tuzzvqsnbtzvkffmazyf";
+const supabaseProjectRef = process.env.SUPABASE_PROJECT_REF;
+const demoProjectRef = process.env.DEMO_SUPABASE_PROJECT_REF;
+if (supabaseProjectRef !== undefined || demoProjectRef !== undefined) {
+  if (!supabaseProjectRef || !demoProjectRef) {
+    console.error("FAIL Demo deployment requires non-empty SUPABASE_PROJECT_REF and DEMO_SUPABASE_PROJECT_REF");
+    process.exit(1);
+  }
+  if (supabaseProjectRef !== demoProjectRef) {
+    console.error("FAIL Supabase target does not equal the explicit Demo project ref");
+    process.exit(1);
+  }
+  if (supabaseProjectRef !== EXPECTED_DEMO_PROJECT_REF) {
+    console.error("FAIL refusing non-Lena-Demo Supabase target");
+    process.exit(1);
+  }
+  console.log(`PASS explicit Lena Demo/Staging target verified: ${EXPECTED_DEMO_PROJECT_REF}`);
+}
+
 if (files.join("\n") !== sorted.join("\n")) {
   console.log("INFO filesystem enumeration is not lexical; canonical order is lexical filename order");
 }

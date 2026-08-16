@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { EnvironmentConfigurationError, parseEnv } from "../config/env";
+import { deriveDefaultEnvironment, EnvironmentConfigurationError, parseEnv } from "../config/env";
 
 describe("Environment Configuration Tests", () => {
     it("Preview mode is rejected", () => {
@@ -55,6 +55,11 @@ describe("Environment Configuration Tests", () => {
             VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
         });
         expect(env.environment).toBe("development");
+    });
+
+    it("classifies an optimized build as staging while no Production data environment exists", () => {
+        expect(deriveDefaultEnvironment(true)).toBe("staging");
+        expect(deriveDefaultEnvironment(false)).toBe("development");
     });
 
     it("accepts an explicit staging environment", () => {

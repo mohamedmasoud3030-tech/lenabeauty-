@@ -1,13 +1,10 @@
 # Apply 20260810000003 to the Demo database — runbook
 
-> Authorized for the **Demo Supabase environment only**. Do NOT run on
-> Production. The sandbox agent cannot apply this itself: the only Supabase
-> URL in the repo (`tuzzvqsnbtzvkffmazyf`) is the **production** Lena
-> deployment, only a publishable (anon) key is committed (RLS-protected,
-> cannot run DDL), and the Demo DB password / `service_role` key are secrets
-> that are correctly absent from the sandbox. Outbound HTTPS to the Supabase
-> Management API is also blocked from the sandbox. Apply one of the two
-> options below from a machine with Demo DB access.
+> Authorized for the Lena **Demo/Staging** project
+> `tuzzvqsnbtzvkffmazyf` only. Lena does not yet have a separate Production
+> Supabase environment. Do not use the unrelated project
+> `livpmxwwxsfnaceczyth`. DDL still requires authenticated Demo database or
+> Supabase management access; the tracked publishable key cannot apply SQL.
 
 ## What gets applied (single migration, additive, with rollback)
 
