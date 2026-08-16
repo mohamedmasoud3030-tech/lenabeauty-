@@ -23,7 +23,7 @@ the current, actively-relevant docs.
 - [`SUPABASE_SETUP_CHECKOUT.md`](./SUPABASE_SETUP_CHECKOUT.md)
 - [`SUPABASE_STAGING_MIGRATION_PLAN.md`](./SUPABASE_STAGING_MIGRATION_PLAN.md)
 - [`SUPABASE_REMOTE_DRIFT_MATRIX.md`](./SUPABASE_REMOTE_DRIFT_MATRIX.md)
-- [`DB_AUDIT_REPORT.md`](./DB_AUDIT_REPORT.md)
+- [`DB_AUDIT_REPORT.md`](./DB_AUDIT_REPORT.md) — superseded 2026-06 baseline retained for history; do not use as setup instructions.
 
 ### SQL (apply order)
 > Canonical migrations live in [`../supabase/migrations/`](../supabase/migrations) — apply them in filename order for any new deployment. The SQL files below are phase references/snapshots, not the deployment path.

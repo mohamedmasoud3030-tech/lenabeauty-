@@ -6,7 +6,7 @@ Supabase/PostgreSQL is authoritative. UI totals are previews only.
 
 | Domain | Authoritative records / routine |
 |---|---|
-| Checkout | `public.process_checkout_v1` |
+| Checkout | Client entry point: `public.process_checkout_idempotent_v1`; internal atomic posting: `public.process_checkout_v1` (not client-executable) |
 | Sale header | `invoices` where `status = 'PAID'` |
 | Sold lines | `invoice_items` immutable catalog snapshots |
 | Payment | `payments` where `status = 'SUCCEEDED'` (zero-payable invoices legitimately have no payment row) |

@@ -315,12 +315,10 @@ export function mapAuthSession(session: SupabaseSession | null): SessionState {
     }
     
     const email = session.user.email || "";
-    // Note: We avoid trusting user_metadata for critical authorization unless specifically validated.
-    // For now, mapping everyone to a default role of STAFF or MANAGER depends on domain logic,
-    // but the safest approach with current contracts is mapping whatever we can derive.
-    // Assuming simple fallback for now.
-    
-    const roleStr = session.user.user_metadata?.role;
+    // Roles are authorization data and therefore come only from server-owned
+    // app_metadata. user_metadata is user-editable in Supabase and must never
+    // grant application privileges.
+    const roleStr = session.user.app_metadata?.role;
     let role: UserRole;
     
     if (roleStr && Object.values(UserRole).includes(roleStr as UserRole)) {

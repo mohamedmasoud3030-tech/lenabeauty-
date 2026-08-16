@@ -11,6 +11,8 @@
     "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
     "ci:rpc-check": "node scripts/check-rpc-contracts.mjs",
     "ci:migrations": "node scripts/check-migration-chain.mjs",
+    "db:types": "node scripts/generate-database-types.mjs",
+    "db:types:check": "node scripts/generate-database-types.mjs --check",
     "audit:replay": "node scripts/audit/replay-schema.mjs",
     "audit:scan": "node scripts/audit/scan-frontend.mjs",
     "audit:matrix": "node scripts/audit/build-matrix.mjs",
@@ -26,7 +28,7 @@
     "desktop:preflight": "npm run typecheck && npm run desktop:test && npm run build && npm run desktop:tauri:check"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
+    "@supabase/supabase-js": "^2.112.3",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",
@@ -43,7 +45,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.4",
+    "@electric-sql/pglite": "^0.5.5",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
@@ -53,7 +55,7 @@
     "dotenv": "^17.4.2",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.12",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^1.3.0",

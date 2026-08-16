@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS center_memberships (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   profile_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   center_id  UUID NOT NULL REFERENCES centers(id)  ON DELETE CASCADE,
+  role       TEXT NOT NULL DEFAULT 'STAFF'
+             CONSTRAINT center_memberships_role_valid CHECK (role IN ('ADMIN', 'MANAGER', 'STAFF')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(profile_id, center_id)
 );

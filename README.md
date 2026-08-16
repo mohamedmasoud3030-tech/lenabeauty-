@@ -65,7 +65,7 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260811004300_refund_status_repair.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, and the financial entitlements ledger for gift cards and packages (deferred obligations, atomic redemption, governed refund/void/expiry, RLS select-only on balances). Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
+5. Continue through `20260816000002_checkout_idempotency.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, the financial entitlements ledger, server-governed center roles, admin-only payroll RLS, validated tenant-scoped foreign keys, and retry-safe financial checkout. Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
 
 The optional Arabic service catalog lives under `supabase/seeds/` and is explicitly gated to demo/staging. It is not part of the production migration chain. See `docs/OPERATIONAL_DATA_CONTRACT.md` and the paired rollback runbook under `supabase/rollbacks/`.
 
@@ -104,6 +104,8 @@ npm run build        # production build (dist/)
 npm run preview      # preview the build
 npm run typecheck    # tsc --noEmit (0 errors expected)
 npm run test         # vitest run
+npm run audit:gate   # replay migrations and verify RLS/RPC/data contracts
+npm run db:types:check # verify generated DB types match canonical replay
 npm run preflight:supabase   # verify live Supabase connectivity
 ```
 
@@ -117,7 +119,7 @@ npm run preflight:supabase   # verify live Supabase connectivity
 
 ## Security notes
 
-- RLS must be enabled (migration 2) before any real data is stored.
+- Apply the full canonical migration chain before storing real data; `20260628000001_enable_rls.sql` establishes the base RLS policies and later migrations harden them.
 - Never commit `.env` or real keys. If a publishable key was ever committed,
   rotate it in the Supabase dashboard.
 - Security headers (CSP, X-Frame-Options, etc.) are configured in `vercel.json`.

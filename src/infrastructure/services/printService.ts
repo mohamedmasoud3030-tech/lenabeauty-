@@ -20,6 +20,33 @@ export interface DocumentContent {
   isArabic?: boolean;
 }
 
+export function sanitizePrintHTML(html: string): string {
+  if (typeof DOMParser === 'undefined') return html;
+  const document = new DOMParser().parseFromString(html, 'text/html');
+  document.querySelectorAll('script, iframe, object, embed, base, link, meta[http-equiv], style:not([data-lb-print-style])').forEach((node) => node.remove());
+  document.querySelectorAll('*').forEach((element) => {
+    for (const attribute of [...element.attributes]) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith('on') || name === 'srcdoc') element.removeAttribute(attribute.name);
+      if ((name === 'href' || name === 'src' || name === 'action' || name === 'formaction')
+          && (value.startsWith('javascript:') || value.startsWith('vbscript:'))) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+  return `<!DOCTYPE html>\n${document.documentElement.outerHTML}`;
+}
+
+export function escapePrintText(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 class PrintService {
   private static instance: PrintService;
 
@@ -49,14 +76,14 @@ class PrintService {
 
     const size = paperSizes[paperSize] || paperSizes['A4'];
 
-    return `
+    return sanitizePrintHTML(`
       <!DOCTYPE html>
       <html dir="ltr" lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${options.filename || 'Document'}</title>
-        <style>
+        <title>${escapePrintText(options.filename || 'Document')}</title>
+        <style data-lb-print-style>
           :root {
             ${Object.entries(cssVars).map(([key, value]) => `${key}: ${value};`).join('\n')}
           }
@@ -241,7 +268,7 @@ class PrintService {
         </div>
       </body>
       </html>
-    `;
+    `);
   }
 
   /**
@@ -251,11 +278,11 @@ class PrintService {
     const branding = brandingService.getSettings();
     return `
       <div class="document-header">
-        ${branding.logo ? `<img src="${branding.logo}" alt="Logo" />` : ''}
-        <h1>${branding.salonName}</h1>
-        <p>${branding.address}</p>
-        <p>${branding.phone} | ${branding.email}</p>
-        ${branding.taxNumber ? `<p>Tax ID: ${branding.taxNumber}</p>` : ''}
+        ${branding.logo ? `<img src="${escapePrintText(branding.logo)}" alt="Logo" />` : ''}
+        <h1>${escapePrintText(branding.salonName)}</h1>
+        <p>${escapePrintText(branding.address)}</p>
+        <p>${escapePrintText(branding.phone)} | ${escapePrintText(branding.email)}</p>
+        ${branding.taxNumber ? `<p>Tax ID: ${escapePrintText(branding.taxNumber)}</p>` : ''}
       </div>
     `;
   }
@@ -267,8 +294,8 @@ class PrintService {
     const branding = brandingService.getSettings();
     return `
       <div class="document-footer">
-        <p>${branding.footerText}</p>
-        ${branding.registrationNumber ? `<p>Registration: ${branding.registrationNumber}</p>` : ''}
+        <p>${escapePrintText(branding.footerText)}</p>
+        ${branding.registrationNumber ? `<p>Registration: ${escapePrintText(branding.registrationNumber)}</p>` : ''}
         <p>${new Date().toLocaleDateString()}</p>
       </div>
     `;

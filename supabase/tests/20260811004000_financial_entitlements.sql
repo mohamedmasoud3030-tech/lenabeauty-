@@ -30,6 +30,7 @@ SELECT set_config('request.jwt.claim.sub', '31000000-0000-4000-8000-000000000001
 DO $$
 DECLARE
   v_gift_sale jsonb;
+  v_gift_retry jsonb;
   v_gift_redeem jsonb;
   v_package_sale jsonb;
   v_package_redeem jsonb;
@@ -39,7 +40,8 @@ DECLARE
   v_status text;
   v_units integer;
 BEGIN
-  v_gift_sale := public.process_checkout_v1(
+  v_gift_sale := public.process_checkout_idempotent_v1(
+    '81000000-0000-4000-8000-000000000001'::uuid,
     '21000000-0000-4000-8000-000000000001'::uuid,
     '41000000-0000-4000-8000-000000000001'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,
@@ -50,6 +52,19 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM public.payments p WHERE p.invoice_id = (v_gift_sale->'invoice'->>'id')::uuid AND p.amount = 10.000) THEN
     RAISE EXCEPTION 'gift-card sale must collect cash';
   END IF;
+
+  v_gift_retry := public.process_checkout_idempotent_v1(
+    '81000000-0000-4000-8000-000000000001'::uuid,
+    '21000000-0000-4000-8000-000000000001'::uuid,
+    '41000000-0000-4000-8000-000000000001'::uuid,
+    '51000000-0000-4000-8000-000000000001'::uuid,
+    'cash', 0, false,
+    '[{"type":"gift_card","code":"LIVE-ENT-001","price":10,"qty":1}]'::jsonb
+  );
+  IF v_gift_retry->'invoice'->>'id' <> v_gift_sale->'invoice'->>'id'
+     OR (SELECT count(*) FROM public.payments WHERE center_id = '21000000-0000-4000-8000-000000000001'::uuid) <> 1 THEN
+    RAISE EXCEPTION 'checkout retry must return the original financial posting';
+  END IF;
   SELECT ce.id, ce.remaining_value, ce.status INTO v_gift_entitlement, v_amount, v_status
   FROM public.customer_entitlements ce WHERE ce.gift_card_id = (v_gift_sale->'gift_cards_issued'->0->>'gift_card_id')::uuid;
   IF v_amount <> 10.000 OR v_status <> 'ACTIVE'
@@ -57,7 +72,8 @@ BEGIN
     RAISE EXCEPTION 'gift-card sale must create a deferred entitlement';
   END IF;
 
-  v_gift_redeem := public.process_checkout_v1(
+  v_gift_redeem := public.process_checkout_idempotent_v1(
+    '81000000-0000-4000-8000-000000000002'::uuid,
     '21000000-0000-4000-8000-000000000001'::uuid,
     '41000000-0000-4000-8000-000000000001'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,
@@ -76,7 +92,8 @@ BEGIN
     RAISE EXCEPTION 'gift-card redemption did not settle correctly';
   END IF;
 
-  v_package_sale := public.process_checkout_v1(
+  v_package_sale := public.process_checkout_idempotent_v1(
+    '81000000-0000-4000-8000-000000000003'::uuid,
     '21000000-0000-4000-8000-000000000001'::uuid,
     '41000000-0000-4000-8000-000000000001'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,
@@ -90,7 +107,8 @@ BEGIN
     RAISE EXCEPTION 'package sale must create its owned sessions and deferred value';
   END IF;
 
-  v_package_redeem := public.process_checkout_v1(
+  v_package_redeem := public.process_checkout_idempotent_v1(
+    '81000000-0000-4000-8000-000000000004'::uuid,
     '21000000-0000-4000-8000-000000000001'::uuid,
     '41000000-0000-4000-8000-000000000001'::uuid,
     '51000000-0000-4000-8000-000000000001'::uuid,

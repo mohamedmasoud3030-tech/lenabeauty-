@@ -1,9 +1,10 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { config, EnvironmentConfigurationError } from "../../config/env";
+import type { Database } from "./database.types";
 
-let supabaseClient: SupabaseClient | null = null;
+let supabaseClient: SupabaseClient<Database> | null = null;
 
-export function getSupabaseClient(): SupabaseClient {
+export function getSupabaseClient(): SupabaseClient<Database> {
   if (supabaseClient) {
     return supabaseClient;
   }
@@ -16,6 +17,6 @@ export function getSupabaseClient(): SupabaseClient {
      throw new EnvironmentConfigurationError("Supabase credentials missing.");
   }
 
-  supabaseClient = createClient(config.supabaseUrl, config.supabasePublishableKey);
+  supabaseClient = createClient<Database>(config.supabaseUrl, config.supabasePublishableKey);
   return supabaseClient;
 }

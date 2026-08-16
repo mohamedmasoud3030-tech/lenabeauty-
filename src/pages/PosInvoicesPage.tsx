@@ -22,6 +22,7 @@ import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../doma
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
+import { escapePrintText } from "../infrastructure/services/printService";
 import {
   ALL_SERVICE_CATEGORIES,
   filterServicesForCatalog,
@@ -386,7 +387,7 @@ export default function PosInvoicesPage() {
         setPrintData(pData);
         setShowPrintModal(true);
         if (isDesktopShell()) {
-          const invoiceHtml = `<div><h1>${pData.settings?.name || "LenaBeauty"}</h1><p>Invoice ${pData.invoice.id}</p><p>Total: ${formatOMRAmount(pData.invoice.totalAmount)}</p></div>`;
+          const invoiceHtml = `<div><h1>${escapePrintText(pData.settings?.name || "LenaBeauty")}</h1><p>Invoice ${escapePrintText(pData.invoice.id)}</p><p>Total: ${escapePrintText(formatOMRAmount(pData.invoice.totalAmount))}</p></div>`;
           await desktopRepository.printHtml(`Invoice ${pData.invoice.id}`, invoiceHtml);
         }
       } catch (e) {

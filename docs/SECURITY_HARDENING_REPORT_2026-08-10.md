@@ -1,3 +1,5 @@
+> **Historical live snapshot (2026-08-10):** later canonical migrations changed the checkout grant surface and role governance. Use `PRODUCTION_READINESS.md`, `OPERATIONAL_DATA_CONTRACT.md`, and the current audit artifacts for the repository contract.
+
 # LenaBeauty — Production Readiness & Security Hardening
 
 **Branch:** `arena/019fee12-lenabeauty`  
