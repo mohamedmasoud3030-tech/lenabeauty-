@@ -42,11 +42,15 @@ Postcondition: remote migration history contains exactly the canonical 31 versio
 
 `.github/workflows/demo-supabase-migrations.yml` now:
 
-1. links only to the explicitly verified Demo project;
-2. inspects migration history before deployment;
-3. records `20260628000002_admin_bootstrap` as applied if the manual migration is not already present remotely, without executing it;
-4. runs `supabase db push --linked --yes` for automated migrations;
-5. fails closed if any local or remote 14-digit migration version is unmatched after the push;
-6. runs the live Demo preflight after history alignment.
+1. triggers when the deployment workflow itself changes, as well as when migration-critical source files change;
+2. links only to the explicitly verified Demo project;
+3. uses the Supabase Management API to enforce and then verify `password_hibp_enabled=true` and `security_update_password_require_reauthentication=true`; a plan/permission/configuration failure stops deployment rather than being treated as success;
+4. inspects migration history before deployment;
+5. records `20260628000002_admin_bootstrap` as applied if the manual migration is not already present remotely, without executing it;
+6. runs `supabase db push --linked --yes` for automated migrations;
+7. fails closed if any local or remote 14-digit migration version is unmatched after the push;
+8. runs the live Demo preflight after history alignment.
+
+The hosted Auth settings are intentionally enforced through the Management API rather than SQL because managed Supabase does not expose `auth.config` in this project. The Management API schema exposes both password-protection fields directly.
 
 Do not manually edit the remote schema outside controlled migrations. If history drift is detected again, verify the real schema first and use `supabase migration repair` only when the SQL effect is independently proven to already exist.
