@@ -83,4 +83,65 @@ describe("branding persistence", () => {
     fireEvent.click(await screen.findByText("Save Settings"));
     await waitFor(() => expect(screen.getByText("boom")).toBeInTheDocument());
   });
+
+  it("import persists the validated imported values atomically (not the stale pre-import state)", async () => {
+    const { container } = renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+
+    const imported = {
+      salonName: "Imported Salon",
+      salonNameAr: "صالون مستورد",
+      address: "Imported Address",
+      primaryColor: "red; } body { display: none; }", // CSS payload must be normalized
+      secondaryColor: "#112233",
+      accentColor: "url(https://attacker.invalid)",
+    };
+    const file = new File([JSON.stringify(imported)], "branding.json", { type: "application/json" });
+    const importInput = container.querySelector('input[accept=".json"]') as HTMLInputElement;
+    fireEvent.change(importInput, { target: { files: [file] } });
+
+    // The import flow persists the validated snapshot DIRECTLY. The old code
+    // called setSettings(imported) then handleSave(), and handleSave read the
+    // previous render's state closure — so Supabase received the OLD values.
+    await waitFor(() => expect(updateMock).toHaveBeenCalled());
+    expect(updateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        displayName: "Imported Salon",
+        brandPrimaryColor: "#8B5CF6", // malicious payload replaced by the default
+        brandSecondaryColor: "#112233",
+        brandAccentColor: "#F3E8FF", // malicious payload replaced by the default
+      }),
+    );
+    // The UI reflects the imported (validated) snapshot too.
+    expect(await screen.findByDisplayValue("Imported Salon")).toBeInTheDocument();
+    // The old values must never be persisted.
+    expect(updateMock).not.toHaveBeenCalledWith(expect.objectContaining({ displayName: "LenaBeauty Remote" }));
+  });
+
+  it("refuses to save when a free-text color is not strict #RRGGBB", async () => {
+    const { container } = renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+
+    // The primary color text input (next to the color picker).
+    const colorText = container.querySelectorAll('input[type="text"].font-mono')[0] as HTMLInputElement;
+    fireEvent.change(colorText, { target: { value: "red; } body { display:none }" } });
+    fireEvent.click(screen.getByText("Save Settings"));
+
+    expect(await screen.findByText("Brand colors must be in #RRGGBB format")).toBeInTheDocument();
+    expect(updateMock).not.toHaveBeenCalled();
+    // Nothing invalid may reach the cache either.
+    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+  });
+
+  it("save still works when colors are valid #RRGGBB", async () => {
+    const { container } = renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+
+    const colorText = container.querySelectorAll('input[type="text"].font-mono')[0] as HTMLInputElement;
+    fireEvent.change(colorText, { target: { value: "#123456" } });
+    fireEvent.click(screen.getByText("Save Settings"));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalled());
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ brandPrimaryColor: "#123456" }));
+  });
 });

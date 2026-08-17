@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCases } from '../app/composition/useCases';
 import { unwrap } from '../shared/hooks/useApplication';
 import { useToast } from '../shared/components/Toast';
-import { LENA_BRAND_PALETTE } from '../shared/theme/brandPalette';
+import { LENA_BRAND_PALETTE, isValidBrandColor, normalizeBrandColor } from '../shared/theme/brandPalette';
 
 interface BrandingSettings {
   salonName: string;
@@ -54,11 +54,41 @@ function fromCenterSettings(cs: any): BrandingSettings {
     taxNumber: cs?.brandTaxNumber ?? DEFAULT_SETTINGS.taxNumber,
     registrationNumber: cs?.brandRegistrationNumber ?? DEFAULT_SETTINGS.registrationNumber,
     logo: cs?.brandLogoBase64 ?? null,
-    primaryColor: cs?.brandPrimaryColor ?? DEFAULT_SETTINGS.primaryColor,
-    secondaryColor: cs?.brandSecondaryColor ?? DEFAULT_SETTINGS.secondaryColor,
-    accentColor: cs?.brandAccentColor ?? DEFAULT_SETTINGS.accentColor,
+    primaryColor: normalizeBrandColor(cs?.brandPrimaryColor, DEFAULT_SETTINGS.primaryColor),
+    secondaryColor: normalizeBrandColor(cs?.brandSecondaryColor, DEFAULT_SETTINGS.secondaryColor),
+    accentColor: normalizeBrandColor(cs?.brandAccentColor, DEFAULT_SETTINGS.accentColor),
     footerText: cs?.brandFooterText ?? DEFAULT_SETTINGS.footerText,
     footerTextAr: cs?.brandFooterTextAr ?? DEFAULT_SETTINGS.footerTextAr,
+  };
+}
+
+/**
+ * Validate an imported branding JSON blob into a complete, safe BrandingSettings.
+ *
+ * Only known fields are taken (as strings); colors are strictly #RRGGBB — a
+ * CSS payload or malformed color falls back to the default instead of ever
+ * reaching a stylesheet or the database. The result is passed directly to the
+ * persistence call so saving never depends on React state that has not
+ * committed yet.
+ */
+function sanitizeImportedBranding(raw: unknown): BrandingSettings {
+  const src = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+  const str = (key: string, fallback: string) => (typeof src[key] === 'string' ? (src[key] as string) : fallback);
+  return {
+    salonName: str('salonName', DEFAULT_SETTINGS.salonName),
+    salonNameAr: str('salonNameAr', DEFAULT_SETTINGS.salonNameAr),
+    address: str('address', DEFAULT_SETTINGS.address),
+    addressAr: str('addressAr', DEFAULT_SETTINGS.addressAr),
+    phone: str('phone', DEFAULT_SETTINGS.phone),
+    email: str('email', DEFAULT_SETTINGS.email),
+    taxNumber: str('taxNumber', DEFAULT_SETTINGS.taxNumber),
+    registrationNumber: str('registrationNumber', DEFAULT_SETTINGS.registrationNumber),
+    logo: typeof src.logo === 'string' ? (src.logo as string) : null,
+    primaryColor: normalizeBrandColor(src.primaryColor, DEFAULT_SETTINGS.primaryColor),
+    secondaryColor: normalizeBrandColor(src.secondaryColor, DEFAULT_SETTINGS.secondaryColor),
+    accentColor: normalizeBrandColor(src.accentColor, DEFAULT_SETTINGS.accentColor),
+    footerText: str('footerText', DEFAULT_SETTINGS.footerText),
+    footerTextAr: str('footerTextAr', DEFAULT_SETTINGS.footerTextAr),
   };
 }
 
@@ -184,28 +214,35 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async () => {
+  /**
+   * Persist an explicit settings snapshot.
+   *
+   * The snapshot (not the component state) is the single source for this save,
+   * so callers — including the import flow — can save a just-validated object
+   * atomically without waiting for (or racing) React state commits.
+   */
+  const persistSettings = async (next: BrandingSettings) => {
     setSaving(true);
     try {
       await unwrap(useCases.settings.update({
-        displayName: settings.salonName,
-        displayNameAr: settings.salonNameAr,
-        brandEmail: settings.email,
-        brandTaxNumber: settings.taxNumber,
-        brandRegistrationNumber: settings.registrationNumber,
-        brandPrimaryColor: settings.primaryColor,
-        brandSecondaryColor: settings.secondaryColor,
-        brandAccentColor: settings.accentColor,
-        brandFooterText: settings.footerText,
-        brandFooterTextAr: settings.footerTextAr,
-        phone: settings.phone,
-        address: settings.address,
-        brandLogoBase64: settings.logo ?? undefined,
+        displayName: next.salonName,
+        displayNameAr: next.salonNameAr,
+        brandEmail: next.email,
+        brandTaxNumber: next.taxNumber,
+        brandRegistrationNumber: next.registrationNumber,
+        brandPrimaryColor: next.primaryColor,
+        brandSecondaryColor: next.secondaryColor,
+        brandAccentColor: next.accentColor,
+        brandFooterText: next.footerText,
+        brandFooterTextAr: next.footerTextAr,
+        phone: next.phone,
+        address: next.address,
+        brandLogoBase64: next.logo ?? undefined,
       }));
-      localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
-      if (settings.logo) localStorage.setItem('lenabeauty_logo', settings.logo);
+      localStorage.setItem('lenabeauty_branding', JSON.stringify(next));
+      if (next.logo) localStorage.setItem('lenabeauty_logo', next.logo);
       // Saved values feed the shared application tokens.
-      applyBrandTokens(settings);
+      applyBrandTokens(next);
       setSaved(true);
       showToast('success', t('Success'), t('Branding settings saved successfully'));
       setTimeout(() => setSaved(false), 3000);
@@ -214,6 +251,23 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    // Strict color contract at the UI boundary: the free-text color inputs
+    // accept anything, so refuse to persist unless all three are #RRGGBB.
+    // (The repository boundary independently normalizes, but a clear error
+    // here beats a silent value change.)
+    const invalidColors = [
+      settings.primaryColor,
+      settings.secondaryColor,
+      settings.accentColor,
+    ].filter((value) => !isValidBrandColor(value));
+    if (invalidColors.length > 0) {
+      showToast('error', t('Error'), t('Brand colors must be in #RRGGBB format'));
+      return;
+    }
+    await persistSettings(settings);
   };
 
   const handleExportSettings = () => {
@@ -233,12 +287,16 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const imported = JSON.parse(event.target?.result as string);
-        setSettings(imported);
-        if (imported.logo) setPreview(imported.logo);
-        handleSave();
+        // Validate FIRST, then persist the validated object directly. Calling
+        // setSettings + handleSave() here would save the pre-import state:
+        // handleSave reads the current render's `settings` closure, which has
+        // not committed the import yet.
+        const validated = sanitizeImportedBranding(JSON.parse(event.target?.result as string));
+        setSettings(validated);
+        if (validated.logo) setPreview(validated.logo);
+        void persistSettings(validated);
       } catch {
-        showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+        showToast('error', t('Error'), t('Invalid branding settings file'));
       }
     };
     reader.readAsText(file);

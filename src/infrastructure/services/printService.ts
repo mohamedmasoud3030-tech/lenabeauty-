@@ -174,7 +174,10 @@ class PrintService {
             background-color: var(--primary-color);
             color: white;
             padding: 10px;
-            text-align: left;
+            /* Logical property: headers align to the document's start edge
+               (right in RTL Arabic documents, left in LTR) instead of being
+               forced left. */
+            text-align: start;
             font-weight: bold;
             border: 1px solid #E5E7EB;
           }

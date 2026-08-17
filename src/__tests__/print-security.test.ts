@@ -87,6 +87,14 @@ describe("print HTML security", () => {
     });
   });
 
+  it("print table headers use the logical start edge, not forced left alignment", () => {
+    const html = printService.generatePrintHTML("<table><tr><th>Employee</th></tr></table>");
+    // The th rule must be direction-aware; a forced `text-align: left` on the
+    // th rule would misalign Arabic headers inside an RTL print document.
+    expect(html).toMatch(/th\s*\{[^}]*text-align:\s*start/s);
+    expect(html).not.toMatch(/th\s*\{[^}]*text-align:\s*left/s);
+  });
+
   it("printDocument attaches the print handler before writing content so the load event cannot be missed", () => {
     const writeOrder: string[] = [];
     const fakeWindow = {
@@ -110,5 +118,11 @@ describe("print HTML security", () => {
       openSpy.mockRestore();
     }
     expect(writeOrder).toEqual(["write", "close"]);
+
+    // The installed handler must actually trigger the print dialog.
+    expect(fakeWindow.onload).not.toBeNull();
+    fakeWindow.onload!();
+    expect(fakeWindow.focus).toHaveBeenCalledTimes(1);
+    expect(fakeWindow.print).toHaveBeenCalledTimes(1);
   });
 });
