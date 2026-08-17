@@ -10,8 +10,9 @@ Logical rollback:
 2. Reconcile each `payroll_runs` row, its line count, and linked `employee_advances`.
 3. Revoke the two payroll RPCs from client roles.
 4. Deploy a compatible client before dropping the functions.
+5. Do not restore direct `INSERT`, `UPDATE`, or `DELETE` grants on payroll runs/lines unless a replacement server-transaction boundary is already active.
 
-Never restore the old browser-side multi-request sequence without accepting its partial-failure risk.
+Never restore the old browser-side or direct-PostgREST mutation sequence; either can leave runs, lines and advance deductions inconsistent.
 
 Verification:
 

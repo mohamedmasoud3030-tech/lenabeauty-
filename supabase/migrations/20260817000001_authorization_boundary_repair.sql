@@ -457,18 +457,21 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
-  v_deleted UUID;
+  v_deactivated UUID;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN
     RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';
   END IF;
-  DELETE FROM public.employees
+  -- Legacy clients may still call the old delete-named RPC. Preserve history by
+  -- converting that request to the supported lifecycle operation.
+  UPDATE public.employees
+  SET is_active = FALSE, updated_at = now()
   WHERE id = p_employee_id AND center_id = p_center_id
-  RETURNING id INTO v_deleted;
-  IF v_deleted IS NULL THEN
+  RETURNING id INTO v_deactivated;
+  IF v_deactivated IS NULL THEN
     RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';
   END IF;
-  RETURN jsonb_build_object('deleted_employee_id', v_deleted);
+  RETURN jsonb_build_object('deactivated_employee_id', v_deactivated);
 END;
 $$;
 
@@ -600,5 +603,38 @@ CREATE POLICY center_assets_admin_update ON storage.objects
     AND app_private.storage_path_center_id(name) IS NOT NULL
     AND app_private.has_center_role(app_private.storage_path_center_id(name), ARRAY['ADMIN'])
   );
+
+-- -----------------------------------------------------------------------------
+-- 5. Contain hard deletion and direct writes that bypass governed workflows.
+--    Existing create/edit/status journeys remain available; historical records
+--    require explicit lifecycle/reversal RPCs rather than PostgREST DELETE.
+-- -----------------------------------------------------------------------------
+REVOKE DELETE ON
+  public.customers,
+  public.employees,
+  public.services,
+  public.service_categories,
+  public.products,
+  public.appointments,
+  public.expenses,
+  public.attendance_records,
+  public.employee_advances,
+  public.center_settings
+FROM PUBLIC, anon, authenticated;
+
+-- These tables are written through the ADMIN-checking SECURITY DEFINER wrappers
+-- above (or are immutable history children), never by direct browser writes.
+REVOKE INSERT, UPDATE, DELETE ON
+  public.notification_settings,
+  public.payment_gateway_settings,
+  public.accounting_journal_entries,
+  public.ai_booking_leads,
+  public.customer_reviews,
+  public.service_files,
+  public.service_file_images,
+  public.customer_notification_timeline,
+  public.service_packages,
+  public.service_package_items
+FROM PUBLIC, anon, authenticated;
 
 COMMIT;

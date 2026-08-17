@@ -16,6 +16,7 @@ This rollback is **not automatic** and must never be applied merely to make a fa
 - Recreate the previous membership-scoped policies from the immediately preceding canonical migration state.
 - Restore the prior employee relation grants only if the old application requires direct compensation reads/writes.
 - Restore the previous storage insert/update policies.
+- Restore direct `DELETE` or wrapper-managed table-write grants only if a separately approved lifecycle design and compatible application require them. The legacy employee delete-named RPC now deactivates; restoring its old hard delete would re-open payroll/attendance cascade risk.
 
 Because this rollback reopens the exact cross-role access fixed by the migration, the preferred recovery is a **forward compatibility migration** that repairs a broken signature or policy while retaining ADMIN enforcement.
 

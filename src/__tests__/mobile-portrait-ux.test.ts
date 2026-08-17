@@ -66,7 +66,8 @@ describe("small-phone portrait UX contracts", () => {
   it("keeps a single POS category strip and a thumb-zone pay action", () => {
     expect(pos.match(/mobile-scroll-x/g) ?? []).toHaveLength(0);
     expect(pos).toContain("no duplicate category row");
-    expect(pos).toContain("Complete Payment");
+    expect(pos).toContain("Record completed sale");
+    expect(pos).toContain("no card is charged here");
     expect(pos).toContain("above-bottom-nav");
     expect(pos).toContain("Catalog");
     expect(pos).toContain("Cart");

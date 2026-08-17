@@ -130,4 +130,11 @@ REVOKE ALL ON FUNCTION public.delete_payroll_run_v1(UUID, UUID) FROM PUBLIC, ano
 GRANT EXECUTE ON FUNCTION public.create_payroll_run_v1(UUID, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_payroll_run_v1(UUID, UUID) TO authenticated;
 
+-- Prevent direct PostgREST mutations from bypassing the transaction above.
+-- Reads remain available to ADMIN through RLS; all writes run as the function
+-- owner inside create/delete_payroll_run_v1.
+REVOKE INSERT, UPDATE, DELETE ON public.payroll_runs FROM PUBLIC, anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.payroll_line_items FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.payroll_runs, public.payroll_line_items TO authenticated;
+
 COMMIT;

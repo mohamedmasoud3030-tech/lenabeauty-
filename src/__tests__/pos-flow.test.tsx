@@ -78,6 +78,69 @@ describe("POS operational flow", () => {
     expect(screen.getByText("Newest Customer")).toBeInTheDocument();
   });
 
+  it("blocks repeated keyboard checkout while the committed receipt is still loading", async () => {
+    await i18n.changeLanguage("ar");
+    const checkoutSpy = vi.spyOn(useCases.invoices, "checkout").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: {
+          id: "inv-guard",
+          serialNumber: "INV-GUARD",
+          date: new Date("2026-08-10T10:00:00"),
+          totalAmount: 5,
+          discount: 0,
+          tax: 0,
+          paymentMethod: "cash",
+          customerId: "c1",
+        },
+        total: 5,
+        earned: 5,
+      },
+    } as any);
+    let resolvePrint!: (value: any) => void;
+    vi.spyOn(useCases.invoices, "getForPrint").mockImplementation(
+      () => new Promise((resolve) => { resolvePrint = resolve; }),
+    );
+    vi.spyOn(useCases.customers, "list").mockResolvedValue({
+      ok: true,
+      data: [{ id: "c1", name: "أمل", phone: "90000000" }],
+    } as any);
+
+    render(
+      <ToastProvider>
+        <PosInvoicesPage />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByText("قص شعر"));
+    const customerInput = screen.getByPlaceholderText(i18n.t("Search customer..."));
+    fireEvent.change(customerInput, { target: { value: "أمل" } });
+    fireEvent.click(await screen.findByText("أمل"));
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
+
+    fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(useCases.invoices.getForPrint).toHaveBeenCalledTimes(1));
+
+    // The checkout RPC has returned, but print loading is still pending. A
+    // stale keyboard-listener closure used to start a second payment here.
+    fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
+    await act(async () => { await Promise.resolve(); });
+    expect(checkoutSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvePrint({
+        ok: true,
+        data: {
+          invoice: { id: "inv-guard", serialNumber: "INV-GUARD", date: new Date(), totalAmount: 5, discount: 0, tax: 0, paymentMethod: "cash", customerId: "c1" },
+          items: [{ id: "it1", type: "service", name: "قص شعر", price: 5, qty: 1 }],
+          customer: { id: "c1", name: "أمل" },
+          settings: { name: "لينا بيوتي", currency: "OMR" },
+        },
+      });
+    });
+  });
+
   it("adds service + product + package, checks out and shows the receipt", async () => {
     await i18n.changeLanguage("ar");
 
@@ -122,8 +185,9 @@ describe("POS operational flow", () => {
       </ToastProvider>,
     );
 
-    // 1) Catalog loads; add the service
+    // 1) Catalog loads and the manual-tender boundary is explicit.
     expect(await screen.findByText("قص شعر")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("The selected payment method confirms manual collection outside the app; no card is charged here"))).toBeInTheDocument();
     fireEvent.click(screen.getByText("قص شعر"));
 
     // 2) Switch to products and add one
@@ -143,7 +207,7 @@ describe("POS operational flow", () => {
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
 
     // 6) Complete the payment
-    fireEvent.click(screen.getByText(i18n.t("Complete Payment")));
+    fireEvent.click(screen.getByText(i18n.t("Record completed sale")));
 
     // 7) Checkout called once with the exact mixed payload
     await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));

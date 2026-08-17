@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useCases } from "../app/composition/useCases";
 import { User, SessionState, UserRole } from "../domain/entities/Session";
 import { config, validateEnvironment, EnvironmentConfigurationError } from "../config/env";
@@ -18,16 +18,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [user, setUser] = useState<User | null>(null);
+  // Auth events can overlap (for example TOKEN_REFRESHED immediately followed
+  // by SIGNED_OUT). Only the newest reconciliation may update the shell.
+  const reconciliationGenerationRef = useRef(0);
 
   const CENTER_STORAGE_KEY = "lb_active_center_id";
 
-  async function applySessionState(resolvedSessionState: SessionState, envError: Error | null) {
+  async function applySessionState(
+    resolvedSessionState: SessionState,
+    envError: Error | null,
+    isCurrent: () => boolean = () => true,
+  ) {
+    if (!isCurrent()) return;
+
     if (resolvedSessionState.status === "authenticated") {
       if (envError) throw envError; // Block Supabase login if misconfigured
       const sessionUser = resolvedSessionState.session.user;
 
       try {
         const centersRes = await useCases.auth.getMyCenters?.();
+        if (!isCurrent()) return;
         const targetCenters = centersRes && centersRes.ok ? centersRes.data : [];
 
         // A session whose center membership cannot be verified (query error)
@@ -79,6 +89,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
         setUser(reconciledUser);
       } catch (error: any) {
+        if (!isCurrent()) return;
         // Membership bootstrap crashed (e.g. network error) — never leave the
         // app half-initialized. Route safely to Login with a clear message.
         console.error("[AppContext] Center membership check failed:", error);
@@ -105,12 +116,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function init() {
+    const generation = ++reconciliationGenerationRef.current;
+    const isCurrent = () => generation === reconciliationGenerationRef.current;
     try {
       const envError = getEnvironmentError();
 
       const res = await useCases.auth.getSession();
+      if (!isCurrent()) return;
       if (res.ok) {
-        await applySessionState(res.data, envError);
+        await applySessionState(res.data, envError, isCurrent);
       } else {
         if (envError) throw envError;
         const errorRes = res as { ok: false; error: Error };
@@ -118,19 +132,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     } catch (error: any) {
+      if (!isCurrent()) return;
       console.error("[AppContext] Initialization failed:", error);
       setSessionState({ status: "error", error: error as Error });
       setUser(null);
     } finally {
-      setIsInitialized(true);
+      if (isCurrent()) setIsInitialized(true);
     }
   }
 
   async function applyAuthenticatedSession(nextSessionState: SessionState) {
+    const generation = ++reconciliationGenerationRef.current;
+    const isCurrent = () => generation === reconciliationGenerationRef.current;
     try {
-      await applySessionState(nextSessionState, getEnvironmentError());
-      setIsInitialized(true);
+      await applySessionState(nextSessionState, getEnvironmentError(), isCurrent);
+      if (isCurrent()) setIsInitialized(true);
     } catch (error: any) {
+      if (!isCurrent()) return;
       console.error("[AppContext] Login session application failed:", error);
       setSessionState({ status: "error", error: error as Error });
       setUser(null);
@@ -149,6 +167,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     return () => {
       active = false;
+      reconciliationGenerationRef.current += 1;
       unsubscribe();
     };
   }, []);

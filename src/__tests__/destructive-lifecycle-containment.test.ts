@@ -6,6 +6,7 @@ const source = (file: string) => readFileSync(resolve(process.cwd(), "src/pages"
 
 describe("destructive lifecycle containment", () => {
   it("does not expose hard delete paths for retained master records", () => {
+    expect(source("AppointmentsPage.tsx")).not.toContain("useCases.appointments.delete");
     expect(source("CustomersPage.tsx")).not.toContain("useCases.customers.delete");
     expect(source("EmployeesPage.tsx")).not.toContain("useCases.employees.delete");
     expect(source("ServicesPage.tsx")).not.toContain("useCases.services.delete");

@@ -48,6 +48,12 @@ describe("transactional payroll repair", () => {
     expect(deleteFn).toContain("DELETE FROM public.payroll_runs");
   });
 
+  it("revokes direct payroll table writes that could bypass advance reconciliation", () => {
+    expect(migration).toMatch(/REVOKE INSERT, UPDATE, DELETE ON public\.payroll_runs FROM PUBLIC, anon, authenticated/i);
+    expect(migration).toMatch(/REVOKE INSERT, UPDATE, DELETE ON public\.payroll_line_items FROM PUBLIC, anon, authenticated/i);
+    expect(migration).toMatch(/GRANT SELECT ON public\.payroll_runs, public\.payroll_line_items TO authenticated/i);
+  });
+
   it("removes the browser-side multi-request payroll mutation sequence", () => {
     const block = repositories.slice(
       repositories.indexOf("class SupabasePayrollAdapter"),

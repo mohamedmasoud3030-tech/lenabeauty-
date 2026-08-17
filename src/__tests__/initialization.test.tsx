@@ -54,6 +54,46 @@ describe("Initialization Regression Tests", () => {
         expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
 
+    it("does not restore a stale authenticated session after a newer sign-out event", async () => {
+        let listener: ((event: string) => void) | undefined;
+        let resolveMembership!: (value: any) => void;
+        vi.mocked(useCases.auth.onAuthStateChange).mockImplementation((callback) => {
+            listener = callback;
+            return () => {};
+        });
+        vi.spyOn(env, "validateEnvironment").mockImplementation(() => {});
+        (env.config as any).centerId = "center-1";
+        (env.config as any).branchMode = "single";
+        vi.spyOn(useCases.auth, "getMyCenters").mockImplementation(
+            () => new Promise((resolve) => { resolveMembership = resolve; }),
+        );
+        const authenticated = {
+            status: "authenticated",
+            session: {
+                user: { id: "user-1", username: "admin@example.com", name: "Admin", role: "ADMIN" },
+            },
+        } as any;
+        const getSession = vi.spyOn(useCases.auth, "getSession")
+            .mockResolvedValueOnce({ ok: true, data: { status: "anonymous" } })
+            .mockResolvedValueOnce({ ok: true, data: authenticated })
+            .mockResolvedValueOnce({ ok: true, data: { status: "anonymous" } });
+
+        render(<AppProvider><TestComponent /></AppProvider>);
+        await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("anonymous"));
+
+        act(() => listener?.("TOKEN_REFRESHED"));
+        await waitFor(() => expect(useCases.auth.getMyCenters).toHaveBeenCalledTimes(1));
+        act(() => listener?.("SIGNED_OUT"));
+        await waitFor(() => expect(getSession).toHaveBeenCalledTimes(3));
+        await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("anonymous"));
+
+        await act(async () => {
+            resolveMembership({ ok: true, data: [{ id: "center-1", name: "Lena Beauty", role: "ADMIN" }] });
+            await Promise.resolve();
+        });
+        expect(screen.getByTestId("status")).toHaveTextContent("anonymous");
+    });
+
     it("loading state clears after failed initialization", async () => {
         vi.spyOn(useCases.auth, "getSession").mockResolvedValue({ ok: false, error: new Error("Test Error") as any });
         vi.spyOn(env, "validateEnvironment").mockImplementation(() => {});

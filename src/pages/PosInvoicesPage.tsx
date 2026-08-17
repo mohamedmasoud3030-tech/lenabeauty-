@@ -88,9 +88,12 @@ export default function PosInvoicesPage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
   // True while a checkout is in flight: guards against double-submit (a second
-  // tap on "Complete Payment" or Ctrl+Enter must never charge the same order
-  // twice).
+  // tap on "Record completed sale" or Ctrl+Enter must never record the same
+  // order twice).
   const [checkingOut, setCheckingOut] = useState(false);
+  // State disables the visible button, while this synchronous guard also
+  // protects keyboard/repeated events before React can render the next state.
+  const checkoutInFlightRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRequestRef = useRef(0);
@@ -322,7 +325,7 @@ export default function PosInvoicesPage() {
   const { subtotal, tierDiscount, loyaltyDiscount, giftCardDiscount, entitlementRedemption, tax, total } = checkoutTotals;
 
   async function handleCheckout() {
-    if (checkingOut) return;
+    if (checkoutInFlightRef.current) return;
 
     if (!selectedCustomer || !selectedEmployee || cart.length === 0) {
       showToast('error', t("Error"), t("Please select a customer, employee, and add items to the cart"));
@@ -349,6 +352,7 @@ export default function PosInvoicesPage() {
       return;
     }
 
+    checkoutInFlightRef.current = true;
     setCheckingOut(true);
     try {
       const payload = {
@@ -404,15 +408,14 @@ export default function PosInvoicesPage() {
         }
       } catch (e) {
         console.error("Print failed", e);
-        showToast('error', t("Error"), t("Payment succeeded, but receipt could not be loaded"));
+        showToast('error', t("Error"), t("Sale was recorded, but receipt could not be loaded"));
       }
 
-      // The payment is already committed at this point. Clear the order and
-      // report success before refreshing so a transient catalog read can never
-      // be misreported as a failed payment. The refresh makes decremented stock
-      // visible immediately and prevents a second order using stale quantity.
+      // The sale and operator-confirmed tender method are committed at this
+      // point. Clear the order before refreshing so a transient catalog read
+      // can never be misreported as a failed sale.
       clearCart();
-      showToast('success', t("Success"), t("Payment successful!"));
+      showToast('success', t("Success"), t("Sale and payment method recorded successfully"));
       try {
         await loadData();
       } catch (e) {
@@ -420,8 +423,9 @@ export default function PosInvoicesPage() {
         showToast('error', t("Error"), t("Sale completed, but catalog refresh failed"));
       }
     } catch (err: any) {
-      showToast('error', t("Error"), err.message || t("Payment failed"));
+      showToast('error', t("Error"), err.message || t("Sale could not be recorded"));
     } finally {
+      checkoutInFlightRef.current = false;
       setCheckingOut(false);
     }
   }
@@ -887,6 +891,9 @@ export default function PosInvoicesPage() {
                     </div>
                   </div>
                 </div>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">
+                  {t("The selected payment method confirms manual collection outside the app; no card is charged here")}
+                </p>
 
                 {/* Loyalty Points - compact toggle */}
                 {selectedCustomer && selectedCustomer.loyaltyPoints > 0 && (
@@ -951,7 +958,7 @@ export default function PosInvoicesPage() {
                   className="group relative w-full min-h-12 rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm touch-target"
                 >
                   <CheckCircle2 className="h-5 w-5" />
-                  <span>{checkingOut ? t("Processing...") : t("Complete Payment")}</span>
+                  <span>{checkingOut ? t("Processing...") : t("Record completed sale")}</span>
                 </button>
               </div>
             </div>

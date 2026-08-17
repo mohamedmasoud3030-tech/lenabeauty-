@@ -69,15 +69,15 @@ The repository baseline compiled and its old suite passed, but direct inspection
 - **Severity/scope:** Critical; payroll, employee advances, accounting integrity.
 - **Root cause:** one business transaction was split across client requests.
 - **Smallest safe repair:** ADMIN-only transactional `create_payroll_run_v1` / `delete_payroll_run_v1` in migration `20260817000003_payroll_transaction_repair.sql`; adapter uses only those RPCs.
-- **Verification/status:** `IMPLEMENTED + LOCAL PASS + HOSTED BLOCKED`. rollback/success/duplicate-month contracts and payroll suites pass locally. Hosted transaction acceptance was not run.
+- **Verification/status:** `IMPLEMENTED + LOCAL PASS + HOSTED BLOCKED`. Rollback/success/duplicate-month contracts pass locally; direct `INSERT/UPDATE/DELETE` grants on payroll runs/lines are now revoked so PostgREST cannot bypass advance reconciliation. Hosted transaction acceptance was not run.
 
 ### DEF-005 — Configured commission is not calculated
 
 - **Symptom/evidence:** `commission_percentage` can be stored and UI has commission reporting fields, but no repository/domain/SQL path calculates earned commission.
 - **Severity/scope:** Critical; payroll, P&L, employee compensation.
 - **Root cause:** field/UI were added without an approved rule for VAT, discounts, refunds, attribution and month cut-off.
-- **Smallest safe repair:** no formula was invented. Keep current payroll contract explicitly at `max(base_salary - approved advances, 0)` until the owner approves signed examples.
-- **Verification/status:** `OWNER BLOCKED`. Required decision: formula, earning event, refund reversal, VAT/discount basis, staff attribution, and cut-off/timezone.
+- **Smallest safe repair:** no formula was invented. The employee form, employee statistics and Dashboard commission row no longer present stored zero/reference fields as calculated earnings. Current payroll is explicitly fixed salary less approved advances.
+- **Verification/status:** `CONTAINED + LOCAL PASS`. UI regressions prove commission values are neither shown nor mutated. Commission can be designed later only after a commercial policy defines earning event, refunds, VAT/discount basis, attribution and cut-off/timezone; it is not a blocker for the fixed-salary product now presented.
 
 ### High
 
@@ -99,11 +99,11 @@ The repository baseline compiled and its old suite passed, but direct inspection
 
 ### DEF-008 — Hard-delete lifecycle is inconsistent
 
-- **Symptom/evidence:** customer, employee, service, product, expense, attendance and advance screens exposed hard delete despite mixed CASCADE/RESTRICT history rules; retention/anonymization policy is absent.
+- **Symptom/evidence:** appointment, customer, employee, service, product, expense, attendance and advance paths exposed hard delete despite mixed CASCADE/RESTRICT history rules; direct relation/RPC access could remain destructive even after hiding buttons; retention/anonymization policy is absent.
 - **Severity/scope:** High; audit, financial history, privacy, foreign keys.
 - **Root cause:** CRUD screens treated deletion as uniform while the database lifecycle is not uniform and no owner-approved retention policy exists.
 - **Smallest safe repair:** contain destructive UI immediately; use existing activation flags for employees/services/products; keep edit/status workflows for attendance/advances/expenses; define anonymize/retain rules before changing rows or constraints.
-- **Verification/status:** `CONTAINED + LOCAL PASS + OWNER BLOCKED FOR FINAL POLICY`. Relevant pages contain no direct hard-delete calls; employee/product/service flows use activation state and regressions pass. No existing row was deleted or rewritten. Customer anonymization, expense reversal and final retention periods still require owner policy.
+- **Verification/status:** `CONTAINED + LOCAL PASS + OWNER BLOCKED FOR FINAL POLICY`. Relevant pages, including Appointments, contain no direct hard-delete calls; employee/product/service flows use activation state. Pending migration grants revoke browser `DELETE` on retained operational entities, and the legacy employee delete-named RPC deactivates instead of cascading history. No existing row was deleted or rewritten. Customer anonymization, expense reversal and final retention periods still require owner policy.
 
 ### DEF-009 — No-show “charged” language did not create a payment
 
@@ -235,7 +235,7 @@ The repository baseline compiled and its old suite passed, but direct inspection
 - **Severity/scope:** Medium; Auth lifecycle and revoked-role UX.
 - **Root cause:** no `onAuthStateChange` subscription or membership revalidation path.
 - **Smallest safe repair:** subscribe through AuthRepository, ignore the initial duplicate event, and rerun canonical session/membership reconciliation for later events; unsubscribe on unmount.
-- **Verification/status:** `IMPLEMENTED + LOCAL PASS`. Tests observe revalidation on `TOKEN_REFRESHED` and cleanup. Invite/reset-password delivery still depends on a configured hosted email/operator flow and is not claimed implemented.
+- **Verification/status:** `IMPLEMENTED + LOCAL PASS`. Tests observe revalidation on `TOKEN_REFRESHED`, cleanup, and generation-ordered reconciliation: a delayed older membership response cannot restore an authenticated shell after a newer `SIGNED_OUT`. Invite/reset-password delivery still depends on a configured hosted email/operator flow and is not claimed implemented.
 
 ### DEF-025 — Logo uploads lacked MIME/size/server quota boundaries
 
@@ -253,13 +253,13 @@ The repository baseline compiled and its old suite passed, but direct inspection
 - **Smallest safe repair:** owner defines audited entities, retention and access; then add append-only metadata events without passwords or unnecessary PII.
 - **Verification/status:** `OWNER BLOCKED`. Destructive UI was contained, but an unbounded audit table was not invented without retention/privacy policy.
 
-### DEF-027 — PWA auto-update could replace chunks under a live session and precached the chart engine
+### DEF-027 — PWA update/precache policy could disrupt sessions or retain private imagery
 
-- **Symptom/evidence:** `autoUpdate` used immediate activation and every install precached the large lazy chart chunk.
-- **Severity/scope:** Medium; open POS sessions, PWA install cost and mixed-version risk.
-- **Root cause:** generated SW defaults were used without release UX.
-- **Smallest safe repair:** prompt for explicit reload, allow dismissal, and exclude the online-report chart engine from install precache.
-- **Verification/status:** `IMPLEMENTED + LOCAL PASS`; static contract and production build confirm prompt registration and chart exclusion. Installed-device update acceptance remains not tested without a browser.
+- **Symptom/evidence:** `autoUpdate` used immediate activation, every install precached the large lazy chart chunk, and a broad CacheFirst image rule could retain business or signed private images on a shared device.
+- **Severity/scope:** High; open POS sessions, install cost, mixed-version risk and logout/privacy boundaries.
+- **Root cause:** generated SW defaults and extension-wide image caching were used without data-classification rules.
+- **Smallest safe repair:** prompt for explicit reload, allow dismissal, exclude the online-report chart engine from install precache, and keep business/customer images network-only; only explicitly public fonts retain runtime caching.
+- **Verification/status:** `IMPLEMENTED + LOCAL PASS`; static contract and production build confirm prompt registration, chart exclusion and absence of broad image runtime caching. Installed-device update/logout acceptance remains not tested without a browser.
 
 ### DEF-028 — `lint` was only a duplicate typecheck and package-manager policy was ambiguous
 
@@ -304,7 +304,7 @@ This table reconciles all 28 IDs from the original `FULL_PROJECT_AUDIT.md`; none
 | M-11 logo MIME/size/quota | IMPLEMENTED + LOCAL PASS; hosted pending | `DEF-025`, migration `000005` |
 | M-12 missing audit trail | OWNER BLOCKED | `DEF-026`; retention/privacy decision required |
 | M-13 attendance duplicates/times | IMPLEMENTED + LOCAL PASS; hosted pending | `DEF-018`, migration `000004` |
-| M-14 payment/public booking incomplete | CONTAINED | metadata/manual scope stated; public RPCs deny-by-default; no live capability claimed |
+| M-14 payment/public booking incomplete | CONTAINED + LOCAL PASS | gateway stays visibly `Not connected`, saves disabled/sandbox metadata only, POS labels external/manual tender recording, public RPCs deny-by-default |
 | M-15 PWA precache/immediate update | IMPLEMENTED locally; device acceptance pending | `DEF-027` |
 | M-16 monitoring/DR proof | OWNER/EXTERNAL BLOCKED | `DEF-021` |
 | L-01 lint/locks/dead candidates | PARTIAL/CONTAINED | `DEF-028`; npm pinned + policy lint; no risky bulk deletion |
@@ -318,10 +318,10 @@ The final exact verification snapshot is recorded after all edits in the section
 
 | Check | Observed result |
 |---|---|
-| Full Vitest suite after merging current `main` | PASS; 104 files / 563 tests. Expected missing-config and branding-import rejection tests logged their deliberate failure paths; process exit 0. |
+| Full Vitest suite after independent review corrections | PASS; 105 files / 570 tests. Expected missing-config and branding-import rejection tests logged their deliberate failure paths; process exit 0. |
 | `npm run typecheck` | PASS; `tsc --noEmit` |
-| `npm run lint` | PASS; TypeScript + source-policy lint across 226 files |
-| `npm run build` | PASS after merging current `main`; 2,833 modules; PWA 53 entries / 1,561.37 KiB |
+| `npm run lint` | PASS; TypeScript + source-policy lint across 227 files |
+| `npm run build` | PASS after independent review corrections; 2,833 modules; PWA 53 entries / 1,557.68 KiB |
 | `npm run ci:migrations` | PASS; 36 canonical migrations, identifier/extension ordering valid |
 | `npm run ci:rpc-check` | PASS; 29 frontend RPC references, all defined canonically |
 | `npm run db:types:check` | PASS; generated types match canonical replay inventory |

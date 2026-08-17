@@ -40,8 +40,10 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
       if (res.ok) {
         setForm({
           provider: res.data.provider,
-          isEnabled: res.data.isEnabled,
-          isSandbox: res.data.isSandbox,
+          // No charge/session/webhook runtime is shipped. Never hydrate legacy
+          // metadata as an active or live gateway in the operator UI.
+          isEnabled: false,
+          isSandbox: true,
           publicKey: res.data.publicKey || "",
           merchantIdentifier: res.data.merchantIdentifier || "",
           webhookSecretHint: res.data.webhookSecretHint || "",
@@ -66,7 +68,13 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
   async function save() {
     setLoading(true);
     try {
-      await unwrap(useCases.settings.updatePaymentGatewaySettings(form));
+      await unwrap(useCases.settings.updatePaymentGatewaySettings({
+        ...form,
+        // Configuration is preparatory metadata only until a server-side
+        // charge session and verified webhook are implemented.
+        isEnabled: false,
+        isSandbox: true,
+      }));
       showToast("success", t("Success"), t("Payment gateway settings saved successfully"));
     } catch (err: any) {
       showToast("error", t("Error"), err.message || t("Failed to save payment gateway settings"));
@@ -101,7 +109,7 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Provider")}</p><div className="mt-2 text-xl font-bold text-foreground uppercase">{form.provider}</div></CardContent></PremiumCard>
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Environment")}</p><div className="mt-2 text-xl font-bold text-foreground">{form.isSandbox ? t("Sandbox") : t("Live")}</div></CardContent></PremiumCard>
+        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Connection")}</p><div className="mt-2 text-xl font-bold text-warning">{t("Not connected")}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Booking Deposit")}</p><div className="mt-2 text-xl font-bold text-foreground">{form.bookingDepositEnabled ? `${form.bookingDepositValue}${form.bookingDepositType === "percentage" ? "%" : ` ${t("OMR")}`}` : t("Disabled")}</div></CardContent></PremiumCard>
       </div>
 
@@ -109,10 +117,11 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
         <PremiumCard variant="glass">
           <CardHeader><div className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /><h2 className="font-bold text-foreground">{t("Gateway Configuration")}</h2></div></CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4 items-end">
               <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Provider")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.provider} onChange={(e) => update("provider", e.target.value as any)}><option value="manual">Manual</option><option value="thawani">Thawani</option><option value="paytabs">PayTabs</option><option value="stripe">Stripe</option></select></label>
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Gateway Enabled")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={String(form.isEnabled)} onChange={(e) => update("isEnabled", e.target.value === "true")}><option value="true">{t("Enabled")}</option><option value="false">{t("Disabled")}</option></select></label>
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Environment")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={String(form.isSandbox)} onChange={(e) => update("isSandbox", e.target.value === "true")}><option value="true">{t("Sandbox")}</option><option value="false">{t("Live")}</option></select></label>
+              <p className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
+                {t("Provider settings are stored for preparation only; no live gateway is connected")}
+              </p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">

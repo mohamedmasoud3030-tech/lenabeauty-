@@ -71,6 +71,14 @@ describe("authorization boundary repair", () => {
     }
   });
 
+  it("contains hard deletion and keeps the legacy employee delete RPC non-destructive", () => {
+    expect(migration).toMatch(/REVOKE DELETE ON[\s\S]*public\.customers[\s\S]*public\.appointments[\s\S]*public\.employee_advances[\s\S]*FROM PUBLIC, anon, authenticated/i);
+    expect(migration).toMatch(/REVOKE INSERT, UPDATE, DELETE ON[\s\S]*public\.accounting_journal_entries[\s\S]*public\.service_packages/i);
+    const legacyEmployeeDelete = inventory.functions.find((entry: any) => entry.name === "admin_delete_employee_v1");
+    expect(legacyEmployeeDelete.definition).toContain("is_active = FALSE");
+    expect(legacyEmployeeDelete.definition).not.toContain("DELETE FROM public.employees");
+  });
+
   it("redacts compensation for operational employee lists and governs writes", () => {
     const listFn = inventory.functions.find((entry: any) => entry.name === "list_employees_v1");
     expect(listFn.definition).toContain("- 'salary'");

@@ -8380,7 +8380,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.admin_delete_employee_v1(p_center_id uuid, p_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_deleted UUID;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  DELETE FROM public.employees\n  WHERE id = p_employee_id AND center_id = p_center_id\n  RETURNING id INTO v_deleted;\n  IF v_deleted IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n  RETURN jsonb_build_object('deleted_employee_id', v_deleted);\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_delete_employee_v1(p_center_id uuid, p_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_deactivated UUID;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  -- Legacy clients may still call the old delete-named RPC. Preserve history by\n  -- converting that request to the supported lifecycle operation.\n  UPDATE public.employees\n  SET is_active = FALSE, updated_at = now()\n  WHERE id = p_employee_id AND center_id = p_center_id\n  RETURNING id INTO v_deactivated;\n  IF v_deactivated IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n  RETURN jsonb_build_object('deactivated_employee_id', v_deactivated);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -16307,568 +16307,575 @@
       "kind": "relation",
       "schema": "public",
       "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "service_categories",
       "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
       "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
     },
     {
       "kind": "relation",

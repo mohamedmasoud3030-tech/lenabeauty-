@@ -7,7 +7,6 @@ import {
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
 import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   formatSalonDate,
@@ -114,7 +113,6 @@ function statusClass(s: AppointmentStatus | string) {
 
 export default function AppointmentsPage() {
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   // Portrait phones: day first. Week view on a 320–360px screen is unreadable.
@@ -303,32 +301,6 @@ export default function AppointmentsPage() {
     setOpen(true);
   }
 
-  async function deleteAppt(id: string) {
-    const appointment = appts.find((entry) => entry.id === id);
-    if (appointment && appointment.status !== AppointmentStatus.SCHEDULED) {
-      showToast('error', t("Error"), t("Terminal appointments cannot be deleted"));
-      return;
-    }
-    const ok = await confirm({
-      title: t("Confirm"),
-      message: t("Are you sure you want to delete this appointment?"),
-      type: "danger"
-    });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.appointments.delete(id));
-      await load();
-      showToast('success', t("Success"), t("Appointment deleted successfully"));
-      setOpen(false);
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err?.message || String(err));
-      }
-    }
-  }
-
   async function submitBooking() {
     if (!slotDate) return;
     const existingAppointment = editApptId ? appts.find((entry) => entry.id === editApptId) : undefined;
@@ -424,17 +396,6 @@ export default function AppointmentsPage() {
 
   const bookingFooter = (
     <div className="flex gap-3">
-      {editApptId && status === AppointmentStatus.SCHEDULED && (
-        <button
-          type="button"
-          onClick={() => void deleteAppt(editApptId)}
-          className="w-14 h-14 shrink-0 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center border border-destructive/20 active:scale-95 touch-target"
-          aria-label={t("Delete")}
-          title={t("Delete")}
-        >
-          <XCircle className="h-6 w-6" />
-        </button>
-      )}
       <button
         type="button"
         disabled={busy || !customerId || (!!editApptId && status !== AppointmentStatus.SCHEDULED)}
