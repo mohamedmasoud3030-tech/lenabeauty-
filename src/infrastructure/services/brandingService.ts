@@ -40,6 +40,58 @@ const DEFAULT_BRANDING: BrandingSettings = {
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };
 
+const BRANDING_STRING_FIELDS = [
+  'salonName', 'salonNameAr', 'address', 'addressAr', 'phone', 'email',
+  'taxNumber', 'registrationNumber', 'footerText', 'footerTextAr',
+] as const;
+
+const BRANDING_COLOR_FIELDS = ['primaryColor', 'secondaryColor', 'accentColor'] as const;
+
+/**
+ * Strict structural validation for a branding import file.
+ *
+ * The exporter always writes a COMPLETE snapshot, so an import is accepted
+ * only when it is a plain object containing every core string field and all
+ * three color fields with the correct types. Anything else — arrays, null,
+ * primitives, empty objects, unknown-only objects, or partial shapes — throws
+ * instead of silently persisting defaults over the salon's real branding.
+ * Colors are then normalized through the strict #RRGGBB contract.
+ */
+export function validateBrandingImport(raw: unknown): BrandingSettings {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Branding import must be a JSON object');
+  }
+  const src = raw as Record<string, unknown>;
+
+  const missingStrings = BRANDING_STRING_FIELDS.filter((key) => typeof src[key] !== 'string');
+  const missingColors = BRANDING_COLOR_FIELDS.filter((key) => typeof src[key] !== 'string');
+  if (missingStrings.length > 0 || missingColors.length > 0) {
+    throw new Error(
+      'Branding import is missing required fields (a complete exported snapshot is expected)',
+    );
+  }
+  if (src.logo !== undefined && src.logo !== null && typeof src.logo !== 'string') {
+    throw new Error('Branding import logo must be a string or null');
+  }
+
+  return {
+    salonName: src.salonName as string,
+    salonNameAr: src.salonNameAr as string,
+    address: src.address as string,
+    addressAr: src.addressAr as string,
+    phone: src.phone as string,
+    email: src.email as string,
+    taxNumber: src.taxNumber as string,
+    registrationNumber: src.registrationNumber as string,
+    footerText: src.footerText as string,
+    footerTextAr: src.footerTextAr as string,
+    logo: typeof src.logo === 'string' ? src.logo : null,
+    primaryColor: normalizeBrandColor(src.primaryColor, LENA_BRAND_PALETTE.primary),
+    secondaryColor: normalizeBrandColor(src.secondaryColor, LENA_BRAND_PALETTE.secondary),
+    accentColor: normalizeBrandColor(src.accentColor, LENA_BRAND_PALETTE.surfaceAccent),
+  };
+}
+
 class BrandingService {
   private static instance: BrandingService;
   private settings: BrandingSettings = DEFAULT_BRANDING;
@@ -134,12 +186,17 @@ class BrandingService {
 
     this.settings = { ...this.settings, ...sanitized };
 
-    // Save to localStorage
+    // Save to localStorage. The logo cache key must be removed when the logo
+    // is cleared (logo: null): loadSettings re-applies the separate key over
+    // the main cache, so a stale logo would otherwise be resurrected after
+    // reload.
     const { logo, ...settingsWithoutLogo } = this.settings;
     localStorage.setItem('lenabeauty_branding', JSON.stringify(settingsWithoutLogo));
-    
+
     if (logo) {
       localStorage.setItem('lenabeauty_logo', logo);
+    } else {
+      localStorage.removeItem('lenabeauty_logo');
     }
   }
 
@@ -198,16 +255,14 @@ class BrandingService {
   /**
    * Import settings from JSON
    *
-   * Only plain objects are accepted; updateSettings then enforces the strict
-   * color contract before anything is cached.
+   * Strict structural validation: only complete exported snapshots are
+   * accepted. Arrays, primitives, empty/unknown objects, and partial shapes
+   * are rejected — a malformed file must never overwrite the salon's branding
+   * with defaults.
    */
   importSettings(jsonString: string): boolean {
     try {
-      const imported: unknown = JSON.parse(jsonString);
-      if (!imported || typeof imported !== 'object' || Array.isArray(imported)) {
-        return false;
-      }
-      this.updateSettings(imported as Partial<BrandingSettings>);
+      this.updateSettings(validateBrandingImport(JSON.parse(jsonString)));
       return true;
     } catch (error) {
       console.error('Failed to import settings:', error);

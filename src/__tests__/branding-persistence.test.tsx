@@ -88,10 +88,20 @@ describe("branding persistence", () => {
     const { container } = renderPage();
     await screen.findByDisplayValue("LenaBeauty Remote");
 
+    // A complete exported snapshot (what the Export button produces) with
+    // hostile color values that must be normalized by the strict contract.
     const imported = {
       salonName: "Imported Salon",
       salonNameAr: "صالون مستورد",
       address: "Imported Address",
+      addressAr: "عنوان مستورد",
+      phone: "+968 1234",
+      email: "imported@example.com",
+      taxNumber: "T1",
+      registrationNumber: "R1",
+      footerText: "Imported footer",
+      footerTextAr: "تذييل مستورد",
+      logo: null,
       primaryColor: "red; } body { display: none; }", // CSS payload must be normalized
       secondaryColor: "#112233",
       accentColor: "url(https://attacker.invalid)",
@@ -116,6 +126,29 @@ describe("branding persistence", () => {
     expect(await screen.findByDisplayValue("Imported Salon")).toBeInTheDocument();
     // The old values must never be persisted.
     expect(updateMock).not.toHaveBeenCalledWith(expect.objectContaining({ displayName: "LenaBeauty Remote" }));
+  });
+
+  it.each([
+    ["array", "[1,2,3]"],
+    ["null", "null"],
+    ["primitive string", '"hello world"'],
+    ["empty object", "{}"],
+    ["unknown-only object", '{"foo":"bar"}'],
+    ["malformed JSON", "{not json"],
+  ])("rejects non-branding JSON (%s) without persisting or changing state/cache", async (_label, payload) => {
+    const { container } = renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+
+    const importInput = container.querySelector('input[accept=".json"]') as HTMLInputElement;
+    const file = new File([payload], "bad.json", { type: "application/json" });
+    fireEvent.change(importInput, { target: { files: [file] } });
+
+    expect(await screen.findByText("Invalid branding settings file")).toBeInTheDocument();
+    // Nothing may be persisted: no Supabase update, no state change, no cache write.
+    expect(updateMock).not.toHaveBeenCalled();
+    expect((await screen.findAllByDisplayValue("LenaBeauty Remote")).length).toBeGreaterThan(0);
+    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+    expect(localStorage.getItem("lenabeauty_logo")).toBeNull();
   });
 
   it("refuses to save when a free-text color is not strict #RRGGBB", async () => {

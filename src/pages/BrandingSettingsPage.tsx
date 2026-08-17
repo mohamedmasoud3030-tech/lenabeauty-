@@ -5,6 +5,7 @@ import { useCases } from '../app/composition/useCases';
 import { unwrap } from '../shared/hooks/useApplication';
 import { useToast } from '../shared/components/Toast';
 import { LENA_BRAND_PALETTE, isValidBrandColor, normalizeBrandColor } from '../shared/theme/brandPalette';
+import brandingService, { validateBrandingImport } from '../infrastructure/services/brandingService';
 
 interface BrandingSettings {
   salonName: string;
@@ -16,7 +17,6 @@ interface BrandingSettings {
   taxNumber: string;
   registrationNumber: string;
   logo: string | null; // Base64 or URL
-  logoFile?: File;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -59,36 +59,6 @@ function fromCenterSettings(cs: any): BrandingSettings {
     accentColor: normalizeBrandColor(cs?.brandAccentColor, DEFAULT_SETTINGS.accentColor),
     footerText: cs?.brandFooterText ?? DEFAULT_SETTINGS.footerText,
     footerTextAr: cs?.brandFooterTextAr ?? DEFAULT_SETTINGS.footerTextAr,
-  };
-}
-
-/**
- * Validate an imported branding JSON blob into a complete, safe BrandingSettings.
- *
- * Only known fields are taken (as strings); colors are strictly #RRGGBB — a
- * CSS payload or malformed color falls back to the default instead of ever
- * reaching a stylesheet or the database. The result is passed directly to the
- * persistence call so saving never depends on React state that has not
- * committed yet.
- */
-function sanitizeImportedBranding(raw: unknown): BrandingSettings {
-  const src = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
-  const str = (key: string, fallback: string) => (typeof src[key] === 'string' ? (src[key] as string) : fallback);
-  return {
-    salonName: str('salonName', DEFAULT_SETTINGS.salonName),
-    salonNameAr: str('salonNameAr', DEFAULT_SETTINGS.salonNameAr),
-    address: str('address', DEFAULT_SETTINGS.address),
-    addressAr: str('addressAr', DEFAULT_SETTINGS.addressAr),
-    phone: str('phone', DEFAULT_SETTINGS.phone),
-    email: str('email', DEFAULT_SETTINGS.email),
-    taxNumber: str('taxNumber', DEFAULT_SETTINGS.taxNumber),
-    registrationNumber: str('registrationNumber', DEFAULT_SETTINGS.registrationNumber),
-    logo: typeof src.logo === 'string' ? (src.logo as string) : null,
-    primaryColor: normalizeBrandColor(src.primaryColor, DEFAULT_SETTINGS.primaryColor),
-    secondaryColor: normalizeBrandColor(src.secondaryColor, DEFAULT_SETTINGS.secondaryColor),
-    accentColor: normalizeBrandColor(src.accentColor, DEFAULT_SETTINGS.accentColor),
-    footerText: str('footerText', DEFAULT_SETTINGS.footerText),
-    footerTextAr: str('footerTextAr', DEFAULT_SETTINGS.footerTextAr),
   };
 }
 
@@ -201,7 +171,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       setPreview(base64);
-      setSettings(prev => ({ ...prev, logo: base64, logoFile: file }));
+      setSettings(prev => ({ ...prev, logo: base64 }));
     };
     reader.readAsDataURL(file);
   };
@@ -239,8 +209,14 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         address: next.address,
         brandLogoBase64: next.logo ?? undefined,
       }));
-      localStorage.setItem('lenabeauty_branding', JSON.stringify(next));
-      if (next.logo) localStorage.setItem('lenabeauty_logo', next.logo);
+      // Single persistence path for the local cache: after Supabase accepts
+      // the save, update the branding singleton (which owns the cache keys
+      // and the logo storage — including removing the logo when it is null).
+      // printService and InvoicePrintLayout read this singleton, so the next
+      // printed document uses the new branding without a reload. Writing the
+      // cache through a separate path here would leave the two sources
+      // drifting apart.
+      brandingService.updateSettings(next);
       // Saved values feed the shared application tokens.
       applyBrandTokens(next);
       setSaved(true);
@@ -287,11 +263,13 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        // Validate FIRST, then persist the validated object directly. Calling
-        // setSettings + handleSave() here would save the pre-import state:
-        // handleSave reads the current render's `settings` closure, which has
-        // not committed the import yet.
-        const validated = sanitizeImportedBranding(JSON.parse(event.target?.result as string));
+        // Strict structural validation FIRST: only a complete exported
+        // snapshot is accepted. Arrays, null, primitives, empty/unknown
+        // objects, and partial shapes are rejected before anything can be
+        // persisted — a malformed file must never overwrite the salon's
+        // branding with defaults. The validated snapshot is then persisted
+        // directly (no dependence on React state commits).
+        const validated = validateBrandingImport(JSON.parse(event.target?.result as string));
         setSettings(validated);
         if (validated.logo) setPreview(validated.logo);
         void persistSettings(validated);

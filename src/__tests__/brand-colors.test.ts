@@ -121,10 +121,49 @@ describe("brandingService color sanitization", () => {
     expect(vars["--accent-color"]).toBe("#06B6D4");
   });
 
+  it("updateSettings with a null logo removes the separate cached logo key", async () => {
+    const service = await freshService();
+    localStorage.setItem("lenabeauty_logo", "data:image/png;base64,STALELOGO");
+    service.updateSettings({ logo: null });
+    expect(localStorage.getItem("lenabeauty_logo")).toBeNull();
+    // A fresh instance must not resurrect the removed logo.
+    const reloaded = await freshService();
+    expect(reloaded.getSettings().logo).toBeNull();
+  });
+
   it("importSettings rejects non-object JSON", async () => {
     const service = await freshService();
     expect(service.importSettings("[1,2,3]")).toBe(false);
     expect(service.importSettings('"just a string"')).toBe(false);
     expect(service.importSettings("null")).toBe(false);
+  });
+
+  it("importSettings rejects empty or unknown-only objects (would wipe real branding with defaults)", async () => {
+    const service = await freshService();
+    expect(service.importSettings("{}")).toBe(false);
+    expect(service.importSettings('{"foo":"bar"}')).toBe(false);
+    expect(service.importSettings('{"salonName":"partial"}')).toBe(false);
+    // Nothing may be cached from a rejected import.
+    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+  });
+
+  it("importSettings accepts a complete snapshot and normalizes hostile colors", async () => {
+    const service = await freshService();
+    const ok = service.importSettings(
+      JSON.stringify({
+        salonName: "Imported", salonNameAr: "مستورد",
+        address: "A", addressAr: "ع", phone: "1", email: "e@x.c",
+        taxNumber: "T", registrationNumber: "R",
+        footerText: "F", footerTextAr: "ف", logo: null,
+        primaryColor: "red; } body { display: none; }",
+        secondaryColor: "#112233",
+        accentColor: "url(https://attacker.invalid)",
+      }),
+    );
+    expect(ok).toBe(true);
+    expect(service.getSettings().salonName).toBe("Imported");
+    expect(service.getSettings().primaryColor).toBe(LENA_BRAND_PALETTE.primary);
+    expect(service.getSettings().secondaryColor).toBe("#112233");
+    expect(service.getSettings().accentColor).toBe(LENA_BRAND_PALETTE.surfaceAccent);
   });
 });

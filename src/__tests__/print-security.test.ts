@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import printService, { escapePrintText, sanitizePrintHTML } from "../infrastructure/services/printService";
+import brandingService from "../infrastructure/services/brandingService";
 
 /** Temporarily set the host document language/direction, restoring afterwards. */
 function withHostDocument(lang: string | null, dir: string | null, fn: () => void) {
@@ -93,6 +94,47 @@ describe("print HTML security", () => {
     // th rule would misalign Arabic headers inside an RTL print document.
     expect(html).toMatch(/th\s*\{[^}]*text-align:\s*start/s);
     expect(html).not.toMatch(/th\s*\{[^}]*text-align:\s*left/s);
+  });
+
+  it("print documents reflect branding saved after the print service was already loaded", () => {
+    // The print service reads the branding singleton at print time. After the
+    // settings page saves new branding (which updates the singleton via
+    // updateSettings), the NEXT printed document must use the new values —
+    // no reload required.
+    brandingService.resetToDefaults();
+    try {
+      withHostDocument("en", "ltr", () => {
+        const before = printService.generatePrintHTML("<p>doc</p>");
+        expect(before).toContain("LenaBeauty");
+        expect(before).not.toContain("Updated Salon");
+
+        // This is exactly what BrandingSettingsPage.persistSettings does after
+        // a successful Supabase save.
+        brandingService.updateSettings({
+          salonName: "Updated Salon",
+          primaryColor: "#123456",
+          logo: null,
+        });
+
+        const after = printService.generatePrintHTML("<p>doc</p>");
+        expect(after).toContain(">Updated Salon</h1>");
+        expect(after).toContain("--primary-color: #123456");
+        expect(after).not.toContain(">LenaBeauty</h1>");
+      });
+    } finally {
+      brandingService.resetToDefaults();
+    }
+  });
+
+  it("clearing the logo on save removes the cached logo so it cannot be resurrected after reload", () => {
+    brandingService.resetToDefaults();
+    try {
+      localStorage.setItem("lenabeauty_logo", "data:image/png;base64,STALELOGO");
+      brandingService.updateSettings({ logo: null });
+      expect(localStorage.getItem("lenabeauty_logo")).toBeNull();
+    } finally {
+      brandingService.resetToDefaults();
+    }
   });
 
   it("printDocument attaches the print handler before writing content so the load event cannot be missed", () => {
