@@ -123,16 +123,24 @@ Component and contract tests cover normal, empty, invalid, retry, out-of-order s
 - Dashboard no longer claims the center is “performing optimally” without evidence and no longer falls back to the username `admin`.
 - Removed duplicate source manifest link and duplicate iOS status-bar metadata; the built app now contains exactly one of each.
 
+### 6.8 Prepared the approved Demo-only safety gate
+
+- Added a read-only pre-migration check that counts duplicate attendance days and invalid time/hour rows and aborts without changing data.
+- Captures the existing `center-assets` file-size/MIME metadata in the GitHub step summary before migration for rollback evidence.
+- Refuses to continue when the bucket/table is missing or attendance violations exist.
+- Verifies preflight occurs before `supabase db push` and keeps live migration explicit-`workflow_dispatch` only.
+- Updated official checkout/setup actions to Node 24-compatible `v5`, removing the observed Node 20 deprecation path.
+
 ## 7. Actual checks executed
 
 | Check | Fresh observed result |
 |---|---|
 | `npm ci` | PASS; 516 packages; audit reported 0 vulnerabilities |
-| `npm test -- --reporter=dot` | **PASS: 105 files / 570 tests** |
+| `npm test -- --reporter=dot` | **PASS: 106 files / 575 tests** after approved workflow/preflight hardening |
 | Focused auth/POS/PWA/lifecycle tests | PASS |
 | Focused authorization/payroll/replay tests | PASS: 4 files / 21 tests before final wider run |
 | `npm run typecheck` | PASS |
-| `npm run lint` | PASS; TypeScript + source policy across **227 files** |
+| `npm run lint` | PASS; TypeScript + source policy across **228 files** |
 | `npm run build` | PASS; **2,833 modules** |
 | PWA generation | PASS; **53 precache entries / 1,557.68 KiB**; `sw.js` generated |
 | `npm run audit:gate` | PASS after expected regeneration of stale generated artifacts |

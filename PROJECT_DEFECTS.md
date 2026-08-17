@@ -318,9 +318,9 @@ The final exact verification snapshot is recorded after all edits in the section
 
 | Check | Observed result |
 |---|---|
-| Full Vitest suite after independent review corrections | PASS; 105 files / 570 tests. Expected missing-config and branding-import rejection tests logged their deliberate failure paths; process exit 0. |
+| Full Vitest suite after approved workflow/preflight hardening | PASS; 106 files / 575 tests. Expected missing-config and branding-import rejection tests logged their deliberate failure paths; process exit 0. |
 | `npm run typecheck` | PASS; `tsc --noEmit` |
-| `npm run lint` | PASS; TypeScript + source-policy lint across 227 files |
+| `npm run lint` | PASS; TypeScript + source-policy lint across 228 files |
 | `npm run build` | PASS after independent review corrections; 2,833 modules; PWA 53 entries / 1,557.68 KiB |
 | `npm run ci:migrations` | PASS; 36 canonical migrations, identifier/extension ordering valid |
 | `npm run ci:rpc-check` | PASS; 29 frontend RPC references, all defined canonically |
