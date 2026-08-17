@@ -394,6 +394,10 @@ class PrintService {
    */
   generateInvoiceHTML(invoiceData: any, isArabic: boolean = false): string {
     const { invoice, items, customer, totals } = invoiceData;
+    // Every dynamic value below is business/user data (customer name, phone,
+    // item name, report cells). Escape it before interpolation so a value
+    // containing markup can never become active content inside the print
+    // window (document.write / innerHTML render this in the app origin).
     
     return `
       <div class="section">
@@ -401,9 +405,9 @@ class PrintService {
         <table>
           <tr>
             <td class="font-bold">${isArabic ? 'رقم الفاتورة' : 'Invoice #'}:</td>
-            <td>${invoice.number}</td>
+            <td>${escapePrintText(invoice.number)}</td>
             <td class="font-bold">${isArabic ? 'التاريخ' : 'Date'}:</td>
-            <td>${invoice.date}</td>
+            <td>${escapePrintText(invoice.date)}</td>
           </tr>
         </table>
       </div>
@@ -411,9 +415,9 @@ class PrintService {
       ${customer ? `
         <div class="section">
           <div class="section-title">${isArabic ? 'بيانات العميل' : 'Customer Information'}</div>
-          <p class="font-bold">${customer.name}</p>
-          <p>${customer.phone}</p>
-          <p>${customer.email || ''}</p>
+          <p class="font-bold">${escapePrintText(customer.name)}</p>
+          <p>${escapePrintText(customer.phone)}</p>
+          <p>${escapePrintText(customer.email || '')}</p>
         </div>
       ` : ''}
 
@@ -431,10 +435,10 @@ class PrintService {
           <tbody>
             ${items.map((item: any) => `
               <tr>
-                <td>${item.name}</td>
-                <td class="text-center">${item.qty}</td>
-                <td class="text-right">${item.price.toFixed(3)}</td>
-                <td class="text-right">${(item.qty * item.price).toFixed(3)}</td>
+                <td>${escapePrintText(item.name)}</td>
+                <td class="text-center">${escapePrintText(item.qty)}</td>
+                <td class="text-right">${escapePrintText(item.price.toFixed(3))}</td>
+                <td class="text-right">${escapePrintText((item.qty * item.price).toFixed(3))}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -445,23 +449,23 @@ class PrintService {
         <table>
           <tr>
             <td class="font-bold">${isArabic ? 'الإجمالي' : 'Subtotal'}:</td>
-            <td class="text-right">${totals.subtotal.toFixed(3)}</td>
+            <td class="text-right">${escapePrintText(totals.subtotal.toFixed(3))}</td>
           </tr>
           ${totals.discount > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الخصم' : 'Discount'}:</td>
-              <td class="text-right">-${totals.discount.toFixed(3)}</td>
+              <td class="text-right">-${escapePrintText(totals.discount.toFixed(3))}</td>
             </tr>
           ` : ''}
           ${totals.tax > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الضريبة' : 'Tax'}:</td>
-              <td class="text-right">+${totals.tax.toFixed(3)}</td>
+              <td class="text-right">+${escapePrintText(totals.tax.toFixed(3))}</td>
             </tr>
           ` : ''}
           <tr style="background-color: var(--primary-color); color: white;">
             <td class="font-bold">${isArabic ? 'الإجمالي النهائي' : 'Grand Total'}:</td>
-            <td class="text-right font-bold">${totals.total.toFixed(3)}</td>
+            <td class="text-right font-bold">${escapePrintText(totals.total.toFixed(3))}</td>
           </tr>
         </table>
       </div>
@@ -473,18 +477,20 @@ class PrintService {
    */
   generateReportHTML(reportData: any, isArabic: boolean = false): string {
     const { title, summary, data } = reportData;
+    // Escape every dynamic cell/header value (same rule as generateInvoiceHTML):
+    // report data is business data and must never become active markup.
 
     return `
       <div class="section">
-        <h2 class="text-lg font-bold mb-3">${title}</h2>
+        <h2 class="text-lg font-bold mb-3">${escapePrintText(title)}</h2>
         ${summary ? `
           <div class="section">
             <div class="section-title">${isArabic ? 'الملخص' : 'Summary'}</div>
             <table>
               ${Object.entries(summary).map(([key, value]) => `
                 <tr>
-                  <td class="font-bold">${key}:</td>
-                  <td class="text-right">${value}</td>
+                  <td class="font-bold">${escapePrintText(key)}:</td>
+                  <td class="text-right">${escapePrintText(value)}</td>
                 </tr>
               `).join('')}
             </table>
@@ -496,13 +502,13 @@ class PrintService {
             <table>
               <thead>
                 <tr>
-                  ${Object.keys(data[0] || {}).map(key => `<th>${key}</th>`).join('')}
+                  ${Object.keys(data[0] || {}).map(key => `<th>${escapePrintText(key)}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${data.map((row: any) => `
                   <tr>
-                    ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
+                    ${Object.values(row).map(value => `<td>${escapePrintText(value)}</td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>

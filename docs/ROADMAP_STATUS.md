@@ -1,6 +1,12 @@
 # LenaBeauty — حالة المشروع وخارطة الطريق
 **آخر تحديث:** 2026-06-28 · **الفرع:** `fix/critical-audit-remediation` → `main`
 
+> **لقطة تاريخية (2026-06-28):** هذه الوثيقة لا تعكس الحالة الحالية للمستودع.
+> بُنيت منذ ذلك الحين ترحيلات لاحقة (قيود مالية، إغلاق نسخة الموظفين فقط،
+> تعطيل الحجز العام وبوابة العميل في هذا الإصدار) ونما عدد الاختبارات.
+> للعقد الحالي راجع `PRODUCTION_READINESS.md` و`OPERATIONAL_DATA_CONTRACT.md`
+> ومخرجات التدقيق في `docs/database-contract/artifacts/`.
+
 وثيقة حيّة تتعقّب: ما تم إنجازه، وما تبقّى، والمراحل القادمة. تُحدَّث مع كل دفعة.
 
 الحالة التقنية الحالية: `tsc --strict` = 0 أخطاء · **174 اختبار ناجح** · بناء PWA نظيف + Tauri desktop foundation متقدمة (SQLite/backup/restore/print bridges + native helper layer + POS desktop print wiring) مع بقاء `cargo check` مؤجلًا لغياب Rust toolchain في البيئة.

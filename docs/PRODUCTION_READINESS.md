@@ -17,7 +17,7 @@
 - SECURITY DEFINER functions used by clients have fixed search paths and explicit grants.
 - Print HTML is sanitized/escaped and production CSP no longer allows inline scripts.
 - Canonical database types are generated from deterministic replay and checked in CI.
-- The existing Demo workflow runs migration/RPC checks, tests, typecheck, lint, and build. Adding the new audit/type/dependency PR gates is pending a GitHub credential with workflow-write permission.
+- The Demo workflow runs migration/RPC checks, tests, typecheck, lint, and build on merges to `main`, and `.github/workflows/pr-static-gates.yml` runs the same static gates (audit, generated types, migration chain, RPC contracts, tests, typecheck, lint, build, dependency audit) on pull requests. Live Demo migration still requires the push-to-`main` workflow with its configured secrets.
 
 See `docs/database-contract/artifacts/` for generated catalog evidence and `docs/OPERATIONAL_DATA_CONTRACT.md` for the financial contract.
 
