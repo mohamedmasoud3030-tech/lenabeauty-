@@ -296,7 +296,10 @@ export interface CenterSettings {
   brandAccentColor?: string;
   brandFooterText?: string;
   brandFooterTextAr?: string;
-  brandLogoBase64?: string;
+  // Nullable: the settings page sends null to CLEAR a stored logo (the
+  // repository writes the field only for non-undefined values, so undefined
+  // would leave the remote logo untouched).
+  brandLogoBase64?: string | null;
 }
 
 export interface NotificationSettingsEntity {

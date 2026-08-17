@@ -118,8 +118,8 @@ The repository baseline compiled and its old suite passed, but direct inspection
 - **Symptom/evidence:** old workflow had narrow triggers; SQL acceptance was not consistently run; a credentialed main push could apply remote migrations automatically.
 - **Severity/scope:** High; all application/database releases and remote data safety.
 - **Root cause:** deployment workflow doubled as incomplete application CI.
-- **Smallest safe repair:** PR/main static gates cover full repository contracts; live job is credential-isolated and now runs only on explicit `workflow_dispatch`.
-- **Verification/status:** `IMPLEMENTED + LOCAL PASS; GITHUB RUN NOT YET OBSERVED FOR THIS PATCH`. `ci-workflow-coverage.test.ts` passes and workflow text is statically checked. A real Actions run on this branch/PR is still required.
+- **Smallest safe repair:** prepared PR/main static gates covering the full repository contract and restrict the credentialed live job to explicit `workflow_dispatch`.
+- **Verification/status:** `REPAIR PREPARED + LOCAL PASS; WORKFLOW PERMISSION BLOCKED`. The hardened workflow and its focused static regression pass locally, but the connected GitHub App cannot update workflow files, so neither is included in this PR. The tracked `main` workflow can still run the live Demo job after a relevant main push when credentials exist; this PR must remain draft/unmerged until a maintainer lands the prepared workflow hardening separately.
 
 ### DEF-011 — Explicit Production could inherit tracked Demo configuration
 
@@ -287,7 +287,7 @@ This table reconciles all 28 IDs from the original `FULL_PROJECT_AUDIT.md`; none
 | H-02 partial Backup/Restore | CONTAINED + LOCAL PASS | `DEF-007`; truthful export only |
 | H-03 hard-delete lifecycle | CONTAINED; owner policy remains | `DEF-008`; destructive master/financial UI paths removed or deactivated |
 | H-04 no-show charged without payment | CONTAINED + LOCAL PASS | `DEF-009` |
-| H-05 CI coverage/live SQL gap | IMPLEMENTED locally; Actions run pending | `DEF-010` |
+| H-05 CI coverage/live SQL gap | REPAIR PREPARED locally; workflow-write permission blocked | `DEF-010`; do not merge pending migrations before maintainer lands the manual-only live gate |
 | H-06 Production Demo fallback | IMPLEMENTED + LOCAL PASS | `DEF-011` |
 | H-07 dual role sources | IMPLEMENTED + LOCAL PASS; hosted pending | `DEF-022` |
 | H-08 hosted schema/security unknown | EXTERNAL BLOCKED | `DEF-029`; no remote migration applied |
@@ -318,10 +318,10 @@ The final exact verification snapshot is recorded after all edits in the section
 
 | Check | Observed result |
 |---|---|
-| Full Vitest suite after final source changes | PASS; 104 files / 537 tests. Expected missing-config test logged its deliberate visible failure path; process exit 0. |
+| Full Vitest suite after merging current `main` | PASS; 104 files / 563 tests. Expected missing-config and branding-import rejection tests logged their deliberate failure paths; process exit 0. |
 | `npm run typecheck` | PASS; `tsc --noEmit` |
 | `npm run lint` | PASS; TypeScript + source-policy lint across 226 files |
-| `npm run build` | PASS; 2,833 modules; PWA 53 entries / 1,561.39 KiB |
+| `npm run build` | PASS after merging current `main`; 2,833 modules; PWA 53 entries / 1,561.37 KiB |
 | `npm run ci:migrations` | PASS; 36 canonical migrations, identifier/extension ordering valid |
 | `npm run ci:rpc-check` | PASS; 29 frontend RPC references, all defined canonically |
 | `npm run db:types:check` | PASS; generated types match canonical replay inventory |
@@ -336,8 +336,8 @@ The final exact verification snapshot is recorded after all edits in the section
 
 ## 7. Remaining approvals and safest next milestone
 
-1. Approve applying migrations `20260817000001`–`20260817000005` to **Demo/Staging only**, after reviewing attendance preflight and current `center-assets` bucket metadata.
-2. Provide/restore CI-held Demo credentials (not in chat) and run the manual `workflow_dispatch` live job plus SQL acceptance.
+1. Have a maintainer land the prepared workflow hardening so live Demo migration requires explicit `workflow_dispatch`; do not merge this migration-bearing PR before that gate exists.
+2. Approve applying migrations `20260817000001`–`20260817000005` to **Demo/Staging only**, after reviewing attendance preflight and current `center-assets` bucket metadata; then use CI-held credentials (not chat) for the manual live job and SQL acceptance.
 3. Decide commission policy (`DEF-005`) and final anonymization/retention/reversal policy (`DEF-008`).
 4. Decide immutable audit retention/privacy (`DEF-026`) and telemetry/backup provider, RPO/RTO and disposable restore drill (`DEF-021`).
 5. Design server pagination with real data-volume acceptance while preserving global search, totals and CSV export semantics; run browser/mobile visual acceptance when a browser environment is available.

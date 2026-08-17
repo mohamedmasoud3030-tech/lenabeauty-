@@ -18,7 +18,7 @@
 - SECURITY DEFINER functions used by clients have fixed search paths and explicit grants.
 - Print HTML is sanitized/escaped and production CSP no longer allows inline scripts.
 - Canonical database types are generated from deterministic replay and checked in CI.
-- PR/main static CI runs migration/RPC checks, generated type/audit gates, tests, typecheck, lint, build, and dependency audit. Live migration/acceptance is isolated from untrusted PR code and requires server credentials.
+- The tracked Demo workflow runs migration/RPC checks, tests, typecheck, lint, and build after relevant merges to `main`. The prepared PR-triggered static gates and explicit-dispatch-only live migration hardening remain a required follow-up because the automation credential cannot update workflow files.
 
 See `docs/database-contract/artifacts/` for generated catalog evidence and `docs/OPERATIONAL_DATA_CONTRACT.md` for the financial contract.
 

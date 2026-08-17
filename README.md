@@ -71,12 +71,7 @@ The optional Arabic service catalog lives under `supabase/seeds/` and is explici
 
 ### Approval-gated Demo migration sync
 
-Pull requests and every `main` push run the static gates in
-`.github/workflows/demo-supabase-migrations.yml`, but they never change a remote
-database. After explicit approval, an operator must run `workflow_dispatch`;
-the credentialed job then repeats the gates and uses `supabase db push` to apply
-only pending migrations to the **Demo Supabase project** in filename order.
-Seeds are deliberately excluded.
+The currently tracked `.github/workflows/demo-supabase-migrations.yml` runs on relevant `main` pushes and can execute the live Demo job when all credentials are present. **Do not merge pending migrations until a maintainer lands the prepared workflow hardening that makes live migration explicit-`workflow_dispatch` only.** After that safety gate and explicit approval, the credentialed job may use `supabase db push` to apply only pending migrations to the Demo Supabase project in filename order. Seeds are deliberately excluded.
 
 Configure these GitHub Actions repository secrets once (never put them in
 `.env`, Vercel, or source control):
@@ -115,7 +110,7 @@ npm run preflight:supabase   # verify live Supabase connectivity
 | Area | Backend | Notes |
 |---|---|---|
 | Auth, Customers, Employees, Services, Products, Appointments, Expenses, Invoices/POS, Settings, Dashboard, Reports | ✅ Supabase contract | Canonical local contract passes replay; hosted acceptance depends on applying the full chain. |
-| Attendance, Advances, Payroll, Staff Analytics | ✅ Supabase contract | Backed by tables/RLS/RPCs; payroll transaction repair is local until its migration is approved and applied remotely. |
+| Attendance, Advances, Payroll, Staff Analytics | ✅ Supabase contract | ADMIN-only in UI/database contracts; payroll transaction repair is local until its migration is approved and applied remotely. |
 | WhatsApp / notifications | ⚠️ Manual/scaffolding | `wa.me` is explicit manual handoff with pending/unverified logs; SMS/automation requires a real provider. |
 
 ## Security notes

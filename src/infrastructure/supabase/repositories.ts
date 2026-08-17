@@ -36,6 +36,7 @@ import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 import { validateCheckoutContract } from "../../domain/commerce";
 import { isCheckoutAfterCheckin } from "../../domain/attendance";
 import { localDateRangeISO } from "../../shared/dateRange";
+import { LENA_BRAND_PALETTE, normalizeBrandColor } from "../../shared/theme/brandPalette";
 
 /**
  * Repository-boundary validation helper. Validates a payload's fields with the
@@ -1329,9 +1330,12 @@ class SupabaseSettingsAdapter implements SettingsRepository {
       if (data.brandEmail !== undefined) payload.brand_email = data.brandEmail;
       if (data.brandTaxNumber !== undefined) payload.brand_tax_number = data.brandTaxNumber;
       if (data.brandRegistrationNumber !== undefined) payload.brand_registration_number = data.brandRegistrationNumber;
-      if (data.brandPrimaryColor !== undefined) payload.brand_primary_color = data.brandPrimaryColor;
-      if (data.brandSecondaryColor !== undefined) payload.brand_secondary_color = data.brandSecondaryColor;
-      if (data.brandAccentColor !== undefined) payload.brand_accent_color = data.brandAccentColor;
+      // Strict #RRGGBB color contract at the persistence boundary: a crafted
+      // request can never store a CSS payload in the branding columns, which
+      // would later be interpolated into generated documents/stylesheets.
+      if (data.brandPrimaryColor !== undefined) payload.brand_primary_color = normalizeBrandColor(data.brandPrimaryColor, LENA_BRAND_PALETTE.primary);
+      if (data.brandSecondaryColor !== undefined) payload.brand_secondary_color = normalizeBrandColor(data.brandSecondaryColor, LENA_BRAND_PALETTE.secondary);
+      if (data.brandAccentColor !== undefined) payload.brand_accent_color = normalizeBrandColor(data.brandAccentColor, LENA_BRAND_PALETTE.surfaceAccent);
       if (data.brandFooterText !== undefined) payload.brand_footer_text = data.brandFooterText;
       if (data.brandFooterTextAr !== undefined) payload.brand_footer_text_ar = data.brandFooterTextAr;
       if (data.brandLogoBase64 !== undefined) payload.brand_logo_base64 = data.brandLogoBase64;

@@ -1,5 +1,11 @@
 # LenaBeauty - Feature Roadmap & Enhancement Proposals
 
+> **Historical snapshot (2026-06-23):** proposal/roadmap written before the
+> staff-only release closure. "Production Ready" here predates the current
+> release boundary — see `docs/PRODUCTION_READINESS.md` for the authoritative,
+> repository-verified status (staff-only Web/PWA; hosted environment
+> acceptance pending).
+
 **Document Date**: June 23, 2026  
 **Market**: Sultanate of Oman  
 **Status**: Production Ready v1.0
