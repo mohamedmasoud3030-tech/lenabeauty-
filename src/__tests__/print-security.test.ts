@@ -1,5 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import printService, { escapePrintText, sanitizePrintHTML } from "../infrastructure/services/printService";
+
+/** Temporarily set the host document language/direction, restoring afterwards. */
+function withHostDocument(lang: string | null, dir: string | null, fn: () => void) {
+  const el = document.documentElement;
+  const prevLang = el.getAttribute("lang");
+  const prevDir = el.getAttribute("dir");
+  if (lang === null) el.removeAttribute("lang"); else el.setAttribute("lang", lang);
+  if (dir === null) el.removeAttribute("dir"); else el.setAttribute("dir", dir);
+  try {
+    fn();
+  } finally {
+    if (prevLang === null) el.removeAttribute("lang"); else el.setAttribute("lang", prevLang);
+    if (prevDir === null) el.removeAttribute("dir"); else el.setAttribute("dir", prevDir);
+  }
+}
 
 describe("print HTML security", () => {
   it("removes active content while preserving the generated print stylesheet", () => {
@@ -53,5 +68,47 @@ describe("print HTML security", () => {
     expect(html).not.toMatch(/(^|\s)srcdoc\s*=\s*["']/i);
     expect(html).toContain("&lt;a href=&quot;javascript:steal()&quot;&gt;Sales&lt;/a&gt;");
     expect(html).toContain("&lt;iframe srcdoc=&quot;x&quot;&gt;&lt;/iframe&gt;");
+  });
+
+  it("generatePrintHTML follows the host document's RTL/Arabic direction", () => {
+    withHostDocument("ar", "rtl", () => {
+      const html = printService.generatePrintHTML("<p>كشف الرواتب</p>");
+      expect(html).toMatch(/<html[^>]*\sdir="rtl"/);
+      expect(html).toMatch(/<html[^>]*\slang="ar"/);
+      expect(html).toContain("كشف الرواتب");
+    });
+  });
+
+  it("generatePrintHTML falls back to LTR/English when the host document is neutral", () => {
+    withHostDocument(null, null, () => {
+      const html = printService.generatePrintHTML("<p>Payroll report</p>");
+      expect(html).toMatch(/<html[^>]*\sdir="ltr"/);
+      expect(html).toMatch(/<html[^>]*\slang="en"/);
+    });
+  });
+
+  it("printDocument attaches the print handler before writing content so the load event cannot be missed", () => {
+    const writeOrder: string[] = [];
+    const fakeWindow = {
+      onload: null as (() => void) | null,
+      document: {
+        write: vi.fn(() => {
+          writeOrder.push("write");
+          // The handler must already be installed when content is written;
+          // otherwise a load event racing close() would never trigger print().
+          expect(typeof fakeWindow.onload).toBe("function");
+        }),
+        close: vi.fn(() => writeOrder.push("close")),
+      },
+      print: vi.fn(),
+      focus: vi.fn(),
+    };
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(fakeWindow as unknown as Window);
+    try {
+      printService.printDocument("<div>payroll</div>");
+    } finally {
+      openSpy.mockRestore();
+    }
+    expect(writeOrder).toEqual(["write", "close"]);
   });
 });

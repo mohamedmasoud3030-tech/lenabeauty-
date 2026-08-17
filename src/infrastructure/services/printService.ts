@@ -67,6 +67,19 @@ class PrintService {
     const branding = brandingService.getSettings();
     const cssVars = brandingService.getCSSVariables();
 
+    // The print document must follow the host app's language and direction.
+    // The host toggles document.documentElement.dir/lang (rtl/ar for Arabic,
+    // ltr for English), and forcing ltr/en here made Arabic documents print
+    // left-to-right with misordered text.
+    const hostDir = typeof document !== "undefined"
+      ? (document.documentElement?.getAttribute("dir") || document.documentElement?.dir || "").toLowerCase()
+      : "";
+    const hostLang = typeof document !== "undefined"
+      ? (document.documentElement?.getAttribute("lang") || document.documentElement?.lang || "")
+      : "";
+    const docDir = hostDir === "rtl" ? "rtl" : "ltr";
+    const docLang = hostLang || "en";
+
     const paperSizes: Record<string, { width: string; height: string }> = {
       '80mm': { width: '80mm', height: 'auto' },
       '58mm': { width: '58mm', height: 'auto' },
@@ -78,7 +91,7 @@ class PrintService {
 
     return sanitizePrintHTML(`
       <!DOCTYPE html>
-      <html dir="ltr" lang="en">
+      <html dir="${docDir}" lang="${escapePrintText(docLang)}">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -307,15 +320,17 @@ class PrintService {
   printDocument(htmlContent: string, options: PrintOptions = {}): void {
     const printHTML = this.generatePrintHTML(htmlContent, options);
     const printWindow = window.open('', '', 'height=600,width=800');
-    
+
     if (printWindow) {
-      printWindow.document.write(printHTML);
-      printWindow.document.close();
-      
-      // Wait for content to load before printing
+      // Attach the load handler BEFORE writing content. The freshly parsed
+      // document can fire its load event as soon as close() runs; a handler
+      // attached afterwards can miss it and the print dialog never opens.
       printWindow.onload = () => {
+        printWindow.focus();
         printWindow.print();
       };
+      printWindow.document.write(printHTML);
+      printWindow.document.close();
     }
   }
 
