@@ -246,6 +246,17 @@ class BrandingService {
   }
 
   /**
+   * Re-read the validated local cache into the singleton and return the
+   * snapshot. Used as the cache fallback when the remote source is
+   * unreachable: the singleton may have been constructed before the cache was
+   * seeded (e.g. another tab saved after this one loaded).
+   */
+  reloadFromCache(): BrandingSettings {
+    this.loadSettings();
+    return { ...this.settings };
+  }
+
+  /**
    * Export settings as JSON
    */
   exportSettings(): string {

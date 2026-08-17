@@ -4,6 +4,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import BrandingSettingsPage from "../pages/BrandingSettingsPage";
 import { ToastProvider } from "../shared/components/Toast";
 import { useCases } from "../app/composition/useCases";
+import brandingService from "../infrastructure/services/brandingService";
 import i18n from "../i18n";
 
 function renderPage() {
@@ -35,10 +36,16 @@ function remoteSettings() {
   };
 }
 
+/** Snapshot of the validated singleton cache (single local cache path). */
+function cachedBranding(): Record<string, unknown> {
+  return JSON.parse(localStorage.getItem("lenabeauty_branding") || "{}");
+}
+
 describe("branding persistence", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     localStorage.clear();
+    brandingService.resetToDefaults();
     await i18n.changeLanguage("en");
     updateMock.mockReset();
     vi.spyOn(useCases.settings, "get").mockResolvedValue({ ok: true, data: remoteSettings() as any });
@@ -61,20 +68,29 @@ describe("branding persistence", () => {
     fireEvent.click(screen.getByText("Save Settings"));
     await waitFor(() => expect(updateMock).toHaveBeenCalled());
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ displayName: "LenaBeauty Updated" }));
+    // A save without a logo must send null explicitly so the remote column is
+    // cleared — `undefined` would leave a previously stored remote logo.
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ brandLogoBase64: null }));
   });
 
-  it("keeps localStorage as a cache but remote remains authoritative", async () => {
+  it("hydrates the branding singleton (cache + print source) from Supabase on load", async () => {
     renderPage();
-    // Wait for remote load to settle and write nothing stale back.
     await screen.findByDisplayValue("LenaBeauty Remote");
-    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+    // printService and InvoicePrintLayout read this singleton; after a load
+    // from Supabase it must reflect the remote values immediately.
+    expect(brandingService.getSettings().salonName).toBe("LenaBeauty Remote");
+    // The validated cache is hydrated through the singleton (single path).
+    expect(cachedBranding().salonName).toBe("LenaBeauty Remote");
   });
 
-  it("falls back to localStorage when Supabase settings are unavailable", async () => {
+  it("falls back to the singleton's validated cache when Supabase settings are unavailable", async () => {
     vi.spyOn(useCases.settings, "get").mockResolvedValue({ ok: false, error: new Error("not found") as any });
     localStorage.setItem("lenabeauty_branding", JSON.stringify({ salonName: "Legacy Local", salonNameAr: "موروث" }));
     renderPage();
     expect(await screen.findByDisplayValue("Legacy Local")).toBeInTheDocument();
+    // The fallback flows through the singleton (validated + hydrated), not a
+    // separate parser.
+    expect(brandingService.getSettings().salonName).toBe("Legacy Local");
   });
 
   it("surfaces a toast on repository failure", async () => {
@@ -120,6 +136,8 @@ describe("branding persistence", () => {
         brandPrimaryColor: "#8B5CF6", // malicious payload replaced by the default
         brandSecondaryColor: "#112233",
         brandAccentColor: "#F3E8FF", // malicious payload replaced by the default
+        // A snapshot without a logo must clear the remote logo column.
+        brandLogoBase64: null,
       }),
     );
     // The UI reflects the imported (validated) snapshot too.
@@ -144,10 +162,11 @@ describe("branding persistence", () => {
     fireEvent.change(importInput, { target: { files: [file] } });
 
     expect(await screen.findByText("Invalid branding settings file")).toBeInTheDocument();
-    // Nothing may be persisted: no Supabase update, no state change, no cache write.
+    // Nothing may be persisted: no Supabase update, no state change, and the
+    // cache keeps only what the remote load hydrated (never the payload).
     expect(updateMock).not.toHaveBeenCalled();
     expect((await screen.findAllByDisplayValue("LenaBeauty Remote")).length).toBeGreaterThan(0);
-    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+    expect(cachedBranding().salonName).toBe("LenaBeauty Remote");
     expect(localStorage.getItem("lenabeauty_logo")).toBeNull();
   });
 
@@ -162,8 +181,10 @@ describe("branding persistence", () => {
 
     expect(await screen.findByText("Brand colors must be in #RRGGBB format")).toBeInTheDocument();
     expect(updateMock).not.toHaveBeenCalled();
-    // Nothing invalid may reach the cache either.
-    expect(localStorage.getItem("lenabeauty_branding")).toBeNull();
+    // The cache keeps only the hydrated remote values; the invalid color
+    // never reaches it.
+    expect(cachedBranding().salonName).toBe("LenaBeauty Remote");
+    expect(cachedBranding().primaryColor).toBe("#8B5CF6");
   });
 
   it("save still works when colors are valid #RRGGBB", async () => {

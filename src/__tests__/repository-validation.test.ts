@@ -120,6 +120,31 @@ describe("repository-boundary validation (UI bypassed)", () => {
     expect(payload.brand_accent_color).toBe("#06B6D4");
   });
 
+  it("writes brand_logo_base64: null to Supabase so a cleared logo is actually removed remotely", async () => {
+    let capturedPayload: Record<string, unknown> | null = null;
+    const updateFn = vi.fn((payload: Record<string, unknown>) => {
+      capturedPayload = payload;
+      return {
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({ data: { center_id: "center-1", name: "Test Salon" }, error: null })),
+          })),
+        })),
+      };
+    });
+    mockFrom.mockReturnValue({ update: updateFn });
+
+    const res = await bundle.settingsAdapter.update({ brandLogoBase64: null });
+
+    expect(res.ok).toBe(true);
+    expect(capturedPayload).not.toBeNull();
+    const payload = capturedPayload as unknown as Record<string, unknown>;
+    // undefined would be dropped by the adapter and leave the remote logo
+    // untouched; null must reach the update payload so Postgres clears it.
+    expect("brand_logo_base64" in payload).toBe(true);
+    expect(payload.brand_logo_base64).toBeNull();
+  });
+
   it("rejects a settings update with an out-of-range tax rate", async () => {
     const res = await bundle.settingsAdapter.update({ name: "Salon", taxRate: 120 });
     expect(res.ok).toBe(false);

@@ -130,29 +130,31 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Supabase is the source of truth; localStorage is only a cache/fallback.
+    // Supabase is the source of truth; the branding singleton owns the
+    // validated local cache. On success, hydrate the singleton with the
+    // remote values (so printService / InvoicePrintLayout — which read the
+    // singleton — use the remote branding immediately, even on a fresh
+    // device or after another device changed it) and take the snapshot from
+    // it. On failure, fall back to the singleton's validated cache — there
+    // is no second cache parser/path.
     (async () => {
       let next: BrandingSettings | null = null;
       try {
         const res = await useCases.settings.get();
         if (res.ok) {
-          next = fromCenterSettings(res.data);
+          brandingService.updateSettings(fromCenterSettings(res.data));
+          next = brandingService.getSettings();
         }
       } catch {
-        // fall through to localStorage
+        // fall through to the validated local cache
       }
       if (!next) {
-        const savedLocal = localStorage.getItem('lenabeauty_branding');
-        if (savedLocal) {
-          try { next = JSON.parse(savedLocal); } catch { /* ignore */ }
-        }
+        next = brandingService.reloadFromCache();
       }
-      if (next) {
-        setSettings(next);
-        if (next.logo) setPreview(next.logo);
-        // Reflect the saved brand across the app tokens.
-        applyBrandTokens(next);
-      }
+      setSettings(next);
+      if (next.logo) setPreview(next.logo);
+      // Reflect the saved brand across the app tokens.
+      applyBrandTokens(next);
     })();
   }, []);
 
@@ -207,7 +209,10 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         brandFooterTextAr: next.footerTextAr,
         phone: next.phone,
         address: next.address,
-        brandLogoBase64: next.logo ?? undefined,
+        // Send null explicitly when the logo is cleared: the repository skips
+        // undefined fields, so `?? undefined` would leave the remote logo
+        // untouched and it would be restored on the next Supabase load.
+        brandLogoBase64: next.logo,
       }));
       // Single persistence path for the local cache: after Supabase accepts
       // the save, update the branding singleton (which owns the cache keys
