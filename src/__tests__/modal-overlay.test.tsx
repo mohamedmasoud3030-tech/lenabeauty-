@@ -1,4 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Modal } from "../shared/components/Modal";
 import { ConfirmProvider } from "../shared/components/ConfirmDialog";
@@ -25,6 +27,14 @@ function renderModal(props: Partial<Parameters<typeof Modal>[0]> & { isOpen?: bo
 describe("Modal overlay architecture", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
+  });
+
+  it("keeps page dialogs on the shared overlay architecture", () => {
+    const pagesDir = resolve(process.cwd(), "src/pages");
+    const offenders = readdirSync(pagesDir)
+      .filter((file) => file.endsWith(".tsx"))
+      .filter((file) => readFileSync(resolve(pagesDir, file), "utf8").includes("fixed inset-0"));
+    expect(offenders).toEqual([]);
   });
 
   it("renders into a portal above app chrome (z-index layer token) when open", () => {

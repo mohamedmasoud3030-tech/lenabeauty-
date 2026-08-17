@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { buildWhatsAppLink, normalizePhone } from "../infrastructure/services/whatsappService";
+import { describe, expect, it, vi } from "vitest";
+import WhatsAppService, { buildWhatsAppLink, normalizePhone } from "../infrastructure/services/whatsappService";
 
 describe("WhatsApp wa.me deep links", () => {
   it("strips non-digits and a leading 00 country prefix", () => {
@@ -21,5 +21,24 @@ describe("WhatsApp wa.me deep links", () => {
   it("does not include an empty text param when message is blank", () => {
     expect(buildWhatsAppLink("96891234567", "")).toBe("https://wa.me/96891234567");
     expect(buildWhatsAppLink("96891234567", "   ")).toBe("https://wa.me/96891234567");
+  });
+
+  it("does not claim send or delivery after only opening a manual link", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const service = new WhatsAppService();
+
+    const result = await service.sendLoyaltyPointsNotification("customer-1", "+96891234567", 2, 10, "gold");
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(result.status).toBe("pending");
+    expect(result.deliveredAt).toBeUndefined();
+    expect(service.isConfigured()).toBe(false);
+    expect(await service.getNotificationStats()).toEqual({
+      totalSent: 0,
+      totalDelivered: 0,
+      totalFailed: 0,
+      successRate: 0,
+    });
+    open.mockRestore();
   });
 });

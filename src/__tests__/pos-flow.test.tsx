@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { useCases } from "../app/composition/useCases";
 import PosInvoicesPage from "../pages/PosInvoicesPage";
 import { ToastProvider } from "../shared/components/Toast";
@@ -34,6 +34,111 @@ describe("POS operational flow", () => {
 
   afterAll(async () => {
     await i18n.changeLanguage("ar");
+  });
+
+  it("shows a retryable error when the initial catalog load fails", async () => {
+    await i18n.changeLanguage("ar");
+    vi.mocked(useCases.services.list).mockResolvedValueOnce({ ok: false, error: new Error("catalog offline") } as any);
+
+    render(
+      <ToastProvider>
+        <PosInvoicesPage />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByText(i18n.t("Failed to load point of sale"))).toBeInTheDocument();
+    expect(screen.getByText("catalog offline")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: i18n.t("Retry") })).toBeInTheDocument();
+  });
+
+  it("keeps the newest customer search result when responses arrive out of order", async () => {
+    await i18n.changeLanguage("ar");
+    let resolveFirst!: (value: any) => void;
+    let resolveSecond!: (value: any) => void;
+    vi.spyOn(useCases.customers, "list")
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
+
+    render(
+      <ToastProvider>
+        <PosInvoicesPage />
+      </ToastProvider>,
+    );
+    await screen.findByText("قص شعر");
+    const input = screen.getByPlaceholderText(i18n.t("Search customer..."));
+    fireEvent.change(input, { target: { value: "Am" } });
+    fireEvent.change(input, { target: { value: "Amal" } });
+    await waitFor(() => expect(useCases.customers.list).toHaveBeenCalledTimes(2));
+
+    await act(async () => resolveSecond({ ok: true, data: [{ id: "new", name: "Newest Customer" }] }));
+    expect(await screen.findByText("Newest Customer")).toBeInTheDocument();
+    await act(async () => resolveFirst({ ok: true, data: [{ id: "old", name: "Stale Customer" }] }));
+
+    expect(screen.queryByText("Stale Customer")).not.toBeInTheDocument();
+    expect(screen.getByText("Newest Customer")).toBeInTheDocument();
+  });
+
+  it("blocks repeated keyboard checkout while the committed receipt is still loading", async () => {
+    await i18n.changeLanguage("ar");
+    const checkoutSpy = vi.spyOn(useCases.invoices, "checkout").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: {
+          id: "inv-guard",
+          serialNumber: "INV-GUARD",
+          date: new Date("2026-08-10T10:00:00"),
+          totalAmount: 5,
+          discount: 0,
+          tax: 0,
+          paymentMethod: "cash",
+          customerId: "c1",
+        },
+        total: 5,
+        earned: 5,
+      },
+    } as any);
+    let resolvePrint!: (value: any) => void;
+    vi.spyOn(useCases.invoices, "getForPrint").mockImplementation(
+      () => new Promise((resolve) => { resolvePrint = resolve; }),
+    );
+    vi.spyOn(useCases.customers, "list").mockResolvedValue({
+      ok: true,
+      data: [{ id: "c1", name: "أمل", phone: "90000000" }],
+    } as any);
+
+    render(
+      <ToastProvider>
+        <PosInvoicesPage />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(await screen.findByText("قص شعر"));
+    const customerInput = screen.getByPlaceholderText(i18n.t("Search customer..."));
+    fireEvent.change(customerInput, { target: { value: "أمل" } });
+    fireEvent.click(await screen.findByText("أمل"));
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
+
+    fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(useCases.invoices.getForPrint).toHaveBeenCalledTimes(1));
+
+    // The checkout RPC has returned, but print loading is still pending. A
+    // stale keyboard-listener closure used to start a second payment here.
+    fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
+    await act(async () => { await Promise.resolve(); });
+    expect(checkoutSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvePrint({
+        ok: true,
+        data: {
+          invoice: { id: "inv-guard", serialNumber: "INV-GUARD", date: new Date(), totalAmount: 5, discount: 0, tax: 0, paymentMethod: "cash", customerId: "c1" },
+          items: [{ id: "it1", type: "service", name: "قص شعر", price: 5, qty: 1 }],
+          customer: { id: "c1", name: "أمل" },
+          settings: { name: "لينا بيوتي", currency: "OMR" },
+        },
+      });
+    });
   });
 
   it("adds service + product + package, checks out and shows the receipt", async () => {
@@ -80,8 +185,9 @@ describe("POS operational flow", () => {
       </ToastProvider>,
     );
 
-    // 1) Catalog loads; add the service
+    // 1) Catalog loads and the manual-tender boundary is explicit.
     expect(await screen.findByText("قص شعر")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("The selected payment method confirms manual collection outside the app; no card is charged here"))).toBeInTheDocument();
     fireEvent.click(screen.getByText("قص شعر"));
 
     // 2) Switch to products and add one
@@ -101,7 +207,7 @@ describe("POS operational flow", () => {
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
 
     // 6) Complete the payment
-    fireEvent.click(screen.getByText(i18n.t("Complete Payment")));
+    fireEvent.click(screen.getByText(i18n.t("Record completed sale")));
 
     // 7) Checkout called once with the exact mixed payload
     await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));

@@ -3,10 +3,12 @@ import { clearDesktopDraft, loadDesktopDraft, saveDesktopDraft } from '../deskto
 import { desktopShellConfig, isDesktopShell } from '../desktop/config';
 
 describe('desktop foundation helpers', () => {
-  it('exposes sqlite-ready desktop config', () => {
+  it('reports prototype capabilities truthfully', () => {
     expect(desktopShellConfig.bundleId).toBe('com.lenabeauty.desktop');
-    expect(desktopShellConfig.capabilities.sqliteReady).toBe(true);
-    expect(desktopShellConfig.capabilities.offlineFirst).toBe(true);
+    expect(desktopShellConfig.capabilities.sqliteReady).toBe(false);
+    expect(desktopShellConfig.capabilities.offlineFirst).toBe(false);
+    expect(desktopShellConfig.capabilities.autoUpdaterReady).toBe(false);
+    expect(desktopShellConfig.capabilities.localDraftStorage).toBe(true);
   });
 
   it('persists desktop drafts in localStorage', () => {

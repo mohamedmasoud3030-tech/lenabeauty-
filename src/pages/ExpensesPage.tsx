@@ -3,21 +3,20 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
 import { getDisplayName, getInitials } from "../shared/displayName";
 import { 
-  Receipt, Plus, Trash2, Calendar, Tag, DollarSign, 
-  Search, X, Save, TrendingDown,
+  Receipt, Plus, Calendar, Tag, DollarSign,
+  Search, Save, TrendingDown,
   ArrowDownRight, PieChart, Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
+import { Modal } from "../shared/components/Modal";
 
 export default function ExpensesPage() {
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const { t } = useTranslation();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,18 +87,6 @@ export default function ExpensesPage() {
       setNewDate(new Date().toISOString().split("T")[0]);
       setShowAddModal(false);
       showToast("success", t("Success"), t("Expense added successfully"));
-      load();
-    } catch (e) {
-      showToast("error", t("Error"), (e as Error).message || String(e));
-    }
-  }
-
-  async function handleDelete(id: string) {
-    const ok = await confirm({ title: t("Delete Expense"), message: t("Are you sure?"), type: "danger" });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.expenses.delete(id));
-      showToast("success", t("Success"), t("Expense deleted"));
       load();
     } catch (e) {
       showToast("error", t("Error"), (e as Error).message || String(e));
@@ -303,13 +290,6 @@ export default function ExpensesPage() {
                         >
                           <Pencil className="h-5 w-5" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(exp.id)}
-                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all shadow-sm hover:scale-110 active:scale-95"
-                          title={t("Delete")}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -367,13 +347,6 @@ export default function ExpensesPage() {
                     <Pencil className="h-4 w-4" />
                     {t("Edit")}
                   </button>
-                  <button
-                    onClick={() => void handleDelete(exp.id)}
-                    className="h-12 flex-1 rounded-2xl border border-border bg-card flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/20 transition-all shadow-sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {t("Delete")}
-                  </button>
                 </div>
               </motion.div>
             ))}
@@ -383,22 +356,27 @@ export default function ExpensesPage() {
       </motion.div>
 
       {/* ── Add Modal ── */}
-      <AnimatePresence>
-        {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddModal(false)} className="absolute inset-0 bg-black/60 backdrop-blur-xl" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl">
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Plus className="h-7 w-7" /></div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">{t("Add Expense")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Record New Cost")}</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowAddModal(false)} className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"><X className="h-6 w-6" /></button>
-              </div>
-              <div className="p-6 sm:p-10 space-y-6">
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        size="md"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Plus className="h-5 w-5" /></span>
+            <span>{t("Add Expense")}</span>
+          </span>
+        }
+        description={t("Record New Cost")}
+        className="sm:rounded-[3rem]"
+        footer={
+          <button type="button" onClick={handleAdd} className="group relative w-full h-14 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <Save className="h-5 w-5 relative z-10" />
+            <span className="text-base relative z-10">{t("Save Expense")}</span>
+          </button>
+        }
+      >
+        <div className="space-y-6 sm:p-5">
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Description")}</label>
                   <div className="relative">
@@ -431,34 +409,31 @@ export default function ExpensesPage() {
                     <input type="date" className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
                   </div>
                 </div>
-                <button onClick={handleAdd} className="group relative w-full h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <Save className="h-6 w-6 relative z-10" />
-                  <span className="text-lg relative z-10">{t("Save Expense")}</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Modal>
 
       {/* ── Edit Modal ── */}
-      <AnimatePresence>
-        {showEditModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeEdit} className="absolute inset-0 bg-black/60 backdrop-blur-xl" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 40 }} className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl">
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner"><Pencil className="h-7 w-7" /></div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">{t("Edit Expense")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Update expense details")}</p>
-                  </div>
-                </div>
-                <button onClick={closeEdit} className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"><X className="h-6 w-6" /></button>
-              </div>
-              <div className="p-6 sm:p-10 space-y-6">
+      <Modal
+        isOpen={showEditModal}
+        onClose={closeEdit}
+        size="md"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shadow-inner"><Pencil className="h-5 w-5" /></span>
+            <span>{t("Edit Expense")}</span>
+          </span>
+        }
+        description={t("Update expense details")}
+        className="sm:rounded-[3rem]"
+        footer={
+          <button type="button" onClick={handleSaveEdit} className="group relative w-full h-14 rounded-[2rem] bg-amber-500 font-bold text-white shadow-2xl shadow-amber-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <Save className="h-5 w-5 relative z-10" />
+            <span className="text-base relative z-10">{t("Save Changes")}</span>
+          </button>
+        }
+      >
+        <div className="space-y-6 sm:p-5">
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Description")}</label>
                   <div className="relative">
@@ -491,16 +466,8 @@ export default function ExpensesPage() {
                     <input type="date" className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
                   </div>
                 </div>
-                <button onClick={handleSaveEdit} className="group relative w-full h-16 rounded-[2rem] bg-amber-500 font-bold text-white shadow-2xl shadow-amber-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <Save className="h-6 w-6 relative z-10" />
-                  <span className="text-lg relative z-10">{t("Save Changes")}</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Modal>
     </div>
   );
 }

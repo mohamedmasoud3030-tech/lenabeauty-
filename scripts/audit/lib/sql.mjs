@@ -25,7 +25,7 @@ export function discoverMigrations(dir = MIGRATIONS_DIR) {
   }));
 }
 
-/** The 28 automated migrations: everything except the documented manual bootstrap. */
+/** Every automated migration: the discovered chain except the documented manual bootstrap. */
 export function automatedMigrations(migrations = discoverMigrations()) {
   return migrations.filter((m) => m.file !== MANUAL_BOOTSTRAP_FILE);
 }
@@ -144,7 +144,9 @@ export function compatPreamble() {
     `CREATE TABLE IF NOT EXISTS storage.buckets (
        id text PRIMARY KEY,
        name text,
-       public boolean
+       public boolean,
+       file_size_limit bigint,
+       allowed_mime_types text[]
      )`,
     `CREATE TABLE IF NOT EXISTS storage.objects (
        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

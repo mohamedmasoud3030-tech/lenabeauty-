@@ -20,6 +20,7 @@ export const useCases = {
     login: (u: string, p: string) => getRepositoryBundle().authAdapter.login(u, p),
     logout: () => getRepositoryBundle().authAdapter.logout(),
     getSession: () => getRepositoryBundle().authAdapter.getSession(),
+    onAuthStateChange: (callback: (event: string) => void) => getRepositoryBundle().authAdapter.onAuthStateChange(callback),
     getMyCenters: () => getRepositoryBundle().authAdapter.getMyCenters(),
   },
   dashboard: {
@@ -33,7 +34,11 @@ export const useCases = {
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
     markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
     delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
-    sendReminder: async (_id: string): Promise<Result<void, any>> => ({ ok: true, data: undefined }),
+    sendReminder: async (_id: string): Promise<Result<void, any>> => {
+      const error = new Error("NOTIFICATION_PROVIDER_NOT_CONFIGURED") as Error & { code: string };
+      error.code = "BACKEND_METHOD_UNSUPPORTED";
+      return { ok: false, error };
+    },
   },
   services: {
     list: () => getRepositoryBundle().serviceAdapter.list(),
@@ -139,8 +144,8 @@ export const useCases = {
   },
 
   advances: {
-    list: () => getRepositoryBundle().advanceAdapter.list(),
-    listByEmployee: (employeeId: string) => getRepositoryBundle().advanceAdapter.listByEmployee(employeeId),
+    list: (range?: { fromISO: string; toISO: string }) => getRepositoryBundle().advanceAdapter.list(range),
+    listByEmployee: (employeeId: string, range?: { fromISO: string; toISO: string }) => getRepositoryBundle().advanceAdapter.listByEmployee(employeeId, range),
     create: async (data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.create(data),
     update: async (id: string, data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.update(id, data),
     delete: async (id: string) => getRepositoryBundle().advanceAdapter.delete(id),

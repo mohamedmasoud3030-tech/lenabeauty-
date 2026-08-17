@@ -74,23 +74,27 @@ export default function LoginPage() {
     theme === "dark" ? "rgba(255,255,255,0.10)" : "rgba(217,119,6,0.25)";
 
   const textPrimary = theme === "dark" ? "#f1f5f9" : "#1c1917";
-  const textMuted   = theme === "dark" ? "rgba(241,245,249,0.45)" : "rgba(28,25,23,0.45)";
+  const textMuted   = theme === "dark" ? "#b9b3c0" : "#625b56";
 
   const inputBg          = theme === "dark" ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.90)";
-  const inputBorder      = theme === "dark" ? "rgba(255,255,255,0.12)" : "rgba(217,119,6,0.30)";
-  const inputFocus       = "rgba(217,119,6,0.75)";
-  const iconColor        = theme === "dark" ? "rgba(255,255,255,0.30)" : "rgba(120,80,0,0.35)";
-  // Placeholder colour — must be visible on both dark & light glass inputs
-  const placeholderColor = theme === "dark" ? "rgba(241,245,249,0.40)" : "rgba(28,25,23,0.40)";
+  const inputBorder      = theme === "dark" ? "#6f627d" : "#8a5b14";
+  const inputFocus       = theme === "dark" ? "#fbbf24" : "#78350f";
+  const iconColor        = theme === "dark" ? "#b9b3c0" : "#625b56";
+  // Placeholder is supplementary to the visible label, but it still needs
+  // enough contrast for low-vision users in both themes.
+  const placeholderColor = theme === "dark" ? "#b9b3c0" : "#625b56";
+  const errorTextColor = theme === "dark" ? "#fecaca" : "#991b1b";
+  const errorBackground = theme === "dark" ? "rgba(127,29,29,0.30)" : "rgba(254,226,226,0.96)";
 
   const blob1Color = theme === "dark" ? "#7c3aed" : "#d97706";
   const blob2Color = theme === "dark" ? "#0ea5e9" : "#a16207";
 
   return (
-    <div
+    <main
       className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors duration-500"
       dir={isRtl ? "rtl" : "ltr"}
       style={{ background: bgGradient }}
+      aria-labelledby="login-title"
     >
       {/* Inject dynamic placeholder colour — can't set ::placeholder via inline style */}
       <style>{`
@@ -128,12 +132,17 @@ export default function LoginPage() {
           {LANGUAGES.map((lang, idx) => (
             <button
               key={lang.code}
+              type="button"
               onClick={() => switchLanguage(lang.code)}
-              className="px-3 py-1.5 text-xs font-medium transition-all duration-200"
+              aria-label={`${t("Change Language")}: ${lang.label}`}
+              aria-pressed={i18n.language === lang.code}
+              className="min-h-11 px-3 py-1.5 text-xs font-medium transition-all duration-200"
               style={{
-                color: i18n.language === lang.code ? "#d97706" : textMuted,
+                color: i18n.language === lang.code
+                  ? (theme === "dark" ? "#fbbf24" : "#78350f")
+                  : textMuted,
                 fontWeight: i18n.language === lang.code ? 700 : 400,
-                borderLeft: idx > 0 ? `1px solid ${cardBorder}` : "none",
+                borderInlineStart: idx > 0 ? `1px solid ${cardBorder}` : "none",
                 background: i18n.language === lang.code
                   ? (theme === "dark" ? "rgba(217,119,6,0.15)" : "rgba(217,119,6,0.12)")
                   : "transparent",
@@ -146,11 +155,14 @@ export default function LoginPage() {
 
         {/* Theme toggle */}
         <motion.button
+          type="button"
           onClick={toggleTheme}
-          className="w-9 h-9 rounded-xl flex items-center justify-center border transition-colors duration-200"
+          className="w-11 h-11 rounded-xl flex items-center justify-center border transition-colors duration-200"
           style={{ borderColor: cardBorder, background: cardBg, backdropFilter: "blur(12px)", color: textPrimary }}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
+          aria-label={theme === "dark" ? t("Light mode") : t("Dark mode")}
+          aria-pressed={theme === "dark"}
           title={theme === "dark" ? t("Light mode") : t("Dark mode")}
         >
           <AnimatePresence mode="wait">
@@ -195,6 +207,7 @@ export default function LoginPage() {
             </motion.div>
 
             <motion.h1
+              id="login-title"
               className="text-2xl font-bold tracking-wide"
               style={{ color: textPrimary }}
               initial={{ opacity: 0, y: 8 }}
@@ -220,11 +233,15 @@ export default function LoginPage() {
             <AnimatePresence>
               {(initError || error) && (
                 <motion.div
+                  id="login-error"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
                   className="mb-5 rounded-xl px-4 py-3 text-sm text-center"
                   style={{
-                    background: "rgba(239,68,68,0.12)",
-                    border: "1px solid rgba(239,68,68,0.30)",
-                    color: "#fca5a5",
+                    background: errorBackground,
+                    border: `1px solid ${theme === "dark" ? "#ef4444" : "#b91c1c"}`,
+                    color: errorTextColor,
                   }}
                   initial={{ opacity: 0, height: 0, marginBottom: 0 }}
                   animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
@@ -251,8 +268,16 @@ export default function LoginPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 }}
               >
+                <label
+                  htmlFor="login-username"
+                  className="mb-1.5 block text-xs font-semibold"
+                  style={{ color: textPrimary }}
+                >
+                  {t("Username")}
+                </label>
                 <div className="relative group">
                   <User
+                    aria-hidden="true"
                     className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors duration-200 group-focus-within:text-amber-500"
                     style={{
                       color: iconColor,
@@ -260,7 +285,13 @@ export default function LoginPage() {
                     } as React.CSSProperties}
                   />
                   <input
+                    id="login-username"
+                    name="username"
+                    autoComplete="username"
+                    required
                     placeholder={t("Username")}
+                    aria-invalid={Boolean(initError || error)}
+                    aria-describedby={initError || error ? "login-error" : undefined}
                     className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
@@ -284,21 +315,35 @@ export default function LoginPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6 }}
               >
+                <label
+                  htmlFor="login-password"
+                  className="mb-1.5 block text-xs font-semibold"
+                  style={{ color: textPrimary }}
+                >
+                  {t("Password")}
+                </label>
                 <div className="relative group">
                   <Lock
+                    aria-hidden="true"
                     className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none transition-colors duration-200 group-focus-within:text-amber-500"
                     style={{ color: iconColor, insetInlineStart: "14px" } as React.CSSProperties}
                   />
                   <input
+                    id="login-password"
+                    name="password"
+                    autoComplete="current-password"
+                    required
                     type={showPassword ? "text" : "password"}
                     placeholder={t("Password")}
+                    aria-invalid={Boolean(initError || error)}
+                    aria-describedby={initError || error ? "login-error" : undefined}
                     className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
                       border: `1px solid ${inputBorder}`,
                       color: textPrimary,
                       paddingInlineStart: "40px",
-                      paddingInlineEnd: "40px",
+                      paddingInlineEnd: "52px",
                     }}
                     onFocus={e => (e.currentTarget.style.borderColor = inputFocus)}
                     onBlur={e => (e.currentTarget.style.borderColor = inputBorder)}
@@ -309,11 +354,12 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(v => !v)}
-                    className="absolute top-1/2 -translate-y-1/2 transition-colors duration-150 hover:text-amber-500"
-                    style={{ color: iconColor, insetInlineEnd: "12px" } as React.CSSProperties}
-                    tabIndex={-1}
+                    className="absolute top-1/2 -translate-y-1/2 h-11 w-11 rounded-lg flex items-center justify-center transition-colors duration-150 hover:text-amber-500"
+                    style={{ color: iconColor, insetInlineEnd: "2px" } as React.CSSProperties}
+                    aria-label={showPassword ? t("Hide password") : t("Show password")}
+                    aria-pressed={showPassword}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff aria-hidden="true" className="w-4 h-4" /> : <Eye aria-hidden="true" className="w-4 h-4" />}
                   </button>
                 </div>
               </motion.div>
@@ -327,8 +373,9 @@ export default function LoginPage() {
                 <motion.button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 rounded-xl font-semibold text-sm text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: "linear-gradient(135deg, #d97706, #f59e0b)" }}
+                  className="w-full min-h-11 py-3 rounded-xl font-semibold text-sm text-white shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #92400e, #a16207)" }}
+                  aria-busy={isLoading}
                   whileHover={!isLoading ? { scale: 1.02, filter: "brightness(1.08)" } : {}}
                   whileTap={!isLoading ? { scale: 0.97 } : {}}
                   transition={{ type: "spring", stiffness: 400, damping: 20 }}
@@ -372,6 +419,6 @@ export default function LoginPage() {
           </div>
         </div>
       </motion.div>
-    </div>
+    </main>
   );
 }

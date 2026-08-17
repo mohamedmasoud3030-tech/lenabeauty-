@@ -1,20 +1,10 @@
 name: Apply Demo Supabase migrations
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/demo-supabase-migrations.yml"
-      - "vercel.json"
-      - "supabase/migrations/**"
-      - "supabase/tests/**"
-      - "scripts/check-rpc-contracts.mjs"
-      - "scripts/check-migration-chain.mjs"
-      - "scripts/supabase-live-preflight.mjs"
-      - "scripts/audit/**"
-      - "src/infrastructure/supabase/**"
-      - "package.json"
-      - "package-lock.json"
   workflow_dispatch:
 
 concurrency:
@@ -34,9 +24,9 @@ jobs:
       VITE_BRANCH_MODE: single
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -95,7 +85,9 @@ jobs:
   live-demo-deployment:
     name: Live Demo migration and security gates
     needs: [static-validation, credential-probe]
-    if: needs.credential-probe.outputs.available == 'true'
+    # Remote schema changes are approval-gated: PRs and ordinary main pushes run
+    # static validation only. An operator must explicitly dispatch this workflow.
+    if: needs.credential-probe.outputs.available == 'true' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -112,9 +104,9 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.DEMO_SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -169,6 +161,68 @@ jobs:
       - name: Show remote migration state before apply
         run: supabase migration list --linked
 
+      - name: Install PostgreSQL client for preflight and acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+      - name: Read-only attendance and Storage preflight
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          connection="host=db.${SUPABASE_PROJECT_REF}.supabase.co port=5432 dbname=postgres user=postgres sslmode=require"
+
+          if [ "$(psql "$connection" -X -A -t -v ON_ERROR_STOP=1 -c "select to_regclass('public.attendance_records') is not null")" != "t" ]; then
+            echo "Refusing migration: attendance_records is missing from the Demo schema." >&2
+            exit 1
+          fi
+
+          duplicate_keys="$(psql "$connection" -X -A -t -v ON_ERROR_STOP=1 -c "
+            select count(*) from (
+              select center_id, employee_id, date
+              from public.attendance_records
+              group by center_id, employee_id, date
+              having count(*) > 1
+            ) duplicate_days
+          ")"
+          invalid_attendance="$(psql "$connection" -X -A -t -v ON_ERROR_STOP=1 -c "
+            select count(*)
+            from public.attendance_records
+            where (check_in_time is not null and check_out_time is not null and check_out_time <= check_in_time)
+               or work_hours < 0
+          ")"
+          bucket_metadata="$(psql "$connection" -X -A -t -F '|' -v ON_ERROR_STOP=1 -c "
+            select coalesce(file_size_limit::text, 'NULL'),
+                   coalesce(array_to_string(allowed_mime_types, ','), 'NULL')
+            from storage.buckets
+            where id = 'center-assets'
+          ")"
+
+          echo "Attendance duplicate day keys: ${duplicate_keys}"
+          echo "Attendance invalid time/hour rows: ${invalid_attendance}"
+          if [ -z "$bucket_metadata" ]; then
+            echo "Refusing migration: center-assets bucket is missing." >&2
+            exit 1
+          fi
+          echo "center-assets before migration (file_size_limit|allowed_mime_types): ${bucket_metadata}"
+          {
+            echo "### Demo pre-migration snapshot"
+            echo "- Attendance duplicate day keys: ${duplicate_keys}"
+            echo "- Attendance invalid time/hour rows: ${invalid_attendance}"
+            echo "- center-assets before migration: ${bucket_metadata}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$duplicate_keys" != "0" ] || [ "$invalid_attendance" != "0" ]; then
+            echo "Refusing migration: attendance integrity violations require owner-reviewed correction; no row was changed." >&2
+            exit 1
+          fi
+
       - name: Mark manual admin bootstrap as handled out-of-band
         shell: bash
         run: |
@@ -221,3 +275,15 @@ jobs:
 
       - name: Verify live Demo schema and center contract
         run: npm run preflight:supabase
+
+      - name: Run rollback-safe SQL acceptance tests
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          connection="host=db.${SUPABASE_PROJECT_REF}.supabase.co port=5432 dbname=postgres user=postgres sslmode=require"
+          for test_file in supabase/tests/*.sql; do
+            echo "Running rollback-safe acceptance: ${test_file}"
+            psql "$connection" -X -v ON_ERROR_STOP=1 --file "$test_file"
+          done

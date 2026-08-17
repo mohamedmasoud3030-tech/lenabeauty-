@@ -159,6 +159,33 @@ body {
   overflow-x: clip;
 }
 
+/* A single keyboard-focus treatment for native and custom controls. Individual
+   components may add a ring, but they must never suppress this visible cue. */
+:where(a, button, input, select, textarea, [role="button"], [role="tab"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid hsl(var(--ring)) !important;
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  inset-block-start: max(0.5rem, env(safe-area-inset-top));
+  inset-inline-start: 0.75rem;
+  z-index: var(--z-overlay-top);
+  transform: translateY(calc(-100% - 1rem));
+  border-radius: 0.75rem;
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 /* ========================================
    MOBILE-FIRST UX IMPROVEMENTS
    ======================================== */

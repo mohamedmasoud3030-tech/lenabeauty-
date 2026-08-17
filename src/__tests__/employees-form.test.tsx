@@ -90,14 +90,33 @@ describe("Employees modal CRUD (portaled overlay)", () => {
     expect(screen.getByText(/Edit Employee/i)).toBeInTheDocument();
   });
 
-  it("confirms before deleting an employee", async () => {
+  it("does not present unimplemented commission values or mutate legacy commission fields", async () => {
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [employee()] });
-    const del = vi.spyOn(useCases.employees, "delete").mockResolvedValue({ ok: true, data: undefined as never });
+    const update = vi.spyOn(useCases.employees, "update").mockResolvedValue({ ok: true, data: employee() });
     renderPage();
     await waitFor(() => expect(screen.getAllByText(/Layla Hassan/i).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByRole("button", { name: /^Delete$/i })[0]);
-    expect(await screen.findByText(/Are you sure you want to delete this employee\?/i)).toBeInTheDocument();
+    expect(screen.queryByText("Month Commission")).not.toBeInTheDocument();
+    expect(screen.queryByText("Total Team Commission")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^Edit$/i })[0]);
+    expect(await screen.findByDisplayValue("Layla Hassan")).toBeInTheDocument();
+    expect(screen.queryByText("Commission (%)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Save Employee/i }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).not.toHaveProperty("commissionPercentage");
+    expect(update.mock.calls[0][1]).not.toHaveProperty("monthCommissionTotal");
+  });
+
+  it("deactivates without deleting payroll or attendance history", async () => {
+    vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [employee()] });
+    const update = vi.spyOn(useCases.employees, "update").mockResolvedValue({ ok: true, data: employee({ isActive: false }) });
+    const hardDelete = vi.spyOn(useCases.employees, "delete");
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText(/Layla Hassan/i).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByRole("button", { name: /^Deactivate$/i })[0]);
+    expect(await screen.findByText(/without deleting payroll or attendance history/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Confirm$/i }));
-    await waitFor(() => expect(del).toHaveBeenCalledWith("e1"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith("e1", { isActive: false }));
+    expect(hardDelete).not.toHaveBeenCalled();
   });
 });

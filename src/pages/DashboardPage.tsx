@@ -236,15 +236,17 @@ export default function DashboardPage() {
             {t("Intelligence Dashboard")}
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tighter text-foreground leading-tight">
-            {t("Welcome back")}, <span className="text-primary">{me?.username || 'admin'}</span>
+            {t("Welcome back")}{me?.username ? <>, <span className="text-primary">{me.username}</span></> : null}
           </h1>
           <p className="hidden sm:block text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
-            {t("Your center is performing optimally today. Here's a quick look at the latest metrics and activities.")}
+            {t("Here is the latest recorded information for your center.")}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button 
-            onClick={load} 
+          <button
+            type="button"
+            onClick={load}
+            aria-label={t("Refresh")}
             className="group relative h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-lg hover:scale-110 active:scale-95"
           >
             <Zap className={clsx("h-5 w-5", loading && "animate-spin")} />
@@ -550,13 +552,6 @@ export default function DashboardPage() {
                     currency={summary?.currency} 
                     icon={<Users className="h-4 w-4" />}
                     color="orange"
-                  />
-                  <FinancialRow 
-                    label={t("Commissions")} 
-                    value={pnl.commissions} 
-                    currency={summary?.currency} 
-                    icon={<Scissors className="h-4 w-4" />}
-                    color="blue"
                   />
                   <FinancialRow 
                     label={t("Other Expenses")} 

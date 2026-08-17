@@ -10,9 +10,14 @@ export default defineConfig(({mode}) => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         workbox: {
-          // Cache strategies for offline support
+          // Reports are online-data only; do not make every PWA install pay for
+          // the large chart engine before that lazy route is requested.
+          globIgnores: ['**/chunk-charts-*.js'],
+          // Only cache explicitly public third-party fonts. Business/customer
+          // images (including signed Storage URLs) stay network-only so logout
+          // or account changes cannot expose them from a shared-device cache.
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -20,14 +25,6 @@ export default defineConfig(({mode}) => {
               options: {
                 cacheName: 'google-fonts-cache',
                 expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              },
-            },
-            {
-              urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'images-cache',
-                expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
               },
             },
           ],
@@ -42,7 +39,7 @@ export default defineConfig(({mode}) => {
           orientation: 'portrait',
           lang: 'ar',
           dir: 'rtl',
-          start_url: '/dashboard',
+          start_url: '/#/dashboard',
           scope: '/',
           categories: ['business', 'productivity'],
           icons: [
@@ -64,14 +61,14 @@ export default defineConfig(({mode}) => {
               name: 'نقطة البيع',
               short_name: 'POS',
               description: 'فتح نقطة البيع مباشرة',
-              url: '/pos',
+              url: '/#/pos',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
             },
             {
               name: 'لوحة التحكم',
               short_name: 'Dashboard',
               description: 'عرض الإحصائيات',
-              url: '/dashboard',
+              url: '/#/dashboard',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
             }
           ]

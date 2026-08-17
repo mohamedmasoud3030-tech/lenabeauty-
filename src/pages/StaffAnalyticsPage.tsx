@@ -5,7 +5,7 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Activity, Users, Clock, TrendingDown, DollarSign } from "lucide-react";
-import { AttendanceRecord, EmployeeAdvance, Employee, PayrollRun, PayrollLineItem } from "../domain/entities";
+import { AttendanceRecord, EmployeeAdvance, Employee, PayrollLineItem } from "../domain/entities";
 
 interface StaffStat {
   id: string;
@@ -28,7 +28,6 @@ export default function StaffAnalyticsPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
-  const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [latestLines, setLatestLines] = useState<PayrollLineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -36,19 +35,22 @@ export default function StaffAnalyticsPage() {
   async function load() {
     setLoading(true);
     try {
+      const [year, month] = selectedMonth.split("-").map(Number);
+      const from = new Date(year, month - 1, 1);
+      const to = new Date(year, month, 0, 23, 59, 59, 999);
+      const range = { fromISO: from.toISOString(), toISO: to.toISOString() };
       const [emps, att, adv, runList] = await Promise.all([
         unwrap(useCases.employees.list()),
-        unwrap(useCases.attendance.list()),
-        unwrap(useCases.advances.list()),
+        unwrap(useCases.attendance.list(range)),
+        unwrap(useCases.advances.list(range)),
         unwrap(useCases.payroll.listRuns()),
       ]);
       setEmployees(emps);
       setAttendance(att);
       setAdvances(adv);
-      setRuns(runList);
-      if (runList.length > 0) {
-        const latest = [...runList].sort((a, b) => new Date(b.runDate).getTime() - new Date(a.runDate).getTime())[0];
-        const detail = await unwrap(useCases.payroll.getRun(latest.id));
+      const selectedRun = runList.find((run) => run.periodMonth.slice(0, 7) === selectedMonth);
+      if (selectedRun) {
+        const detail = await unwrap(useCases.payroll.getRun(selectedRun.id));
         setLatestLines(detail.lines);
       } else {
         setLatestLines([]);
@@ -61,7 +63,7 @@ export default function StaffAnalyticsPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, [selectedMonth]);
 
   const stats = useMemo<StaffStat[]>(() => {
     return employees.map((emp) => {
@@ -115,10 +117,10 @@ export default function StaffAnalyticsPage() {
     .map((s) => ({ name: s.name, net: Math.round((s.netSalary as number) * 1000) / 1000 }));
 
   const attendancePie = [
-    { name: "حاضر", value: stats.reduce((s, x) => s + x.presentDays, 0), color: "#10b981" },
-    { name: "متأخر", value: stats.reduce((s, x) => s + x.lateDays, 0), color: "#f59e0b" },
-    { name: "غائب", value: stats.reduce((s, x) => s + x.absentDays, 0), color: "#ef4444" },
-    { name: "نصف يوم", value: stats.reduce((s, x) => s + x.halfDays, 0), color: "#3b82f6" },
+    { name: t("Present"), value: stats.reduce((s, x) => s + x.presentDays, 0), color: "#10b981" },
+    { name: t("Late"), value: stats.reduce((s, x) => s + x.lateDays, 0), color: "#f59e0b" },
+    { name: t("Absent"), value: stats.reduce((s, x) => s + x.absentDays, 0), color: "#ef4444" },
+    { name: t("Half Day"), value: stats.reduce((s, x) => s + x.halfDays, 0), color: "#3b82f6" },
   ].filter((d) => d.value > 0);
 
   return (
@@ -130,6 +132,7 @@ export default function StaffAnalyticsPage() {
         </h1>
         <input
           type="month"
+          aria-label={t("Month")}
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
           className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
@@ -139,19 +142,19 @@ export default function StaffAnalyticsPage() {
       {/* Overall summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-gray-600 text-sm">إجمالي ساعات العمل</p>
+          <p className="text-gray-600 text-sm">{t("Total Work Hours")}</p>
           <p className="text-3xl font-bold text-blue-600">{overall.totalHours.toFixed(1)}</p>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm">متوسط الحضور</p>
+          <p className="text-gray-600 text-sm">{t("Average Attendance")}</p>
           <p className="text-3xl font-bold text-green-600">{overall.avgRate}%</p>
         </div>
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border-l-4 border-orange-500">
-          <p className="text-gray-600 text-sm">إجمالي السلف (الشهر)</p>
+          <p className="text-gray-600 text-sm">{t("Total Advances (Month)")}</p>
           <p className="text-3xl font-bold text-orange-600">{overall.totalAdvances.toFixed(2)}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-gray-600 text-sm">إجمالي الرواتب الصافية</p>
+          <p className="text-gray-600 text-sm">{t("Total Net Salaries")}</p>
           <p className="text-3xl font-bold text-purple-600">{overall.totalNet.toFixed(2)}</p>
         </div>
       </div>
@@ -163,27 +166,27 @@ export default function StaffAnalyticsPage() {
             <h3 className="font-bold text-lg text-gray-800 mb-3">{s.name}</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-gray-600">أيام الحضور</p>
+                <p className="text-gray-600">{t("Present Days")}</p>
                 <p className="font-bold text-lg text-green-600">{s.presentDays}</p>
               </div>
               <div>
-                <p className="text-gray-600">أيام التأخير</p>
+                <p className="text-gray-600">{t("Late Days")}</p>
                 <p className="font-bold text-lg text-yellow-600">{s.lateDays}</p>
               </div>
               <div>
-                <p className="text-gray-600">ساعات العمل</p>
+                <p className="text-gray-600">{t("Work Hours")}</p>
                 <p className="font-bold text-lg text-blue-600">{s.workHours.toFixed(1)}</p>
               </div>
               <div>
-                <p className="text-gray-600">نسبة الحضور</p>
+                <p className="text-gray-600">{t("Attendance Rate")}</p>
                 <p className="font-bold text-lg text-purple-600">{s.attendanceRate}%</p>
               </div>
               <div>
-                <p className="text-gray-600">السلف</p>
+                <p className="text-gray-600">{t("Advances")}</p>
                 <p className="font-bold text-lg text-orange-600">{s.advancesTotal.toFixed(2)}</p>
               </div>
               <div>
-                <p className="text-gray-600">الصافي (آخر راتب)</p>
+                <p className="text-gray-600">{t("Net Salary (Selected Month)")}</p>
                 <p className="font-bold text-lg text-gray-800">{s.netSalary !== null ? s.netSalary.toFixed(2) : "-"}</p>
               </div>
             </div>
@@ -191,7 +194,7 @@ export default function StaffAnalyticsPage() {
         ))}
         {stats.length === 0 && !loading && (
           <div className="col-span-full bg-white rounded-lg shadow p-20 text-center text-gray-400">
-            لا يوجد موظفون لعرض التحليلات
+            {t("No employees available for analytics")}
           </div>
         )}
       </div>
@@ -199,7 +202,7 @@ export default function StaffAnalyticsPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4">ساعات العمل لكل موظف</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Work Hours per Employee")}</h2>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={workHoursData}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -207,13 +210,13 @@ export default function StaffAnalyticsPage() {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="hours" fill="#3b82f6" name="ساعات" />
+              <Bar dataKey="hours" fill="#3b82f6" name={t("Hours")} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4">الراتب الصافي لكل موظف</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Net Salary per Employee")}</h2>
           {netData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={netData}>
@@ -222,12 +225,12 @@ export default function StaffAnalyticsPage() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="net" fill="#8b5cf6" name="الصافي (OMR)" />
+                <Bar dataKey="net" fill="#8b5cf6" name={t("Net (OMR)")} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">
-              لا يوجد كشف رواتب بعد — أنشئ كشفاً لعرض المقارنة
+              {t("No payroll run for the selected month")}
             </div>
           )}
         </div>
@@ -235,7 +238,7 @@ export default function StaffAnalyticsPage() {
 
       {attendancePie.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4">توزيع الحضور (الشهر)</h2>
+          <h2 className="text-xl font-bold mb-4">{t("Attendance Distribution (Month)")}</h2>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie

@@ -107,6 +107,7 @@ export function mapSalesReportRows(
     }
 
     const totalAmount = toSafeNumber(invoice.totalAmount, 0);
+    const taxAmount = toSafeNumber(invoice.tax, 0);
     // Prepaid lines (gift-card/package sales) are deferred obligations, NOT
     // earned revenue. Their gross value is subtracted from the invoice cash
     // total to derive the recognized service/product revenue.
@@ -121,7 +122,13 @@ export function mapSalesReportRows(
     const redeemedAmount = roundMoney3(
       redemptionByInvoice?.get(invoice.id) ?? toSafeNumber(invoice.giftCardDiscount, 0),
     );
-    const earnedRevenue = roundMoney3(Math.max(0, totalAmount - prepaidAmount + redeemedAmount));
+    // `total_amount` is cash including VAT. VAT and prepaid instruments are
+    // liabilities, not earned service/product revenue. Redemption releases a
+    // previously deferred obligation and is therefore added back.
+    const earnedRevenue = roundMoney3(Math.max(
+      0,
+      totalAmount - taxAmount - prepaidAmount + redeemedAmount,
+    ));
 
     out.push({
       id: invoice.id,

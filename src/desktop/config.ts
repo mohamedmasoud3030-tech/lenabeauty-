@@ -31,12 +31,12 @@ export const desktopShellConfig: DesktopShellConfig = {
     fullscreen: false,
   },
   capabilities: {
-    offlineFirst: true,
+    offlineFirst: false,
     localDraftStorage: true,
-    desktopShortcuts: true,
-    deepLinksReady: true,
+    desktopShortcuts: false,
+    deepLinksReady: false,
     autoUpdaterReady: false,
-    sqliteReady: true,
+    sqliteReady: false,
   },
 };
 

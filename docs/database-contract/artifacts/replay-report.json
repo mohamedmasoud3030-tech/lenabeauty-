@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 31,
-    "automated": 30,
+    "total": 36,
+    "automated": 35,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -155,6 +155,31 @@
     },
     {
       "file": "20260816000002_checkout_idempotency.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260817000001_authorization_boundary_repair.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260817000002_financial_reporting_repair.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260817000003_payroll_transaction_repair.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260817000004_attendance_integrity.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260817000005_storage_upload_hardening.sql",
       "status": "ok",
       "error": null
     }
@@ -309,6 +334,31 @@
       "file": "20260816000002_checkout_idempotency.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260817000001_authorization_boundary_repair.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260817000002_financial_reporting_repair.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260817000003_payroll_transaction_repair.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260817000004_attendance_integrity.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260817000005_storage_upload_hardening.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -329,8 +379,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "8d553ebcf47e0b834ad60d54718b5617332f27dbc1d861cf6703745a8fcee442",
-    "after_repeat": "8d553ebcf47e0b834ad60d54718b5617332f27dbc1d861cf6703745a8fcee442",
+    "after_first_replay": "1616b31569eee5a057a42dea3d06a2f38d65cf435ba1e6a3d471d0dd9e7a5aff",
+    "after_repeat": "1616b31569eee5a057a42dea3d06a2f38d65cf435ba1e6a3d471d0dd9e7a5aff",
     "identical": true,
     "diff": {
       "changed_sections": [],

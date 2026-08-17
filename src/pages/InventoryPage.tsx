@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  AlertTriangle, Plus, Pencil, Trash2, Boxes,
+  AlertTriangle, Plus, Pencil, Boxes,
   Package, DollarSign, BarChart, Search, Save,
   CheckCircle2,
   AlertCircle,
@@ -12,7 +12,6 @@ import {
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
 import { Modal } from "../shared/components/Modal";
 import { getInitials } from "../shared/displayName";
 import { mapErrorToMessage } from "../application/errors/ErrorMapper";
@@ -48,7 +47,6 @@ function exportToCSV(products: Product[], t: (k: string) => string) {
 
 export default function InventoryPage() {
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const { t } = useTranslation();
   const [rows, setRows] = useState<Product[]>([]);
   const [q, setQ] = useState("");
@@ -185,21 +183,6 @@ export default function InventoryPage() {
     resetForm();
   }
 
-  async function onDelete(id: string) {
-    const ok = await confirm({
-      title: t("Delete Product"),
-      message: t("Are you sure you want to delete this product?"),
-      type: "danger"
-    });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.products.delete(id));
-      await load();
-    } catch (e) {
-      showToast("error", t("Error"), mapErrorToMessage(e, t));
-    }
-  }
-
   async function onToggleActive(product: Product) {
     try {
       await unwrap(useCases.products.update(product.id, { isActive: !product.isActive }));
@@ -224,7 +207,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => setShowLowStockOnly(true)}
-            className="min-h-9 inline-flex items-center text-[11px] font-bold underline underline-offset-2 hover:opacity-70 transition-opacity"
+            className="min-h-11 inline-flex items-center text-[11px] font-bold underline underline-offset-2 hover:opacity-70 transition-opacity"
           >
             {t("View All")}
           </button>
@@ -322,14 +305,14 @@ export default function InventoryPage() {
             </button>
             <button
               onClick={() => exportToCSV(filtered, t)}
-              className="h-9 px-2.5 rounded-lg border border-border bg-card flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+              className="h-11 px-2.5 rounded-lg border border-border bg-card flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
             >
               <Download className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{t("Export")}</span>
             </button>
             <button
               onClick={load}
-              className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+              className="h-11 w-11 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
               aria-label={t("Refresh")}
             >
               <RefreshCw className={clsx("h-4 w-4", loading && "animate-spin")} />
@@ -362,7 +345,7 @@ export default function InventoryPage() {
                     >
                       <td>
                         <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shrink-0">
+                          <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase shrink-0">
                             {getInitials(p.name, "·")}
                           </div>
                           <div className="min-w-0">
@@ -412,17 +395,10 @@ export default function InventoryPage() {
                           </button>
                           <button
                             onClick={() => onEdit(p)}
-                            className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                            className="h-11 w-11 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                             aria-label={t("Edit")}
                           >
                             <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => void onDelete(p.id)}
-                            className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
-                            aria-label={t("Delete")}
-                          >
-                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -492,7 +468,7 @@ export default function InventoryPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => void onToggleActive(p)}
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-border text-muted-foreground flex items-center justify-center"
+                      className="h-11 min-w-0 flex-1 rounded-lg border border-border text-muted-foreground flex items-center justify-center"
                       title={p.isActive ? t("Disable") : t("Enable")}
                       aria-label={p.isActive ? t("Disable") : t("Enable")}
                     >
@@ -500,17 +476,10 @@ export default function InventoryPage() {
                     </button>
                     <button
                       onClick={() => onEdit(p)}
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-border text-muted-foreground flex items-center justify-center"
+                      className="h-11 min-w-0 flex-1 rounded-lg border border-border text-muted-foreground flex items-center justify-center"
                       aria-label={t("Edit")}
                     >
                       <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => void onDelete(p.id)}
-                      className="h-9 min-w-0 flex-1 rounded-lg border border-border text-destructive flex items-center justify-center"
-                      aria-label={t("Delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </motion.div>

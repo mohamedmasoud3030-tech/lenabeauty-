@@ -60,6 +60,9 @@ const canonicalMigrations = [
   "20260811004300_refund_status_repair.sql",
   "20260816000001_production_integrity_hardening.sql",
   "20260816000002_checkout_idempotency.sql",
+  "20260817000001_authorization_boundary_repair.sql",
+  "20260817000002_financial_reporting_repair.sql",
+  "20260817000003_payroll_transaction_repair.sql",
 ];
 
 function parseEnvFile(path) {
@@ -221,13 +224,18 @@ async function verifyRemoteSchema() {
     const url = new URL(`/rest/v1/${table}`, env.VITE_SUPABASE_URL);
     url.searchParams.set("select", "id");
     url.searchParams.set("limit", "1");
-    const response = await fetch(url, {
-      headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
-    });
-    if (!response.ok) {
-      fail(`remote table check failed for ${table}: HTTP ${response.status}`);
-    } else {
-      pass(`remote table is reachable: ${table}`);
+    try {
+      const response = await fetch(url, {
+        headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
+      });
+      if (!response.ok) {
+        fail(`remote table check failed for ${table}: HTTP ${response.status}`);
+      } else {
+        pass(`remote table is reachable: ${table}`);
+      }
+    } catch (error) {
+      const code = error?.cause?.code || error?.code || error?.name || "NETWORK_ERROR";
+      fail(`remote table check failed for ${table}: network ${code}`);
     }
   });
 
@@ -237,14 +245,19 @@ async function verifyRemoteSchema() {
     const centerUrl = new URL("/rest/v1/centers", env.VITE_SUPABASE_URL);
     centerUrl.searchParams.set("id", `eq.${env.VITE_CENTER_ID}`);
     centerUrl.searchParams.set("select", "id");
-    const centerResponse = await fetch(centerUrl, {
-      headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
-    });
-    const centers = centerResponse.ok ? await centerResponse.json() : [];
-    if (!centerResponse.ok || !Array.isArray(centers) || centers.length !== 1) {
-      fail("configured VITE_CENTER_ID is not present in the remote database");
-    } else {
-      pass("configured VITE_CENTER_ID exists remotely");
+    try {
+      const centerResponse = await fetch(centerUrl, {
+        headers: { apikey: apiKey, Authorization: `Bearer ${apiKey}` },
+      });
+      const centers = centerResponse.ok ? await centerResponse.json() : [];
+      if (!centerResponse.ok || !Array.isArray(centers) || centers.length !== 1) {
+        fail("configured VITE_CENTER_ID is not present in the remote database");
+      } else {
+        pass("configured VITE_CENTER_ID exists remotely");
+      }
+    } catch (error) {
+      const code = error?.cause?.code || error?.code || error?.name || "NETWORK_ERROR";
+      fail(`configured center verification failed: network ${code}`);
     }
   } else {
     console.log("INFO center seed verification requires a server-only key; table availability was checked with the publishable key.");

@@ -1991,16 +1991,48 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_channel": string | null; "p_direction": string | null; "p_template_key": string | null; "p_message_preview": string | null; "p_delivery_status": string | null; "p_sent_at": string | null }
         Returns: Json
       },
+      "admin_create_employee_v1": {
+        Args: { "p_center_id": string | null; "p_employee": Json | null }
+        Returns: Json
+      },
+      "admin_delete_employee_v1": {
+        Args: { "p_center_id": string | null; "p_employee_id": string | null }
+        Returns: Json
+      },
+      "admin_update_employee_v1": {
+        Args: { "p_center_id": string | null; "p_employee_id": string | null; "p_patch": Json | null }
+        Returns: Json
+      },
+      "create_accounting_journal_entry_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_entry_date": string | null; "p_entry_type": string | null; "p_reference_type": string | null; "p_reference_id": string | null; "p_description": string | null; "p_debit_account": string | null; "p_credit_account": string | null; "p_amount": number | null; "p_currency": string | null }
+        Returns: Json
+      },
       "create_accounting_journal_entry_v1": {
         Args: { "p_center_id": string | null; "p_entry_date": string | null; "p_entry_type": string | null; "p_reference_type": string | null; "p_reference_id": string | null; "p_description": string | null; "p_debit_account": string | null; "p_credit_account": string | null; "p_amount": number | null; "p_currency": string | null }
+        Returns: Json
+      },
+      "create_ai_booking_lead_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_customer_name": string | null; "p_customer_phone": string | null; "p_preferred_service_id": string | null; "p_preferred_date": string | null; "p_source_channel": string | null; "p_summary": string | null }
         Returns: Json
       },
       "create_ai_booking_lead_v1": {
         Args: { "p_center_id": string | null; "p_customer_name": string | null; "p_customer_phone": string | null; "p_preferred_service_id": string | null; "p_preferred_date": string | null; "p_source_channel": string | null; "p_summary": string | null }
         Returns: Json
       },
+      "create_customer_review_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_rating": number | null; "p_comment": string | null; "p_is_published": boolean | null }
+        Returns: Json
+      },
       "create_customer_review_v1": {
         Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_rating": number | null; "p_comment": string | null; "p_is_published": boolean | null }
+        Returns: Json
+      },
+      "create_payroll_run_v1": {
+        Args: { "p_center_id": string | null; "p_period_month": string | null; "p_notes": string | null }
+        Returns: Json
+      },
+      "create_service_file_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_service_id": string | null; "p_title": string | null; "p_note": string | null; "p_before_images": string[] | null; "p_after_images": string[] | null; "p_reference_images": string[] | null }
         Returns: Json
       },
       "create_service_file_v1": {
@@ -2011,12 +2043,36 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_name": string | null; "p_description": string | null; "p_package_price": number | null; "p_items": Json | null }
         Returns: Json
       },
+      "delete_payroll_run_v1": {
+        Args: { "p_center_id": string | null; "p_payroll_run_id": string | null }
+        Returns: Json
+      },
+      "expire_entitlement_admin_impl_v1": {
+        Args: { "p_entitlement_id": string | null; "p_reason": string | null; "p_actor_employee_id": string | null }
+        Returns: Json
+      },
       "expire_entitlement_v1": {
         Args: { "p_entitlement_id": string | null; "p_reason": string | null; "p_actor_employee_id": string | null }
         Returns: Json
       },
+      "get_dashboard_pnl_v1": {
+        Args: { "p_center_id": string | null; "p_from": string | null; "p_to": string | null }
+        Returns: Json
+      },
+      "get_dashboard_revenue_entries_v1": {
+        Args: { "p_center_id": string | null; "p_from": string | null; "p_to": string | null }
+        Returns: Json
+      },
+      "get_dashboard_summary_v1": {
+        Args: { "p_center_id": string | null; "p_day_start": string | null; "p_day_end": string | null; "p_month_start": string | null }
+        Returns: Json
+      },
       "issue_gift_card_v1": {
         Args: { "p_center_id": string | null; "p_code": string | null; "p_initial_balance": number | null; "p_customer_id": string | null; "p_note": string | null; "p_expires_at": string | null }
+        Returns: Json
+      },
+      "list_employees_v1": {
+        Args: { "p_center_id": string | null }
         Returns: Json
       },
       "mark_appointment_no_show_v1": {
@@ -2071,6 +2127,10 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_day": string | null }
         Returns: unknown
       },
+      "refund_entitlement_admin_impl_v1": {
+        Args: { "p_entitlement_id": string | null; "p_amount": number | null; "p_reason": string | null; "p_actor_employee_id": string | null }
+        Returns: Json
+      },
       "refund_entitlement_v1": {
         Args: { "p_entitlement_id": string | null; "p_amount": number | null; "p_reason": string | null; "p_actor_employee_id": string | null }
         Returns: Json
@@ -2079,12 +2139,24 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null }
         Returns: Json
       },
+      "upsert_notification_settings_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_whatsapp_enabled": boolean | null; "p_sms_enabled": boolean | null; "p_reminder_enabled": boolean | null; "p_reminder_hours_before": number | null; "p_whatsapp_sender_name": string | null; "p_sms_sender_name": string | null; "p_whatsapp_template_booking": string | null; "p_whatsapp_template_reminder": string | null; "p_sms_template_reminder": string | null }
+        Returns: Json
+      },
       "upsert_notification_settings_v1": {
         Args: { "p_center_id": string | null; "p_whatsapp_enabled": boolean | null; "p_sms_enabled": boolean | null; "p_reminder_enabled": boolean | null; "p_reminder_hours_before": number | null; "p_whatsapp_sender_name": string | null; "p_sms_sender_name": string | null; "p_whatsapp_template_booking": string | null; "p_whatsapp_template_reminder": string | null; "p_sms_template_reminder": string | null }
         Returns: Json
       },
+      "upsert_payment_gateway_settings_admin_impl_v1": {
+        Args: { "p_center_id": string | null; "p_provider": string | null; "p_is_enabled": boolean | null; "p_is_sandbox": boolean | null; "p_public_key": string | null; "p_merchant_identifier": string | null; "p_webhook_secret_hint": string | null; "p_booking_deposit_enabled": boolean | null; "p_booking_deposit_type": string | null; "p_booking_deposit_value": number | null; "p_success_url": string | null; "p_cancel_url": string | null }
+        Returns: Json
+      },
       "upsert_payment_gateway_settings_v1": {
         Args: { "p_center_id": string | null; "p_provider": string | null; "p_is_enabled": boolean | null; "p_is_sandbox": boolean | null; "p_public_key": string | null; "p_merchant_identifier": string | null; "p_webhook_secret_hint": string | null; "p_booking_deposit_enabled": boolean | null; "p_booking_deposit_type": string | null; "p_booking_deposit_value": number | null; "p_success_url": string | null; "p_cancel_url": string | null }
+        Returns: Json
+      },
+      "void_entitlement_admin_impl_v1": {
+        Args: { "p_entitlement_id": string | null; "p_reason": string | null; "p_actor_employee_id": string | null }
         Returns: Json
       },
       "void_entitlement_v1": {

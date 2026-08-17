@@ -12,7 +12,7 @@ import {
   ArrowUpRight, ArrowDownRight, RefreshCw, Activity, Sparkles,
   Clock, Wallet, BarChart3, CheckCircle2,
   XCircle, AlertCircle, Target, Flame, Award, Zap as ZapIcon,
-  ChevronRight, X, User, Receipt
+  ChevronRight, User, Receipt
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -22,6 +22,7 @@ import { LazyChart } from "../shared/components/LazyChart";
 import { ScreenState } from "../shared/components/ScreenState";
 import { formatLocalDateOnly } from "../shared/dateRange";
 import { formatOMRAmount } from "../shared/money";
+import { Modal } from "../shared/components/Modal";
 
 function initialReportDateRange() {
   const today = new Date();
@@ -46,6 +47,8 @@ export default function ReportsPage() {
   const [entitlementSummary, setEntitlementSummary] = useState<EntitlementSummary | null>(null);
   // Drill-down: العملية المحددة من سجل المعاملات
   const [selectedSale, setSelectedSale] = useState<SalesReportRow | null>(null);
+  const [salesVisibleCount, setSalesVisibleCount] = useState(20);
+  const [inventoryVisibleCount, setInventoryVisibleCount] = useState(10);
   // Guards against stale async results: when the user switches tabs while a
   // request is in flight, the old request must not overwrite the new tab's
   // state (previously it could flash the previous tab's error/empty screen).
@@ -53,6 +56,8 @@ export default function ReportsPage() {
 
   const load = useCallback(async () => {
     const seq = ++requestSeq.current;
+    if (tab === "sales") setSalesVisibleCount(20);
+    if (tab === "inventory") setInventoryVisibleCount(10);
     setLoading(true);
     setError(null);
     try {
@@ -369,7 +374,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {salesData.slice(0, 20).map((sale) => (
+                {salesData.slice(0, salesVisibleCount).map((sale) => (
                   <tr
                     key={sale.id}
                     onClick={() => setSelectedSale(sale)}
@@ -403,7 +408,7 @@ export default function ReportsPage() {
 
           {/* Mobile cards */}
           <div className="md:hidden grid grid-cols-2 gap-2">
-            {salesData.slice(0, 15).map((sale) => (
+            {salesData.slice(0, salesVisibleCount).map((sale) => (
               <button
                 key={sale.id}
                 onClick={() => setSelectedSale(sale)}
@@ -422,6 +427,18 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
+          {salesData.length > salesVisibleCount && (
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <p className="text-xs text-muted-foreground">{t("Showing {{visible}} of {{total}}", { visible: salesVisibleCount, total: salesData.length })}</p>
+              <button
+                type="button"
+                onClick={() => setSalesVisibleCount((count) => Math.min(count + 20, salesData.length))}
+                className="min-h-11 rounded-xl border border-border bg-card px-5 text-sm font-bold text-primary hover:bg-muted transition-colors"
+              >
+                {t("Load more")}
+              </button>
+            </div>
+          )}
         </motion.div>
 
         {/* Insights Grid — computed from real sales data only */}
@@ -612,7 +629,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {invData.slice(0, 10).map((item, idx) => {
+                {invData.slice(0, inventoryVisibleCount).map((item, idx) => {
                   const qty = Number((item as any).quantity ?? item.stockQuantity) || 0;
                   const inStock = qty > 10;
                   return (
@@ -633,6 +650,18 @@ export default function ReportsPage() {
               </tbody>
             </table>
           </div>
+          {invData.length > inventoryVisibleCount && (
+            <div className="mt-5 flex flex-col items-center gap-2">
+              <p className="text-xs text-muted-foreground">{t("Showing {{visible}} of {{total}}", { visible: inventoryVisibleCount, total: invData.length })}</p>
+              <button
+                type="button"
+                onClick={() => setInventoryVisibleCount((count) => Math.min(count + 10, invData.length))}
+                className="min-h-11 rounded-xl border border-border bg-card px-5 text-sm font-bold text-primary hover:bg-muted transition-colors"
+              >
+                {t("Load more")}
+              </button>
+            </div>
+          )}
         </motion.div>
       </motion.div>
     );
@@ -737,43 +766,23 @@ export default function ReportsPage() {
       </AnimatePresence>
 
       {/* تفاصيل العملية — drill-down من سجل المعاملات */}
-      <AnimatePresence>
+      <Modal
+        isOpen={selectedSale !== null}
+        onClose={() => setSelectedSale(null)}
+        size="md"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <Receipt className="h-5 w-5" />
+            </span>
+            <span>{t("Transaction Details")}</span>
+          </span>
+        }
+        description={selectedSale ? `${t("Invoice No")} · ${selectedSale.id.slice(-6).toUpperCase()}` : undefined}
+        className="sm:rounded-[2rem]"
+      >
         {selectedSale && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedSale(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 30 }}
-              className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-[1.5rem] sm:rounded-[2rem] border border-border bg-card shadow-2xl"
-            >
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border px-5 sm:px-8 py-4 sm:py-6 bg-muted/20 backdrop-blur-xl">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <Receipt className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">{t("Transaction Details")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                      {t("Invoice No")} · {selectedSale.id.slice(-6).toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedSale(null)}
-                  className="h-10 w-10 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90 shrink-0"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="p-5 sm:p-8 space-y-5">
+          <div className="space-y-5 sm:p-3">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="rounded-xl bg-muted/40 p-3">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">{t("Date")}</p>
@@ -820,11 +829,9 @@ export default function ReportsPage() {
                     <span className="text-lg font-bold text-primary">{formatOMRAmount(selectedSale.totalAmount)} OMR</span>
                   </div>
                 </div>
-              </div>
-            </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </motion.div>
   );
 }

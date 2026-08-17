@@ -1,10 +1,6 @@
 # CURRENT VERSION CLOSURE — staff-only release
 
-> **Historical snapshot (2026-08-09):** this document froze the state at the
-> staff-only closure (18 migrations, 245 tests). The canonical chain has grown
-> since then (financial entitlements, checkout idempotency, integrity
-> hardening). Use `PRODUCTION_READINESS.md`, `OPERATIONAL_DATA_CONTRACT.md`,
-> and the current audit artifacts for the repository contract.
+> **Historical closure snapshot (2026-08-09):** this document froze the staff-only closure at 18 migrations / 245 tests. The canonical chain and verification suite have grown since then. Current release status and blockers are maintained in `PROJECT_DEFECTS.md`, `docs/PRODUCTION_READINESS.md`, `docs/OPERATIONAL_DATA_CONTRACT.md`, and the generated database-contract artifacts.
 
 **Release definition:** Single-customer, single-center Supabase PWA. Real auth. Real CRUD. Staff-only (no public booking, no customer portal). No fake mode.
 **Primary gate:** Live Supabase connection must be established before any customer receives this product.

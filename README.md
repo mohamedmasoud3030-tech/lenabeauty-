@@ -65,17 +65,13 @@ The deployment-critical steps are:
 2. `20260623000002_enable_rls_and_policies.sql` — retained safe no-op for compatibility.
 3. `20260628000001_enable_rls.sql` — canonical RLS policies. **Required before real data.**
 4. `20260628000002_admin_bootstrap.sql` — link the real admin UUID and role.
-5. Continue through `20260816000002_checkout_idempotency.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, the financial entitlements ledger, server-governed center roles, admin-only payroll RLS, validated tenant-scoped foreign keys, and retry-safe financial checkout. Apply to Demo/staging first; no migration or seed is applied remotely by this repository checkout.
+5. Continue through `20260817000005_storage_upload_hardening.sql` in filename order. The final steps install the canonical checkout/payment/inventory contract, appointment state machine, duration snapshots, concurrent-safe staff overlap protection, financial entitlements, server-governed authorization/reporting, admin-only transactional payroll, attendance business-key/time integrity, private-logo upload limits, validated tenant-scoped foreign keys, and retry-safe checkout. Apply to Demo/staging first and run the live acceptance suites; no migration or seed is applied remotely by this repository checkout.
 
 The optional Arabic service catalog lives under `supabase/seeds/` and is explicitly gated to demo/staging. It is not part of the production migration chain. See `docs/OPERATIONAL_DATA_CONTRACT.md` and the paired rollback runbook under `supabase/rollbacks/`.
 
-### Automatic Demo migration sync
+### Approval-gated Demo migration sync
 
-Every merge to `main` that changes `supabase/migrations/**` now runs
-`.github/workflows/demo-supabase-migrations.yml`. It first runs the test,
-typecheck, lint, and production-build gates, then uses `supabase db push` to
-apply only pending migrations to the **Demo Supabase project** in filename
-order. Seeds are deliberately excluded.
+The currently tracked `.github/workflows/demo-supabase-migrations.yml` runs on relevant `main` pushes and can execute the live Demo job when all credentials are present. **Do not merge pending migrations until a maintainer lands the prepared workflow hardening that makes live migration explicit-`workflow_dispatch` only.** After that safety gate and explicit approval, the credentialed job may use `supabase db push` to apply only pending migrations to the Demo Supabase project in filename order. Seeds are deliberately excluded.
 
 Configure these GitHub Actions repository secrets once (never put them in
 `.env`, Vercel, or source control):
@@ -113,9 +109,9 @@ npm run preflight:supabase   # verify live Supabase connectivity
 
 | Area | Backend | Notes |
 |---|---|---|
-| Auth, Customers, Employees, Services, Products, Appointments, Expenses, Invoices/POS, Settings, Dashboard, Reports | ✅ Supabase | Core v1.0 CRUD |
-| Attendance, Advances, Payroll, Staff Analytics | ✅ Supabase | ADMIN-only: gated by `RequireAdmin` in the UI and `has_center_role` database policies. |
-| WhatsApp / notifications | ⚠️ Scaffolding | Service layer present; requires WhatsApp Business API credentials. |
+| Auth, Customers, Employees, Services, Products, Appointments, Expenses, Invoices/POS, Settings, Dashboard, Reports | ✅ Supabase contract | Canonical local contract passes replay; hosted acceptance depends on applying the full chain. |
+| Attendance, Advances, Payroll, Staff Analytics | ✅ Supabase contract | ADMIN-only in UI/database contracts; payroll transaction repair is local until its migration is approved and applied remotely. |
+| WhatsApp / notifications | ⚠️ Manual/scaffolding | `wa.me` is explicit manual handoff with pending/unverified logs; SMS/automation requires a real provider. |
 
 ## Security notes
 

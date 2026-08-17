@@ -1,5 +1,5 @@
 {
-  "files": 197,
+  "files": 216,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -85,11 +85,6 @@
               "embeds": []
             }
           ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         },
         {
           "hasStar": true,
@@ -205,7 +200,8 @@
         {
           "hasStar": false,
           "columns": [
-            "center_id"
+            "center_id",
+            "role"
           ],
           "embeds": [
             {
@@ -468,7 +464,9 @@
       "filters": [
         "center_id",
         "created_at",
-        "id"
+        "id",
+        "name",
+        "phone"
       ],
       "single": [
         "maybeSingle"
@@ -504,20 +502,13 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         }
       ],
       "filters": [
         "advance_date",
         "center_id",
-        "deducted_in_run_id",
         "employee_id",
-        "id",
-        "status"
+        "id"
       ],
       "single": [
         "maybeSingle"
@@ -528,52 +519,9 @@
       "files": [
         "src/infrastructure/supabase/repositories.ts"
       ],
-      "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "base_salary",
-            "salary",
-            "commission_percentage",
-            "month_commission_total"
-          ],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        }
-      ],
-      "filters": [
-        "center_id",
-        "id",
-        "is_active",
-        "name"
-      ],
-      "single": [
-        "maybeSingle"
-      ]
+      "selects": [],
+      "filters": [],
+      "single": []
     },
     {
       "table": "entitlement_ledger",
@@ -654,13 +602,6 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "amount"
-          ],
           "embeds": []
         },
         {
@@ -815,28 +756,6 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "total_amount"
-          ],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "total_amount"
-          ],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "date",
-            "total_amount"
-          ],
           "embeds": []
         },
         {
@@ -1008,11 +927,6 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         }
       ],
       "filters": [
@@ -1028,11 +942,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -1085,11 +994,6 @@
           "embeds": []
         },
         {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
           "hasStar": false,
           "columns": [
             "id",
@@ -1109,10 +1013,7 @@
       "filters": [
         "center_id",
         "id",
-        "is_active",
-        "name",
-        "stock_quantity",
-        "track_inventory"
+        "name"
       ],
       "single": [
         "maybeSingle"
@@ -1268,6 +1169,37 @@
   ],
   "rpc": [
     {
+      "name": "admin_create_employee_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_employee"
+      ]
+    },
+    {
+      "name": "admin_delete_employee_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_employee_id"
+      ]
+    },
+    {
+      "name": "admin_update_employee_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_employee_id",
+        "p_patch"
+      ]
+    },
+    {
       "name": "create_accounting_journal_entry_v1",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1315,6 +1247,17 @@
       ]
     },
     {
+      "name": "create_payroll_run_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_notes",
+        "p_period_month"
+      ]
+    },
+    {
       "name": "create_service_file_v1",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1345,11 +1288,64 @@
       ]
     },
     {
+      "name": "delete_payroll_run_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_payroll_run_id"
+      ]
+    },
+    {
       "name": "expire_entitlement_v1",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
       ],
       "args": []
+    },
+    {
+      "name": "get_dashboard_pnl_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_from",
+        "p_to"
+      ]
+    },
+    {
+      "name": "get_dashboard_revenue_entries_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_from",
+        "p_to"
+      ]
+    },
+    {
+      "name": "get_dashboard_summary_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_day_end",
+        "p_day_start",
+        "p_month_start"
+      ]
+    },
+    {
+      "name": "list_employees_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id"
+      ]
     },
     {
       "name": "mark_appointment_no_show_v1",

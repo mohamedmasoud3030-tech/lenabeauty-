@@ -4,14 +4,14 @@
 // then fails the build when the contract invariants are violated:
 //
 //   - any migration fails to replay (expected: 0)
-//   - any idempotency failure beyond the two documented duplicate-policy gaps
+//   - any idempotency failure
 //   - unresolved frontend table/RPC existence or argument mismatches
 //   - missing client-role EXECUTE grants on frontend-referenced RPCs
 //   - unpinned SECURITY DEFINER search_path
 //   - unexpected broad sensitive-table write policies (payroll)
 //   - stale generated audit artifacts (committed artifacts differ from fresh)
 //
-// The two known idempotency gaps are the ONLY documented exclusions.
+// No idempotency exclusion is permitted in the current canonical chain.
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
@@ -90,11 +90,9 @@ for (const [name, content] of before) {
 }
 if (stale) violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
 
-// Documented (not fatal): the two known idempotency gaps drive a fingerprint
-// drift on re-application. Reported here for visibility; it is not a new drift.
 if (replay.fingerprints && !replay.fingerprints.identical) {
   const sections = replay.fingerprints.diff?.changed_sections ?? [];
-  console.warn(`NOTE: schema fingerprint drift on re-application (documented): [${sections.join(", ")}]`);
+  violations.push(`schema fingerprint drift on re-application: [${sections.join(", ")}]`);
 }
 
 if (violations.length) {

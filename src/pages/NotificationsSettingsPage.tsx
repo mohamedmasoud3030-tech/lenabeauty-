@@ -7,6 +7,7 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
 import { QuickNotificationSender } from "../shared/components/NotificationSystem";
+import { ScreenState } from "../shared/components/ScreenState";
 import { whatsappService } from "../infrastructure/services/whatsappService";
 
 const fallbackTemplates = {
@@ -19,6 +20,7 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [whatsAppConnected, setWhatsAppConnected] = useState(false);
   const [stats, setStats] = useState({ totalSent: 0, totalDelivered: 0, totalFailed: 0, successRate: 0 });
@@ -40,11 +42,13 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const [settingsRes, statsRes] = await Promise.all([
         useCases.settings.getNotificationSettings(),
         whatsappService.getNotificationStats(),
       ]);
+      if (!settingsRes.ok && settingsRes.error.code !== "NOT_FOUND") throw settingsRes.error;
       if (settingsRes.ok) {
         setForm({
           whatsappEnabled: settingsRes.data.whatsappEnabled,
@@ -60,6 +64,8 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
       }
       setStats(statsRes);
       setWhatsAppConnected(whatsappService.isConfigured());
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
@@ -80,18 +86,20 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
   async function handleSendMessage(message: string, type: "whatsapp" | "sms", recipients: string[]) {
     setSending(true);
     try {
-      if (type === "whatsapp") {
-        await whatsappService.sendBulkNotifications(
-          recipients.map((phone, index) => ({
-            customerId: `manual-${index + 1}`,
-            phone,
-            message,
-            type: "special_offer",
-          }))
-        );
+      if (type === "sms") {
+        throw new Error(t("SMS provider is not configured"));
       }
+      if (recipients.length !== 1) {
+        throw new Error(t("Manual WhatsApp mode supports one recipient at a time"));
+      }
+      await whatsappService.sendBulkNotifications([{
+        customerId: "manual-1",
+        phone: recipients[0],
+        message,
+        type: "special_offer",
+      }]);
       setStats(await whatsappService.getNotificationStats());
-      showToast("success", t("Success"), t("Your message has been queued successfully"));
+      showToast("success", t("WhatsApp link opened"), t("Complete the send manually in WhatsApp; sending and delivery are not verified."));
     } catch (err: any) {
       showToast("error", t("Error"), err.message || t("Failed to send message"));
     } finally {
@@ -101,6 +109,18 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
 
   function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  if (loadError) {
+    return (
+      <ScreenState
+        state="error"
+        title={t("Failed to load notification settings")}
+        description={loadError}
+        actionLabel={t("Retry")}
+        onAction={() => void load()}
+      />
+    );
   }
 
   return (
@@ -118,7 +138,7 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("WhatsApp Status")}</p><div className="mt-2 flex items-center gap-2 text-lg font-bold text-foreground">{whatsAppConnected ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Bell className="h-5 w-5 text-warning" />}{whatsAppConnected ? t("Connected") : t("Sandbox / Mock Mode")}</div></CardContent></PremiumCard>
+        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("WhatsApp Status")}</p><div className="mt-2 flex items-center gap-2 text-lg font-bold text-foreground">{whatsAppConnected ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Bell className="h-5 w-5 text-warning" />}{whatsAppConnected ? t("Automated provider connected") : t("Manual link mode")}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Messages Sent")}</p><div className="mt-2 text-2xl font-bold text-foreground">{stats.totalSent}</div></CardContent></PremiumCard>
         <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Delivery Rate")}</p><div className="mt-2 text-2xl font-bold text-success">{stats.successRate.toFixed(1)}%</div></CardContent></PremiumCard>
       </div>
@@ -196,9 +216,9 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
           <PremiumCard variant="glass">
             <CardHeader><div className="flex items-center gap-2"><MessageCircle className="h-5 w-5 text-success" /><h2 className="font-bold text-foreground">{t("Provider Notes")}</h2></div></CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>{t("WhatsApp automation is ready in the app layer. To go live, connect a WhatsApp Business API token outside the repository.")}</p>
-              <p>{t("SMS automation follows the same settings model, but still needs your chosen SMS provider credentials.")}</p>
-              <p>{t("Until credentials are supplied, the app safely operates in mock mode for QA.")}</p>
+              <p>{t("WhatsApp currently opens one manual wa.me link; sending and delivery are not verified.")}</p>
+              <p>{t("SMS sending is disabled until a server-side provider is implemented.")}</p>
+              <p>{t("Automated messaging requires consent, server-side credentials, delivery receipts, and monitoring.")}</p>
             </CardContent>
           </PremiumCard>
         </div>

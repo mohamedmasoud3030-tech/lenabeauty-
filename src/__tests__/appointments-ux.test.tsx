@@ -60,6 +60,22 @@ describe("Appointments operational UX", () => {
     expect(screen.getAllByText(i18n.t("Canceled")).length).toBeGreaterThan(0);
   });
 
+  it("uses an accessible dialog, traps focus, closes on Escape, and restores the trigger", async () => {
+    await i18n.changeLanguage("ar");
+    renderPage();
+
+    const trigger = (await screen.findAllByRole("button", { name: i18n.t("New Appointment") }))[0];
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole("dialog", { name: i18n.t("Book Appointment") });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("Book Appointment") })).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
   it("creates a new customer inline from the booking dialog when search has no results", async () => {
     await i18n.changeLanguage("ar");
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);

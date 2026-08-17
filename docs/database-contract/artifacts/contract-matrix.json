@@ -450,6 +450,79 @@
   ],
   "rpc": [
     {
+      "name": "admin_create_employee_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_employee"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_employee jsonb",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "admin_delete_employee_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_employee_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "admin_update_employee_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_employee_id",
+        "p_patch"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
       "name": "create_accounting_journal_entry_v1",
       "exists": true,
       "frontend_args": [
@@ -539,6 +612,31 @@
       ]
     },
     {
+      "name": "create_payroll_run_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_notes",
+        "p_period_month"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_period_month text, p_notes text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
       "name": "create_service_file_v1",
       "exists": true,
       "frontend_args": [
@@ -597,6 +695,30 @@
       ]
     },
     {
+      "name": "delete_payroll_run_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_payroll_run_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_payroll_run_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
       "name": "expire_entitlement_v1",
       "exists": true,
       "frontend_args": [],
@@ -604,6 +726,105 @@
         {
           "schema": "public",
           "signature": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "get_dashboard_pnl_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_from",
+        "p_to"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "get_dashboard_revenue_entries_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_from",
+        "p_to"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "get_dashboard_summary_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_day_end",
+        "p_day_start",
+        "p_month_start"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_day_start timestamp with time zone, p_day_end timestamp with time zone, p_month_start timestamp with time zone",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "list_employees_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid",
           "security_definer": true,
           "search_path": [
             "search_path=pg_catalog, public, app_private"
@@ -1038,48 +1259,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "accounting_journal_entries_delete_policy",
-          "command": "DELETE",
+          "name": "accounting_journal_entries_admin",
+          "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "accounting_journal_entries_insert_policy",
-          "command": "INSERT",
-          "roles": [
-            "public"
-          ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "accounting_journal_entries_select_policy",
-          "command": "SELECT",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "accounting_journal_entries_update_policy",
-          "command": "UPDATE",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
-      "has_for_all": false
+      "has_for_all": true
     },
     {
       "table": "ai_booking_leads",
@@ -1087,48 +1278,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "ai_booking_leads_delete_policy",
-          "command": "DELETE",
+          "name": "ai_booking_leads_admin",
+          "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "ai_booking_leads_insert_policy",
-          "command": "INSERT",
-          "roles": [
-            "public"
-          ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "ai_booking_leads_select_policy",
-          "command": "SELECT",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "ai_booking_leads_update_policy",
-          "command": "UPDATE",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
-      "has_for_all": false
+      "has_for_all": true
     },
     {
       "table": "appointments",
@@ -1197,13 +1358,23 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "center_settings_insert",
+          "name": "center_settings_admin_insert",
           "command": "INSERT",
           "roles": [
             "authenticated"
           ],
           "using": null,
-          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
+        },
+        {
+          "name": "center_settings_admin_update",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
           "membership_only": false
         },
         {
@@ -1214,16 +1385,6 @@
           ],
           "using": "(center_id = ANY (app_private.user_center_ids()))",
           "with_check": null,
-          "membership_only": false
-        },
-        {
-          "name": "center_settings_update",
-          "command": "UPDATE",
-          "roles": [
-            "authenticated"
-          ],
-          "using": "(center_id = ANY (app_private.user_center_ids()))",
-          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
           "membership_only": false
         }
       ],
@@ -1261,48 +1422,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "customer_reviews_delete_policy",
-          "command": "DELETE",
+          "name": "customer_reviews_admin",
+          "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "customer_reviews_insert_policy",
-          "command": "INSERT",
-          "roles": [
-            "public"
-          ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "customer_reviews_select_policy",
-          "command": "SELECT",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "customer_reviews_update_policy",
-          "command": "UPDATE",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
-      "has_for_all": false
+      "has_for_all": true
     },
     {
       "table": "customers",
@@ -1348,18 +1479,48 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "employees_tenant",
-          "command": "ALL",
+          "name": "employees_admin_delete",
+          "command": "DELETE",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "(center_id = ANY (app_private.user_center_ids()))",
-          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": null,
           "membership_only": false
+        },
+        {
+          "name": "employees_admin_insert",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
+        },
+        {
+          "name": "employees_admin_update",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
+        },
+        {
+          "name": "employees_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
         }
       ],
       "missing_operations": [],
-      "has_for_all": true
+      "has_for_all": false
     },
     {
       "table": "entitlement_ledger",
@@ -1390,13 +1551,13 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "expenses_tenant",
+          "name": "expenses_admin",
           "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "(center_id = ANY (app_private.user_center_ids()))",
-          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
           "membership_only": false
         }
       ],
@@ -1501,40 +1662,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "notification_settings_insert_member",
-          "command": "INSERT",
+          "name": "notification_settings_admin",
+          "command": "ALL",
           "roles": [
             "authenticated"
           ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "notification_settings_select_member",
-          "command": "SELECT",
-          "roles": [
-            "authenticated"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "notification_settings_update_member",
-          "command": "UPDATE",
-          "roles": [
-            "authenticated"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
-      "missing_operations": [
-        "DELETE"
-      ],
-      "has_for_all": false
+      "missing_operations": [],
+      "has_for_all": true
     },
     {
       "table": "payment_gateway_settings",
@@ -1542,40 +1681,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "payment_gateway_settings_insert_member",
-          "command": "INSERT",
+          "name": "payment_gateway_settings_admin",
+          "command": "ALL",
           "roles": [
             "authenticated"
           ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "payment_gateway_settings_select_member",
-          "command": "SELECT",
-          "roles": [
-            "authenticated"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "payment_gateway_settings_update_member",
-          "command": "UPDATE",
-          "roles": [
-            "authenticated"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
-      "missing_operations": [
-        "DELETE"
-      ],
-      "has_for_all": false
+      "missing_operations": [],
+      "has_for_all": true
     },
     {
       "table": "payments",
@@ -1682,48 +1799,18 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "service_files_delete_policy",
-          "command": "DELETE",
+          "name": "service_files_admin",
+          "command": "ALL",
           "roles": [
-            "public"
+            "authenticated"
           ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "service_files_insert_policy",
-          "command": "INSERT",
-          "roles": [
-            "public"
-          ],
-          "using": null,
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
-        },
-        {
-          "name": "service_files_select_policy",
-          "command": "SELECT",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": null,
-          "membership_only": true
-        },
-        {
-          "name": "service_files_update_policy",
-          "command": "UPDATE",
-          "roles": [
-            "public"
-          ],
-          "using": "app_private.is_center_member(center_id)",
-          "with_check": "app_private.is_center_member(center_id)",
-          "membership_only": true
+          "using": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+          "membership_only": false
         }
       ],
       "missing_operations": [],
-      "has_for_all": false
+      "has_for_all": true
     },
     {
       "table": "service_packages",

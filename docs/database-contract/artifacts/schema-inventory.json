@@ -4166,9 +4166,23 @@
     {
       "schema": "public",
       "table": "attendance_records",
+      "name": "attendance_records_time_order_check",
+      "type": "c",
+      "definition": "CHECK (((check_in_time IS NULL) OR (check_out_time IS NULL) OR (check_out_time > check_in_time)))"
+    },
+    {
+      "schema": "public",
+      "table": "attendance_records",
       "name": "attendance_records_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
+      "table": "attendance_records",
+      "name": "attendance_records_work_hours_nonnegative_check",
+      "type": "c",
+      "definition": "CHECK ((work_hours >= (0)::numeric))"
     },
     {
       "schema": "public",
@@ -7160,6 +7174,15 @@
     {
       "schema": "public",
       "table": "attendance_records",
+      "name": "attendance_records_center_employee_date_uq",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX attendance_records_center_employee_date_uq ON public.attendance_records USING btree (center_id, employee_id, date)"
+    },
+    {
+      "schema": "public",
+      "table": "attendance_records",
       "name": "attendance_records_pkey",
       "unique": true,
       "primary": true,
@@ -8335,6 +8358,58 @@
     },
     {
       "schema": "public",
+      "name": "admin_create_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee jsonb",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_create_employee_v1(p_center_id uuid, p_employee jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.employees;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF length(btrim(COALESCE(p_employee->>'name', ''))) = 0 THEN\n    RAISE EXCEPTION 'employee_name_required' USING ERRCODE = '22023';\n  END IF;\n  INSERT INTO public.employees (\n    center_id, name, phone, role, salary, base_salary,\n    commission_percentage, is_active\n  ) VALUES (\n    p_center_id,\n    btrim(p_employee->>'name'),\n    NULLIF(btrim(COALESCE(p_employee->>'phone', '')), ''),\n    COALESCE(NULLIF(btrim(COALESCE(p_employee->>'role', '')), ''), 'Staff'),\n    COALESCE((p_employee->>'salary')::NUMERIC, 0),\n    COALESCE((p_employee->>'baseSalary')::NUMERIC, (p_employee->>'salary')::NUMERIC, 0),\n    COALESCE((p_employee->>'commissionPercentage')::NUMERIC, 0),\n    COALESCE((p_employee->>'isActive')::BOOLEAN, TRUE)\n  ) RETURNING * INTO v_row;\n  RETURN jsonb_build_object('employee', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "admin_delete_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_delete_employee_v1(p_center_id uuid, p_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_deactivated UUID;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  -- Legacy clients may still call the old delete-named RPC. Preserve history by\n  -- converting that request to the supported lifecycle operation.\n  UPDATE public.employees\n  SET is_active = FALSE, updated_at = now()\n  WHERE id = p_employee_id AND center_id = p_center_id\n  RETURNING id INTO v_deactivated;\n  IF v_deactivated IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n  RETURN jsonb_build_object('deactivated_employee_id', v_deactivated);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "admin_update_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_update_employee_v1(p_center_id uuid, p_employee_id uuid, p_patch jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.employees;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_patch ? 'name' AND length(btrim(COALESCE(p_patch->>'name', ''))) = 0 THEN\n    RAISE EXCEPTION 'employee_name_required' USING ERRCODE = '22023';\n  END IF;\n  UPDATE public.employees e\n  SET\n    name = CASE WHEN p_patch ? 'name' THEN btrim(p_patch->>'name') ELSE e.name END,\n    phone = CASE WHEN p_patch ? 'phone' THEN NULLIF(btrim(COALESCE(p_patch->>'phone', '')), '') ELSE e.phone END,\n    role = CASE WHEN p_patch ? 'role' THEN COALESCE(NULLIF(btrim(p_patch->>'role'), ''), e.role) ELSE e.role END,\n    salary = CASE WHEN p_patch ? 'salary' THEN (p_patch->>'salary')::NUMERIC ELSE e.salary END,\n    base_salary = CASE WHEN p_patch ? 'baseSalary' THEN (p_patch->>'baseSalary')::NUMERIC ELSE e.base_salary END,\n    commission_percentage = CASE WHEN p_patch ? 'commissionPercentage' THEN (p_patch->>'commissionPercentage')::NUMERIC ELSE e.commission_percentage END,\n    is_active = CASE WHEN p_patch ? 'isActive' THEN (p_patch->>'isActive')::BOOLEAN ELSE e.is_active END\n  WHERE e.id = p_employee_id AND e.center_id = p_center_id\n  RETURNING * INTO v_row;\n  IF v_row.id IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n  RETURN jsonb_build_object('employee', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_accounting_journal_entry_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_accounting_journal_entry_admin_impl_v1(p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text DEFAULT 'OMR'::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_entry public.accounting_journal_entries;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  -- p_reference_id is an informational reference (no FK, no table identity),\n  -- so it cannot be validated against a center; it is never used to join or\n  -- expose another center's data. All rows are stamped with the caller's\n  -- center_id and created_by.\n\n  INSERT INTO public.accounting_journal_entries (\n    center_id, entry_date, entry_type, reference_type, reference_id,\n    description, debit_account, credit_account, amount, currency, created_by\n  ) VALUES (\n    p_center_id,\n    COALESCE(p_entry_date, CURRENT_DATE),\n    UPPER(COALESCE(p_entry_type, 'ADJUSTMENT')),\n    NULLIF(trim(COALESCE(p_reference_type, '')), ''),\n    p_reference_id,\n    COALESCE(NULLIF(trim(COALESCE(p_description, '')), ''), 'Journal Entry'),\n    COALESCE(NULLIF(trim(COALESCE(p_debit_account, '')), ''), 'Uncategorized Debit'),\n    COALESCE(NULLIF(trim(COALESCE(p_credit_account, '')), ''), 'Uncategorized Credit'),\n    GREATEST(COALESCE(p_amount, 0), 0),\n    COALESCE(NULLIF(trim(COALESCE(p_currency, '')), ''), 'OMR'),\n    auth.uid()\n  ) RETURNING * INTO v_entry;\n\n  RETURN jsonb_build_object('entry', to_jsonb(v_entry));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "create_accounting_journal_entry_v1",
       "identity_args": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
       "result": "jsonb",
@@ -8344,7 +8419,20 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.create_accounting_journal_entry_v1(p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text DEFAULT 'OMR'::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_entry public.accounting_journal_entries;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  -- p_reference_id is an informational reference (no FK, no table identity),\n  -- so it cannot be validated against a center; it is never used to join or\n  -- expose another center's data. All rows are stamped with the caller's\n  -- center_id and created_by.\n\n  INSERT INTO public.accounting_journal_entries (\n    center_id, entry_date, entry_type, reference_type, reference_id,\n    description, debit_account, credit_account, amount, currency, created_by\n  ) VALUES (\n    p_center_id,\n    COALESCE(p_entry_date, CURRENT_DATE),\n    UPPER(COALESCE(p_entry_type, 'ADJUSTMENT')),\n    NULLIF(trim(COALESCE(p_reference_type, '')), ''),\n    p_reference_id,\n    COALESCE(NULLIF(trim(COALESCE(p_description, '')), ''), 'Journal Entry'),\n    COALESCE(NULLIF(trim(COALESCE(p_debit_account, '')), ''), 'Uncategorized Debit'),\n    COALESCE(NULLIF(trim(COALESCE(p_credit_account, '')), ''), 'Uncategorized Credit'),\n    GREATEST(COALESCE(p_amount, 0), 0),\n    COALESCE(NULLIF(trim(COALESCE(p_currency, '')), ''), 'OMR'),\n    auth.uid()\n  ) RETURNING * INTO v_entry;\n\n  RETURN jsonb_build_object('entry', to_jsonb(v_entry));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.create_accounting_journal_entry_v1(p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text DEFAULT 'OMR'::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.create_accounting_journal_entry_admin_impl_v1(\n    p_center_id, p_entry_date, p_entry_type, p_reference_type, p_reference_id,\n    p_description, p_debit_account, p_credit_account, p_amount, p_currency\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_ai_booking_lead_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_ai_booking_lead_admin_impl_v1(p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_lead public.ai_booking_leads;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_preferred_service_id IS NOT NULL THEN\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_preferred_service_id AND s.center_id = p_center_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'service_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.ai_booking_leads (\n    center_id, customer_name, customer_phone, preferred_service_id, preferred_date, source_channel, summary\n  ) VALUES (\n    p_center_id,\n    COALESCE(NULLIF(trim(COALESCE(p_customer_name, '')), ''), 'Guest lead'),\n    NULLIF(trim(COALESCE(p_customer_phone, '')), ''),\n    p_preferred_service_id,\n    p_preferred_date,\n    UPPER(COALESCE(p_source_channel, 'WEB')),\n    NULLIF(trim(COALESCE(p_summary, '')), '')\n  ) RETURNING * INTO v_lead;\n\n  RETURN jsonb_build_object('lead', to_jsonb(v_lead));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8357,7 +8445,20 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.create_ai_booking_lead_v1(p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_lead public.ai_booking_leads;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_preferred_service_id IS NOT NULL THEN\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_preferred_service_id AND s.center_id = p_center_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'service_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.ai_booking_leads (\n    center_id, customer_name, customer_phone, preferred_service_id, preferred_date, source_channel, summary\n  ) VALUES (\n    p_center_id,\n    COALESCE(NULLIF(trim(COALESCE(p_customer_name, '')), ''), 'Guest lead'),\n    NULLIF(trim(COALESCE(p_customer_phone, '')), ''),\n    p_preferred_service_id,\n    p_preferred_date,\n    UPPER(COALESCE(p_source_channel, 'WEB')),\n    NULLIF(trim(COALESCE(p_summary, '')), '')\n  ) RETURNING * INTO v_lead;\n\n  RETURN jsonb_build_object('lead', to_jsonb(v_lead));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.create_ai_booking_lead_v1(p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.create_ai_booking_lead_admin_impl_v1(\n    p_center_id, p_customer_name, p_customer_phone, p_preferred_service_id,\n    p_preferred_date, p_source_channel, p_summary\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_customer_review_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_customer_review_admin_impl_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean DEFAULT false)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_review public.customer_reviews;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  IF p_appointment_id IS NOT NULL THEN\n    PERFORM 1 FROM public.appointments a\n    WHERE a.id = p_appointment_id\n      AND a.center_id = p_center_id\n      AND a.customer_id = p_customer_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'appointment_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.customer_reviews (\n    center_id, customer_id, appointment_id, rating, comment, is_published\n  ) VALUES (\n    p_center_id, p_customer_id, p_appointment_id, p_rating, NULLIF(trim(COALESCE(p_comment, '')), ''), COALESCE(p_is_published, FALSE)\n  )\n  RETURNING * INTO v_review;\n\n  RETURN jsonb_build_object('review', to_jsonb(v_review));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8370,7 +8471,33 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.create_customer_review_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean DEFAULT false)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_review public.customer_reviews;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  IF p_appointment_id IS NOT NULL THEN\n    PERFORM 1 FROM public.appointments a\n    WHERE a.id = p_appointment_id\n      AND a.center_id = p_center_id\n      AND a.customer_id = p_customer_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'appointment_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.customer_reviews (\n    center_id, customer_id, appointment_id, rating, comment, is_published\n  ) VALUES (\n    p_center_id, p_customer_id, p_appointment_id, p_rating, NULLIF(trim(COALESCE(p_comment, '')), ''), COALESCE(p_is_published, FALSE)\n  )\n  RETURNING * INTO v_review;\n\n  RETURN jsonb_build_object('review', to_jsonb(v_review));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.create_customer_review_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean DEFAULT false)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.create_customer_review_admin_impl_v1(\n    p_center_id, p_customer_id, p_appointment_id, p_rating, p_comment, p_is_published\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_period_month text, p_notes text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_payroll_run_v1(p_center_id uuid, p_period_month text, p_notes text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_run public.payroll_runs;\n  v_lines JSONB;\n  v_year INTEGER;\n  v_month INTEGER;\n  v_month_start TIMESTAMPTZ;\n  v_month_end TIMESTAMPTZ;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_period_month IS NULL OR p_period_month !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' THEN\n    RAISE EXCEPTION 'invalid_payroll_period' USING ERRCODE = '22023';\n  END IF;\n\n  v_year := split_part(p_period_month, '-', 1)::INTEGER;\n  v_month := split_part(p_period_month, '-', 2)::INTEGER;\n  v_month_start := make_timestamptz(v_year, v_month, 1, 0, 0, 0, 'UTC');\n  v_month_end := v_month_start + INTERVAL '1 month';\n\n  INSERT INTO public.payroll_runs (center_id, period_month, notes)\n  VALUES (p_center_id, p_period_month, NULLIF(btrim(COALESCE(p_notes, '')), ''))\n  RETURNING * INTO v_run;\n\n  WITH approved_advances AS (\n    SELECT employee_id, round(COALESCE(sum(amount), 0), 3) AS amount\n    FROM public.employee_advances\n    WHERE center_id = p_center_id\n      AND status = 'APPROVED'\n      AND advance_date >= v_month_start\n      AND advance_date < v_month_end\n    GROUP BY employee_id\n  ), inserted AS (\n    INSERT INTO public.payroll_line_items (\n      center_id, payroll_run_id, employee_id,\n      base_salary, advances_deducted, net_salary\n    )\n    SELECT\n      p_center_id,\n      v_run.id,\n      employee.id,\n      round(COALESCE(employee.base_salary, employee.salary, 0), 3),\n      round(COALESCE(advance.amount, 0), 3),\n      round(greatest(\n        COALESCE(employee.base_salary, employee.salary, 0) - COALESCE(advance.amount, 0),\n        0\n      ), 3)\n    FROM public.employees employee\n    LEFT JOIN approved_advances advance ON advance.employee_id = employee.id\n    WHERE employee.center_id = p_center_id AND employee.is_active = TRUE\n    ORDER BY employee.name\n    RETURNING *\n  )\n  SELECT COALESCE(jsonb_agg(to_jsonb(inserted) ORDER BY inserted.created_at, inserted.id), '[]'::jsonb)\n  INTO v_lines\n  FROM inserted;\n\n  UPDATE public.employee_advances\n  SET status = 'DEDUCTED', deducted_in_run_id = v_run.id\n  WHERE center_id = p_center_id\n    AND status = 'APPROVED'\n    AND advance_date >= v_month_start\n    AND advance_date < v_month_end;\n\n  RETURN jsonb_build_object('run', to_jsonb(v_run), 'lines', v_lines);\nEXCEPTION\n  WHEN unique_violation THEN\n    RAISE EXCEPTION 'payroll_period_already_exists' USING ERRCODE = '23505';\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_service_file_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[], p_after_images text[], p_reference_images text[]",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_service_file_admin_impl_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[] DEFAULT ARRAY[]::text[], p_after_images text[] DEFAULT ARRAY[]::text[], p_reference_images text[] DEFAULT ARRAY[]::text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_file public.service_files;\n  v_image TEXT;\n  v_index INTEGER := 0;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  IF p_appointment_id IS NOT NULL THEN\n    PERFORM 1 FROM public.appointments a\n    WHERE a.id = p_appointment_id\n      AND a.center_id = p_center_id\n      AND a.customer_id = p_customer_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'appointment_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  IF p_service_id IS NOT NULL THEN\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_service_id AND s.center_id = p_center_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'service_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.service_files (\n    center_id, customer_id, appointment_id, service_id, title, note, created_by\n  ) VALUES (\n    p_center_id, p_customer_id, p_appointment_id, p_service_id,\n    COALESCE(NULLIF(trim(p_title), ''), 'Service File'),\n    NULLIF(trim(COALESCE(p_note, '')), ''),\n    auth.uid()\n  ) RETURNING * INTO v_file;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_before_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'BEFORE', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_after_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'AFTER', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_reference_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'REFERENCE', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  RETURN jsonb_build_object('service_file', to_jsonb(v_file));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8383,7 +8510,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.create_service_file_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[] DEFAULT ARRAY[]::text[], p_after_images text[] DEFAULT ARRAY[]::text[], p_reference_images text[] DEFAULT ARRAY[]::text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_file public.service_files;\n  v_image TEXT;\n  v_index INTEGER := 0;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  IF p_appointment_id IS NOT NULL THEN\n    PERFORM 1 FROM public.appointments a\n    WHERE a.id = p_appointment_id\n      AND a.center_id = p_center_id\n      AND a.customer_id = p_customer_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'appointment_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  IF p_service_id IS NOT NULL THEN\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_service_id AND s.center_id = p_center_id;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'service_not_in_center' USING ERRCODE = '23503';\n    END IF;\n  END IF;\n\n  INSERT INTO public.service_files (\n    center_id, customer_id, appointment_id, service_id, title, note, created_by\n  ) VALUES (\n    p_center_id, p_customer_id, p_appointment_id, p_service_id,\n    COALESCE(NULLIF(trim(p_title), ''), 'Service File'),\n    NULLIF(trim(COALESCE(p_note, '')), ''),\n    auth.uid()\n  ) RETURNING * INTO v_file;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_before_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'BEFORE', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_after_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'AFTER', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  v_index := 0;\n  FOREACH v_image IN ARRAY COALESCE(p_reference_images, ARRAY[]::TEXT[]) LOOP\n    INSERT INTO public.service_file_images (center_id, service_file_id, image_kind, image_url, sort_order)\n    VALUES (p_center_id, v_file.id, 'REFERENCE', v_image, v_index);\n    v_index := v_index + 1;\n  END LOOP;\n\n  RETURN jsonb_build_object('service_file', to_jsonb(v_file));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.create_service_file_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[] DEFAULT ARRAY[]::text[], p_after_images text[] DEFAULT ARRAY[]::text[], p_reference_images text[] DEFAULT ARRAY[]::text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.create_service_file_admin_impl_v1(\n    p_center_id, p_customer_id, p_appointment_id, p_service_id, p_title, p_note,\n    p_before_images, p_after_images, p_reference_images\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8400,6 +8527,32 @@
     },
     {
       "schema": "public",
+      "name": "delete_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_payroll_run_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.delete_payroll_run_v1(p_center_id uuid, p_payroll_run_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_run_id UUID;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT id INTO v_run_id\n  FROM public.payroll_runs\n  WHERE id = p_payroll_run_id AND center_id = p_center_id\n  FOR UPDATE;\n  IF v_run_id IS NULL THEN\n    RAISE EXCEPTION 'payroll_run_not_found' USING ERRCODE = 'P0002';\n  END IF;\n\n  UPDATE public.employee_advances\n  SET status = 'APPROVED', deducted_in_run_id = NULL\n  WHERE center_id = p_center_id AND deducted_in_run_id = v_run_id;\n\n  DELETE FROM public.payroll_runs\n  WHERE id = v_run_id AND center_id = p_center_id;\n\n  RETURN jsonb_build_object('deleted_payroll_run_id', v_run_id);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "expire_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.expire_entitlement_admin_impl_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_center_id UUID;\nBEGIN\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'expiry_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n  v_center_id := v_ent.center_id;\n\n  IF NOT app_private.is_center_member(v_center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'expiry_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'expiry_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_center_id, v_ent.id, 'EXPIRY', 0, p_actor_employee_id,\n    'Expiry recorded (breakage NOT recognized): ' || btrim(p_reason)\n  );\n\n  RETURN jsonb_build_object('entitlement_id', v_ent.id, 'status', 'EXPIRED');\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "expire_entitlement_v1",
       "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
       "result": "jsonb",
@@ -8409,7 +8562,46 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.expire_entitlement_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_center_id UUID;\nBEGIN\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'expiry_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n  v_center_id := v_ent.center_id;\n\n  IF NOT app_private.is_center_member(v_center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'expiry_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'expiry_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_center_id, v_ent.id, 'EXPIRY', 0, p_actor_employee_id,\n    'Expiry recorded (breakage NOT recognized): ' || btrim(p_reason)\n  );\n\n  RETURN jsonb_build_object('entitlement_id', v_ent.id, 'status', 'EXPIRED');\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.expire_entitlement_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_center_id UUID;\nBEGIN\n  SELECT center_id INTO v_center_id\n  FROM public.customer_entitlements\n  WHERE id = p_entitlement_id;\n  IF v_center_id IS NULL OR NOT app_private.has_center_role(v_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.expire_entitlement_admin_impl_v1(\n    p_entitlement_id, p_reason, p_actor_employee_id\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_pnl_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.get_dashboard_pnl_v1(p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_revenue NUMERIC(14,3) := 0;\n  v_expenses NUMERIC(14,3) := 0;\n  v_base_salaries NUMERIC(14,3) := 0;\n  v_commissions NUMERIC(14,3) := 0;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_from IS NULL OR p_to IS NULL OR p_to <= p_from THEN\n    RAISE EXCEPTION 'invalid_dashboard_range' USING ERRCODE = '22023';\n  END IF;\n\n  WITH prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ), redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  )\n  SELECT round(COALESCE(sum(greatest(\n    inv.total_amount\n    - COALESCE(inv.tax, 0)\n    - COALESCE(prepaid.amount, 0)\n    + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n    0\n  )), 0), 3)\n  INTO v_revenue\n  FROM public.invoices inv\n  LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n  LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n  WHERE inv.center_id = p_center_id\n    AND inv.status = 'PAID'\n    AND inv.date >= p_from AND inv.date < p_to;\n\n  SELECT round(COALESCE(sum(amount), 0), 3)\n  INTO v_expenses\n  FROM public.expenses\n  WHERE center_id = p_center_id AND date >= p_from AND date < p_to;\n\n  SELECT\n    round(COALESCE(sum(COALESCE(base_salary, salary, 0)), 0), 3),\n    round(COALESCE(sum(COALESCE(month_commission_total, 0)), 0), 3)\n  INTO v_base_salaries, v_commissions\n  FROM public.employees\n  WHERE center_id = p_center_id AND is_active = TRUE;\n\n  RETURN jsonb_build_object(\n    'revenue', v_revenue,\n    'base_salaries', v_base_salaries,\n    'commissions', v_commissions,\n    'expenses', v_expenses,\n    'profit', round(v_revenue - v_base_salaries - v_commissions - v_expenses, 3)\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_revenue_entries_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.get_dashboard_revenue_entries_v1(p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_entries JSONB;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_from IS NULL OR p_to IS NULL OR p_to <= p_from THEN\n    RAISE EXCEPTION 'invalid_dashboard_range' USING ERRCODE = '22023';\n  END IF;\n\n  WITH prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ), redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  ), earned AS (\n    SELECT\n      inv.id,\n      inv.date,\n      round(greatest(\n        inv.total_amount\n        - COALESCE(inv.tax, 0)\n        - COALESCE(prepaid.amount, 0)\n        + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n        0\n      ), 3) AS revenue\n    FROM public.invoices inv\n    LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n    LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n    ORDER BY inv.date\n  )\n  SELECT COALESCE(jsonb_agg(jsonb_build_object(\n    'invoice_id', earned.id,\n    'date', earned.date,\n    'revenue', earned.revenue\n  ) ORDER BY earned.date), '[]'::jsonb)\n  INTO v_entries\n  FROM earned;\n\n  RETURN jsonb_build_object('entries', v_entries);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_summary_v1",
+      "identity_args": "p_center_id uuid, p_day_start timestamp with time zone, p_day_end timestamp with time zone, p_month_start timestamp with time zone",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.get_dashboard_summary_v1(p_center_id uuid, p_day_start timestamp with time zone, p_day_end timestamp with time zone, p_month_start timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_is_admin BOOLEAN;\n  v_customers BIGINT := 0;\n  v_appointments BIGINT := 0;\n  v_low_stock BIGINT := 0;\n  v_new_customers BIGINT := 0;\n  v_sales BIGINT := 0;\n  v_earned NUMERIC(14,3) := 0;\n  v_currency TEXT := 'OMR';\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n  IF p_day_start IS NULL OR p_day_end IS NULL OR p_day_end <= p_day_start THEN\n    RAISE EXCEPTION 'invalid_dashboard_day_range' USING ERRCODE = '22023';\n  END IF;\n\n  v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);\n\n  SELECT count(*) INTO v_customers FROM public.customers WHERE center_id = p_center_id;\n  SELECT count(*) INTO v_appointments FROM public.appointments WHERE center_id = p_center_id;\n  SELECT count(*) INTO v_low_stock\n  FROM public.products\n  WHERE center_id = p_center_id\n    AND is_active = TRUE\n    AND track_inventory = TRUE\n    AND stock_quantity <= COALESCE(reorder_level, 5);\n  SELECT count(*) INTO v_new_customers\n  FROM public.customers\n  WHERE center_id = p_center_id\n    AND created_at >= COALESCE(p_month_start, date_trunc('month', p_day_start));\n  SELECT COALESCE(currency, 'OMR') INTO v_currency\n  FROM public.center_settings\n  WHERE center_id = p_center_id;\n  v_currency := COALESCE(v_currency, 'OMR');\n\n  IF v_is_admin THEN\n    WITH prepaid AS (\n      SELECT ii.invoice_id,\n             round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n      FROM public.invoice_items ii\n      JOIN public.invoices inv ON inv.id = ii.invoice_id\n      WHERE inv.center_id = p_center_id\n        AND inv.status = 'PAID'\n        AND inv.date >= p_day_start AND inv.date < p_day_end\n        AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n      GROUP BY ii.invoice_id\n    ), redeemed AS (\n      SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n      FROM public.entitlement_ledger el\n      WHERE el.center_id = p_center_id\n        AND el.entry_type = 'REDEEM'\n        AND el.invoice_id IS NOT NULL\n      GROUP BY el.invoice_id\n    )\n    SELECT\n      count(*),\n      round(COALESCE(sum(greatest(\n        inv.total_amount\n        - COALESCE(inv.tax, 0)\n        - COALESCE(prepaid.amount, 0)\n        + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n        0\n      )), 0), 3)\n    INTO v_sales, v_earned\n    FROM public.invoices inv\n    LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n    LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_day_start AND inv.date < p_day_end;\n  END IF;\n\n  RETURN jsonb_build_object(\n    'customers', v_customers,\n    'appointments', v_appointments,\n    'sales', CASE WHEN v_is_admin THEN v_sales ELSE 0 END,\n    'revenue', CASE WHEN v_is_admin THEN v_earned ELSE 0 END,\n    'today_revenue', CASE WHEN v_is_admin THEN v_earned ELSE 0 END,\n    'can_view_revenue', v_is_admin,\n    'low_stock_count', v_low_stock,\n    'new_customers_this_month', v_new_customers,\n    'currency', v_currency\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8423,6 +8615,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.issue_gift_card_v1(p_center_id uuid, p_code text, p_initial_balance numeric, p_customer_id uuid DEFAULT NULL::uuid, p_note text DEFAULT NULL::text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  RAISE EXCEPTION 'issue_gift_card_v1_deprecated' USING ERRCODE = '0A000',\n    HINT = 'Sell the gift card through process_checkout_v1 with a gift_card line item so the payment and the deferred obligation are recorded atomically.';\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "list_employees_v1",
+      "identity_args": "p_center_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.list_employees_v1(p_center_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_is_admin BOOLEAN;\n  v_rows JSONB;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n  v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);\n  SELECT COALESCE(jsonb_agg(\n    CASE WHEN v_is_admin THEN to_jsonb(e)\n    ELSE to_jsonb(e) - 'salary' - 'base_salary' - 'commission_percentage' - 'month_commission_total'\n    END ORDER BY e.name\n  ), '[]'::jsonb)\n  INTO v_rows\n  FROM public.employees e\n  WHERE e.center_id = p_center_id;\n  RETURN jsonb_build_object('employees', v_rows, 'compensation_visible', v_is_admin);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8595,6 +8800,19 @@
     },
     {
       "schema": "public",
+      "name": "refund_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.refund_entitlement_admin_impl_v1(p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_balance NUMERIC(12,3);\nBEGIN\n  IF p_entitlement_id IS NULL OR p_amount IS NULL OR\n     p_amount = 'NaN'::numeric OR p_amount <= 0 OR p_amount <> round(p_amount, 3) THEN\n    RAISE EXCEPTION 'invalid_refund_amount' USING ERRCODE = '22023';\n  END IF;\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'refund_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n\n  IF NOT app_private.is_center_member(v_ent.center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'refund_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_ent.center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'refund_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  IF v_ent.status IN ('REFUNDED', 'VOID') THEN\n    RAISE EXCEPTION 'entitlement_not_refundable' USING ERRCODE = '23514';\n  END IF;\n  IF v_ent.remaining_value <= 0 THEN\n    RAISE EXCEPTION 'entitlement_not_refundable' USING ERRCODE = '23514';\n  END IF;\n  IF p_amount > v_ent.remaining_value + 0.0005 THEN\n    RAISE EXCEPTION 'entitlement_refund_exceeds_remaining' USING ERRCODE = '23514';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_ent.center_id, v_ent.id, 'REFUND', p_amount, p_actor_employee_id,\n    'Refund: ' || btrim(p_reason)\n  );\n\n  SELECT remaining_value INTO v_balance\n  FROM public.customer_entitlements ce WHERE ce.id = v_ent.id;\n\n  RETURN jsonb_build_object(\n    'entitlement_id', v_ent.id,\n    'refunded', p_amount,\n    'remaining_after', v_balance\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "refund_entitlement_v1",
       "identity_args": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
       "result": "jsonb",
@@ -8604,7 +8822,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.refund_entitlement_v1(p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_balance NUMERIC(12,3);\nBEGIN\n  IF p_entitlement_id IS NULL OR p_amount IS NULL OR\n     p_amount = 'NaN'::numeric OR p_amount <= 0 OR p_amount <> round(p_amount, 3) THEN\n    RAISE EXCEPTION 'invalid_refund_amount' USING ERRCODE = '22023';\n  END IF;\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'refund_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n\n  IF NOT app_private.is_center_member(v_ent.center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'refund_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_ent.center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'refund_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  IF v_ent.status IN ('REFUNDED', 'VOID') THEN\n    RAISE EXCEPTION 'entitlement_not_refundable' USING ERRCODE = '23514';\n  END IF;\n  IF v_ent.remaining_value <= 0 THEN\n    RAISE EXCEPTION 'entitlement_not_refundable' USING ERRCODE = '23514';\n  END IF;\n  IF p_amount > v_ent.remaining_value + 0.0005 THEN\n    RAISE EXCEPTION 'entitlement_refund_exceeds_remaining' USING ERRCODE = '23514';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_ent.center_id, v_ent.id, 'REFUND', p_amount, p_actor_employee_id,\n    'Refund: ' || btrim(p_reason)\n  );\n\n  SELECT remaining_value INTO v_balance\n  FROM public.customer_entitlements ce WHERE ce.id = v_ent.id;\n\n  RETURN jsonb_build_object(\n    'entitlement_id', v_ent.id,\n    'refunded', p_amount,\n    'remaining_after', v_balance\n  );\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.refund_entitlement_v1(p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_center_id UUID;\nBEGIN\n  SELECT center_id INTO v_center_id\n  FROM public.customer_entitlements\n  WHERE id = p_entitlement_id;\n  IF v_center_id IS NULL OR NOT app_private.has_center_role(v_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.refund_entitlement_admin_impl_v1(\n    p_entitlement_id, p_amount, p_reason, p_actor_employee_id\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8647,6 +8865,19 @@
     },
     {
       "schema": "public",
+      "name": "upsert_notification_settings_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.upsert_notification_settings_admin_impl_v1(p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.notification_settings%ROWTYPE;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized notification center' USING ERRCODE = '42501';\n  END IF;\n\n  INSERT INTO public.notification_settings (\n    center_id,\n    whatsapp_enabled,\n    sms_enabled,\n    reminder_enabled,\n    reminder_hours_before,\n    whatsapp_sender_name,\n    sms_sender_name,\n    whatsapp_template_booking,\n    whatsapp_template_reminder,\n    sms_template_reminder\n  )\n  VALUES (\n    p_center_id,\n    COALESCE(p_whatsapp_enabled, FALSE),\n    COALESCE(p_sms_enabled, FALSE),\n    COALESCE(p_reminder_enabled, TRUE),\n    COALESCE(p_reminder_hours_before, 24),\n    NULLIF(trim(p_whatsapp_sender_name), ''),\n    NULLIF(trim(p_sms_sender_name), ''),\n    NULLIF(trim(p_whatsapp_template_booking), ''),\n    NULLIF(trim(p_whatsapp_template_reminder), ''),\n    NULLIF(trim(p_sms_template_reminder), '')\n  )\n  ON CONFLICT (center_id)\n  DO UPDATE SET\n    whatsapp_enabled = EXCLUDED.whatsapp_enabled,\n    sms_enabled = EXCLUDED.sms_enabled,\n    reminder_enabled = EXCLUDED.reminder_enabled,\n    reminder_hours_before = EXCLUDED.reminder_hours_before,\n    whatsapp_sender_name = EXCLUDED.whatsapp_sender_name,\n    sms_sender_name = EXCLUDED.sms_sender_name,\n    whatsapp_template_booking = EXCLUDED.whatsapp_template_booking,\n    whatsapp_template_reminder = EXCLUDED.whatsapp_template_reminder,\n    sms_template_reminder = EXCLUDED.sms_template_reminder,\n    updated_at = now()\n  RETURNING * INTO v_row;\n\n  RETURN jsonb_build_object('notification_settings', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "upsert_notification_settings_v1",
       "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
       "result": "jsonb",
@@ -8656,7 +8887,20 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.upsert_notification_settings_v1(p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.notification_settings%ROWTYPE;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized notification center' USING ERRCODE = '42501';\n  END IF;\n\n  INSERT INTO public.notification_settings (\n    center_id,\n    whatsapp_enabled,\n    sms_enabled,\n    reminder_enabled,\n    reminder_hours_before,\n    whatsapp_sender_name,\n    sms_sender_name,\n    whatsapp_template_booking,\n    whatsapp_template_reminder,\n    sms_template_reminder\n  )\n  VALUES (\n    p_center_id,\n    COALESCE(p_whatsapp_enabled, FALSE),\n    COALESCE(p_sms_enabled, FALSE),\n    COALESCE(p_reminder_enabled, TRUE),\n    COALESCE(p_reminder_hours_before, 24),\n    NULLIF(trim(p_whatsapp_sender_name), ''),\n    NULLIF(trim(p_sms_sender_name), ''),\n    NULLIF(trim(p_whatsapp_template_booking), ''),\n    NULLIF(trim(p_whatsapp_template_reminder), ''),\n    NULLIF(trim(p_sms_template_reminder), '')\n  )\n  ON CONFLICT (center_id)\n  DO UPDATE SET\n    whatsapp_enabled = EXCLUDED.whatsapp_enabled,\n    sms_enabled = EXCLUDED.sms_enabled,\n    reminder_enabled = EXCLUDED.reminder_enabled,\n    reminder_hours_before = EXCLUDED.reminder_hours_before,\n    whatsapp_sender_name = EXCLUDED.whatsapp_sender_name,\n    sms_sender_name = EXCLUDED.sms_sender_name,\n    whatsapp_template_booking = EXCLUDED.whatsapp_template_booking,\n    whatsapp_template_reminder = EXCLUDED.whatsapp_template_reminder,\n    sms_template_reminder = EXCLUDED.sms_template_reminder,\n    updated_at = now()\n  RETURNING * INTO v_row;\n\n  RETURN jsonb_build_object('notification_settings', to_jsonb(v_row));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.upsert_notification_settings_v1(p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.upsert_notification_settings_admin_impl_v1(\n    p_center_id, p_whatsapp_enabled, p_sms_enabled, p_reminder_enabled,\n    p_reminder_hours_before, p_whatsapp_sender_name, p_sms_sender_name,\n    p_whatsapp_template_booking, p_whatsapp_template_reminder, p_sms_template_reminder\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "upsert_payment_gateway_settings_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.upsert_payment_gateway_settings_admin_impl_v1(p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.payment_gateway_settings%ROWTYPE;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized payment gateway center' USING ERRCODE = '42501';\n  END IF;\n\n  INSERT INTO public.payment_gateway_settings (\n    center_id,\n    provider,\n    is_enabled,\n    is_sandbox,\n    public_key,\n    merchant_identifier,\n    webhook_secret_hint,\n    booking_deposit_enabled,\n    booking_deposit_type,\n    booking_deposit_value,\n    success_url,\n    cancel_url\n  )\n  VALUES (\n    p_center_id,\n    COALESCE(NULLIF(trim(p_provider), ''), 'manual'),\n    COALESCE(p_is_enabled, FALSE),\n    COALESCE(p_is_sandbox, TRUE),\n    NULLIF(trim(p_public_key), ''),\n    NULLIF(trim(p_merchant_identifier), ''),\n    NULLIF(trim(p_webhook_secret_hint), ''),\n    COALESCE(p_booking_deposit_enabled, FALSE),\n    COALESCE(NULLIF(trim(p_booking_deposit_type), ''), 'fixed'),\n    GREATEST(COALESCE(p_booking_deposit_value, 0), 0),\n    NULLIF(trim(p_success_url), ''),\n    NULLIF(trim(p_cancel_url), '')\n  )\n  ON CONFLICT (center_id)\n  DO UPDATE SET\n    provider = EXCLUDED.provider,\n    is_enabled = EXCLUDED.is_enabled,\n    is_sandbox = EXCLUDED.is_sandbox,\n    public_key = EXCLUDED.public_key,\n    merchant_identifier = EXCLUDED.merchant_identifier,\n    webhook_secret_hint = EXCLUDED.webhook_secret_hint,\n    booking_deposit_enabled = EXCLUDED.booking_deposit_enabled,\n    booking_deposit_type = EXCLUDED.booking_deposit_type,\n    booking_deposit_value = EXCLUDED.booking_deposit_value,\n    success_url = EXCLUDED.success_url,\n    cancel_url = EXCLUDED.cancel_url,\n    updated_at = now()\n  RETURNING * INTO v_row;\n\n  RETURN jsonb_build_object('payment_gateway_settings', to_jsonb(v_row));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8669,7 +8913,20 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.upsert_payment_gateway_settings_v1(p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.payment_gateway_settings%ROWTYPE;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized payment gateway center' USING ERRCODE = '42501';\n  END IF;\n\n  INSERT INTO public.payment_gateway_settings (\n    center_id,\n    provider,\n    is_enabled,\n    is_sandbox,\n    public_key,\n    merchant_identifier,\n    webhook_secret_hint,\n    booking_deposit_enabled,\n    booking_deposit_type,\n    booking_deposit_value,\n    success_url,\n    cancel_url\n  )\n  VALUES (\n    p_center_id,\n    COALESCE(NULLIF(trim(p_provider), ''), 'manual'),\n    COALESCE(p_is_enabled, FALSE),\n    COALESCE(p_is_sandbox, TRUE),\n    NULLIF(trim(p_public_key), ''),\n    NULLIF(trim(p_merchant_identifier), ''),\n    NULLIF(trim(p_webhook_secret_hint), ''),\n    COALESCE(p_booking_deposit_enabled, FALSE),\n    COALESCE(NULLIF(trim(p_booking_deposit_type), ''), 'fixed'),\n    GREATEST(COALESCE(p_booking_deposit_value, 0), 0),\n    NULLIF(trim(p_success_url), ''),\n    NULLIF(trim(p_cancel_url), '')\n  )\n  ON CONFLICT (center_id)\n  DO UPDATE SET\n    provider = EXCLUDED.provider,\n    is_enabled = EXCLUDED.is_enabled,\n    is_sandbox = EXCLUDED.is_sandbox,\n    public_key = EXCLUDED.public_key,\n    merchant_identifier = EXCLUDED.merchant_identifier,\n    webhook_secret_hint = EXCLUDED.webhook_secret_hint,\n    booking_deposit_enabled = EXCLUDED.booking_deposit_enabled,\n    booking_deposit_type = EXCLUDED.booking_deposit_type,\n    booking_deposit_value = EXCLUDED.booking_deposit_value,\n    success_url = EXCLUDED.success_url,\n    cancel_url = EXCLUDED.cancel_url,\n    updated_at = now()\n  RETURNING * INTO v_row;\n\n  RETURN jsonb_build_object('payment_gateway_settings', to_jsonb(v_row));\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.upsert_payment_gateway_settings_v1(p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.upsert_payment_gateway_settings_admin_impl_v1(\n    p_center_id, p_provider, p_is_enabled, p_is_sandbox, p_public_key,\n    p_merchant_identifier, p_webhook_secret_hint, p_booking_deposit_enabled,\n    p_booking_deposit_type, p_booking_deposit_value, p_success_url, p_cancel_url\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "void_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.void_entitlement_admin_impl_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_center_id UUID;\nBEGIN\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'void_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n  v_center_id := v_ent.center_id;\n\n  IF NOT app_private.is_center_member(v_center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'void_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'void_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_center_id, v_ent.id, 'VOID', 0, p_actor_employee_id,\n    'Void: ' || btrim(p_reason)\n  );\n\n  RETURN jsonb_build_object('entitlement_id', v_ent.id, 'status', 'VOID');\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8682,7 +8939,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.void_entitlement_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ent public.customer_entitlements%ROWTYPE;\n  v_center_id UUID;\nBEGIN\n  IF length(btrim(COALESCE(p_reason, ''))) = 0 THEN\n    RAISE EXCEPTION 'void_reason_required' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_ent\n  FROM public.customer_entitlements ce\n  WHERE ce.id = p_entitlement_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'entitlement_not_found' USING ERRCODE = '23503';\n  END IF;\n  v_center_id := v_ent.center_id;\n\n  IF NOT app_private.is_center_member(v_center_id) THEN\n    RAISE EXCEPTION 'unauthorized_entitlement_center' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_actor_employee_id IS NULL THEN\n    RAISE EXCEPTION 'void_actor_required' USING ERRCODE = '23502';\n  END IF;\n  PERFORM 1 FROM public.employees e\n  WHERE e.id = p_actor_employee_id AND e.center_id = v_center_id AND e.is_active = true;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'void_actor_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  INSERT INTO public.entitlement_ledger (\n    center_id, entitlement_id, entry_type, amount, actor_id, reason\n  ) VALUES (\n    v_center_id, v_ent.id, 'VOID', 0, p_actor_employee_id,\n    'Void: ' || btrim(p_reason)\n  );\n\n  RETURN jsonb_build_object('entitlement_id', v_ent.id, 'status', 'VOID');\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.void_entitlement_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_center_id UUID;\nBEGIN\n  SELECT center_id INTO v_center_id\n  FROM public.customer_entitlements\n  WHERE id = p_entitlement_id;\n  IF v_center_id IS NULL OR NOT app_private.has_center_role(v_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.void_entitlement_admin_impl_v1(\n    p_entitlement_id, p_reason, p_actor_employee_id\n  );\nEND;\n$function$\n"
     }
   ],
   "function_acl": [
@@ -8814,6 +9071,55 @@
     },
     {
       "schema": "public",
+      "name": "admin_create_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee jsonb",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_create_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_delete_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_delete_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_update_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_update_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_accounting_journal_entry_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "create_accounting_journal_entry_v1",
       "identity_args": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
       "grantee": "authenticated",
@@ -8823,6 +9129,13 @@
       "schema": "public",
       "name": "create_accounting_journal_entry_v1",
       "identity_args": "p_center_id uuid, p_entry_date date, p_entry_type text, p_reference_type text, p_reference_id uuid, p_description text, p_debit_account text, p_credit_account text, p_amount numeric, p_currency text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_ai_booking_lead_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_name text, p_customer_phone text, p_preferred_service_id uuid, p_preferred_date timestamp with time zone, p_source_channel text, p_summary text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -8842,6 +9155,13 @@
     },
     {
       "schema": "public",
+      "name": "create_customer_review_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "create_customer_review_v1",
       "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean",
       "grantee": "authenticated",
@@ -8851,6 +9171,27 @@
       "schema": "public",
       "name": "create_customer_review_v1",
       "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_rating smallint, p_comment text, p_is_published boolean",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_period_month text, p_notes text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_period_month text, p_notes text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_service_file_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_service_id uuid, p_title text, p_note text, p_before_images text[], p_after_images text[], p_reference_images text[]",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -8884,6 +9225,27 @@
     },
     {
       "schema": "public",
+      "name": "delete_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_payroll_run_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "delete_payroll_run_v1",
+      "identity_args": "p_center_id uuid, p_payroll_run_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "expire_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "expire_entitlement_v1",
       "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
       "grantee": "authenticated",
@@ -8898,6 +9260,48 @@
     },
     {
       "schema": "public",
+      "name": "get_dashboard_pnl_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_pnl_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_revenue_entries_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_revenue_entries_v1",
+      "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_summary_v1",
+      "identity_args": "p_center_id uuid, p_day_start timestamp with time zone, p_day_end timestamp with time zone, p_month_start timestamp with time zone",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_dashboard_summary_v1",
+      "identity_args": "p_center_id uuid, p_day_start timestamp with time zone, p_day_end timestamp with time zone, p_month_start timestamp with time zone",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "issue_gift_card_v1",
       "identity_args": "p_center_id uuid, p_code text, p_initial_balance numeric, p_customer_id uuid, p_note text, p_expires_at timestamp with time zone",
       "grantee": "authenticated",
@@ -8907,6 +9311,20 @@
       "schema": "public",
       "name": "issue_gift_card_v1",
       "identity_args": "p_center_id uuid, p_code text, p_initial_balance numeric, p_customer_id uuid, p_note text, p_expires_at timestamp with time zone",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_employees_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_employees_v1",
+      "identity_args": "p_center_id uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9017,6 +9435,13 @@
     },
     {
       "schema": "public",
+      "name": "refund_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "refund_entitlement_v1",
       "identity_args": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
       "grantee": "authenticated",
@@ -9059,6 +9484,13 @@
     },
     {
       "schema": "public",
+      "name": "upsert_notification_settings_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "upsert_notification_settings_v1",
       "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
       "grantee": "authenticated",
@@ -9073,6 +9505,13 @@
     },
     {
       "schema": "public",
+      "name": "upsert_payment_gateway_settings_admin_impl_v1",
+      "identity_args": "p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "upsert_payment_gateway_settings_v1",
       "identity_args": "p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text",
       "grantee": "authenticated",
@@ -9082,6 +9521,13 @@
       "schema": "public",
       "name": "upsert_payment_gateway_settings_v1",
       "identity_args": "p_center_id uuid, p_provider text, p_is_enabled boolean, p_is_sandbox boolean, p_public_key text, p_merchant_identifier text, p_webhook_secret_hint text, p_booking_deposit_enabled boolean, p_booking_deposit_type text, p_booking_deposit_value numeric, p_success_url text, p_cancel_url text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "void_entitlement_admin_impl_v1",
+      "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9104,98 +9550,26 @@
     {
       "schema": "public",
       "table": "accounting_journal_entries",
-      "name": "accounting_journal_entries_delete_policy",
+      "name": "accounting_journal_entries_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "accounting_journal_entries",
-      "name": "accounting_journal_entries_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "accounting_journal_entries",
-      "name": "accounting_journal_entries_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "accounting_journal_entries",
-      "name": "accounting_journal_entries_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
       "table": "ai_booking_leads",
-      "name": "ai_booking_leads_delete_policy",
+      "name": "ai_booking_leads_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "ai_booking_leads",
-      "name": "ai_booking_leads_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "ai_booking_leads",
-      "name": "ai_booking_leads_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "ai_booking_leads",
-      "name": "ai_booking_leads_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9236,14 +9610,26 @@
     {
       "schema": "public",
       "table": "center_settings",
-      "name": "center_settings_insert",
+      "name": "center_settings_admin_insert",
       "permissive": "PERMISSIVE",
       "roles": [
         "authenticated"
       ],
       "cmd": "INSERT",
       "qual": null,
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "center_settings",
+      "name": "center_settings_admin_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9256,18 +9642,6 @@
       "cmd": "SELECT",
       "qual": "(center_id = ANY (app_private.user_center_ids()))",
       "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "center_settings",
-      "name": "center_settings_update",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "UPDATE",
-      "qual": "(center_id = ANY (app_private.user_center_ids()))",
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
     },
     {
       "schema": "public",
@@ -9296,98 +9670,26 @@
     {
       "schema": "public",
       "table": "customer_notification_timeline",
-      "name": "customer_notification_timeline_delete_policy",
+      "name": "customer_notification_timeline_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "customer_notification_timeline",
-      "name": "customer_notification_timeline_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "customer_notification_timeline",
-      "name": "customer_notification_timeline_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "customer_notification_timeline",
-      "name": "customer_notification_timeline_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
       "table": "customer_reviews",
-      "name": "customer_reviews_delete_policy",
+      "name": "customer_reviews_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "customer_reviews",
-      "name": "customer_reviews_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "customer_reviews",
-      "name": "customer_reviews_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "customer_reviews",
-      "name": "customer_reviews_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9416,14 +9718,50 @@
     {
       "schema": "public",
       "table": "employees",
-      "name": "employees_tenant",
+      "name": "employees_admin_delete",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "ALL",
-      "qual": "(center_id = ANY (app_private.user_center_ids()))",
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+      "cmd": "DELETE",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "employees",
+      "name": "employees_admin_insert",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "employees",
+      "name": "employees_admin_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "employees",
+      "name": "employees_member_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
     },
     {
       "schema": "public",
@@ -9440,14 +9778,14 @@
     {
       "schema": "public",
       "table": "expenses",
-      "name": "expenses_tenant",
+      "name": "expenses_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
       "cmd": "ALL",
-      "qual": "(center_id = ANY (app_private.user_center_ids()))",
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9500,38 +9838,14 @@
     {
       "schema": "public",
       "table": "notification_settings",
-      "name": "notification_settings_insert_member",
+      "name": "notification_settings_admin",
       "permissive": "PERMISSIVE",
       "roles": [
         "authenticated"
       ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "notification_settings",
-      "name": "notification_settings_select_member",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "notification_settings",
-      "name": "notification_settings_update_member",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9548,38 +9862,14 @@
     {
       "schema": "public",
       "table": "payment_gateway_settings",
-      "name": "payment_gateway_settings_insert_member",
+      "name": "payment_gateway_settings_admin",
       "permissive": "PERMISSIVE",
       "roles": [
         "authenticated"
       ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "payment_gateway_settings",
-      "name": "payment_gateway_settings_select_member",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "payment_gateway_settings",
-      "name": "payment_gateway_settings_update_member",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -9680,98 +9970,26 @@
     {
       "schema": "public",
       "table": "service_file_images",
-      "name": "service_file_images_delete_policy",
+      "name": "service_file_images_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "service_file_images",
-      "name": "service_file_images_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "service_file_images",
-      "name": "service_file_images_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "service_file_images",
-      "name": "service_file_images_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
       "table": "service_files",
-      "name": "service_files_delete_policy",
+      "name": "service_files_admin",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "DELETE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "service_files",
-      "name": "service_files_insert_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "INSERT",
-      "qual": null,
-      "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "service_files",
-      "name": "service_files_select_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
-    },
-    {
-      "schema": "public",
-      "table": "service_files",
-      "name": "service_files_update_policy",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "public"
-      ],
-      "cmd": "UPDATE",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": "app_private.is_center_member(center_id)"
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
     },
     {
       "schema": "public",
@@ -10278,6 +10496,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records_center_employee_date_uq",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "attendance_records_pkey",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -16033,568 +16307,575 @@
       "kind": "relation",
       "schema": "public",
       "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_payroll_run_id_employee_id_key",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_line_items_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_center_id_period_month_key",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "payroll_runs_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "products_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "DELETE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "INSERT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "MAINTAIN"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "REFERENCES"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "SELECT"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "TRIGGER"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "TRUNCATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "profiles_pkey",
-      "grantee": "postgres",
-      "privilege": "UPDATE"
-    },
-    {
-      "kind": "relation",
-      "schema": "public",
-      "object": "service_categories",
       "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
       "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_payroll_run_id_employee_id_key",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_line_items_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_center_id_period_month_key",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payroll_runs_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
     },
     {
       "kind": "relation",
@@ -17530,6 +17811,55 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "admin_create_employee_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_create_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_delete_employee_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_delete_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_update_employee_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_update_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_accounting_journal_entry_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "create_accounting_journal_entry_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17538,6 +17868,13 @@
       "kind": "routine",
       "schema": "public",
       "object": "create_accounting_journal_entry_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_ai_booking_lead_admin_impl_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -17558,6 +17895,13 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "create_customer_review_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "create_customer_review_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17566,6 +17910,27 @@
       "kind": "routine",
       "schema": "public",
       "object": "create_customer_review_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_payroll_run_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_payroll_run_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_service_file_admin_impl_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -17600,6 +17965,27 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "delete_payroll_run_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "delete_payroll_run_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "expire_entitlement_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "expire_entitlement_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17614,6 +18000,48 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "get_dashboard_pnl_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_dashboard_pnl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_dashboard_revenue_entries_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_dashboard_revenue_entries_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_dashboard_summary_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_dashboard_summary_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "issue_gift_card_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17622,6 +18050,20 @@
       "kind": "routine",
       "schema": "public",
       "object": "issue_gift_card_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_employees_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_employees_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -17733,6 +18175,13 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "refund_entitlement_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "refund_entitlement_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17775,6 +18224,13 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "upsert_notification_settings_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "upsert_notification_settings_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17789,6 +18245,13 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "upsert_payment_gateway_settings_admin_impl_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "upsert_payment_gateway_settings_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -17797,6 +18260,13 @@
       "kind": "routine",
       "schema": "public",
       "object": "upsert_payment_gateway_settings_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "void_entitlement_admin_impl_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },

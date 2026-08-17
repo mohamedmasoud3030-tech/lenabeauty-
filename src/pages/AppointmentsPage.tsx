@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CalendarDays, ChevronLeft, ChevronRight, Plus, X, Clock,
+  CalendarDays, ChevronLeft, ChevronRight, Plus, Clock,
   User, Scissors, Search, Bell, CheckCircle2, Calendar as CalendarIcon,
   Filter, MoreVertical, Phone, MapPin, Sparkles, XCircle, UserPlus
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
 import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   formatSalonDate,
@@ -21,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "i18next";
 import { ScreenState } from "../shared/components/ScreenState";
 import { PageHeader } from "../shared/components/PageHeader";
+import { Modal } from "../shared/components/Modal";
 
 type Customer = { id: string; name: string; phone: string | null };
 type Service = { id: string; name: string; category: string; durationMins: number; price: number };
@@ -113,7 +113,6 @@ function statusClass(s: AppointmentStatus | string) {
 
 export default function AppointmentsPage() {
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   // Portrait phones: day first. Week view on a 320–360px screen is unreadable.
@@ -152,6 +151,7 @@ export default function AppointmentsPage() {
   // Inline "create customer" inside the booking dialog
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [customerSearchDone, setCustomerSearchDone] = useState(false);
+  const customerSearchRequestRef = useRef(0);
 
   const range = useMemo(() => {
     if (mode === "day") {
@@ -193,23 +193,26 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     setCustomerSearchDone(false);
-    const t = setTimeout(async () => {
+    const requestId = ++customerSearchRequestRef.current;
+    const timer = setTimeout(async () => {
       const q = customerQ.trim();
       if (!q) {
-        setCustomers([]);
-        setCustomerSearchDone(true);
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomers([]);
+          setCustomerSearchDone(true);
+        }
         return;
       }
       try {
         const res = await unwrap(useCases.customers.list(q));
-        setCustomers(res.map(mapCustomer));
+        if (requestId === customerSearchRequestRef.current) setCustomers(res.map(mapCustomer));
       } catch {
-        setCustomers([]);
+        if (requestId === customerSearchRequestRef.current) setCustomers([]);
       } finally {
-        setCustomerSearchDone(true);
+        if (requestId === customerSearchRequestRef.current) setCustomerSearchDone(true);
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [customerQ]);
 
   /** Inline flow: «عميل جديد → حجز موعد» بدون مغادرة الحوار. */
@@ -298,32 +301,6 @@ export default function AppointmentsPage() {
     setOpen(true);
   }
 
-  async function deleteAppt(id: string) {
-    const appointment = appts.find((entry) => entry.id === id);
-    if (appointment && appointment.status !== AppointmentStatus.SCHEDULED) {
-      showToast('error', t("Error"), t("Terminal appointments cannot be deleted"));
-      return;
-    }
-    const ok = await confirm({
-      title: t("Confirm"),
-      message: t("Are you sure you want to delete this appointment?"),
-      type: "danger"
-    });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.appointments.delete(id));
-      await load();
-      showToast('success', t("Success"), t("Appointment deleted successfully"));
-      setOpen(false);
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err?.message || String(err));
-      }
-    }
-  }
-
   async function submitBooking() {
     if (!slotDate) return;
     const existingAppointment = editApptId ? appts.find((entry) => entry.id === editApptId) : undefined;
@@ -381,9 +358,13 @@ export default function AppointmentsPage() {
     try {
       setBusy(true);
       await unwrap(useCases.appointments.sendReminder(appt.id));
-      showToast('error', t("Error"), t("Reminder sent successfully (Simulated)"));
+      showToast('success', t("Success"), t("Reminder sent successfully"));
     } catch (e) {
-      showToast('error', t("Error"), ((e as Error).message || String(e)));
+      const error = e as Error & { code?: string };
+      const message = error.code === "BACKEND_METHOD_UNSUPPORTED"
+        ? t("Automated reminders are unavailable; use the manual WhatsApp action instead.")
+        : (error.message || String(error));
+      showToast('error', t("Error"), message);
     } finally {
       setBusy(false);
     }
@@ -412,6 +393,21 @@ export default function AppointmentsPage() {
     }
     return map;
   }, [filteredAppts]);
+
+  const bookingFooter = (
+    <div className="flex gap-3">
+      <button
+        type="button"
+        disabled={busy || !customerId || (!!editApptId && status !== AppointmentStatus.SCHEDULED)}
+        onClick={submitBooking}
+        className="group relative flex-1 min-h-14 rounded-2xl bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden touch-target"
+      >
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+        <CheckCircle2 className="h-6 w-6 relative z-10" />
+        <span className="text-base sm:text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-6 pb-8">
@@ -816,7 +812,9 @@ export default function AppointmentsPage() {
           
           {/* Sticky Quick Book FAB */}
           <button
+            type="button"
             onClick={() => openBooking()}
+            aria-label={t("New Appointment")}
             className="fixed end-4 above-bottom-nav z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all lg:hidden touch-target"
           >
             <Plus className="h-6 w-6" />
@@ -824,41 +822,24 @@ export default function AppointmentsPage() {
         </div>
       </motion.div>
 
-      <AnimatePresence>
-        {open && (
-          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative flex flex-col w-full max-w-2xl h-[100dvh] sm:h-auto overflow-hidden rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl max-h-[calc(100dvh-var(--keyboard-inset,0px))] sm:max-h-[90dvh]"
-            >
-              <div className="shrink-0 flex items-center justify-between border-b border-border px-4 sm:px-10 py-4 sm:py-8 bg-muted/20 backdrop-blur-xl pt-[max(1rem,env(safe-area-inset-top))]">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <CalendarIcon className="h-7 w-7" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h2 className="text-xl sm:text-2xl font-bold text-foreground">{editApptId ? t("Edit Appointment") : t("Book Appointment")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Fill in the details below")}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90 shrink-0"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-10 space-y-6 sm:space-y-8">
+      <Modal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        size="lg"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <CalendarIcon className="h-5 w-5" />
+            </span>
+            <span>{editApptId ? t("Edit Appointment") : t("Book Appointment")}</span>
+          </span>
+        }
+        description={t("Fill in the details below")}
+        footer={bookingFooter}
+        disableClose={busy}
+        className="sm:max-w-2xl sm:rounded-[3rem]"
+      >
+        <div className="space-y-6 sm:space-y-8 sm:p-5">
                 <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-4 sm:gap-6 p-4 sm:p-6 rounded-[2rem] bg-muted/30 border border-border shadow-inner">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Date")}</label>
@@ -1060,7 +1041,10 @@ export default function AppointmentsPage() {
                       <div>
                         <p className="text-sm font-bold text-warning">{t("Mark as No-Show")}</p>
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                          {t("Charge on no-show")}: {Math.max(depositAmount, noShowFeeAmount).toFixed(2)} {t("OMR")}
+                          {t("Manual no-show fee record")}: {Math.max(depositAmount, noShowFeeAmount).toFixed(2)} {t("OMR")}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("Recording this amount does not create a payment or invoice.")}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
@@ -1070,7 +1054,7 @@ export default function AppointmentsPage() {
                             checked={chargeNoShowFee}
                             onChange={(e) => setChargeNoShowFee(e.target.checked)}
                           />
-                          {t("Charge no-show fee")}
+                          {t("Record no-show fee")}
                         </label>
                         <button
                           onClick={async () => {
@@ -1078,7 +1062,10 @@ export default function AppointmentsPage() {
                             setBusy(true);
                             try {
                               const res = await unwrap(useCases.appointments.markNoShow(editApptId, { chargeNoShowFee, note: noShowNote || undefined }));
-                              showToast('success', t("Success"), `${t("No-show saved")}: ${res.chargedAmount.toFixed(2)} ${t("OMR")}`);
+                              const feeNote = chargeNoShowFee
+                                ? `${t("No-show fee recorded (not collected)")}: ${res.chargedAmount.toFixed(2)} ${t("OMR")}`
+                                : t("No-show saved");
+                              showToast('success', t("Success"), feeNote);
                               await load();
                               setOpen(false);
                             } catch (err: any) {
@@ -1119,30 +1106,7 @@ export default function AppointmentsPage() {
 
                 </div>
               </div>
-              <div className="shrink-0 flex gap-3 border-t border-border bg-card/95 backdrop-blur-sm p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                    {editApptId && status === AppointmentStatus.SCHEDULED && (
-                    <button
-                      onClick={() => void deleteAppt(editApptId)}
-                      className="w-14 h-14 shrink-0 rounded-2xl bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all flex items-center justify-center border border-destructive/20 active:scale-95 touch-target"
-                      title={t("Delete")}
-                    >
-                      <XCircle className="h-6 w-6" />
-                    </button>
-                  )}
-                  <button
-                    disabled={busy || !customerId || (!!editApptId && status !== AppointmentStatus.SCHEDULED)}
-                    onClick={submitBooking}
-                    className="group relative flex-1 min-h-14 rounded-2xl bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 overflow-hidden touch-target"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    <CheckCircle2 className="h-6 w-6 relative z-10" />
-                    <span className="text-base sm:text-lg relative z-10">{editApptId ? t("Save Changes") : t("Confirm Booking")}</span>
-                  </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 }

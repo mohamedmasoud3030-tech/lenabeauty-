@@ -151,6 +151,25 @@ describe("repository-boundary validation (UI bypassed)", () => {
     if (!res.ok) expect((res.error as any).issues.some((i: any) => i.field === "taxRate")).toBe(true);
   });
 
+  it("rejects unsafe logo MIME types before touching Storage", async () => {
+    const res = await bundle.settingsAdapter.uploadLogo(new File(["<svg/>"] , "logo.svg", { type: "image/svg+xml" }));
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("VALIDATION_ERROR");
+      expect((res.error as any).issues.some((i: any) => i.key === "validation.logo_type")).toBe(true);
+    }
+  });
+
+  it("rejects logos larger than the 2 MiB bucket contract", async () => {
+    const oversized = new File([new Uint8Array(2 * 1024 * 1024 + 1)], "logo.png", { type: "image/png" });
+    const res = await bundle.settingsAdapter.uploadLogo(oversized);
+    expect(res.ok).toBe(false);
+    if (!res.ok) {
+      expect(res.error.code).toBe("VALIDATION_ERROR");
+      expect((res.error as any).issues.some((i: any) => i.key === "validation.logo_size")).toBe(true);
+    }
+  });
+
   it("rejects a customer with an invalid phone and email", async () => {
     const res = await bundle.customerAdapter.create({ name: "A", phone: "abc", email: "nope" });
     expect(res.ok).toBe(false);

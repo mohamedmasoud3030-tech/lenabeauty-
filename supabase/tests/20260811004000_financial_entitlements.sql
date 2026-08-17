@@ -9,8 +9,8 @@ INSERT INTO auth.users(id, email) VALUES
   ('31000000-0000-4000-8000-000000000001'::uuid, 'entitlements.member@lenabeauty.test');
 INSERT INTO public.profiles(id, full_name) VALUES
   ('31000000-0000-4000-8000-000000000001'::uuid, 'Entitlements member');
-INSERT INTO public.center_memberships(profile_id, center_id) VALUES
-  ('31000000-0000-4000-8000-000000000001'::uuid, '21000000-0000-4000-8000-000000000001'::uuid);
+INSERT INTO public.center_memberships(profile_id, center_id, role) VALUES
+  ('31000000-0000-4000-8000-000000000001'::uuid, '21000000-0000-4000-8000-000000000001'::uuid, 'ADMIN');
 INSERT INTO public.customers(id, center_id, name, phone) VALUES
   ('41000000-0000-4000-8000-000000000001'::uuid, '21000000-0000-4000-8000-000000000001'::uuid, 'Entitlements customer', '+96800010001');
 INSERT INTO public.employees(id, center_id, name, role) VALUES

@@ -58,11 +58,11 @@ async function functionSignatureSet(db: PGlite): Promise<string[]> {
  * bootstrap excluded, and only the two *known* idempotency gaps may surface.
  */
 describe("audit: deterministic migration replay (PGlite)", () => {
-  it("replays 30 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
+  it("replays 35 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(31);
+    expect(all).toHaveLength(36);
     const automated = automatedMigrations(all);
-    expect(automated).toHaveLength(30);
+    expect(automated).toHaveLength(35);
 
     const db = new PGlite();
     const { failures, nonIdem } = await replayInto(db);
@@ -79,6 +79,37 @@ describe("audit: deterministic migration replay (PGlite)", () => {
       "SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE'",
     );
     expect((r.rows[0] as { n: number }).n).toBeGreaterThanOrEqual(30);
+
+    // Executable acceptance for the attendance integrity migration.
+    await db.exec(`
+      INSERT INTO public.centers (id, name)
+      VALUES ('10000000-0000-0000-0000-000000000001', 'Attendance Test');
+      INSERT INTO public.employees (id, center_id, name)
+      VALUES ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Employee');
+      INSERT INTO public.attendance_records
+        (center_id, employee_id, date, check_in_time, check_out_time, work_hours)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-08-17', '09:00', '17:00', 8);
+    `);
+    await expect(db.exec(`
+      INSERT INTO public.attendance_records
+        (center_id, employee_id, date, check_in_time, check_out_time, work_hours)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-08-17', '10:00', '18:00', 8);
+    `)).rejects.toThrow();
+    await expect(db.exec(`
+      INSERT INTO public.attendance_records
+        (center_id, employee_id, date, check_in_time, check_out_time, work_hours)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-08-18', '17:00', '09:00', 0);
+    `)).rejects.toThrow();
+    await expect(db.exec(`
+      INSERT INTO public.attendance_records
+        (center_id, employee_id, date, work_hours)
+      VALUES
+        ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-08-19', -1);
+    `)).rejects.toThrow();
+
     await db.close();
   }, 60_000);
 

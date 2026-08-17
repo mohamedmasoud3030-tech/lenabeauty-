@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Plus, Pencil, Trash2, RefreshCw, Scissors, Search,
+  Plus, Pencil, RefreshCw, Scissors, Search,
   Save, CheckCircle2, Clock, Tag, DollarSign,
   Sparkles, XCircle, LayoutGrid,
 } from "lucide-react";
@@ -152,26 +152,6 @@ export default function ServicesPage() {
     setFormOpen(true);
   }
 
-  async function onDelete(id: string) {
-    const ok = await confirm({
-      title: t("Delete Service"),
-      message: t("Are you sure you want to delete this service?"),
-      type: "danger"
-    });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.services.delete(id));
-      await reload();
-      showToast('success', t("Success"), t("Service deleted successfully"));
-    } catch (err: any) {
-      if (err?.code === "BACKEND_METHOD_UNSUPPORTED") {
-        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-        showToast('error', t("Error"), mapErrorToMessage(err, t));
-      }
-    }
-  }
-
   /** تعطيل/تفعيل الخدمة — تختفي من نقطة البيع دون حذف سجلها. */
   async function onToggleActive(s: Service) {
     const next = !s.isActive;
@@ -271,7 +251,7 @@ export default function ServicesPage() {
                   >
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
+                        <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
                           {getInitials(s.name, "·")}
                         </div>
                         <div className="min-w-0">
@@ -321,19 +301,11 @@ export default function ServicesPage() {
                         </button>
                         <button
                           onClick={() => onEdit(s)}
-                          className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                          className="h-11 w-11 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                           aria-label={t("Edit")}
                           title={t("Edit")}
                         >
                           <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(s.id)}
-                          className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
-                          aria-label={t("Delete")}
-                          title={t("Delete")}
-                        >
-                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -407,19 +379,11 @@ export default function ServicesPage() {
                   </button>
                   <button
                     onClick={() => onEdit(s)}
-                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
+                    className="h-11 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
                     aria-label={t("Edit")}
                     title={t("Edit")}
                   >
                     <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => void onDelete(s.id)}
-                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-colors"
-                    aria-label={t("Delete")}
-                    title={t("Delete")}
-                  >
-                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </motion.div>

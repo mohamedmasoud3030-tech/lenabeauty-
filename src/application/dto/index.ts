@@ -118,7 +118,7 @@ export interface SalesReportRow {
    *  - redeemedAmount: entitlement value consumed on this invoice (gift card
    *    + package redemptions) — recognized service revenue.
    *  - earnedRevenue: service/product revenue recognized for this invoice =
-   *    totalAmount − prepaidAmount + redeemedAmount.
+   *    totalAmount − tax − prepaidAmount + redeemedAmount.
    */
   prepaidAmount: number;
   redeemedAmount: number;

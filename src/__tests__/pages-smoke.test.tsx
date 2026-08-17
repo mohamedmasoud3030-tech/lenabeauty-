@@ -23,7 +23,8 @@ function bootAuthMocks() {
   (env.config as any).centerId = "center-1";
   (env.config as any).branchMode = "single";
   vi.spyOn(useCases.auth, "getSession").mockResolvedValue({ ok: true, data: { status: "anonymous" } });
-  vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({ ok: true, data: [{ id: "center-1", name: "Lena Beauty" }] });
+  vi.spyOn(useCases.auth, "onAuthStateChange").mockReturnValue(() => {});
+  vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({ ok: true, data: [{ id: "center-1", name: "Lena Beauty", role: "ADMIN" }] });
 }
 
 describe("Login page smoke", () => {
@@ -52,6 +53,12 @@ describe("Login page smoke", () => {
     expect(screen.getByText(i18n.t("Sign In"))).toBeInTheDocument();
     // The form must be usable (not disabled) even after a failed bootstrap.
     expect(screen.getByPlaceholderText(i18n.t("Username"))).not.toBeDisabled();
+    expect(screen.getByLabelText(i18n.t("Username"))).toHaveAttribute("autocomplete", "username");
+    expect(screen.getByLabelText(i18n.t("Password"))).toHaveAttribute("autocomplete", "current-password");
+    const revealPassword = screen.getByRole("button", { name: i18n.t("Show password") });
+    expect(revealPassword).toHaveClass("h-11", "w-11");
+    expect(revealPassword).not.toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("main")).toHaveAttribute("aria-labelledby", "login-title");
   });
 });
 

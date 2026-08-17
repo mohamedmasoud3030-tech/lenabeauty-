@@ -41,10 +41,12 @@ function validateUUID(uuid: string | undefined): boolean {
   return uuidRegex.test(uuid);
 }
 
-export function parseEnv(customEnv?: Record<string, string | undefined>) {
+export function parseEnv(
+  customEnv?: Record<string, string | undefined>,
+  options?: { isProductionBuild?: boolean },
+) {
   const getEnv = (key: string) => customEnv ? customEnv[key] : import.meta.env[key];
-  const isProdBuild = !customEnv && import.meta.env.PROD;
-  const useDemoFallbacks = isProdBuild;
+  const isProdBuild = options?.isProductionBuild ?? (!customEnv && import.meta.env.PROD);
 
   // Environment: explicit VITE_ENVIRONMENT wins. Otherwise local/test builds
   // are development and the current optimized trial build is Demo/Staging.
@@ -60,6 +62,11 @@ export function parseEnv(customEnv?: Record<string, string | undefined>) {
   } else {
     environment = deriveDefaultEnvironment(isProdBuild);
   }
+
+  // Only the explicit/current trial Staging target may use the tracked browser
+  // fallback. An explicit Production environment must always provide its own
+  // backend URL/key/center and fail closed when any value is missing.
+  const useDemoFallbacks = isProdBuild && environment === "staging";
 
   const backendRaw = (
     getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase()

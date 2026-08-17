@@ -2,6 +2,7 @@
   "name": "salon-management-pwa",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "npm@10.9.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +20,7 @@
     "audit:all": "npm run audit:replay && npm run audit:scan && npm run audit:matrix",
     "audit:gate": "node scripts/audit/ci-gate.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && node scripts/lint-source.mjs",
     "test": "vitest run",
     "desktop:dev": "vite --host 127.0.0.1 --port 1420",
     "desktop:build:web": "vite build",

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useCases } from "../app/composition/useCases";
 import { User, SessionState, UserRole } from "../domain/entities/Session";
 import { config, validateEnvironment, EnvironmentConfigurationError } from "../config/env";
@@ -18,18 +18,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [sessionState, setSessionState] = useState<SessionState>({ status: "loading" });
   const [user, setUser] = useState<User | null>(null);
+  // Auth events can overlap (for example TOKEN_REFRESHED immediately followed
+  // by SIGNED_OUT). Only the newest reconciliation may update the shell.
+  const reconciliationGenerationRef = useRef(0);
 
   const CENTER_STORAGE_KEY = "lb_active_center_id";
 
-  async function applySessionState(resolvedSessionState: SessionState, envError: Error | null) {
-    setSessionState(resolvedSessionState);
+  async function applySessionState(
+    resolvedSessionState: SessionState,
+    envError: Error | null,
+    isCurrent: () => boolean = () => true,
+  ) {
+    if (!isCurrent()) return;
+
     if (resolvedSessionState.status === "authenticated") {
       if (envError) throw envError; // Block Supabase login if misconfigured
-      const userObj = resolvedSessionState.session.user;
-      setUser(userObj);
+      const sessionUser = resolvedSessionState.session.user;
 
       try {
         const centersRes = await useCases.auth.getMyCenters?.();
+        if (!isCurrent()) return;
         const targetCenters = centersRes && centersRes.ok ? centersRes.data : [];
 
         // A session whose center membership cannot be verified (query error)
@@ -43,9 +51,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        let activeMembership: (typeof targetCenters)[number] | undefined;
         if (config.branchMode === "single") {
-          const hasMembership = targetCenters.some(c => c.id === config.centerId);
-          if (!hasMembership) {
+          activeMembership = targetCenters.find(c => c.id === config.centerId);
+          if (!activeMembership) {
             const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
             setSessionState({ status: "error", error: err });
             setUser(null);
@@ -56,15 +65,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           } catch { /* storage unavailable */ }
         } else {
           let activeId = localStorage.getItem(CENTER_STORAGE_KEY);
-          if (!activeId || !targetCenters.find(c => c.id === activeId)) {
-            activeId = targetCenters[0].id;
+          activeMembership = targetCenters.find(c => c.id === activeId);
+          if (!activeMembership) {
+            activeMembership = targetCenters[0];
+            activeId = activeMembership.id;
           }
-          useCases.tenant.setActiveCenterId(activeId);
+          useCases.tenant.setActiveCenterId(activeId!);
           try {
-            localStorage.setItem(CENTER_STORAGE_KEY, activeId);
+            localStorage.setItem(CENTER_STORAGE_KEY, activeId!);
           } catch { /* storage unavailable */ }
         }
+
+        // The active center membership is the UI role source of truth. Auth
+        // app_metadata can be stale after a center-specific role change, while
+        // PostgreSQL authorization already uses center_memberships.role.
+        const reconciledUser: User = {
+          ...sessionUser,
+          role: activeMembership.role as UserRole,
+        };
+        setSessionState({
+          status: "authenticated",
+          session: { user: reconciledUser },
+        });
+        setUser(reconciledUser);
       } catch (error: any) {
+        if (!isCurrent()) return;
         // Membership bootstrap crashed (e.g. network error) — never leave the
         // app half-initialized. Route safely to Login with a clear message.
         console.error("[AppContext] Center membership check failed:", error);
@@ -76,6 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       // unauthenticated
       if (envError) throw envError;
+      setSessionState(resolvedSessionState);
       setUser(null);
     }
   }
@@ -90,12 +116,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function init() {
+    const generation = ++reconciliationGenerationRef.current;
+    const isCurrent = () => generation === reconciliationGenerationRef.current;
     try {
       const envError = getEnvironmentError();
 
       const res = await useCases.auth.getSession();
+      if (!isCurrent()) return;
       if (res.ok) {
-        await applySessionState(res.data, envError);
+        await applySessionState(res.data, envError, isCurrent);
       } else {
         if (envError) throw envError;
         const errorRes = res as { ok: false; error: Error };
@@ -103,19 +132,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
       }
     } catch (error: any) {
+      if (!isCurrent()) return;
       console.error("[AppContext] Initialization failed:", error);
       setSessionState({ status: "error", error: error as Error });
       setUser(null);
     } finally {
-      setIsInitialized(true);
+      if (isCurrent()) setIsInitialized(true);
     }
   }
 
   async function applyAuthenticatedSession(nextSessionState: SessionState) {
+    const generation = ++reconciliationGenerationRef.current;
+    const isCurrent = () => generation === reconciliationGenerationRef.current;
     try {
-      await applySessionState(nextSessionState, getEnvironmentError());
-      setIsInitialized(true);
+      await applySessionState(nextSessionState, getEnvironmentError(), isCurrent);
+      if (isCurrent()) setIsInitialized(true);
     } catch (error: any) {
+      if (!isCurrent()) return;
       console.error("[AppContext] Login session application failed:", error);
       setSessionState({ status: "error", error: error as Error });
       setUser(null);
@@ -125,7 +158,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let active = true;
     void init();
+    const unsubscribe = useCases.auth.onAuthStateChange((event) => {
+      // getSession() already performs the canonical mapping and membership
+      // reconciliation. Ignore Supabase's initial echo because init() handles it.
+      if (active && event !== "INITIAL_SESSION") void init();
+    });
+    return () => {
+      active = false;
+      reconciliationGenerationRef.current += 1;
+      unsubscribe();
+    };
   }, []);
 
   return (

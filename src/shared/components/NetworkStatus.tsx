@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'motion/react';
-import { clsx } from 'clsx';
 
 export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -34,6 +33,9 @@ export function NetworkStatus() {
     <AnimatePresence mode="wait">
       {!isOnline && (
         <motion.div
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -42,13 +44,16 @@ export function NetworkStatus() {
           style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
         >
           <div className="px-4 py-2.5 flex items-center justify-center gap-2">
-            <WifiOff className="h-4 w-4" />
+            <WifiOff aria-hidden="true" className="h-4 w-4" />
             <span className="text-xs sm:text-sm font-bold">{t('No internet connection')}</span>
           </div>
         </motion.div>
       )}
       {wasOffline && isOnline && (
         <motion.div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -57,7 +62,7 @@ export function NetworkStatus() {
           style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}
         >
           <div className="px-4 py-2.5 flex items-center justify-center gap-2">
-            <Wifi className="h-4 w-4" />
+            <Wifi aria-hidden="true" className="h-4 w-4" />
             <span className="text-xs sm:text-sm font-bold">{t('Back online')}</span>
           </div>
         </motion.div>

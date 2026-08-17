@@ -98,23 +98,19 @@ describe("Inventory modal CRUD (closed-by-default)", () => {
     expect(screen.getByText(/Edit Product/i)).toBeInTheDocument();
   });
 
-  it("confirms before deleting a product", async () => {
+  it("disables a product without exposing hard delete", async () => {
     vi.spyOn(useCases.products, "listFull").mockResolvedValue({
       ok: true,
       data: [product()],
     });
-    const del = vi.spyOn(useCases.products, "delete").mockResolvedValue({
-      ok: true,
-      data: undefined as never,
-    });
+    const update = vi.spyOn(useCases.products, "update").mockResolvedValue({ ok: true, data: product({ isActive: false }) });
+    const hardDelete = vi.spyOn(useCases.products, "delete");
     renderPage();
     await waitFor(() =>
       expect(screen.getAllByText(/Luxury Shampoo/i).length).toBeGreaterThan(0)
     );
-    fireEvent.click(screen.getAllByRole("button", { name: /^Delete$/i })[0]);
-    // Confirm dialog appears (no silent delete).
-    expect(await screen.findByText(/Are you sure you want to delete this product\?/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Confirm$/i }));
-    await waitFor(() => expect(del).toHaveBeenCalledWith("p1"));
+    fireEvent.click(screen.getAllByRole("button", { name: /^Disable$/i })[0]);
+    await waitFor(() => expect(update).toHaveBeenCalledWith("p1", { isActive: false }));
+    expect(hardDelete).not.toHaveBeenCalled();
   });
 });

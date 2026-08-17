@@ -25,6 +25,9 @@ interface BrandingSettings {
 }
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_BRANDING_IMPORT_BYTES = 3 * 1024 * 1024;
+const ALLOWED_LOGO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_IMPORTED_LOGO_PREFIX = /^data:image\/(?:jpeg|png|webp);base64,/i;
 
 const DEFAULT_SETTINGS: BrandingSettings = {
   salonName: 'LenaBeauty',
@@ -152,7 +155,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         next = brandingService.reloadFromCache();
       }
       setSettings(next);
-      if (next.logo) setPreview(next.logo);
+      setPreview(next.logo);
       // Reflect the saved brand across the app tokens.
       applyBrandTokens(next);
     })();
@@ -161,7 +164,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (!ALLOWED_LOGO_MIME_TYPES.has(file.type)) {
       showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
       return;
     }
@@ -214,31 +217,25 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         // untouched and it would be restored on the next Supabase load.
         brandLogoBase64: next.logo,
       }));
-      // Single persistence path for the local cache: after Supabase accepts
-      // the save, update the branding singleton (which owns the cache keys
-      // and the logo storage — including removing the logo when it is null).
-      // printService and InvoicePrintLayout read this singleton, so the next
-      // printed document uses the new branding without a reload. Writing the
-      // cache through a separate path here would leave the two sources
-      // drifting apart.
+      // Keep one validated cache owner so the application shell and print
+      // services observe the same saved snapshot immediately.
       brandingService.updateSettings(next);
-      // Saved values feed the shared application tokens.
       applyBrandTokens(next);
       setSaved(true);
       showToast('success', t('Success'), t('Branding settings saved successfully'));
       setTimeout(() => setSaved(false), 3000);
+      return true;
     } catch (err: any) {
       showToast('error', t('Error'), err?.message || t('Failed to load branding'));
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
   const handleSave = async () => {
-    // Strict color contract at the UI boundary: the free-text color inputs
-    // accept anything, so refuse to persist unless all three are #RRGGBB.
-    // (The repository boundary independently normalizes, but a clear error
-    // here beats a silent value change.)
+    // Reject malformed free-text color values at the UI boundary; repository
+    // normalization remains a second line of defense.
     const invalidColors = [
       settings.primaryColor,
       settings.secondaryColor,
@@ -265,19 +262,25 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   const handleImportSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_BRANDING_IMPORT_BYTES) {
+      showToast('error', t('Error'), t('Invalid branding settings file'));
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        // Strict structural validation FIRST: only a complete exported
-        // snapshot is accepted. Arrays, null, primitives, empty/unknown
-        // objects, and partial shapes are rejected before anything can be
-        // persisted — a malformed file must never overwrite the salon's
-        // branding with defaults. The validated snapshot is then persisted
-        // directly (no dependence on React state commits).
+        // Require a complete exported snapshot and never persist a malformed,
+        // oversized, or non-image logo from a user-controlled JSON file.
         const validated = validateBrandingImport(JSON.parse(event.target?.result as string));
+        if (validated.logo
+            && (!ALLOWED_IMPORTED_LOGO_PREFIX.test(validated.logo)
+              || validated.logo.length > MAX_BRANDING_IMPORT_BYTES * 1.4)) {
+          throw new Error('INVALID_BRANDING_LOGO');
+        }
+        const savedSuccessfully = await persistSettings(validated);
+        if (!savedSuccessfully) return;
         setSettings(validated);
-        if (validated.logo) setPreview(validated.logo);
-        void persistSettings(validated);
+        setPreview(validated.logo);
       } catch {
         showToast('error', t('Error'), t('Invalid branding settings file'));
       }
@@ -299,7 +302,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
             type="color"
             value={settings[field]}
             onChange={(e) => handleColorChange(field, e.target.value)}
-            className="h-9 w-12 rounded-lg cursor-pointer border border-border bg-card p-0.5"
+            className="h-11 w-12 rounded-lg cursor-pointer border border-border bg-card p-0.5"
             aria-label={t(labelKey)}
           />
           <input
@@ -371,19 +374,19 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  className="h-9 px-3 rounded-lg font-bold text-sm text-white shadow-sm"
+                  className="h-11 px-3 rounded-lg font-bold text-sm text-white shadow-sm"
                   style={{ backgroundColor: settings.primaryColor }}
                 >
                   {t('Save')}
                 </button>
                 <span
-                  className="h-9 px-3 inline-flex items-center rounded-lg font-bold text-sm text-white"
+                  className="h-11 px-3 inline-flex items-center rounded-lg font-bold text-sm text-white"
                   style={{ backgroundColor: settings.secondaryColor }}
                 >
                   {t('Secondary Color')}
                 </span>
                 <span
-                  className="h-9 w-9 rounded-lg border border-border"
+                  className="h-11 w-11 rounded-lg border border-border"
                   style={{ backgroundColor: settings.accentColor }}
                   aria-hidden
                 />

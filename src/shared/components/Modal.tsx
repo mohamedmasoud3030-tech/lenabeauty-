@@ -33,6 +33,8 @@ interface ModalProps {
   disableClose?: boolean;
   /** Accessible name fallback when no title is supplied. */
   ariaLabel?: string;
+  /** Optional classes for the portal overlay container (for example print:hidden). */
+  overlayClassName?: string;
   className?: string;
 }
 
@@ -58,6 +60,7 @@ export function Modal({
   confirmCloseMessage,
   disableClose = false,
   ariaLabel,
+  overlayClassName,
   className,
 }: ModalProps) {
   const { t } = useTranslation();
@@ -161,7 +164,8 @@ export function Modal({
         <div
           className={clsx(
             "fixed inset-0 z-[var(--z-overlay)] flex items-stretch sm:items-center justify-center",
-            "p-0 sm:p-4"
+            "p-0 sm:p-4",
+            overlayClassName
           )}
         >
           {/* Backdrop */}
@@ -221,7 +225,7 @@ export function Modal({
                   onClick={() => void requestClose()}
                   disabled={disableClose}
                   aria-label={t("Close")}
-                  className="shrink-0 h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 h-11 w-11 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4" />
                 </button>
