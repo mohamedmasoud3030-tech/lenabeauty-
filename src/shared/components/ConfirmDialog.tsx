@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { AlertTriangle, X } from "lucide-react";
@@ -18,6 +18,9 @@ interface ConfirmContextValue {
 
 export const ConfirmContext = createContext<ConfirmContextValue | undefined>(undefined);
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function useConfirm() {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error("useConfirm must be used within ConfirmProvider");
@@ -31,6 +34,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     options: ConfirmOptions;
     resolve: (value: boolean) => void;
   } | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const isOpen = Boolean(state?.open);
 
   const confirm = (options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
@@ -57,17 +63,57 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!state?.open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    if (!isOpen) return;
+    previouslyFocused.current = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => {
+      const panel = panelRef.current;
+      const safestAction = panel?.querySelector<HTMLElement>("[data-confirm-cancel]");
+      (safestAction ?? panel)?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      const target = previouslyFocused.current;
+      window.setTimeout(() => target?.focus(), 0);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         handleCancel();
-      } else if (e.key === "Enter") {
-        handleConfirm();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusables.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !panel.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
+        event.preventDefault();
+        first.focus();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [state]);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [isOpen, state]);
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
@@ -78,6 +124,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <div className="fixed inset-0 z-[var(--z-overlay-top)] flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div
+              aria-hidden="true"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -87,6 +134,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
             {/* Dialog Card */}
             <motion.div
+              ref={panelRef}
               role="alertdialog"
               aria-modal="true"
               aria-labelledby="confirm-title"
@@ -116,7 +164,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 </div>
                 <button
                   onClick={handleCancel}
-                  className="rounded-xl p-1.5 hover:bg-muted text-muted-foreground transition-all cursor-pointer"
+                  className="h-11 w-11 -m-2 rounded-xl flex items-center justify-center hover:bg-muted text-muted-foreground transition-all cursor-pointer"
                   aria-label={t("Close")}
                 >
                   <X className="h-4 w-4" />
@@ -132,6 +180,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-3 justify-end">
                 <button
                   type="button"
+                  data-confirm-cancel
                   onClick={handleCancel}
                   className="min-h-11 px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-muted-foreground border border-border bg-transparent hover:bg-muted hover:text-foreground transition-all min-w-[90px] cursor-pointer"
                 >
@@ -140,7 +189,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  autoFocus
                   className={`min-h-11 px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-wider text-primary-foreground min-w-[90px] transition-all shadow-md cursor-pointer ${
                     state.options.type === "danger"
                       ? "bg-destructive hover:bg-destructive/90 shadow-destructive/10"

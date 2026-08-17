@@ -22,11 +22,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const CENTER_STORAGE_KEY = "lb_active_center_id";
 
   async function applySessionState(resolvedSessionState: SessionState, envError: Error | null) {
-    setSessionState(resolvedSessionState);
     if (resolvedSessionState.status === "authenticated") {
       if (envError) throw envError; // Block Supabase login if misconfigured
-      const userObj = resolvedSessionState.session.user;
-      setUser(userObj);
+      const sessionUser = resolvedSessionState.session.user;
 
       try {
         const centersRes = await useCases.auth.getMyCenters?.();
@@ -43,9 +41,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        let activeMembership: (typeof targetCenters)[number] | undefined;
         if (config.branchMode === "single") {
-          const hasMembership = targetCenters.some(c => c.id === config.centerId);
-          if (!hasMembership) {
+          activeMembership = targetCenters.find(c => c.id === config.centerId);
+          if (!activeMembership) {
             const err = new Error("UNAUTHORIZED_CENTER_MEMBERSHIP");
             setSessionState({ status: "error", error: err });
             setUser(null);
@@ -56,14 +55,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           } catch { /* storage unavailable */ }
         } else {
           let activeId = localStorage.getItem(CENTER_STORAGE_KEY);
-          if (!activeId || !targetCenters.find(c => c.id === activeId)) {
-            activeId = targetCenters[0].id;
+          activeMembership = targetCenters.find(c => c.id === activeId);
+          if (!activeMembership) {
+            activeMembership = targetCenters[0];
+            activeId = activeMembership.id;
           }
-          useCases.tenant.setActiveCenterId(activeId);
+          useCases.tenant.setActiveCenterId(activeId!);
           try {
-            localStorage.setItem(CENTER_STORAGE_KEY, activeId);
+            localStorage.setItem(CENTER_STORAGE_KEY, activeId!);
           } catch { /* storage unavailable */ }
         }
+
+        // The active center membership is the UI role source of truth. Auth
+        // app_metadata can be stale after a center-specific role change, while
+        // PostgreSQL authorization already uses center_memberships.role.
+        const reconciledUser: User = {
+          ...sessionUser,
+          role: activeMembership.role as UserRole,
+        };
+        setSessionState({
+          status: "authenticated",
+          session: { user: reconciledUser },
+        });
+        setUser(reconciledUser);
       } catch (error: any) {
         // Membership bootstrap crashed (e.g. network error) — never leave the
         // app half-initialized. Route safely to Login with a clear message.
@@ -76,6 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       // unauthenticated
       if (envError) throw envError;
+      setSessionState(resolvedSessionState);
       setUser(null);
     }
   }
@@ -125,7 +140,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    let active = true;
     void init();
+    const unsubscribe = useCases.auth.onAuthStateChange((event) => {
+      // getSession() already performs the canonical mapping and membership
+      // reconciliation. Ignore Supabase's initial echo because init() handles it.
+      if (active && event !== "INITIAL_SESSION") void init();
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   return (

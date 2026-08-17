@@ -83,6 +83,7 @@ export default function PosInvoicesPage() {
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS" | "PACKAGES">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
@@ -92,6 +93,7 @@ export default function PosInvoicesPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
+  const customerSearchRequestRef = useRef(0);
 
   useEffect(() => {
     loadData();
@@ -120,6 +122,7 @@ export default function PosInvoicesPage() {
 
   async function loadData() {
     setLoading(true);
+    setLoadError(null);
     try {
       const [s, p, pkg, e, settings, gc] = await Promise.all([
         unwrap(useCases.services.list()),
@@ -141,6 +144,8 @@ export default function PosInvoicesPage() {
       setEmployees(e.filter((employee) => employee.isActive !== false));
       setGiftCards(gc.filter((card: any) => card.isActive !== false));
       if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
+    } catch (error) {
+      setLoadError(formatError(error));
     } finally {
       setLoading(false);
     }
@@ -148,11 +153,18 @@ export default function PosInvoicesPage() {
 
   async function searchCustomers(q: string) {
     setSearchQ(q);
-    if (q.length > 1) {
-      const res = await unwrap(useCases.customers.list(q));
-      setCustomers(res);
-    } else {
+    const requestId = ++customerSearchRequestRef.current;
+    if (q.trim().length <= 1) {
       setCustomers([]);
+      return;
+    }
+    try {
+      const res = await unwrap(useCases.customers.list(q));
+      if (requestId === customerSearchRequestRef.current) setCustomers(res);
+    } catch (error) {
+      if (requestId !== customerSearchRequestRef.current) return;
+      setCustomers([]);
+      showToast('error', t("Error"), formatError(error));
     }
   }
 
@@ -419,6 +431,18 @@ export default function PosInvoicesPage() {
     : activeTab === "PRODUCTS"
       ? products.filter(it => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()))
       : packages.filter((it: any) => it.name.toLowerCase().includes(itemSearchQ.toLowerCase()));
+
+  if (loadError) {
+    return (
+      <ScreenState
+        state="error"
+        title={t("Failed to load point of sale")}
+        description={loadError}
+        actionLabel={t("Retry")}
+        onAction={() => void loadData()}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 lg:gap-6 min-h-0 lg:min-h-[calc(100vh-120px)] pb-4 lg:pb-0 min-w-0 overflow-x-clip">

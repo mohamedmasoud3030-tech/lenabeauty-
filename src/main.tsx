@@ -23,7 +23,6 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-// Service Worker registration is handled automatically by vite-plugin-pwa
-// (registerType: 'autoUpdate' injects registerSW). A manual
-// navigator.serviceWorker.register('/sw.js') here caused a double
-// registration and is intentionally removed.
+// Service Worker registration is owned by PwaUpdatePrompt through
+// virtual:pwa-register. A manual navigator.serviceWorker.register('/sw.js')
+// here would create a duplicate registration and is intentionally omitted.

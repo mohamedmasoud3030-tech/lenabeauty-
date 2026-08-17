@@ -90,6 +90,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         titleKey: "Management",
         items: [
           { to: "/reports", labelKey: "Reports", Icon: FileBarChart, adminOnly: true },
+          { to: "/expenses", labelKey: "Expenses", Icon: Receipt, adminOnly: true },
+          { to: "/attendance", labelKey: "Attendance", Icon: CalendarDays, adminOnly: true },
+          { to: "/advances", labelKey: "Advances", Icon: Receipt, adminOnly: true },
+          { to: "/payroll", labelKey: "Payroll", Icon: FileBarChart, adminOnly: true },
+          { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: UserCog, adminOnly: true },
           { to: "/settings", labelKey: "Settings", Icon: Settings, adminOnly: true },
         ],
       },
@@ -135,11 +140,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 relative z-10 gap-2">
         <div className="flex items-center gap-2">
-          <button onClick={toggleLanguage} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" title={t("Change Language")}>
-            <Globe className="h-4 w-4" />
+          <button onClick={toggleLanguage} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" aria-label={t("Change Language")} title={t("Change Language")}>
+            <Globe aria-hidden="true" className="h-4 w-4" />
           </button>
-          <button onClick={toggleTheme} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" title={t("Change Theme")}>
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <button onClick={toggleTheme} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" aria-label={t("Change Theme")} aria-pressed={isDark} title={t("Change Theme")}>
+            {isDark ? <Sun aria-hidden="true" className="h-4 w-4" /> : <Moon aria-hidden="true" className="h-4 w-4" />}
           </button>
         </div>
         {onClose && (
@@ -149,7 +154,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 scrollbar-hide relative z-10">
+      <nav aria-label={t("Primary navigation")} className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 scrollbar-hide relative z-10">
         {navGroups.map((group) => {
           const visibleItems = group.items.filter((item) => !item.adminOnly || me?.role === "ADMIN");
           if (visibleItems.length === 0) return null;

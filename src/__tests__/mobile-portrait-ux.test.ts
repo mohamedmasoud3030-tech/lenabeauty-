@@ -14,6 +14,7 @@ const appointments = readFileSync(resolve(process.cwd(), "src/pages/Appointments
 const pos = readFileSync(resolve(process.cwd(), "src/pages/PosInvoicesPage.tsx"), "utf8");
 const layout = readFileSync(resolve(process.cwd(), "src/ui/layout/Layout.tsx"), "utf8");
 const receipt = readFileSync(resolve(process.cwd(), "src/shared/components/ReceiptPreviewModal.tsx"), "utf8");
+const modal = readFileSync(resolve(process.cwd(), "src/shared/components/Modal.tsx"), "utf8");
 
 describe("small-phone portrait UX contracts", () => {
   it("does not ship an Android-style touch ripple", () => {
@@ -37,20 +38,29 @@ describe("small-phone portrait UX contracts", () => {
     expect(layout).toContain("translate-y-full");
   });
 
+  it("filters admin-only destinations from the mobile More menu", () => {
+    expect(layout).toContain('{ to: "/reports", labelKey: "Reports", Icon: BarChart3, adminOnly: true }');
+    expect(layout).toContain('{ to: "/employees", labelKey: "Employees", Icon: Users, adminOnly: true }');
+    expect(layout).toContain('{ to: "/settings", labelKey: "Settings", Icon: Settings2, adminOnly: true }');
+    expect(layout).toContain("visibleMoreMenuItems.map");
+  });
+
   it("does not implement swipe actions on Customers (accidental delete risk)", () => {
     expect(customers).not.toMatch(/onTouchStart|onTouchEnd|onPan|drag=["']x["']/);
     expect(customers).not.toMatch(/swipe actions/i);
     expect(customers).toContain("No swipe");
     expect(customers).toContain("aria-label={t(\"Actions\")}");
     expect(customers).toContain("openEdit(c)");
-    expect(customers).toContain("handleDeleteCustomer(c.id)");
+    expect(customers).not.toContain("handleDeleteCustomer");
+    expect(customers).not.toContain("useCases.customers.delete");
   });
 
   it("defaults Appointments to day mode on a phone-sized viewport", () => {
     expect(appointments).toContain("window.innerWidth < 1024 ? \"day\" : \"week\"");
     expect(appointments).toContain("skip empty days");
     expect(appointments).toContain("above-bottom-nav");
-    expect(appointments).toContain("--keyboard-inset");
+    expect(appointments).toContain("<Modal");
+    expect(modal).toContain("--keyboard-inset");
   });
 
   it("keeps a single POS category strip and a thumb-zone pay action", () => {

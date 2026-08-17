@@ -16,6 +16,8 @@ const VALIDATION_KEYS = [
   "validation.date_range",
   "validation.past_date",
   "validation.checkout_after_checkin",
+  "validation.logo_type",
+  "validation.logo_size",
   "validation.vat_range",
 ];
 

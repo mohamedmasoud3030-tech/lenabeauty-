@@ -1,4 +1,6 @@
 # CURRENT VERSION CLOSURE — staff-only release
+
+> **Historical closure snapshot.** Current release status and blockers are maintained in `PROJECT_DEFECTS.md` and `docs/PRODUCTION_READINESS.md`.
 **Release definition:** Single-customer, single-center Supabase PWA. Real auth. Real CRUD. Staff-only (no public booking, no customer portal). No fake mode.
 **Primary gate:** Live Supabase connection must be established before any customer receives this product.
 

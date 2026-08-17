@@ -1,7 +1,7 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, ChevronRight, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut, MoreHorizontal, Scissors, Package, Gift, BarChart3, Settings2, DollarSign } from "lucide-react";
+import { Menu, Bell, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut, MoreHorizontal, Scissors, Package, Gift, BarChart3, Settings2 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
@@ -19,20 +19,13 @@ export default function Layout() {
   const [showSidebar, setShowSidebar] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
   const { isOpen: isKeyboardOpen } = useKeyboardInset();
   useScrollFieldIntoView();
-
-  // Detect mobile
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Close more menu on click/tap outside (touch-first: mousedown alone misses taps).
   useEffect(() => {
@@ -53,8 +46,42 @@ export default function Layout() {
   }, [showMoreMenu]);
 
   useEffect(() => {
+    if (!showUserMenu) return;
+    const closeUserMenu = (event: MouseEvent | KeyboardEvent) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      if (event instanceof MouseEvent) {
+        const target = event.target as Node | null;
+        if (target && (userMenuRef.current?.contains(target) || userButtonRef.current?.contains(target))) return;
+      }
+      setShowUserMenu(false);
+      if (event instanceof KeyboardEvent) {
+        window.setTimeout(() => userButtonRef.current?.focus(), 0);
+      }
+    };
+    document.addEventListener("mousedown", closeUserMenu);
+    window.addEventListener("keydown", closeUserMenu);
+    return () => {
+      document.removeEventListener("mousedown", closeUserMenu);
+      window.removeEventListener("keydown", closeUserMenu);
+    };
+  }, [showUserMenu]);
+
+  useEffect(() => {
     if (isKeyboardOpen) setShowMoreMenu(false);
   }, [isKeyboardOpen]);
+
+  // Escape closes the mobile More surface and returns focus to its trigger.
+  useEffect(() => {
+    if (!showMoreMenu) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setShowMoreMenu(false);
+      window.setTimeout(() => moreButtonRef.current?.focus(), 0);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showMoreMenu]);
 
   // Dynamically sync language and direction on document element
   useEffect(() => {
@@ -78,6 +105,7 @@ export default function Layout() {
       "/customers": "Customers",
       "/gift-cards": "Gift Cards",
       "/customer-experience": "Customer Experience",
+      "/forecasting": "Forecasting",
       "/services": "Services",
       "/inventory": "Inventory",
       "/packages": "Packages",
@@ -99,6 +127,13 @@ export default function Layout() {
     return key ? t(key) : t("Dashboard");
   }, [location.pathname, t]);
 
+  useEffect(() => {
+    document.title = `${pageTitle} — LenaBeauty`;
+    return () => {
+      document.title = "Lena Beauty";
+    };
+  }, [pageTitle]);
+
   const isRtl = i18n.language === "ar";
 
   // Mobile bottom navigation - 5 key daily functions
@@ -115,13 +150,19 @@ export default function Layout() {
     { to: "/services", labelKey: "Services", Icon: Scissors },
     { to: "/inventory", labelKey: "Inventory", Icon: Package },
     { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
-    { to: "/reports", labelKey: "Reports", Icon: BarChart3 },
-    { to: "/employees", labelKey: "Employees", Icon: Users },
-    { to: "/settings", labelKey: "Settings", Icon: Settings2 },
+    { to: "/reports", labelKey: "Reports", Icon: BarChart3, adminOnly: true },
+    { to: "/employees", labelKey: "Employees", Icon: Users, adminOnly: true },
+    { to: "/settings", labelKey: "Settings", Icon: Settings2, adminOnly: true },
   ];
+  const visibleMoreMenuItems = moreMenuItems.filter(
+    (item) => !item.adminOnly || me?.role === "ADMIN",
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <a className="skip-link print:hidden" href="#main-content">
+        {t("Skip to main content")}
+      </a>
       <div className="lg:grid lg:min-h-screen lg:grid-cols-[320px_1fr] relative">
         
         {/* Mobile Sidebar Overlay */}
@@ -138,7 +179,7 @@ export default function Layout() {
         </AnimatePresence>
 
         {/* Sidebar Container */}
-        <div className={clsx(
+        <div id="app-sidebar" className={clsx(
           "fixed inset-y-0 z-[var(--z-sidebar)] w-[80%] max-w-[320px] transform transition-all duration-300 ease-[0.23,1,0.32,1] lg:static lg:translate-x-0 shadow-2xl lg:shadow-none print:hidden start-0",
           showSidebar
             ? "translate-x-0"
@@ -154,6 +195,8 @@ export default function Layout() {
               <button
                 onClick={() => setShowSidebar(true)}
                 aria-label={t("Open menu")}
+                aria-expanded={showSidebar}
+                aria-controls="app-sidebar"
                 className="lg:hidden h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm active:scale-95"
               >
                 <Menu className="h-5 w-5" />
@@ -163,7 +206,7 @@ export default function Layout() {
                   <LayoutGrid className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-foreground leading-tight truncate">
+                  <h2 id="current-page-title" className="text-xs sm:text-sm font-bold uppercase tracking-[0.2em] text-foreground leading-tight truncate">
                     {pageTitle}
                   </h2>
                 </div>
@@ -173,19 +216,30 @@ export default function Layout() {
             {/* Right Actions */}
             <div className="flex items-center gap-1 sm:gap-3 ml-auto">
               <CenterSwitcher />
-              <GlobalSearch />
+              <GlobalSearch userRole={me?.role} />
 
-              <button onClick={() => nav("/settings?tab=notifications")} className="h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95" title={t("Notifications")}>
-                <Bell className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                <span className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-primary border-2 border-card shadow-sm" />
-              </button>
+              {me?.role === "ADMIN" && (
+                <button
+                  onClick={() => nav("/settings?tab=notifications")}
+                  className="h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95"
+                  aria-label={t("Notifications")}
+                  title={t("Notifications")}
+                >
+                  <Bell aria-hidden="true" className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                </button>
+              )}
               
-              <div className="hidden sm:block h-8 w-px bg-border" />
+              <div aria-hidden="true" className="hidden sm:block h-8 w-px bg-border" />
               
               <div className="relative">
                 <button 
+                  ref={userButtonRef}
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="hidden sm:flex h-10 w-10 sm:h-11 sm:w-11 rounded-lg bg-primary/10 border border-primary/20 items-center justify-center text-primary font-bold text-sm shadow-inner hover:scale-105 transition-transform active:scale-95"
+                  aria-label={t("User menu")}
+                  aria-expanded={showUserMenu}
+                  aria-haspopup="menu"
+                  aria-controls="user-menu"
                 >
                   {getInitials(me, "·")}
                 </button>
@@ -194,6 +248,10 @@ export default function Layout() {
                 <AnimatePresence>
                   {showUserMenu && (
                     <motion.div
+                      id="user-menu"
+                      ref={userMenuRef}
+                      role="group"
+                      aria-label={t("User menu")}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -202,16 +260,18 @@ export default function Layout() {
                       <div className="p-3 border-b border-border">
                         <p className="text-xs font-bold text-foreground">{getDisplayName(me, t("Unnamed"))}</p>
                         <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
-                          {me?.role === "ADMIN" ? t("Administrator") : me?.role === "STAFF" ? t("Staff Member") : ""}
+                          {me?.role === "ADMIN" ? t("Administrator") : me?.role === "MANAGER" ? t("Manager") : me?.role === "STAFF" ? t("Staff Member") : ""}
                         </p>
                       </div>
-                      <button
-                        onClick={() => { setShowUserMenu(false); nav("/settings"); }}
-                        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/50 transition-all"
-                      >
-                        <Settings className="h-4 w-4" />
-                        {t("Settings")}
-                      </button>
+                      {me?.role === "ADMIN" && (
+                        <button
+                          onClick={() => { setShowUserMenu(false); nav("/settings"); }}
+                          className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-foreground hover:bg-muted/50 transition-all"
+                        >
+                          <Settings className="h-4 w-4" />
+                          {t("Settings")}
+                        </button>
+                      )}
                       <button
                         onClick={() => { setShowUserMenu(false); logout(); }}
                         className="w-full flex items-center gap-2 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-500/10 transition-all"
@@ -227,7 +287,12 @@ export default function Layout() {
           </header>
 
           {/* Main Content */}
-          <main className="min-w-0 flex-1 p-3 sm:p-6 lg:p-10 relative z-10">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            aria-labelledby="current-page-title"
+            className="min-w-0 flex-1 p-3 sm:p-6 lg:p-10 relative z-10"
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -254,7 +319,7 @@ export default function Layout() {
         )}
         aria-hidden={isKeyboardOpen}
       >
-        <nav className="flex items-stretch justify-around h-[64px] px-1">
+        <nav aria-label={t("Primary navigation")} className="flex items-stretch justify-around h-[64px] px-1">
           {bottomNavItems.map(({ to, labelKey, Icon, action }) => (
             action ? (
               <button
@@ -262,6 +327,9 @@ export default function Layout() {
                 type="button"
                 onClick={action}
                 ref={moreButtonRef}
+                aria-expanded={showMoreMenu}
+                aria-haspopup="menu"
+                aria-controls="mobile-more-menu"
                 className={clsx(
                   "flex flex-col items-center justify-center flex-1 gap-0.5 transition-all duration-200 touch-target relative",
                   showMoreMenu ? "text-primary" : "text-muted-foreground hover:text-foreground"
@@ -325,7 +393,10 @@ export default function Layout() {
                 onClick={() => setShowMoreMenu(false)}
               />
               <motion.div
+                id="mobile-more-menu"
                 ref={moreMenuRef}
+                role="navigation"
+                aria-label={t("More")}
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -333,7 +404,7 @@ export default function Layout() {
                 className="absolute bottom-full mb-2 inset-x-2 z-50 rounded-2xl bg-card border border-border shadow-2xl overflow-hidden"
               >
                 <div className="grid grid-cols-3 gap-1 p-2">
-                  {moreMenuItems.map(({ to, labelKey, Icon }) => (
+                  {visibleMoreMenuItems.map(({ to, labelKey, Icon }) => (
                     <NavLink
                       key={to}
                       to={to}

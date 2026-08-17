@@ -87,6 +87,26 @@ describe("Environment Configuration Tests", () => {
         expect(env.environment).toBe("production");
     });
 
+    it("fails closed when an optimized explicit Production target omits its project configuration", () => {
+        expect(() => parseEnv({
+            VITE_ENVIRONMENT: "production",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        }, { isProductionBuild: true })).toThrowError("INVALID_SUPABASE_CONFIGURATION");
+    });
+
+    it("keeps the optimized Demo fallback limited to Staging", () => {
+        const env = parseEnv({
+            VITE_ENVIRONMENT: "staging",
+        }, { isProductionBuild: true });
+        expect(env.environment).toBe("staging");
+        expect(env.backend).toBe("supabase");
+        expect(env.supabaseUrl).toMatch(/^https:\/\//);
+        expect(env.supabasePublishableKey).toBeTruthy();
+        expect(env.centerId).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
     it("rejects an unsupported VITE_ENVIRONMENT value", () => {
         expect(() => parseEnv({
             VITE_ENVIRONMENT: "preview",

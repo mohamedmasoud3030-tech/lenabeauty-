@@ -243,8 +243,10 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button 
-            onClick={load} 
+          <button
+            type="button"
+            onClick={load}
+            aria-label={t("Refresh")}
             className="group relative h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-lg hover:scale-110 active:scale-95"
           >
             <Zap className={clsx("h-5 w-5", loading && "animate-spin")} />

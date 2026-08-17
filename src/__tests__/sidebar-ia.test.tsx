@@ -30,12 +30,13 @@ describe("Sidebar client-trial navigation", () => {
     );
   }
 
-  it("shows only the compact daily client-trial navigation", async () => {
+  it("keeps daily navigation compact while exposing every supported admin workforce route", async () => {
     await renderSidebar();
 
     for (const label of [
       "Dashboard", "Appointments", "POS", "Customers", "Services",
-      "Inventory", "Employees", "Reports", "Settings",
+      "Inventory", "Employees", "Reports", "Expenses", "Attendance",
+      "Advances", "Payroll", "Staff Analytics", "Settings",
     ]) {
       expect(screen.getByText(i18n.t(label))).toBeInTheDocument();
     }
@@ -45,10 +46,7 @@ describe("Sidebar client-trial navigation", () => {
       expect(screen.queryByText(i18n.t("Packages"))).not.toBeInTheDocument();
     });
 
-    for (const hidden of [
-      "Customer Experience", "Attendance", "Advances", "Payroll",
-      "Staff Analytics", "Branding", "Expenses",
-    ]) {
+    for (const hidden of ["Customer Experience", "Branding"]) {
       expect(screen.queryByText(i18n.t(hidden))).not.toBeInTheDocument();
     }
   });

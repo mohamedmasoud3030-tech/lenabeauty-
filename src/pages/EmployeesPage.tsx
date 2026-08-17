@@ -9,9 +9,9 @@ import { getDisplayName, getInitials } from "../shared/displayName";
 import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { useAuth } from "../auth";
 import {
-  Plus, Trash2, Edit, Users, UserPlus, Save,
+  Plus, Edit, Users, UserPlus, Save,
   Briefcase, Percent,
-  TrendingUp, Award, Star, UserCheck, Wallet,
+  TrendingUp, Award, Star, UserCheck, UserX, Wallet,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -51,17 +51,20 @@ export default function EmployeesPage() {
     void load();
   }, []);
 
-  async function handleDelete(id: string) {
-    const ok = await confirm({
-      title: t("Delete Employee"),
-      message: t("Are you sure you want to delete this employee?"),
-      type: "danger"
-    });
-    if (!ok) return;
+  async function handleToggleActive(employee: Employee) {
+    const nextActive = !employee.isActive;
+    if (!nextActive) {
+      const ok = await confirm({
+        title: t("Deactivate Employee"),
+        message: t("Deactivate this employee without deleting payroll or attendance history?"),
+        type: "status",
+      });
+      if (!ok) return;
+    }
     try {
-      await unwrap(useCases.employees.delete(id));
-      showToast("success", t("Success"), t("Employee deleted successfully"));
-      load();
+      await unwrap(useCases.employees.update(employee.id, { isActive: nextActive }));
+      showToast("success", t("Success"), nextActive ? t("Employee activated") : t("Employee deactivated"));
+      await load();
     } catch (e) {
       showToast("error", t("Error"), mapErrorToMessage(e, t));
     }
@@ -180,11 +183,12 @@ export default function EmployeesPage() {
                   >
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
+                        <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase shrink-0">
                           {getInitials(emp, "·")}
                         </div>
                         <div className="min-w-0">
                           <span className="font-bold text-foreground text-sm block group-hover:text-primary transition-colors truncate">{getDisplayName(emp, t("Unnamed"))}</span>
+                          {!emp.isActive && <span className="text-[9px] font-bold text-destructive uppercase">{t("Disabled")}</span>}
                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("Staff ID")}: {emp.id.slice(-6).toUpperCase()}</span>
                         </div>
                       </div>
@@ -216,19 +220,24 @@ export default function EmployeesPage() {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => { setForm(emp); setErrors({}); }}
-                            className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                            className="h-11 w-11 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                             aria-label={t("Edit")}
                             title={t("Edit")}
                           >
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(emp.id)}
-                            className="h-9 w-9 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
-                            aria-label={t("Delete")}
-                            title={t("Delete")}
+                            onClick={() => void handleToggleActive(emp)}
+                            className={clsx(
+                              "h-9 w-9 rounded-lg border bg-card flex items-center justify-center transition-all",
+                              emp.isActive
+                                ? "border-border text-muted-foreground hover:bg-warning/10 hover:text-warning"
+                                : "border-success/30 text-success hover:bg-success/10",
+                            )}
+                            aria-label={emp.isActive ? t("Deactivate") : t("Activate")}
+                            title={emp.isActive ? t("Deactivate") : t("Activate")}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {emp.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                           </button>
                         </div>
                       </td>
@@ -271,6 +280,7 @@ export default function EmployeesPage() {
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col items-start gap-1">
                     <span className="font-bold text-foreground text-sm truncate w-full leading-tight">{getDisplayName(emp, t("Unnamed"))}</span>
+                    {!emp.isActive && <span className="text-[9px] font-bold text-destructive uppercase">{t("Disabled")}</span>}
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("Staff ID")}: {emp.id.slice(-6).toUpperCase()}</span>
                     <div className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2 py-0.5 mt-0.5 text-[10px] font-bold text-muted-foreground">
                       <Briefcase className="h-3 w-3" />
@@ -302,17 +312,22 @@ export default function EmployeesPage() {
                   <div className="flex items-center gap-1.5 pt-1 border-t border-border/50">
                     <button
                       onClick={() => { setForm(emp); setErrors({}); }}
-                      className="h-9 flex-1 rounded-lg border border-border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                      className="h-11 flex-1 rounded-lg border border-border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                     >
                       <Edit className="h-4 w-4" />
                       {t("Edit")}
                     </button>
                     <button
-                      onClick={() => void handleDelete(emp.id)}
-                      className="h-9 flex-1 rounded-lg border border-border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+                      onClick={() => void handleToggleActive(emp)}
+                      className={clsx(
+                        "h-9 flex-1 rounded-lg border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all",
+                        emp.isActive
+                          ? "border-border text-muted-foreground hover:bg-warning/10 hover:text-warning"
+                          : "border-success/30 text-success hover:bg-success/10",
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
-                      {t("Delete")}
+                      {emp.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      {emp.isActive ? t("Deactivate") : t("Activate")}
                     </button>
                   </div>
                 )}
@@ -353,7 +368,7 @@ export default function EmployeesPage() {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{t("Team Size")}</p>
-              <h3 className="text-sm font-bold text-foreground">{employees.length} {t("Active Staff")}</h3>
+              <h3 className="text-sm font-bold text-foreground">{employees.filter((employee) => employee.isActive).length} {t("Active Staff")}</h3>
             </div>
           </div>
         </div>

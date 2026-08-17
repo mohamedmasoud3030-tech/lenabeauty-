@@ -215,9 +215,10 @@ ${offerTitle}
       // pre-filled message from their real WhatsApp. No API key required.
       const link = buildWhatsAppLink(phone, message);
       openWhatsApp(phone, message);
-      log.status = 'sent';
-      log.deliveredAt = new Date();
-      log.errorMessage = link; // keep the generated link for reference/audit
+      // Opening a pre-filled link is not evidence that the user pressed Send,
+      // and it is never a delivery receipt. Keep the event pending/unverified.
+      log.status = 'pending';
+      log.errorMessage = link; // generated manual link; no delivery claim
     } catch (error) {
       log.status = 'failed';
       log.errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -233,7 +234,7 @@ ${offerTitle}
    * Log notification to database
    */
   private async logNotification(log: WhatsAppNotificationLog): Promise<void> {
-    logger.log('[WhatsApp Log]', log);
+    logger.log('[WhatsApp Log]', { id: log.id, type: log.type, status: log.status });
     this.sentLogs.unshift(log);
     this.sentLogs = this.sentLogs.slice(0, 200);
   }
@@ -336,8 +337,8 @@ ${offerTitle}
     totalFailed: number;
     successRate: number;
   }> {
-    const totalSent = this.sentLogs.length;
-    const totalDelivered = this.sentLogs.filter((log) => log.status === 'sent' || log.status === 'delivered').length;
+    const totalSent = this.sentLogs.filter((log) => log.status === 'sent' || log.status === 'delivered').length;
+    const totalDelivered = this.sentLogs.filter((log) => log.status === 'delivered').length;
     const totalFailed = this.sentLogs.filter((log) => log.status === 'failed').length;
     return {
       totalSent,
@@ -347,13 +348,9 @@ ${offerTitle}
     };
   }
 
-  /**
-   * With the wa.me approach there is nothing to configure — every browser can
-   * open a WhatsApp deep link. (If you later switch to the Business Cloud API,
-   * gate this on WHATSAPP_API_KEY + WHATSAPP_PHONE_NUMBER_ID instead.)
-   */
+  /** Whether an automated provider with verifiable delivery is configured. */
   isConfigured(): boolean {
-    return true;
+    return false;
   }
 }
 

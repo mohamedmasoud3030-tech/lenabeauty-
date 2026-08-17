@@ -69,8 +69,8 @@ fn desktop_health() -> DesktopHealth {
     DesktopHealth {
         app: "LenaBeauty",
         shell: "tauri",
-        sqlite_ready: true,
-        offline_first: true,
+        sqlite_ready: false,
+        offline_first: false,
     }
 }
 
@@ -83,7 +83,7 @@ fn desktop_db_health(app: AppHandle) -> Result<DesktopDatabaseHealth, String> {
     Ok(DesktopDatabaseHealth {
         connected: true,
         path: path.to_string_lossy().to_string(),
-        sqlite_ready: true,
+        sqlite_ready: false,
     })
 }
 

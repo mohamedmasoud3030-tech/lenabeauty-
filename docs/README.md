@@ -1,12 +1,21 @@
 # LenaBeauty — Documentation Index
 
-This folder was reorganized for navigability. Historical phase certifications
-and superseded drafts now live in [`archive/`](./archive); the files below are
-the current, actively-relevant docs.
+Current operational truth is intentionally limited to the canonical documents
+listed below. Older phase certifications and sales/readiness plans are retained
+for traceability, but they are historical snapshots and must not override the
+current defect register, generated database artifacts, or runtime checks.
 
-## 🚀 Start here
+## 🚀 Start here — canonical current documents
 - [`../README.md`](../README.md) — project overview, setup, scripts.
-- [`CRITICAL_FIXES_PLAN.md`](./CRITICAL_FIXES_PLAN.md) — the post-audit fix plan and TODO status.
+- [`../PROJECT_DEFECTS.md`](../PROJECT_DEFECTS.md) — current defect status and executable evidence.
+- [`PRODUCTION_READINESS.md`](./PRODUCTION_READINESS.md) — current release gate and hosted acceptance.
+- [`OPERATIONAL_DATA_CONTRACT.md`](./OPERATIONAL_DATA_CONTRACT.md) — financial/data behavior contract.
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — verified current architecture.
+
+`CRITICAL_FIXES_PLAN.md`, `CURRENT_VERSION_CLOSURE.md`, `SALES_READY_RELEASE.md`,
+`V1_1_COMPLETION.md`, `NEXT_VERSION_PLAN.md` and `FINAL_MASTER_PLAN.md` are
+historical planning snapshots; unchecked boxes or completion claims inside them
+are not current status.
 
 ## 📦 Release & delivery
 - [`CURRENT_VERSION_CLOSURE.md`](./CURRENT_VERSION_CLOSURE.md) — v1.0 definition and remaining gates.

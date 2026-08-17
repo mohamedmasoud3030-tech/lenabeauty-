@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { XCircle, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -24,6 +25,7 @@ export function useToast() {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t: translate } = useTranslation();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   function showToast(type: ToastType, title: string, message?: string) {
@@ -46,6 +48,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((t) => (
             <motion.div
               key={t.id}
+              role={t.type === "error" ? "alert" : "status"}
+              aria-live={t.type === "error" ? "assertive" : "polite"}
+              aria-atomic="true"
+              aria-labelledby={`toast-title-${t.id}`}
+              aria-describedby={t.message ? `toast-message-${t.id}` : undefined}
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
@@ -66,12 +73,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {t.type === "info" && <Info className="w-5 h-5 text-info" />}
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-sm">{t.title}</h4>
-                {t.message && <p className="text-sm mt-1 opacity-90">{t.message}</p>}
+                <h4 id={`toast-title-${t.id}`} className="font-semibold text-sm">{t.title}</h4>
+                {t.message && <p id={`toast-message-${t.id}`} className="text-sm mt-1 opacity-90">{t.message}</p>}
               </div>
-              <button onClick={() => removeToast(t.id)} className="shrink-0 opacity-50 hover:opacity-100">
-                <span className="sr-only">Close</span>
-                <XCircle className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => removeToast(t.id)}
+                aria-label={translate("Close")}
+                className="h-11 w-11 -m-2 shrink-0 flex items-center justify-center rounded-lg opacity-70 hover:opacity-100"
+              >
+                <XCircle aria-hidden="true" className="w-4 h-4" />
               </button>
             </motion.div>
           ))}

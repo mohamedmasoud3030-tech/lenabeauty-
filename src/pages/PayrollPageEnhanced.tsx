@@ -10,7 +10,6 @@ import printService, { escapePrintText } from "../infrastructure/services/printS
 
 export default function PayrollPageEnhanced() {
   const { t, i18n } = useTranslation();
-  const isArabic = i18n.language === "ar";
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
@@ -77,7 +76,7 @@ export default function PayrollPageEnhanced() {
     setCreating(true);
     try {
       const result = await unwrap(useCases.payroll.createRun({ periodMonth: selectedMonth }));
-      showToast("success", t("Success"), "تم إنشاء كشف الرواتب");
+      showToast("success", t("Success"), t("Payroll run created"));
       setSelectedRun(result);
       loadRuns();
     } catch (e) {
@@ -88,11 +87,11 @@ export default function PayrollPageEnhanced() {
   }
 
   async function handleDelete(id: string) {
-    const ok = await confirm({ title: "حذف كشف الرواتب", message: "هل أنت متأكد؟ سيتم إرجاع السلف للخصم مجدداً.", type: "danger" });
+    const ok = await confirm({ title: t("Delete payroll run"), message: t("Are you sure? Approved advances will become deductible again."), type: "danger" });
     if (!ok) return;
     try {
       await unwrap(useCases.payroll.deleteRun(id));
-      showToast("success", t("Success"), "تم الحذف");
+      showToast("success", t("Success"), t("Deleted successfully"));
       setSelectedRun(null);
       loadRuns();
     } catch (e) {
@@ -111,19 +110,19 @@ export default function PayrollPageEnhanced() {
       </tr>`).join("");
     return `
       <div class="section">
-        <h2 class="text-lg font-bold mb-3">${isArabic ? "كشف الرواتب" : "Payroll Report"}</h2>
-        <p class="mb-3">${isArabic ? "الفترة" : "Period"}: ${escapePrintText(selectedRun.run.periodMonth)}</p>
+        <h2 class="text-lg font-bold mb-3">${escapePrintText(t("Payroll Report"))}</h2>
+        <p class="mb-3">${escapePrintText(t("Period"))}: ${escapePrintText(selectedRun.run.periodMonth)}</p>
         <table>
           <thead><tr>
-            <th>${isArabic ? "الموظف" : "Employee"}</th>
-            <th>${isArabic ? "الأساسي" : "Base"}</th>
-            <th>${isArabic ? "السلف المخصومة" : "Advances"}</th>
-            <th>${isArabic ? "الصافي" : "Net"}</th>
+            <th>${escapePrintText(t("Employee"))}</th>
+            <th>${escapePrintText(t("Base"))}</th>
+            <th>${escapePrintText(t("Advances"))}</th>
+            <th>${escapePrintText(t("Net"))}</th>
           </tr></thead>
           <tbody>${lines}</tbody>
           <tfoot>
             <tr style="background-color: var(--primary-color); color: white;">
-              <td class="font-bold">${isArabic ? "الإجمالي" : "Total"}</td>
+              <td class="font-bold">${escapePrintText(t("Total"))}</td>
               <td class="text-right">${totals.base.toFixed(3)}</td>
               <td class="text-right">${totals.advances.toFixed(3)}</td>
               <td class="text-right font-bold">${totals.net.toFixed(3)}</td>
@@ -137,19 +136,20 @@ export default function PayrollPageEnhanced() {
     <div className="min-h-full rounded-2xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-3 sm:p-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-4xl font-bold text-white mb-2">
-          {isArabic ? "إدارة الرواتب" : "Payroll Management"}
+          {t("Payroll Management")}
         </h1>
         <p className="text-gray-400 mb-6">
-          {isArabic ? "الراتب الصافي = الأساسي − السلف المخصومة في نفس الشهر" : "Net salary = base − advances deducted in the same month"}
+          {t("Net salary = base − advances deducted in the same month")}
         </p>
 
         {/* Controls */}
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-6">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div>
-              <label className="block text-sm text-gray-300 mb-2">{isArabic ? "اختر الشهر" : "Select Month"}</label>
+              <label className="block text-sm text-gray-300 mb-2">{t("Select Month")}</label>
               <input
                 type="month"
+                aria-label={t("Select Month")}
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white"
@@ -161,7 +161,7 @@ export default function PayrollPageEnhanced() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition disabled:opacity-50"
             >
               <FileText className="w-5 h-5" />
-              {creating ? (isArabic ? "جارٍ الإنشاء…" : "Creating…") : (isArabic ? "إنشاء كشف الرواتب" : "Create Payroll Run")}
+              {creating ? t("Creating…") : t("Create Payroll Run")}
             </button>
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{isArabic ? "الموظفون" : "Employees"}</p>
+                  <p className="text-gray-400 text-sm">{t("Employees")}</p>
                   <p className="text-2xl font-bold text-white">{totals.count}</p>
                 </div>
                 <Users className="w-10 h-10 text-purple-400 opacity-50" />
@@ -181,7 +181,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{isArabic ? "الرواتب الأساسية" : "Base Salaries"}</p>
+                  <p className="text-gray-400 text-sm">{t("Base Salaries")}</p>
                   <p className="text-2xl font-bold text-white">{totals.base.toFixed(2)}</p>
                 </div>
                 <DollarSign className="w-10 h-10 text-green-400 opacity-50" />
@@ -190,7 +190,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{isArabic ? "السلف المخصومة" : "Advances Deducted"}</p>
+                  <p className="text-gray-400 text-sm">{t("Advances Deducted")}</p>
                   <p className="text-2xl font-bold text-white">{totals.advances.toFixed(2)}</p>
                 </div>
                 <TrendingDown className="w-10 h-10 text-orange-400 opacity-50" />
@@ -199,7 +199,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{isArabic ? "الصافي" : "Net Salary"}</p>
+                  <p className="text-gray-400 text-sm">{t("Net Salary")}</p>
                   <p className="text-2xl font-bold text-white">{totals.net.toFixed(2)}</p>
                 </div>
                 <FileText className="w-10 h-10 text-blue-400 opacity-50" />
@@ -212,7 +212,7 @@ export default function PayrollPageEnhanced() {
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 overflow-x-auto">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">
-              {isArabic ? "تفاصيل الرواتب" : "Payroll Details"} — {selectedMonth}
+              {t("Payroll Details")} — {selectedMonth}
             </h2>
             {selectedRun && (
               <div className="flex gap-2">
@@ -220,7 +220,7 @@ export default function PayrollPageEnhanced() {
                   onClick={() => printService.printDocument(generatePayrollHTML(), { paperSize: "A4", filename: `Payroll-${selectedMonth}` })}
                   className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
                 >
-                  <Printer className="w-4 h-4" /> {isArabic ? "طباعة" : "Print"}
+                  <Printer className="w-4 h-4" /> {t("Print")}
                 </button>
                 <button
                   onClick={() => printService.exportToPDF(generatePayrollHTML(), `Payroll-${selectedMonth}.pdf`, { paperSize: "A4" })}
@@ -229,7 +229,9 @@ export default function PayrollPageEnhanced() {
                   <Download className="w-4 h-4" /> PDF
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDelete(selectedRun.run.id)}
+                  aria-label={t("Delete payroll run")}
                   className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -246,10 +248,10 @@ export default function PayrollPageEnhanced() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/20">
-                  <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "الموظف" : "Employee"}</th>
-                  <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "الأساسي" : "Base"}</th>
-                  <th className="text-right py-3 px-4 text-gray-300">{isArabic ? "السلف المخصومة" : "Advances"}</th>
-                  <th className="text-right py-3 px-4 text-white font-bold">{isArabic ? "الصافي" : "Net"}</th>
+                  <th className="text-right py-3 px-4 text-gray-300">{t("Employee")}</th>
+                  <th className="text-right py-3 px-4 text-gray-300">{t("Base")}</th>
+                  <th className="text-right py-3 px-4 text-gray-300">{t("Advances")}</th>
+                  <th className="text-right py-3 px-4 text-white font-bold">{t("Net")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -262,7 +264,7 @@ export default function PayrollPageEnhanced() {
                   </tr>
                 ))}
                 <tr className="border-t-2 border-white/30 font-bold">
-                  <td className="py-3 px-4 text-white">{isArabic ? "الإجمالي" : "Total"}</td>
+                  <td className="py-3 px-4 text-white">{t("Total")}</td>
                   <td className="py-3 px-4 text-right text-white">{totals.base.toFixed(3)}</td>
                   <td className="py-3 px-4 text-right text-orange-400">-{totals.advances.toFixed(3)}</td>
                   <td className="py-3 px-4 text-right text-white">{totals.net.toFixed(3)}</td>
@@ -272,7 +274,7 @@ export default function PayrollPageEnhanced() {
           ) : (
             <div className="text-center py-16 text-gray-400">
               <CalendarClock className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p>{isArabic ? "لا يوجد كشف لهذا الشهر. اضغط «إنشاء كشف الرواتب»." : "No payroll run for this month. Click 'Create Payroll Run'."}</p>
+              <p>{t("No payroll run for this month. Click Create Payroll Run.")}</p>
             </div>
           )}
         </div>
@@ -280,7 +282,7 @@ export default function PayrollPageEnhanced() {
         {/* Runs history */}
         {runs.length > 0 && (
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mt-6">
-            <h2 className="text-xl font-bold text-white mb-4">{isArabic ? "أكشاف سابقة" : "Previous Runs"}</h2>
+            <h2 className="text-xl font-bold text-white mb-4">{t("Previous Runs")}</h2>
             <div className="space-y-2">
               {runs.map((r) => (
                 <div
@@ -291,7 +293,7 @@ export default function PayrollPageEnhanced() {
                   onClick={() => setSelectedMonth(r.periodMonth)}
                 >
                   <span className="text-white font-bold">{r.periodMonth}</span>
-                  <span className="text-gray-300 text-sm">{new Date(r.runDate).toLocaleDateString("ar-SA")}</span>
+                  <span className="text-gray-300 text-sm">{new Date(r.runDate).toLocaleDateString(i18n.language)}</span>
                 </div>
               ))}
             </div>

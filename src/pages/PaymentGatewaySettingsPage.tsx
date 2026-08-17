@@ -6,11 +6,13 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
+import { ScreenState } from "../shared/components/ScreenState";
 
 export default function PaymentGatewaySettingsPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [form, setForm] = useState({
     provider: "manual" as "manual" | "thawani" | "paytabs" | "stripe",
     isEnabled: false,
@@ -31,8 +33,10 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await useCases.settings.getPaymentGatewaySettings();
+      if (!res.ok && res.error.code !== "NOT_FOUND") throw res.error;
       if (res.ok) {
         setForm({
           provider: res.data.provider,
@@ -48,6 +52,8 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
           cancelUrl: res.data.cancelUrl || "",
         });
       }
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
     }
@@ -67,6 +73,18 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
     } finally {
       setLoading(false);
     }
+  }
+
+  if (loadError) {
+    return (
+      <ScreenState
+        state="error"
+        title={t("Failed to load payment settings")}
+        description={loadError}
+        actionLabel={t("Retry")}
+        onAction={() => void load()}
+      />
+    );
   }
 
   return (

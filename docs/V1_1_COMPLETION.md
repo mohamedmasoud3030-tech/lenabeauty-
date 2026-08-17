@@ -1,5 +1,7 @@
 # v1.1 Implementation Complete
 
+> **Historical snapshot; not current release evidence.** Use `PROJECT_DEFECTS.md` and `docs/PRODUCTION_READINESS.md` for current status.
+
 **Date:** June 22, 2026  
 **Status:** ✅ Ready for QA  
 

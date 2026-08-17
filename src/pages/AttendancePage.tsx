@@ -3,31 +3,22 @@ import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
-import { Fingerprint, Plus, Trash2, Pencil, Clock, XCircle } from "lucide-react";
+import { Fingerprint, Plus, Pencil, Clock } from "lucide-react";
+import { Modal } from "../shared/components/Modal";
 import { AttendanceRecord, AttendanceStatus, AttendanceMethod, Employee } from "../domain/entities";
+import { computeAttendanceWorkHours, isCheckoutAfterCheckin } from "../domain/attendance";
 
-function computeWorkHours(checkIn?: string, checkOut?: string, status?: AttendanceStatus): number {
-  if (!checkIn || !checkOut) return 0;
-  if (status === "ABSENT") return 0;
-  const [h1, m1] = checkIn.split(":").map(Number);
-  const [h2, m2] = checkOut.split(":").map(Number);
-  const mins = h2 * 60 + m2 - (h1 * 60 + m1);
-  if (mins <= 0) return 0;
-  return Math.round((mins / 60) * 100) / 100;
-}
-
-const STATUS_LABELS: Record<AttendanceStatus, string> = {
-  PRESENT: "حاضر",
-  LATE: "متأخر",
-  ABSENT: "غائب",
-  HALF_DAY: "نصف يوم",
+const STATUS_LABEL_KEYS: Record<AttendanceStatus, string> = {
+  PRESENT: "Present",
+  LATE: "Late",
+  ABSENT: "Absent",
+  HALF_DAY: "Half Day",
 };
 
-const METHOD_LABELS: Record<AttendanceMethod, string> = {
-  MANUAL: "يدوي",
-  BIOMETRIC: "بصمة",
-  MOBILE: "هاتف",
+const METHOD_LABEL_KEYS: Record<AttendanceMethod, string> = {
+  MANUAL: "Manual",
+  BIOMETRIC: "Biometric",
+  MOBILE: "Mobile",
 };
 
 const statusBadge: Record<AttendanceStatus, string> = {
@@ -40,7 +31,6 @@ const statusBadge: Record<AttendanceStatus, string> = {
 export default function AttendancePage() {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -67,8 +57,11 @@ export default function AttendancePage() {
   async function load() {
     setLoading(true);
     try {
+      const [year, month] = selectedMonth.split("-").map(Number);
+      const from = new Date(year, month - 1, 1);
+      const to = new Date(year, month, 0, 23, 59, 59, 999);
       const [recs, emps] = await Promise.all([
-        unwrap(useCases.attendance.list()),
+        unwrap(useCases.attendance.list({ fromISO: from.toISOString(), toISO: to.toISOString() })),
         unwrap(useCases.employees.list()),
       ]);
       setRecords(recs);
@@ -81,7 +74,7 @@ export default function AttendancePage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, [selectedMonth]);
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
@@ -128,10 +121,23 @@ export default function AttendancePage() {
 
   async function handleSave() {
     if (!empId) {
-      showToast("error", t("Error"), "يرجى اختيار موظف");
+      showToast("error", t("Error"), t("Please select an employee"));
       return;
     }
-    const workHours = computeWorkHours(checkIn, checkOut, status);
+    if (status !== "ABSENT" && checkIn && checkOut && !isCheckoutAfterCheckin(checkIn, checkOut)) {
+      showToast("error", t("Error"), t("validation.checkout_after_checkin"));
+      return;
+    }
+    const duplicate = records.some((record) => (
+      record.id !== editingId
+      && record.employeeId === empId
+      && new Date(record.date).toISOString().slice(0, 10) === date
+    ));
+    if (duplicate) {
+      showToast("error", t("Error"), t("Attendance already exists for this employee and date"));
+      return;
+    }
+    const workHours = computeAttendanceWorkHours(checkIn, checkOut, status);
     try {
       if (editingId) {
         await unwrap(useCases.attendance.update(editingId, {
@@ -144,7 +150,7 @@ export default function AttendancePage() {
           workHours,
           notes: notes || undefined,
         }));
-        showToast("success", t("Success"), "تم تحديث السجل");
+        showToast("success", t("Success"), t("Attendance record updated"));
       } else {
         await unwrap(useCases.attendance.create({
           employeeId: empId,
@@ -156,21 +162,9 @@ export default function AttendancePage() {
           workHours,
           notes: notes || undefined,
         }));
-        showToast("success", t("Success"), "تم تسجيل الحضور");
+        showToast("success", t("Success"), t("Attendance recorded"));
       }
       setShowModal(false);
-      load();
-    } catch (e) {
-      showToast("error", t("Error"), (e as Error).message || String(e));
-    }
-  }
-
-  async function handleDelete(id: string) {
-    const ok = await confirm({ title: "حذف سجل الحضور", message: "هل أنت متأكد؟", type: "danger" });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.attendance.delete(id));
-      showToast("success", t("Success"), "تم الحذف");
       load();
     } catch (e) {
       showToast("error", t("Error"), (e as Error).message || String(e));
@@ -189,30 +183,30 @@ export default function AttendancePage() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
         >
           <Plus className="w-4 h-4" />
-          تسجيل حضور
+          {t("Record Attendance")}
         </button>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm">نسبة الحضور</p>
+          <p className="text-gray-600 text-sm">{t("Attendance Rate")}</p>
           <p className="text-3xl font-bold text-green-600">{summary.pct}%</p>
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-gray-600 text-sm">أيام الحضور</p>
+          <p className="text-gray-600 text-sm">{t("Present Days")}</p>
           <p className="text-3xl font-bold text-blue-600">{summary.present}</p>
         </div>
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
-          <p className="text-gray-600 text-sm">أيام التأخير</p>
+          <p className="text-gray-600 text-sm">{t("Late Days")}</p>
           <p className="text-3xl font-bold text-yellow-600">{summary.late}</p>
         </div>
         <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-l-4 border-red-500">
-          <p className="text-gray-600 text-sm">أيام الغياب</p>
+          <p className="text-gray-600 text-sm">{t("Absent Days")}</p>
           <p className="text-3xl font-bold text-red-600">{summary.absent}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-gray-600 text-sm">إجمالي ساعات العمل</p>
+          <p className="text-gray-600 text-sm">{t("Total Work Hours")}</p>
           <p className="text-3xl font-bold text-purple-600">{summary.totalHours.toFixed(2)}</p>
         </div>
       </div>
@@ -224,13 +218,14 @@ export default function AttendancePage() {
           onChange={(e) => setSelectedEmployee(e.target.value)}
           className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
         >
-          <option value="all">كل الموظفين</option>
+          <option value="all">{t("All Employees")}</option>
           {employees.map((e) => (
             <option key={e.id} value={e.id}>{e.name}</option>
           ))}
         </select>
         <input
           type="month"
+          aria-label={t("Month")}
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
           className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
@@ -243,13 +238,13 @@ export default function AttendancePage() {
           <table className="w-full">
             <thead className="bg-gray-100 border-b-2 border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الموظف</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">التاريخ</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الدخول</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الخروج</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الساعات</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الطريقة</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">الحالة</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Employee")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Date")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Check-in")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Check-out")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Hours")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Method")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Status")}</th>
                 <th className="px-6 py-3 text-right text-sm font-bold text-gray-700"></th>
               </tr>
             </thead>
@@ -261,10 +256,10 @@ export default function AttendancePage() {
                   <td className="px-6 py-4 text-gray-600">{rec.checkInTime || "-"}</td>
                   <td className="px-6 py-4 text-gray-600">{rec.checkOutTime || "-"}</td>
                   <td className="px-6 py-4 font-bold text-blue-600">{rec.workHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-gray-600">{METHOD_LABELS[rec.method]}</td>
+                  <td className="px-6 py-4 text-gray-600">{t(METHOD_LABEL_KEYS[rec.method])}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-sm font-bold ${statusBadge[rec.status]}`}>
-                      {STATUS_LABELS[rec.status]}
+                      {t(STATUS_LABEL_KEYS[rec.status])}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -276,13 +271,6 @@ export default function AttendancePage() {
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(rec.id)}
-                        className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                        title={t("Delete")}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -290,7 +278,7 @@ export default function AttendancePage() {
               {filtered.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-6 py-20 text-center text-gray-400">
-                    لا توجد سجلات حضور لهذه الفترة
+                    {t("No attendance records for this period")}
                   </td>
                 </tr>
               )}
@@ -300,19 +288,33 @@ export default function AttendancePage() {
       </div>
 
       {/* Add / Edit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-bold">{editingId ? "تعديل سجل" : "تسجيل حضور"}</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        size="sm"
+        title={editingId ? t("Edit Attendance Record") : t("Record Attendance")}
+        footer={
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
+            >
+              {editingId ? t("Save Changes") : t("Record")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold"
+            >
+              {t("Cancel")}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-2">الموظف</label>
+                <label className="block text-sm font-bold mb-2">{t("Employee")}</label>
                 <select
                   value={empId}
                   onChange={(e) => setEmpId(e.target.value)}
@@ -326,7 +328,7 @@ export default function AttendancePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold mb-2">التاريخ</label>
+                  <label className="block text-sm font-bold mb-2">{t("Date")}</label>
                   <input
                     type="date"
                     value={date}
@@ -335,23 +337,23 @@ export default function AttendancePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">الحالة</label>
+                  <label className="block text-sm font-bold mb-2">{t("Status")}</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
                   >
-                    <option value="PRESENT">حاضر</option>
-                    <option value="LATE">متأخر</option>
-                    <option value="ABSENT">غائب</option>
-                    <option value="HALF_DAY">نصف يوم</option>
+                    <option value="PRESENT">{t("Present")}</option>
+                    <option value="LATE">{t("Late")}</option>
+                    <option value="ABSENT">{t("Absent")}</option>
+                    <option value="HALF_DAY">{t("Half Day")}</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold mb-2">وقت الدخول</label>
+                  <label className="block text-sm font-bold mb-2">{t("Check-in Time")}</label>
                   <input
                     type="time"
                     value={checkIn}
@@ -360,7 +362,7 @@ export default function AttendancePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2">وقت الخروج</label>
+                  <label className="block text-sm font-bold mb-2">{t("Check-out Time")}</label>
                   <input
                     type="time"
                     value={checkOut}
@@ -371,20 +373,20 @@ export default function AttendancePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">طريقة التسجيل</label>
+                <label className="block text-sm font-bold mb-2">{t("Recording Method")}</label>
                 <select
                   value={method}
                   onChange={(e) => setMethod(e.target.value as AttendanceMethod)}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
                 >
-                  <option value="MANUAL">يدوي</option>
-                  <option value="BIOMETRIC">بصمة</option>
-                  <option value="MOBILE">هاتف</option>
+                  <option value="MANUAL">{t("Manual")}</option>
+                  <option value="BIOMETRIC">{t("Biometric")}</option>
+                  <option value="MOBILE">{t("Mobile")}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">ملاحظات</label>
+                <label className="block text-sm font-bold mb-2">{t("Notes")}</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -395,27 +397,11 @@ export default function AttendancePage() {
 
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Clock className="w-4 h-4" />
-                ساعات العمل المحسوبة: <span className="font-bold text-blue-600">{computeWorkHours(checkIn, checkOut, status).toFixed(2)} ساعة</span>
+                {t("Calculated work hours")}: <span className="font-bold text-blue-600">{computeAttendanceWorkHours(checkIn, checkOut, status).toFixed(2)} {t("hours")}</span>
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
-                >
-                  {editingId ? "حفظ التعديلات" : "تسجيل"}
-                </button>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

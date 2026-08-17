@@ -1,5 +1,7 @@
 # خطة الإصلاح وقائمة المهام — LenaBeauty
 
+> **لقطة تاريخية وليست دليل الإغلاق الحالي.** الحالة الحالية في `PROJECT_DEFECTS.md` و`docs/PRODUCTION_READINESS.md`.
+
 **التاريخ:** 2026-06-28
 **الأساس:** أهداف الإصدار v1.0 الموثقة في
 `CURRENT_VERSION_CLOSURE.md`، `SALES_READY_RELEASE.md`،

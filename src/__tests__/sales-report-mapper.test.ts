@@ -219,6 +219,70 @@ describe("mapSalesReportRows (resilience)", () => {
     expect(result[0].items[0].name).toBeTruthy();
     expect(result[0].items[0].qty).toBe(2);
   });
+
+  it("excludes VAT from earned service revenue", () => {
+    const rows = [{
+      id: "inv-vat",
+      customer_id: "c-1",
+      total_amount: 10.5,
+      tax: 0.5,
+      discount: 0,
+      payment_method: "cash",
+      date: "2026-08-07T10:00:00Z",
+      created_at: "2026-08-07T10:00:00Z",
+      updated_at: "2026-08-07T10:00:00Z",
+      invoice_items: [
+        { id: "svc", invoice_id: "inv-vat", service_id: "s-1", item_name: "Service", price: 10, quantity: 1 },
+      ],
+    }];
+
+    const [result] = mapSalesReportRows(rows);
+    expect(result.totalAmount).toBe(10.5);
+    expect(result.prepaidAmount).toBe(0);
+    expect(result.earnedRevenue).toBe(10);
+  });
+
+  it("does not recognize VAT or prepaid package cash as earned revenue", () => {
+    const rows = [{
+      id: "inv-prepaid",
+      customer_id: "c-1",
+      total_amount: 10.5,
+      tax: 0.5,
+      discount: 0,
+      payment_method: "cash",
+      date: "2026-08-07T11:00:00Z",
+      created_at: "2026-08-07T11:00:00Z",
+      updated_at: "2026-08-07T11:00:00Z",
+      invoice_items: [
+        { id: "pkg", invoice_id: "inv-prepaid", package_id: "p-1", item_name: "Package", price: 10, quantity: 1 },
+      ],
+    }];
+
+    const [result] = mapSalesReportRows(rows);
+    expect(result.prepaidAmount).toBe(10);
+    expect(result.earnedRevenue).toBe(0);
+  });
+
+  it("recognizes ledger redemption as earned revenue even when no cash is due", () => {
+    const rows = [{
+      id: "inv-redeem",
+      customer_id: "c-1",
+      total_amount: 0,
+      tax: 0,
+      discount: 0,
+      payment_method: "cash",
+      date: "2026-08-07T12:00:00Z",
+      created_at: "2026-08-07T12:00:00Z",
+      updated_at: "2026-08-07T12:00:00Z",
+      invoice_items: [
+        { id: "svc", invoice_id: "inv-redeem", service_id: "s-1", item_name: "Service", price: 5, quantity: 1 },
+      ],
+    }];
+
+    const [result] = mapSalesReportRows(rows, new Map([["inv-redeem", 5]]));
+    expect(result.redeemedAmount).toBe(5);
+    expect(result.earnedRevenue).toBe(5);
+  });
 });
 
 describe("mapInvoicePrintItems", () => {

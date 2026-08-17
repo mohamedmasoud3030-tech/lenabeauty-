@@ -77,6 +77,28 @@ describe("branding persistence", () => {
     expect(await screen.findByDisplayValue("Legacy Local")).toBeInTheDocument();
   });
 
+  it("imports and persists the imported values rather than stale form state", async () => {
+    const { container } = renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+    const input = container.querySelector('input[accept=".json"]') as HTMLInputElement;
+    const imported = {
+      salonName: "Imported Salon",
+      salonNameAr: "صالون مستورد",
+      primaryColor: "#112233",
+      secondaryColor: "#445566",
+      accentColor: "#778899",
+    };
+    const file = new File([JSON.stringify(imported)], "branding.json", { type: "application/json" });
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({
+      displayName: "Imported Salon",
+      brandPrimaryColor: "#112233",
+    })));
+    expect(await screen.findByDisplayValue("Imported Salon")).toBeInTheDocument();
+  });
+
   it("surfaces a toast on repository failure", async () => {
     vi.spyOn(useCases.settings, "update").mockResolvedValue({ ok: false, error: new Error("boom") as any });
     renderPage();

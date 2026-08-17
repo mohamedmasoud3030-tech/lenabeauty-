@@ -74,7 +74,7 @@ describe("ReportsPage screen states", () => {
     renderPage();
 
     await screen.findByText(i18n.t("No Sales Data"));
-    screen.getByText(i18n.t("Appointments")).click();
+    fireEvent.click(screen.getByText(i18n.t("Appointments")));
 
     expect(await screen.findByText(i18n.t("No Appointments Data"))).toBeInTheDocument();
   });
@@ -87,9 +87,29 @@ describe("ReportsPage screen states", () => {
     renderPage();
 
     await screen.findByText(i18n.t("No Sales Data"));
-    screen.getByText(i18n.t("Inventory")).click();
+    fireEvent.click(screen.getByText(i18n.t("Inventory")));
 
     expect(await screen.findByText(i18n.t("No Inventory Data"))).toBeInTheDocument();
+  });
+
+  it("does not silently hide sales beyond the first visible batch", async () => {
+    const rows = Array.from({ length: 21 }, (_, index) => ({
+      id: `inv-${index + 1}`,
+      date: `2026-08-${String((index % 20) + 1).padStart(2, "0")}T10:00:00.000Z`,
+      totalAmount: 10,
+      discount: 0,
+      customer: `Customer ${index + 1}`,
+      items: [],
+    }));
+    vi.spyOn(useCases.reports, "getSales").mockResolvedValue({ ok: true, data: rows } as any);
+
+    await i18n.changeLanguage("en");
+    renderPage();
+
+    expect(await screen.findByText("Showing 20 of 21")).toBeInTheDocument();
+    expect(screen.queryByText("Customer 21")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await screen.findAllByText("Customer 21")).not.toHaveLength(0);
   });
 
   it("shows the date range filter inputs", async () => {
@@ -126,11 +146,18 @@ describe("ReportsPage screen states", () => {
     expect(await screen.findByText(i18n.t("Sales Transactions"))).toBeInTheDocument();
     expect(screen.getAllByText("أمل").length).toBeGreaterThan(0);
 
-    // Drill-down opens the transaction details dialog
-    fireEvent.click(screen.getAllByText("أمل")[0]);
-    expect(await screen.findByText(i18n.t("Transaction Details"))).toBeInTheDocument();
+    // Drill-down opens an accessible transaction details dialog.
+    const rowTrigger = screen.getByRole("button", { name: i18n.t("Details") });
+    rowTrigger.focus();
+    fireEvent.click(rowTrigger);
+    const dialog = await screen.findByRole("dialog", { name: i18n.t("Transaction Details") });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0);
     // Discount is shown when > 0
     expect(screen.getByText("-1.000")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("Transaction Details") })).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(rowTrigger));
   });
 });

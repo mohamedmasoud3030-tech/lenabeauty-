@@ -26,7 +26,6 @@ import {
   mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
-import { computePayrollNetSalary, sumAdvancesForMonth, parsePeriodMonth } from "../../domain/payroll";
 import {
   requiredText, optionalText, nonNegativeNumber, positiveNumber, positiveInteger, nonNegativeInteger,
   percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField,
@@ -35,6 +34,7 @@ import {
 import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload, EntitlementSummary } from "../../application/dto";
 import { mapSalesReportRows, mapInvoicePrintItems } from "./salesReportMapper";
 import { validateCheckoutContract } from "../../domain/commerce";
+import { isCheckoutAfterCheckin } from "../../domain/attendance";
 import { localDateRangeISO } from "../../shared/dateRange";
 
 /**
@@ -110,6 +110,18 @@ function toJson(value: unknown): Json {
 
 function toDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+async function resolveCenterAssetUrl(path: string | undefined): Promise<string | undefined> {
+  if (!path) return undefined;
+  if (/^(?:https?:|data:|blob:)/i.test(path)) return path;
+  const client: any = getSupabaseClient();
+  if (!client.storage?.from) return undefined;
+  const bucket = client.storage.from('center-assets');
+  if (!bucket?.createSignedUrl) return undefined;
+  const { data, error } = await bucket.createSignedUrl(path, 60 * 60);
+  if (error || !data?.signedUrl) return undefined;
+  return data.signedUrl;
 }
 
 /**
@@ -203,6 +215,13 @@ class SupabaseAuthAdapter implements AuthRepository {
     }
   }
   
+  onAuthStateChange(callback: (event: string) => void): () => void {
+    const { data } = getSupabaseClient().auth.onAuthStateChange((event) => {
+      callback(event);
+    });
+    return () => data.subscription.unsubscribe();
+  }
+
   async getSession(): Promise<Result<SessionState, AuthError>> {
     try {
       const { data, error } = await getSupabaseClient().auth.getSession();
@@ -222,12 +241,13 @@ class SupabaseAuthAdapter implements AuthRepository {
     }
   }
 
-  async getMyCenters(): Promise<Result<{ id: string, name: string }[], AuthError>> {
+  async getMyCenters(): Promise<Result<{ id: string; name: string; role: "ADMIN" | "MANAGER" | "STAFF" }[], AuthError>> {
     try {
       const { data, error } = await getSupabaseClient()
         .from('center_memberships')
         .select(`
           center_id,
+          role,
           centers (
             name
           )
@@ -235,10 +255,15 @@ class SupabaseAuthAdapter implements AuthRepository {
       if (error) {
          return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", error.message) };
       }
-      const mapped = data.map((d: any) => ({
-        id: d.center_id,
-        name: d.centers?.name || 'Unknown Center'
-      })).sort((a,b) => a.name.localeCompare(b.name));
+      const mapped = data.flatMap((d: any) => {
+        const role = String(d.role || "").toUpperCase();
+        if (role !== "ADMIN" && role !== "MANAGER" && role !== "STAFF") return [];
+        return [{
+          id: d.center_id,
+          name: d.centers?.name || 'Unknown Center',
+          role: role as "ADMIN" | "MANAGER" | "STAFF",
+        }];
+      }).sort((a, b) => a.name.localeCompare(b.name));
       return { ok: true, data: mapped };
     } catch (e: unknown) {
        return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", (e as Error).message) };
@@ -251,18 +276,40 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     const centerRes = getCenterIdFor("Customer.list");
     if (!centerRes.ok) return centerRes as any;
     try {
-      let req = getSupabaseClient()
+      const client = getSupabaseClient();
+      const q = query?.trim();
+      if (q) {
+        // Use typed filters rather than interpolating user text into raw
+        // PostgREST disjunction grammar. Merge duplicate matches by id.
+        const [byName, byPhone] = await Promise.all([
+          client.from('customers').select('*')
+            .eq('center_id', centerRes.data)
+            .ilike('name', `%${q}%`)
+            .order('created_at', { ascending: false })
+            .limit(50),
+          client.from('customers').select('*')
+            .eq('center_id', centerRes.data)
+            .ilike('phone', `%${q}%`)
+            .order('created_at', { ascending: false })
+            .limit(50),
+        ]);
+        if (byName.error) return { ok: false, error: createQueryError("Customer.list", byName.error.message) };
+        if (byPhone.error) return { ok: false, error: createQueryError("Customer.list", byPhone.error.message) };
+        const merged = new Map<string, any>();
+        for (const row of [...(byName.data || []), ...(byPhone.data || [])]) merged.set(row.id, row);
+        return {
+          ok: true,
+          data: [...merged.values()]
+            .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+            .map(mapCustomer),
+        };
+      }
+
+      const { data, error } = await client
         .from('customers')
         .select('*')
         .eq('center_id', centerRes.data)
         .order('created_at', { ascending: false });
-
-      if (query && query.trim().length > 0) {
-        const q = query.trim();
-        req = req.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
-      }
-
-      const { data, error } = await req;
       if (error) return { ok: false, error: createQueryError("Customer.list", error.message) };
       return { ok: true, data: data.map(mapCustomer) };
     } catch (e: unknown) {
@@ -444,14 +491,17 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     const centerRes = getCenterIdFor("Employee.list");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const { data, error } = await getSupabaseClient()
-        .from('employees')
-        .select('*')
-        .eq('center_id', centerRes.data)
-        .order('name', { ascending: true });
-
+      // The RPC returns full compensation fields only to a center ADMIN. Other
+      // operational roles receive the identity fields needed by POS/calendar.
+      const { data, error } = await getSupabaseClient().rpc('list_employees_v1', {
+        p_center_id: centerRes.data,
+      });
       if (error) return { ok: false, error: createQueryError("Employee.list", error.message) };
-      return { ok: true, data: data.map(mapEmployee) };
+      const rows = (data as { employees?: unknown[] } | null)?.employees;
+      if (!Array.isArray(rows)) {
+        return { ok: false, error: createQueryError("Employee.list", "Invalid employee list response") };
+      }
+      return { ok: true, data: rows.map(mapEmployee) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Employee.list", (e as Error).message) };
     }
@@ -472,23 +522,22 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: TablesInsert<"employees"> = {
-        center_id: centerRes.data,
+      const employeePayload = {
         name: okValue(nameR),
-        phone: data.phone,
-        role: data.role,
+        phone: data.phone ?? null,
+        role: data.role ?? "Staff",
         salary: okValue(salaryR),
-        base_salary: okValue(salaryR),
-        commission_percentage: okValue(commissionR),
-        is_active: data.isActive !== undefined ? data.isActive : true
+        baseSalary: okValue(salaryR),
+        commissionPercentage: okValue(commissionR),
+        isActive: data.isActive !== undefined ? data.isActive : true,
       };
-      const { data: row, error } = await getSupabaseClient()
-        .from('employees')
-        .insert(payload)
-        .select()
-        .maybeSingle();
+      const { data: result, error } = await getSupabaseClient().rpc('admin_create_employee_v1', {
+        p_center_id: centerRes.data,
+        p_employee: toJson(employeePayload),
+      });
 
       if (error) return { ok: false, error: createQueryError("Employee.create", error.message) };
+      const row = (result as { employee?: unknown } | null)?.employee;
       if (!row) return { ok: false, error: createQueryError("Employee.create", "No data returned") };
       return { ok: true, data: mapEmployee(row) };
     } catch (e: unknown) {
@@ -513,26 +562,23 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
     try {
-      const payload: TablesUpdate<"employees"> = {};
-      if (data.name !== undefined) payload.name = okValue(nameR);
-      if (data.phone !== undefined) payload.phone = data.phone;
-      if (data.role !== undefined) payload.role = data.role;
-      if (data.salary !== undefined) payload.salary = okValue(salaryR);
-      if (data.baseSalary !== undefined) payload.base_salary = okValue(baseSalaryR);
-      if (data.commissionPercentage !== undefined) payload.commission_percentage = okValue(commissionR);
-      if (data.isActive !== undefined) payload.is_active = data.isActive;
+      const patch: Record<string, Json | undefined> = {};
+      if (data.name !== undefined) patch.name = okValue(nameR);
+      if (data.phone !== undefined) patch.phone = data.phone;
+      if (data.role !== undefined) patch.role = data.role;
+      if (data.salary !== undefined) patch.salary = okValue(salaryR);
+      if (data.baseSalary !== undefined) patch.baseSalary = okValue(baseSalaryR);
+      if (data.commissionPercentage !== undefined) patch.commissionPercentage = okValue(commissionR);
+      if (data.isActive !== undefined) patch.isActive = data.isActive;
 
-      delete payload.center_id;
-
-      const { data: row, error } = await getSupabaseClient()
-        .from('employees')
-        .update(payload)
-        .eq('id', id)
-        .eq('center_id', centerRes.data)
-        .select()
-        .maybeSingle();
+      const { data: result, error } = await getSupabaseClient().rpc('admin_update_employee_v1', {
+        p_center_id: centerRes.data,
+        p_employee_id: id,
+        p_patch: toJson(patch),
+      });
 
       if (error) return { ok: false, error: createQueryError("Employee.update", error.message) };
+      const row = (result as { employee?: unknown } | null)?.employee;
       if (!row) return { ok: false, error: createQueryError("Employee.update", "No data returned") };
       return { ok: true, data: mapEmployee(row) };
     } catch (e: unknown) {
@@ -544,12 +590,10 @@ class SupabaseEmployeeAdapter implements EmployeeRepository {
     const centerRes = getCenterIdFor("Employee.delete");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const { error } = await getSupabaseClient()
-        .from('employees')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
+      const { error } = await getSupabaseClient().rpc('admin_delete_employee_v1', {
+        p_center_id: centerRes.data,
+        p_employee_id: id,
+      });
       if (error) return { ok: false, error: createQueryError("Employee.delete", error.message) };
       return { ok: true, data: undefined };
     } catch (e: unknown) {
@@ -1219,6 +1263,8 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
       // Defensive: a broken item row (missing join, legacy package row) is
       // skipped instead of failing the whole invoice print.
       const items = mapInvoicePrintItems(itemRes.data || []);
+      const settings = settingsRes.data ? mapCenterSettings(settingsRes.data) : undefined;
+      if (settings) settings.logoPath = await resolveCenterAssetUrl(settings.logoPath);
 
       return {
         ok: true,
@@ -1226,7 +1272,7 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
           invoice,
           items,
           customer,
-          settings: settingsRes.data ? mapCenterSettings(settingsRes.data) : undefined
+          settings,
         }
       };
     } catch (e: unknown) {
@@ -1249,7 +1295,9 @@ class SupabaseSettingsAdapter implements SettingsRepository {
 
       if (error) return { ok: false, error: createQueryError("Settings.get", error.message) };
       if (!data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
-      return { ok: true, data: mapCenterSettings(data) };
+      const settings = mapCenterSettings(data);
+      settings.logoPath = await resolveCenterAssetUrl(settings.logoPath);
+      return { ok: true, data: settings };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Settings.get", (e as Error).message) };
     }
@@ -1307,12 +1355,30 @@ class SupabaseSettingsAdapter implements SettingsRepository {
   async uploadLogo(file: File): Promise<Result<{ logoPath: string }, DomainError>> {
     const centerRes = getCenterIdFor("Settings.uploadLogo");
     if (!centerRes.ok) return centerRes as any;
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type)) {
+      return {
+        ok: false,
+        error: new DomainValidationError([{ field: "logo", key: "validation.logo_type" }]),
+      };
+    }
+    if (file.size <= 0 || file.size > 2 * 1024 * 1024) {
+      return {
+        ok: false,
+        error: new DomainValidationError([{ field: "logo", key: "validation.logo_size" }]),
+      };
+    }
     try {
       const client: any = getSupabaseClient();
       if (!client.storage?.from) return { ok: false, error: createUnsupportedWriteError("Settings.uploadLogo") };
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const logoPath = `${centerRes.data}/logo-${Date.now()}-${safeName}`;
-      const { error } = await client.storage.from('center-assets').upload(logoPath, file, { upsert: true });
+      // A stable object key prevents every replacement from accumulating a new
+      // orphan. Supabase stores the MIME type from contentType, not the suffix.
+      const logoPath = `${centerRes.data}/logo-current`;
+      const { error } = await client.storage.from('center-assets').upload(logoPath, file, {
+        upsert: true,
+        contentType: file.type,
+        cacheControl: "3600",
+      });
       if (error) return { ok: false, error: createQueryError("Settings.uploadLogo", error.message) };
       const updateRes = await this.update({ logoPath });
       if (!updateRes.ok) return updateRes as any;
@@ -1333,7 +1399,7 @@ class SupabaseSettingsAdapter implements SettingsRepository {
       const client = getSupabaseClient();
       const [customers, employees, services, appointments, products, expenses, settings, invoices, attendance, advances, payrollRuns, payrollLines] = await Promise.all([
         client.from('customers').select('*').eq('center_id', centerRes.data),
-        client.from('employees').select('*').eq('center_id', centerRes.data),
+        client.rpc('list_employees_v1', { p_center_id: centerRes.data }),
         client.from('services').select('*').eq('center_id', centerRes.data),
         client.from('appointments').select('*').eq('center_id', centerRes.data),
         client.from('products').select('*').eq('center_id', centerRes.data),
@@ -1361,7 +1427,7 @@ class SupabaseSettingsAdapter implements SettingsRepository {
           timestamp: new Date().toISOString(),
           data: {
             customers: (customers.data || []).map(mapCustomer),
-            employees: (employees.data || []).map(mapEmployee),
+            employees: (Array.isArray((employees.data as any)?.employees) ? (employees.data as any).employees : []).map(mapEmployee),
             services: (services.data || []).map(mapService),
             appointments: (appointments.data || []).map(mapAppointment),
             products: (products.data || []).map(mapProduct),
@@ -1678,119 +1744,111 @@ class SupabaseDashboardAdapter implements DashboardRepository {
     if (!centerRes.ok) return centerRes as any;
 
     try {
-      const client = getSupabaseClient();
-      
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      const [custRes, apptRes, prodRes, newCustRes, invoiceRes] = await Promise.all([
-        client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
-        client.from('appointments').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data),
-        client.from('products').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).eq('is_active', true).eq('track_inventory', true).lte('stock_quantity', 5),
-        client.from('customers').select('*', { count: 'exact', head: true }).eq('center_id', centerRes.data).gte('created_at', monthStart),
-        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).eq('status', 'PAID').gte('date', localDayStartISO(new Date())).lt('date', localDayEndISO(new Date()))
-      ]);
-
-      if (custRes.error) throw new Error(custRes.error.message);
-      if (apptRes.error) throw new Error(apptRes.error.message);
-      if (prodRes.error) throw new Error(prodRes.error.message);
-
-      const data: DashboardSummary = {
-        customers: custRes.count || 0,
-        appointments: apptRes.count || 0,
-        sales: 0,
-        revenue: 0,
-        canViewRevenue: false,
-        lowStockCount: prodRes.count || 0,
-        newCustomersThisMonth: newCustRes.error ? 0 : newCustRes.count || 0,
-      };
-
-      if (!invoiceRes.error) {
-        const revenue = (invoiceRes.data || []).reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
-        data.sales = invoiceRes.data?.length || 0;
-        data.revenue = revenue;
-        data.todayRevenue = revenue;
-        data.canViewRevenue = true;
-      } else if (!isMissingBackendFeature(invoiceRes.error)) {
-        throw new Error(invoiceRes.error.message);
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const { data, error } = await getSupabaseClient().rpc('get_dashboard_summary_v1', {
+        p_center_id: centerRes.data,
+        p_day_start: localDayStartISO(now),
+        p_day_end: localDayEndISO(now),
+        p_month_start: monthStart.toISOString(),
+      });
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getSummary") };
+        return { ok: false, error: createQueryError("Dashboard.getSummary", error.message) };
       }
-
-      return { ok: true, data };
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return { ok: false, error: createQueryError("Dashboard.getSummary", "Invalid dashboard summary response") };
+      }
+      const row = data as Record<string, unknown>;
+      return {
+        ok: true,
+        data: {
+          customers: Number(row.customers) || 0,
+          appointments: Number(row.appointments) || 0,
+          sales: Number(row.sales) || 0,
+          revenue: Number(row.revenue) || 0,
+          todayRevenue: Number(row.today_revenue) || 0,
+          canViewRevenue: row.can_view_revenue === true,
+          lowStockCount: Number(row.low_stock_count) || 0,
+          newCustomersThisMonth: Number(row.new_customers_this_month) || 0,
+          currency: typeof row.currency === "string" ? row.currency : "OMR",
+        },
+      };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Dashboard.getSummary", (e as Error).message) };
     }
   }
+
   async getPnlMonth(): Promise<Result<PnlData, DomainError>> {
     const centerRes = getCenterIdFor("Dashboard.getPnlMonth");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const client = getSupabaseClient();
       const now = new Date();
       const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const to = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-      const [invoiceRes, expenseRes, employeeRes] = await Promise.all([
-        client.from('invoices').select('total_amount').eq('center_id', centerRes.data).eq('status', 'PAID').gte('date', from).lt('date', to),
-        client.from('expenses').select('amount').eq('center_id', centerRes.data).gte('date', from).lt('date', to),
-        client.from('employees').select('base_salary, salary, commission_percentage, month_commission_total').eq('center_id', centerRes.data).eq('is_active', true)
-      ]);
-
-      for (const response of [invoiceRes, expenseRes, employeeRes]) {
-        if (response.error) {
-          if (isMissingBackendFeature(response.error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getPnlMonth") };
-          return { ok: false, error: createQueryError("Dashboard.getPnlMonth", response.error.message) };
-        }
+      const { data, error } = await getSupabaseClient().rpc('get_dashboard_pnl_v1', {
+        p_center_id: centerRes.data,
+        p_from: from,
+        p_to: to,
+      });
+      if (error) {
+        if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getPnlMonth") };
+        return { ok: false, error: createQueryError("Dashboard.getPnlMonth", error.message) };
       }
-
-      const revenue = (invoiceRes.data || []).reduce((sum: number, row: any) => sum + Number(row.total_amount || 0), 0);
-      const expenses = (expenseRes.data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
-      const baseSalaries = (employeeRes.data || []).reduce((sum: number, row: any) => sum + Number(row.base_salary ?? row.salary ?? 0), 0);
-      const commissions = (employeeRes.data || []).reduce((sum: number, row: any) => sum + Number(row.month_commission_total || 0), 0);
-
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return { ok: false, error: createQueryError("Dashboard.getPnlMonth", "Invalid P&L response") };
+      }
+      const row = data as Record<string, unknown>;
       return {
         ok: true,
         data: {
-          revenue,
-          baseSalaries,
-          commissions,
-          expenses,
-          profit: revenue - baseSalaries - commissions - expenses
-        }
+          revenue: Number(row.revenue) || 0,
+          baseSalaries: Number(row.base_salaries) || 0,
+          commissions: Number(row.commissions) || 0,
+          expenses: Number(row.expenses) || 0,
+          profit: Number(row.profit) || 0,
+        },
       };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Dashboard.getPnlMonth", (e as Error).message) };
     }
   }
+
   async getRevenueLast7Days(): Promise<Result<ChartData[], DomainError>> {
     const centerRes = getCenterIdFor("Dashboard.getRevenueLast7Days");
     if (!centerRes.ok) return centerRes as any;
     try {
-      // Local calendar days (the salon's timezone), converted to UTC instants
-      // for the comparison so early-morning sales stay on the right day.
+      // Local calendar days are converted to UTC instants for the server query;
+      // returned invoice timestamps are bucketed back into the user's local day.
       const today = new Date();
       const fromDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
-      const { data, error } = await getSupabaseClient()
-        .from('invoices')
-        .select('date, total_amount')
-        .eq('center_id', centerRes.data)
-        .eq('status', 'PAID')
-        .gte('date', localDayStartISO(fromDate))
-        .lt('date', localDayEndISO(today))
-        .order('date', { ascending: true });
-
+      const { data, error } = await getSupabaseClient().rpc('get_dashboard_revenue_entries_v1', {
+        p_center_id: centerRes.data,
+        p_from: localDayStartISO(fromDate),
+        p_to: localDayEndISO(today),
+      });
       if (error) {
         if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Dashboard.getRevenueLast7Days") };
         return { ok: false, error: createQueryError("Dashboard.getRevenueLast7Days", error.message) };
       }
 
+      const entries = (data as { entries?: unknown[] } | null)?.entries;
+      if (!Array.isArray(entries)) {
+        return { ok: false, error: createQueryError("Dashboard.getRevenueLast7Days", "Invalid revenue entries response") };
+      }
       const buckets = new Map<string, number>();
       for (let i = 0; i < 7; i++) {
         const day = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate() + i);
         buckets.set(toLocalDateOnly(day), 0);
       }
-      for (const row of data || []) {
-        const date = new Date((row as any).date);
+      for (const raw of entries) {
+        if (!raw || typeof raw !== "object") continue;
+        const row = raw as Record<string, unknown>;
+        const date = new Date(String(row.date ?? ""));
         if (isNaN(date.getTime())) continue;
         const key = toLocalDateOnly(date);
-        if (!buckets.has(key)) continue; // ignore rows outside the window
-        buckets.set(key, (buckets.get(key) || 0) + Number((row as any).total_amount || 0));
+        if (!buckets.has(key)) continue;
+        buckets.set(key, (buckets.get(key) || 0) + (Number(row.revenue) || 0));
       }
 
       return { ok: true, data: Array.from(buckets, ([date, revenue]) => ({ date, revenue })) };
@@ -2101,21 +2159,23 @@ export class SupabaseEntitlementAdapter implements EntitlementRepository {
     if (!centerRes.ok) return centerRes as any;
     try {
       const q = (query || "").trim().toLowerCase();
-      let request = getSupabaseClient()
+      const request = getSupabaseClient()
         .from('customer_entitlements')
         .select(ENTITLEMENT_SELECT)
         .eq('center_id', centerRes.data)
         .order('created_at', { ascending: false })
         .limit(500);
-      if (q) {
-        request = request.or(`customers.name.ilike.%${q}%,gift_cards.code.ilike.%${q}%,service_packages.name.ilike.%${q}%`);
-      }
       const { data, error } = await request;
       if (error) {
         if (isMissingBackendFeature(error)) return { ok: false, error: createUnsupportedReadError("Entitlement.list") };
         return { ok: false, error: createQueryError("Entitlement.list", error.message) };
       }
-      return { ok: true, data: (data || []).map(mapCustomerEntitlement) };
+      const mapped = (data || []).map(mapCustomerEntitlement);
+      const filtered = q
+        ? mapped.filter((item) => [item.customerName, item.giftCardCode, item.instrumentName]
+            .some((value) => value?.toLocaleLowerCase().includes(q)))
+        : mapped;
+      return { ok: true, data: filtered };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Entitlement.list", (e as Error).message) };
     }
@@ -2875,16 +2935,13 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
     ]);
     if (!boundary.ok) return { ok: false, error: boundary.error };
 
-    // Check-out must be strictly after check-in when both are provided.
-    if (data.checkInTime && data.checkOutTime) {
-      const inT = new Date(data.checkInTime).getTime();
-      const outT = new Date(data.checkOutTime).getTime();
-      if (Number.isFinite(inT) && Number.isFinite(outT) && outT <= inT) {
-        return {
-          ok: false,
-          error: new DomainValidationError([{ field: "checkOut", key: "validation.checkout_after_checkin" }]),
-        };
-      }
+    // PostgreSQL TIME values are strings such as "09:00"; Date parsing is not
+    // reliable for that form, so validate them as explicit times of day.
+    if (data.checkInTime && data.checkOutTime && !isCheckoutAfterCheckin(data.checkInTime, data.checkOutTime)) {
+      return {
+        ok: false,
+        error: new DomainValidationError([{ field: "checkOut", key: "validation.checkout_after_checkin" }]),
+      };
     }
 
     try {
@@ -2915,6 +2972,12 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
   async update(id: string, data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>> {
     const centerRes = getCenterIdFor("Attendance.update");
     if (!centerRes.ok) return centerRes as any;
+    if (data.checkInTime && data.checkOutTime && !isCheckoutAfterCheckin(data.checkInTime, data.checkOutTime)) {
+      return {
+        ok: false,
+        error: new DomainValidationError([{ field: "checkOut", key: "validation.checkout_after_checkin" }]),
+      };
+    }
     try {
       const payload: TablesUpdate<"attendance_records"> = {};
       if (data.employeeId !== undefined) payload.employee_id = data.employeeId;
@@ -2961,15 +3024,19 @@ class SupabaseAttendanceAdapter implements AttendanceRepository {
 }
 
 class SupabaseAdvanceAdapter implements AdvanceRepository {
-  async list(): Promise<Result<EmployeeAdvance[], DomainError>> {
+  async list(range?: { fromISO: string; toISO: string }): Promise<Result<EmployeeAdvance[], DomainError>> {
     const centerRes = getCenterIdFor("Advance.list");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const { data, error } = await getSupabaseClient()
+      let request = getSupabaseClient()
         .from('employee_advances')
         .select('*')
         .eq('center_id', centerRes.data)
         .order('advance_date', { ascending: false });
+      if (range?.fromISO && range?.toISO) {
+        request = request.gte('advance_date', range.fromISO).lte('advance_date', range.toISO);
+      }
+      const { data, error } = await request;
       if (error) return { ok: false, error: createQueryError("Advance.list", error.message) };
       return { ok: true, data: (data || []).map(mapEmployeeAdvance) };
     } catch (e: unknown) {
@@ -2977,16 +3044,20 @@ class SupabaseAdvanceAdapter implements AdvanceRepository {
     }
   }
 
-  async listByEmployee(employeeId: string): Promise<Result<EmployeeAdvance[], DomainError>> {
+  async listByEmployee(employeeId: string, range?: { fromISO: string; toISO: string }): Promise<Result<EmployeeAdvance[], DomainError>> {
     const centerRes = getCenterIdFor("Advance.listByEmployee");
     if (!centerRes.ok) return centerRes as any;
     try {
-      const { data, error } = await getSupabaseClient()
+      let request = getSupabaseClient()
         .from('employee_advances')
         .select('*')
         .eq('center_id', centerRes.data)
         .eq('employee_id', employeeId)
         .order('advance_date', { ascending: false });
+      if (range?.fromISO && range?.toISO) {
+        request = request.gte('advance_date', range.fromISO).lte('advance_date', range.toISO);
+      }
+      const { data, error } = await request;
       if (error) return { ok: false, error: createQueryError("Advance.listByEmployee", error.message) };
       return { ok: true, data: (data || []).map(mapEmployeeAdvance) };
     } catch (e: unknown) {
@@ -3119,89 +3190,31 @@ class SupabasePayrollAdapter implements PayrollRepository {
   async createRun(input: { periodMonth: string; notes?: string }): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>> {
     const centerRes = getCenterIdFor("Payroll.createRun");
     if (!centerRes.ok) return centerRes as any;
-    const centerId = centerRes.data;
     try {
-      const { year, month } = parsePeriodMonth(input.periodMonth);
-      const monthStart = new Date(Date.UTC(year, month - 1, 1));
-      const monthEnd = new Date(Date.UTC(year, month, 1));
-
-      const client = getSupabaseClient();
-
-      // Active employees for this center
-      const { data: employees, error: empErr } = await client
-        .from('employees')
-        .select('*')
-        .eq('center_id', centerId)
-        .eq('is_active', true)
-        .order('name', { ascending: true });
-      if (empErr) return { ok: false, error: createQueryError("Payroll.createRun", empErr.message) };
-
-      // APPROVED advances in the same month (candidates to deduct)
-      const { data: advances, error: advErr } = await client
-        .from('employee_advances')
-        .select('*')
-        .eq('center_id', centerId)
-        .eq('status', 'APPROVED')
-        .gte('advance_date', monthStart.toISOString())
-        .lt('advance_date', monthEnd.toISOString());
-      if (advErr) return { ok: false, error: createQueryError("Payroll.createRun", advErr.message) };
-
-      const advanceRows = (advances || []) as any[];
-
-      // Build the payroll run
-      const { data: runRow, error: runErr } = await client
-        .from('payroll_runs')
-        .insert({ center_id: centerId, period_month: input.periodMonth, notes: input.notes || null })
-        .select()
-        .maybeSingle();
-      if (runErr) {
-        const msg = runErr.code === '23505'
-          ? 'A payroll run for this month already exists.'
-          : runErr.message;
-        return { ok: false, error: createQueryError("Payroll.createRun", msg) };
-      }
-      if (!runRow) return { ok: false, error: createQueryError("Payroll.createRun", "No data returned after insert") };
-
-      const lineRows = (employees || []).map((emp: any) => {
-        const empAdvances = advanceRows.filter((a) => a.employee_id === emp.id);
-        const advancesDeducted = sumAdvancesForMonth(
-          empAdvances.map((a: any) => ({ amount: a.amount, advanceDate: a.advance_date })),
-          year,
-          month
-        );
-        const netSalary = computePayrollNetSalary(Number(emp.base_salary) || 0, advancesDeducted);
-        return {
-          center_id: centerId,
-          payroll_run_id: runRow.id,
-          employee_id: emp.id,
-          base_salary: Number(emp.base_salary) || 0,
-          advances_deducted: advancesDeducted,
-          net_salary: netSalary
-        };
+      const { data, error } = await getSupabaseClient().rpc('create_payroll_run_v1', {
+        p_center_id: centerRes.data,
+        p_period_month: input.periodMonth,
+        p_notes: input.notes ?? null,
       });
-
-      const { data: insertedLines, error: lineErr } = await client
-        .from('payroll_line_items')
-        .insert(lineRows)
-        .select();
-      if (lineErr) return { ok: false, error: createQueryError("Payroll.createRun", lineErr.message) };
-
-      // Mark the deducted advances so they are not double-counted.
-      const deductedIds = advanceRows.map((a) => a.id);
-      if (deductedIds.length > 0) {
-        await client
-          .from('employee_advances')
-          .update({ status: 'DEDUCTED', deducted_in_run_id: runRow.id })
-          .eq('center_id', centerId)
-          .in('id', deductedIds);
+      if (error) {
+        const message = error.code === '23505'
+          ? 'A payroll run for this month already exists.'
+          : error.message;
+        return { ok: false, error: createQueryError("Payroll.createRun", message) };
       }
-
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return { ok: false, error: createQueryError("Payroll.createRun", "Invalid payroll response") };
+      }
+      const row = data as { run?: unknown; lines?: unknown[] };
+      if (!row.run || !Array.isArray(row.lines)) {
+        return { ok: false, error: createQueryError("Payroll.createRun", "Incomplete payroll response") };
+      }
       return {
         ok: true,
         data: {
-          run: mapPayrollRun(runRow),
-          lines: (insertedLines || []).map(mapPayrollLineItem)
-        }
+          run: mapPayrollRun(row.run),
+          lines: row.lines.map(mapPayrollLineItem),
+        },
       };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Payroll.createRun", (e as Error).message) };
@@ -3211,21 +3224,11 @@ class SupabasePayrollAdapter implements PayrollRepository {
   async deleteRun(id: string): Promise<Result<void, DomainError>> {
     const centerRes = getCenterIdFor("Payroll.deleteRun");
     if (!centerRes.ok) return centerRes as any;
-    const centerId = centerRes.data;
     try {
-      const client = getSupabaseClient();
-      // Release the advances tied to this run so a corrected run can re-deduct them.
-      await client
-        .from('employee_advances')
-        .update({ status: 'APPROVED', deducted_in_run_id: null })
-        .eq('center_id', centerId)
-        .eq('deducted_in_run_id', id);
-
-      const { error } = await client
-        .from('payroll_runs')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerId);
+      const { error } = await getSupabaseClient().rpc('delete_payroll_run_v1', {
+        p_center_id: centerRes.data,
+        p_payroll_run_id: id,
+      });
       if (error) return { ok: false, error: createQueryError("Payroll.deleteRun", error.message) };
       return { ok: true, data: undefined };
     } catch (e: unknown) {

@@ -5,18 +5,18 @@
       "columns": 364,
       "enum_types": 1,
       "enum_labels": 4,
-      "constraints": 380,
+      "constraints": 382,
       "foreign_keys": 78,
-      "indexes": 99,
+      "indexes": 100,
       "triggers": 23,
       "views": 0,
-      "functions": 41,
-      "policies": 65,
-      "grants": 1138
+      "functions": 59,
+      "policies": 46,
+      "grants": 1173
     },
     "frontend": {
       "tables": 27,
-      "rpc": 22,
+      "rpc": 31,
       "storage": 1
     },
     "findings_by_severity": {

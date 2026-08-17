@@ -12,7 +12,7 @@ import { useCases } from "../../app/composition/useCases";
 export default function CenterSwitcher() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [centers, setCenters] = useState<{ id: string; name: string; role: "ADMIN" | "MANAGER" | "STAFF" }[]>([]);
   const [activeId, setActiveId] = useState<string | null>(useCases.tenant.getActiveCenterId());
   const isMulti = config.branchMode === "multi";
 
@@ -50,7 +50,7 @@ export default function CenterSwitcher() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={t("Switch branch")}
-        className="flex items-center gap-2 h-10 rounded-lg bg-muted/50 px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+        className="flex min-h-11 items-center gap-2 rounded-lg bg-muted/50 px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
       >
         <Building2 className="h-4 w-4" />
         <span className="hidden sm:inline text-xs font-bold max-w-[120px] truncate">{activeName}</span>

@@ -25,6 +25,7 @@ interface BrandingSettings {
 }
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_BRANDING_IMPORT_BYTES = 3 * 1024 * 1024;
 
 const DEFAULT_SETTINGS: BrandingSettings = {
   salonName: 'LenaBeauty',
@@ -42,6 +43,45 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   footerText: 'Powered by LenaBeauty',
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };
+
+const BRAND_TEXT_FIELDS: (keyof Pick<BrandingSettings,
+  'salonName' | 'salonNameAr' | 'address' | 'addressAr' | 'phone' | 'email' |
+  'taxNumber' | 'registrationNumber' | 'footerText' | 'footerTextAr'
+>)[] = [
+  'salonName', 'salonNameAr', 'address', 'addressAr', 'phone', 'email',
+  'taxNumber', 'registrationNumber', 'footerText', 'footerTextAr',
+];
+
+function normalizeBrandingSettings(
+  value: unknown,
+  options: { requireExportShape?: boolean } = {},
+): BrandingSettings | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const hasKnownField = [...BRAND_TEXT_FIELDS, 'primaryColor', 'secondaryColor', 'accentColor', 'logo']
+    .some((field) => Object.prototype.hasOwnProperty.call(source, field));
+  if (!hasKnownField) return null;
+  // Imported files need identifying fields. Legacy local caches are normalized
+  // with defaults so old partial settings never create uncontrolled inputs.
+  if (options.requireExportShape
+      && (typeof source.salonName !== 'string' || typeof source.primaryColor !== 'string')) return null;
+
+  const next: BrandingSettings = { ...DEFAULT_SETTINGS };
+  for (const field of BRAND_TEXT_FIELDS) {
+    if (typeof source[field] === 'string') next[field] = source[field] as never;
+  }
+  for (const field of ['primaryColor', 'secondaryColor', 'accentColor'] as const) {
+    const color = source[field];
+    if (typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color)) next[field] = color;
+  }
+  const logo = source.logo;
+  next.logo = typeof logo === 'string'
+    && logo.startsWith('data:image/')
+    && logo.length <= MAX_BRANDING_IMPORT_BYTES * 1.4
+      ? logo
+      : null;
+  return next;
+}
 
 function fromCenterSettings(cs: any): BrandingSettings {
   return {
@@ -144,7 +184,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
       if (!next) {
         const savedLocal = localStorage.getItem('lenabeauty_branding');
         if (savedLocal) {
-          try { next = JSON.parse(savedLocal); } catch { /* ignore */ }
+          try { next = normalizeBrandingSettings(JSON.parse(savedLocal)); } catch { /* ignore */ }
         }
       }
       if (next) {
@@ -184,40 +224,48 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async () => {
+  const persistSettings = async (next: BrandingSettings) => {
     setSaving(true);
     try {
       await unwrap(useCases.settings.update({
-        displayName: settings.salonName,
-        displayNameAr: settings.salonNameAr,
-        brandEmail: settings.email,
-        brandTaxNumber: settings.taxNumber,
-        brandRegistrationNumber: settings.registrationNumber,
-        brandPrimaryColor: settings.primaryColor,
-        brandSecondaryColor: settings.secondaryColor,
-        brandAccentColor: settings.accentColor,
-        brandFooterText: settings.footerText,
-        brandFooterTextAr: settings.footerTextAr,
-        phone: settings.phone,
-        address: settings.address,
-        brandLogoBase64: settings.logo ?? undefined,
+        displayName: next.salonName,
+        displayNameAr: next.salonNameAr,
+        brandEmail: next.email,
+        brandTaxNumber: next.taxNumber,
+        brandRegistrationNumber: next.registrationNumber,
+        brandPrimaryColor: next.primaryColor,
+        brandSecondaryColor: next.secondaryColor,
+        brandAccentColor: next.accentColor,
+        brandFooterText: next.footerText,
+        brandFooterTextAr: next.footerTextAr,
+        phone: next.phone,
+        address: next.address,
+        brandLogoBase64: next.logo ?? undefined,
       }));
-      localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
-      if (settings.logo) localStorage.setItem('lenabeauty_logo', settings.logo);
-      // Saved values feed the shared application tokens.
-      applyBrandTokens(settings);
+      const { logoFile: _logoFile, ...serializable } = next;
+      localStorage.setItem('lenabeauty_branding', JSON.stringify(serializable));
+      if (next.logo) localStorage.setItem('lenabeauty_logo', next.logo);
+      else localStorage.removeItem('lenabeauty_logo');
+      applyBrandTokens(next);
       setSaved(true);
       showToast('success', t('Success'), t('Branding settings saved successfully'));
       setTimeout(() => setSaved(false), 3000);
+      return true;
     } catch (err: any) {
       showToast('error', t('Error'), err?.message || t('Failed to load branding'));
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
+  const handleSave = async () => {
+    await persistSettings(settings);
+  };
+
   const handleExportSettings = () => {
-    const data = JSON.stringify(settings, null, 2);
+    const { logoFile: _logoFile, ...serializable } = settings;
+    const data = JSON.stringify(serializable, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -230,15 +278,24 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   const handleImportSettings = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_BRANDING_IMPORT_BYTES) {
+      showToast('error', t('Error'), t('Invalid branding settings file'));
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const imported = JSON.parse(event.target?.result as string);
+        const imported = normalizeBrandingSettings(
+          JSON.parse(event.target?.result as string),
+          { requireExportShape: true },
+        );
+        if (!imported) throw new Error('INVALID_BRANDING_SETTINGS');
+        const savedSuccessfully = await persistSettings(imported);
+        if (!savedSuccessfully) return;
         setSettings(imported);
-        if (imported.logo) setPreview(imported.logo);
-        handleSave();
+        setPreview(imported.logo);
       } catch {
-        showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+        showToast('error', t('Error'), t('Invalid branding settings file'));
       }
     };
     reader.readAsText(file);
@@ -258,7 +315,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
             type="color"
             value={settings[field]}
             onChange={(e) => handleColorChange(field, e.target.value)}
-            className="h-9 w-12 rounded-lg cursor-pointer border border-border bg-card p-0.5"
+            className="h-11 w-12 rounded-lg cursor-pointer border border-border bg-card p-0.5"
             aria-label={t(labelKey)}
           />
           <input
@@ -330,19 +387,19 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  className="h-9 px-3 rounded-lg font-bold text-sm text-white shadow-sm"
+                  className="h-11 px-3 rounded-lg font-bold text-sm text-white shadow-sm"
                   style={{ backgroundColor: settings.primaryColor }}
                 >
                   {t('Save')}
                 </button>
                 <span
-                  className="h-9 px-3 inline-flex items-center rounded-lg font-bold text-sm text-white"
+                  className="h-11 px-3 inline-flex items-center rounded-lg font-bold text-sm text-white"
                   style={{ backgroundColor: settings.secondaryColor }}
                 >
                   {t('Secondary Color')}
                 </span>
                 <span
-                  className="h-9 w-9 rounded-lg border border-border"
+                  className="h-11 w-11 rounded-lg border border-border"
                   style={{ backgroundColor: settings.accentColor }}
                   aria-hidden
                 />

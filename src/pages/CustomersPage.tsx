@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { 
-  History, X, Search, User, Phone, Calendar, 
+  History, Search, User, Phone, Calendar,
   Receipt, FileText, Save, CheckCircle2, UserPlus,
   MoreVertical, Sparkles,
-  TrendingUp, Pencil, Trash2,
+  TrendingUp, Pencil,
   Download, Star, Users, Crown
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { useConfirm } from "../shared/components/ConfirmDialog";
 import { getDisplayName, getInitials } from "../shared/displayName";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
@@ -22,6 +21,7 @@ import { ListState } from "../shared/components/ListState";
 import { formatOMRAmount } from "../shared/money";
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { InvoicePrintData } from "../application/dto";
+import { Modal } from "../shared/components/Modal";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -61,7 +61,6 @@ function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
 
 export default function CustomersPage() {
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const { t, i18n } = useTranslation();
   const [rows, setRows] = useState<Customer[]>([]);
   const [q, setQ] = useState("");
@@ -194,26 +193,6 @@ export default function CustomersPage() {
       }
     } finally {
       setAdding(false);
-    }
-  }
-
-  async function handleDeleteCustomer(id: string) {
-    const ok = await confirm({
-      title: t("Confirm"),
-      message: t("Are you sure you want to delete this customer?"),
-      type: "danger"
-    });
-    if (!ok) return;
-    try {
-      await unwrap(useCases.customers.delete(id));
-      await load();
-      showToast('success', t("Success"), t("Customer deleted successfully"));
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err?.message || String(err));
-      }
     }
   }
 
@@ -374,13 +353,6 @@ export default function CustomersPage() {
                         >
                           <Pencil className="h-5 w-5" />
                         </button>
-                        <button
-                          onClick={() => void handleDeleteCustomer(c.id)}
-                          className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all shadow-sm hover:scale-110 active:scale-95"
-                          title={t("Delete")}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
                       </div>
                     </td>
                   </motion.tr>
@@ -459,14 +431,6 @@ export default function CustomersPage() {
                         <Pencil className="h-4 w-4" />
                         {t("Edit")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => { setMenuId(null); void handleDeleteCustomer(c.id); }}
-                        className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {t("Delete")}
-                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -492,41 +456,24 @@ export default function CustomersPage() {
         </div>
       </motion.div>
 
-      <AnimatePresence>
-        {openId && (
-          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6 print:hidden">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpenId(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative flex flex-col w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[90dvh] rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden max-h-[calc(100dvh-var(--keyboard-inset,0px))]"
-            >
-              <div className="shrink-0 flex items-center justify-between border-b border-border px-4 sm:px-10 py-4 sm:py-8 bg-muted/20 pt-[max(1rem,env(safe-area-inset-top))]">
-                <div className="flex items-center gap-5">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <History className="h-7 w-7" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h2 className="text-2xl font-bold text-foreground">{t("Customer Profile")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("History & Preferences")}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setOpenId(null)}
-                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-auto p-4 sm:p-10 scrollbar-hide overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <Modal
+        isOpen={openId !== null}
+        onClose={() => setOpenId(null)}
+        size="xl"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <History className="h-5 w-5" />
+            </span>
+            <span>{t("Customer Profile")}</span>
+          </span>
+        }
+        description={t("History & Preferences")}
+        disableClose={savingNotes}
+        overlayClassName="print:hidden"
+        className="sm:max-w-6xl sm:rounded-[3rem]"
+      >
+        <div className="sm:p-5">
                 {!history ? (
                   <ScreenState state="loading" title={t("Fetching Data...")} compact />
                 ) : (
@@ -668,47 +615,26 @@ export default function CustomersPage() {
                     </div>
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Modal>
 
-      <AnimatePresence>
-        {showAddModal && (
-          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowAddModal(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md max-h-[calc(100dvh-var(--keyboard-inset,0px))] overflow-y-auto rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <UserPlus className="h-7 w-7" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h2 className="text-2xl font-bold text-foreground">{t("Add Customer")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Create New Client")}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="p-6 sm:p-10 space-y-6 sm:space-y-8">
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        size="sm"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <UserPlus className="h-5 w-5" />
+            </span>
+            <span>{t("Add Customer")}</span>
+          </span>
+        }
+        description={t("Create New Client")}
+        disableClose={adding}
+        className="sm:rounded-[3rem]"
+      >
+        <div className="space-y-6 sm:space-y-8 sm:p-5">
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Full Name")}</label>
                   <div className="relative">
@@ -747,46 +673,26 @@ export default function CustomersPage() {
                   <CheckCircle2 className="h-6 w-6 relative z-10" />
                   <span className="text-lg relative z-10">{adding ? t("Creating...") : t("Create Customer")}</span>
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {editId && (
-          <div className="fixed inset-0 z-[var(--z-overlay)] flex items-end sm:items-center justify-center p-0 sm:p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setEditId(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-xl"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-md max-h-[calc(100dvh-var(--keyboard-inset,0px))] overflow-y-auto rounded-t-3xl sm:rounded-[3rem] border border-border bg-card shadow-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-border px-6 sm:px-10 py-5 sm:py-8 bg-muted/20">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <Pencil className="h-7 w-7" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <h2 className="text-2xl font-bold text-foreground">{t("Edit Customer")}</h2>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Update Details")}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setEditId(null)}
-                  className="h-12 w-12 rounded-full hover:bg-muted flex items-center justify-center transition-all hover:rotate-90"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+        </div>
+      </Modal>
 
-              <div className="p-6 sm:p-10 space-y-6 sm:space-y-8">
+      <Modal
+        isOpen={editId !== null}
+        onClose={() => setEditId(null)}
+        size="sm"
+        title={
+          <span className="flex items-center gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <Pencil className="h-5 w-5" />
+            </span>
+            <span>{t("Edit Customer")}</span>
+          </span>
+        }
+        description={t("Update Details")}
+        disableClose={adding}
+        className="sm:rounded-[3rem]"
+      >
+        <div className="space-y-6 sm:space-y-8 sm:p-5">
                 <div className="space-y-3">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Full Name")}</label>
                   <div className="relative">
@@ -825,11 +731,8 @@ export default function CustomersPage() {
                   <Save className="h-6 w-6 relative z-10" />
                   <span className="text-lg relative z-10">{adding ? t("Saving...") : t("Save Changes")}</span>
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Modal>
     </div>
   );
 }

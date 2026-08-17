@@ -7,12 +7,14 @@ import { ToastProvider } from "./shared/components/Toast";
 import { ConfirmProvider } from "./shared/components/ConfirmDialog";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
 import { NetworkStatus } from "./shared/components/NetworkStatus";
+import { PwaUpdatePrompt } from "./shared/components/PwaUpdatePrompt";
 
 export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <NetworkStatus />
+        <PwaUpdatePrompt />
         <AppProvider>
           <AuthProvider>
             <ToastProvider>

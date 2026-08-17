@@ -1,7 +1,7 @@
 // Deterministic local schema replay + catalog inventory for the database
 // contract freeze audit.
 //
-// Replays the 28 canonical automated migrations against PGlite (bare PostgreSQL
+// Replays every canonical automated migration against PGlite (bare PostgreSQL
 // 18.3) with per-file rollback, verifies idempotency by re-running the chain,
 // computes a deterministic catalog fingerprint before and after, and extracts
 // the replayed schema (tables, columns, enums, constraints, FKs, indexes,
@@ -88,7 +88,7 @@ report.fingerprints.after_repeat = fingerprint(inventoryAfterReplay);
 report.fingerprints.identical = report.fingerprints.after_first_replay === report.fingerprints.after_repeat;
 report.fingerprints.diff = diffInventories(inventoryAfterFirst, inventoryAfterReplay);
 
-// The canonical schema is the FIRST application (28 migrations applied once).
+// The canonical schema is the FIRST application of the discovered automated chain.
 // Canonical-only objects captured from SQL text that PGlite cannot execute.
 inventoryAfterFirst.canonical_only = canonicalOnlyObjects();
 
@@ -113,8 +113,8 @@ console.log(
   `fingerprint after_first=${report.fingerprints.after_first_replay} after_repeat=${report.fingerprints.after_repeat} identical=${report.fingerprints.identical}`,
 );
 
-// Only unexpected replay failures fail the replay step; the two documented
-// idempotency gaps and their fingerprint drift are reported, not fatal.
+// Replay failures fail this step. The CI gate additionally treats every
+// non-idempotent migration and any fingerprint drift as a contract violation.
 if (failed.length) process.exitCode = 1;
 
 // --- helpers ---------------------------------------------------------------

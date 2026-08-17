@@ -10,8 +10,11 @@ export default defineConfig(({mode}) => {
       react(),
       tailwindcss(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
         workbox: {
+          // Reports are online-data only; do not make every PWA install pay for
+          // the large chart engine before that lazy route is requested.
+          globIgnores: ['**/chunk-charts-*.js'],
           // Cache strategies for offline support
           runtimeCaching: [
             {
@@ -42,7 +45,7 @@ export default defineConfig(({mode}) => {
           orientation: 'portrait',
           lang: 'ar',
           dir: 'rtl',
-          start_url: '/dashboard',
+          start_url: '/#/dashboard',
           scope: '/',
           categories: ['business', 'productivity'],
           icons: [
@@ -64,14 +67,14 @@ export default defineConfig(({mode}) => {
               name: 'نقطة البيع',
               short_name: 'POS',
               description: 'فتح نقطة البيع مباشرة',
-              url: '/pos',
+              url: '/#/pos',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
             },
             {
               name: 'لوحة التحكم',
               short_name: 'Dashboard',
               description: 'عرض الإحصائيات',
-              url: '/dashboard',
+              url: '/#/dashboard',
               icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
             }
           ]
