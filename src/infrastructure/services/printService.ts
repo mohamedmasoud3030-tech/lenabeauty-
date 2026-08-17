@@ -67,6 +67,19 @@ class PrintService {
     const branding = brandingService.getSettings();
     const cssVars = brandingService.getCSSVariables();
 
+    // The print document must follow the host app's language and direction.
+    // The host toggles document.documentElement.dir/lang (rtl/ar for Arabic,
+    // ltr for English), and forcing ltr/en here made Arabic documents print
+    // left-to-right with misordered text.
+    const hostDir = typeof document !== "undefined"
+      ? (document.documentElement?.getAttribute("dir") || document.documentElement?.dir || "").toLowerCase()
+      : "";
+    const hostLang = typeof document !== "undefined"
+      ? (document.documentElement?.getAttribute("lang") || document.documentElement?.lang || "")
+      : "";
+    const docDir = hostDir === "rtl" ? "rtl" : "ltr";
+    const docLang = hostLang || "en";
+
     const paperSizes: Record<string, { width: string; height: string }> = {
       '80mm': { width: '80mm', height: 'auto' },
       '58mm': { width: '58mm', height: 'auto' },
@@ -78,7 +91,7 @@ class PrintService {
 
     return sanitizePrintHTML(`
       <!DOCTYPE html>
-      <html dir="ltr" lang="en">
+      <html dir="${docDir}" lang="${escapePrintText(docLang)}">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -161,7 +174,10 @@ class PrintService {
             background-color: var(--primary-color);
             color: white;
             padding: 10px;
-            text-align: left;
+            /* Logical property: headers align to the document's start edge
+               (right in RTL Arabic documents, left in LTR) instead of being
+               forced left. */
+            text-align: start;
             font-weight: bold;
             border: 1px solid #E5E7EB;
           }
@@ -307,15 +323,17 @@ class PrintService {
   printDocument(htmlContent: string, options: PrintOptions = {}): void {
     const printHTML = this.generatePrintHTML(htmlContent, options);
     const printWindow = window.open('', '', 'height=600,width=800');
-    
+
     if (printWindow) {
-      printWindow.document.write(printHTML);
-      printWindow.document.close();
-      
-      // Wait for content to load before printing
+      // Attach the load handler BEFORE writing content. The freshly parsed
+      // document can fire its load event as soon as close() runs; a handler
+      // attached afterwards can miss it and the print dialog never opens.
       printWindow.onload = () => {
+        printWindow.focus();
         printWindow.print();
       };
+      printWindow.document.write(printHTML);
+      printWindow.document.close();
     }
   }
 
@@ -394,6 +412,10 @@ class PrintService {
    */
   generateInvoiceHTML(invoiceData: any, isArabic: boolean = false): string {
     const { invoice, items, customer, totals } = invoiceData;
+    // Every dynamic value below is business/user data (customer name, phone,
+    // item name, report cells). Escape it before interpolation so a value
+    // containing markup can never become active content inside the print
+    // window (document.write / innerHTML render this in the app origin).
     
     return `
       <div class="section">
@@ -401,9 +423,9 @@ class PrintService {
         <table>
           <tr>
             <td class="font-bold">${isArabic ? 'رقم الفاتورة' : 'Invoice #'}:</td>
-            <td>${invoice.number}</td>
+            <td>${escapePrintText(invoice.number)}</td>
             <td class="font-bold">${isArabic ? 'التاريخ' : 'Date'}:</td>
-            <td>${invoice.date}</td>
+            <td>${escapePrintText(invoice.date)}</td>
           </tr>
         </table>
       </div>
@@ -411,9 +433,9 @@ class PrintService {
       ${customer ? `
         <div class="section">
           <div class="section-title">${isArabic ? 'بيانات العميل' : 'Customer Information'}</div>
-          <p class="font-bold">${customer.name}</p>
-          <p>${customer.phone}</p>
-          <p>${customer.email || ''}</p>
+          <p class="font-bold">${escapePrintText(customer.name)}</p>
+          <p>${escapePrintText(customer.phone)}</p>
+          <p>${escapePrintText(customer.email || '')}</p>
         </div>
       ` : ''}
 
@@ -431,10 +453,10 @@ class PrintService {
           <tbody>
             ${items.map((item: any) => `
               <tr>
-                <td>${item.name}</td>
-                <td class="text-center">${item.qty}</td>
-                <td class="text-right">${item.price.toFixed(3)}</td>
-                <td class="text-right">${(item.qty * item.price).toFixed(3)}</td>
+                <td>${escapePrintText(item.name)}</td>
+                <td class="text-center">${escapePrintText(item.qty)}</td>
+                <td class="text-right">${escapePrintText(item.price.toFixed(3))}</td>
+                <td class="text-right">${escapePrintText((item.qty * item.price).toFixed(3))}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -445,23 +467,23 @@ class PrintService {
         <table>
           <tr>
             <td class="font-bold">${isArabic ? 'الإجمالي' : 'Subtotal'}:</td>
-            <td class="text-right">${totals.subtotal.toFixed(3)}</td>
+            <td class="text-right">${escapePrintText(totals.subtotal.toFixed(3))}</td>
           </tr>
           ${totals.discount > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الخصم' : 'Discount'}:</td>
-              <td class="text-right">-${totals.discount.toFixed(3)}</td>
+              <td class="text-right">-${escapePrintText(totals.discount.toFixed(3))}</td>
             </tr>
           ` : ''}
           ${totals.tax > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الضريبة' : 'Tax'}:</td>
-              <td class="text-right">+${totals.tax.toFixed(3)}</td>
+              <td class="text-right">+${escapePrintText(totals.tax.toFixed(3))}</td>
             </tr>
           ` : ''}
           <tr style="background-color: var(--primary-color); color: white;">
             <td class="font-bold">${isArabic ? 'الإجمالي النهائي' : 'Grand Total'}:</td>
-            <td class="text-right font-bold">${totals.total.toFixed(3)}</td>
+            <td class="text-right font-bold">${escapePrintText(totals.total.toFixed(3))}</td>
           </tr>
         </table>
       </div>
@@ -473,18 +495,20 @@ class PrintService {
    */
   generateReportHTML(reportData: any, isArabic: boolean = false): string {
     const { title, summary, data } = reportData;
+    // Escape every dynamic cell/header value (same rule as generateInvoiceHTML):
+    // report data is business data and must never become active markup.
 
     return `
       <div class="section">
-        <h2 class="text-lg font-bold mb-3">${title}</h2>
+        <h2 class="text-lg font-bold mb-3">${escapePrintText(title)}</h2>
         ${summary ? `
           <div class="section">
             <div class="section-title">${isArabic ? 'الملخص' : 'Summary'}</div>
             <table>
               ${Object.entries(summary).map(([key, value]) => `
                 <tr>
-                  <td class="font-bold">${key}:</td>
-                  <td class="text-right">${value}</td>
+                  <td class="font-bold">${escapePrintText(key)}:</td>
+                  <td class="text-right">${escapePrintText(value)}</td>
                 </tr>
               `).join('')}
             </table>
@@ -496,13 +520,13 @@ class PrintService {
             <table>
               <thead>
                 <tr>
-                  ${Object.keys(data[0] || {}).map(key => `<th>${key}</th>`).join('')}
+                  ${Object.keys(data[0] || {}).map(key => `<th>${escapePrintText(key)}</th>`).join('')}
                 </tr>
               </thead>
               <tbody>
                 ${data.map((row: any) => `
                   <tr>
-                    ${Object.values(row).map(value => `<td>${value}</td>`).join('')}
+                    ${Object.values(row).map(value => `<td>${escapePrintText(value)}</td>`).join('')}
                   </tr>
                 `).join('')}
               </tbody>

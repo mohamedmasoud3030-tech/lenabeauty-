@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useCases } from '../app/composition/useCases';
 import { unwrap } from '../shared/hooks/useApplication';
 import { useToast } from '../shared/components/Toast';
-import { LENA_BRAND_PALETTE } from '../shared/theme/brandPalette';
+import { LENA_BRAND_PALETTE, isValidBrandColor, normalizeBrandColor } from '../shared/theme/brandPalette';
+import brandingService, { validateBrandingImport } from '../infrastructure/services/brandingService';
 
 interface BrandingSettings {
   salonName: string;
@@ -16,7 +17,6 @@ interface BrandingSettings {
   taxNumber: string;
   registrationNumber: string;
   logo: string | null; // Base64 or URL
-  logoFile?: File;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -54,9 +54,9 @@ function fromCenterSettings(cs: any): BrandingSettings {
     taxNumber: cs?.brandTaxNumber ?? DEFAULT_SETTINGS.taxNumber,
     registrationNumber: cs?.brandRegistrationNumber ?? DEFAULT_SETTINGS.registrationNumber,
     logo: cs?.brandLogoBase64 ?? null,
-    primaryColor: cs?.brandPrimaryColor ?? DEFAULT_SETTINGS.primaryColor,
-    secondaryColor: cs?.brandSecondaryColor ?? DEFAULT_SETTINGS.secondaryColor,
-    accentColor: cs?.brandAccentColor ?? DEFAULT_SETTINGS.accentColor,
+    primaryColor: normalizeBrandColor(cs?.brandPrimaryColor, DEFAULT_SETTINGS.primaryColor),
+    secondaryColor: normalizeBrandColor(cs?.brandSecondaryColor, DEFAULT_SETTINGS.secondaryColor),
+    accentColor: normalizeBrandColor(cs?.brandAccentColor, DEFAULT_SETTINGS.accentColor),
     footerText: cs?.brandFooterText ?? DEFAULT_SETTINGS.footerText,
     footerTextAr: cs?.brandFooterTextAr ?? DEFAULT_SETTINGS.footerTextAr,
   };
@@ -130,29 +130,31 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Supabase is the source of truth; localStorage is only a cache/fallback.
+    // Supabase is the source of truth; the branding singleton owns the
+    // validated local cache. On success, hydrate the singleton with the
+    // remote values (so printService / InvoicePrintLayout — which read the
+    // singleton — use the remote branding immediately, even on a fresh
+    // device or after another device changed it) and take the snapshot from
+    // it. On failure, fall back to the singleton's validated cache — there
+    // is no second cache parser/path.
     (async () => {
       let next: BrandingSettings | null = null;
       try {
         const res = await useCases.settings.get();
         if (res.ok) {
-          next = fromCenterSettings(res.data);
+          brandingService.updateSettings(fromCenterSettings(res.data));
+          next = brandingService.getSettings();
         }
       } catch {
-        // fall through to localStorage
+        // fall through to the validated local cache
       }
       if (!next) {
-        const savedLocal = localStorage.getItem('lenabeauty_branding');
-        if (savedLocal) {
-          try { next = JSON.parse(savedLocal); } catch { /* ignore */ }
-        }
+        next = brandingService.reloadFromCache();
       }
-      if (next) {
-        setSettings(next);
-        if (next.logo) setPreview(next.logo);
-        // Reflect the saved brand across the app tokens.
-        applyBrandTokens(next);
-      }
+      setSettings(next);
+      if (next.logo) setPreview(next.logo);
+      // Reflect the saved brand across the app tokens.
+      applyBrandTokens(next);
     })();
   }, []);
 
@@ -171,7 +173,7 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     reader.onload = (event) => {
       const base64 = event.target?.result as string;
       setPreview(base64);
-      setSettings(prev => ({ ...prev, logo: base64, logoFile: file }));
+      setSettings(prev => ({ ...prev, logo: base64 }));
     };
     reader.readAsDataURL(file);
   };
@@ -184,28 +186,44 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     setSettings(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async () => {
+  /**
+   * Persist an explicit settings snapshot.
+   *
+   * The snapshot (not the component state) is the single source for this save,
+   * so callers — including the import flow — can save a just-validated object
+   * atomically without waiting for (or racing) React state commits.
+   */
+  const persistSettings = async (next: BrandingSettings) => {
     setSaving(true);
     try {
       await unwrap(useCases.settings.update({
-        displayName: settings.salonName,
-        displayNameAr: settings.salonNameAr,
-        brandEmail: settings.email,
-        brandTaxNumber: settings.taxNumber,
-        brandRegistrationNumber: settings.registrationNumber,
-        brandPrimaryColor: settings.primaryColor,
-        brandSecondaryColor: settings.secondaryColor,
-        brandAccentColor: settings.accentColor,
-        brandFooterText: settings.footerText,
-        brandFooterTextAr: settings.footerTextAr,
-        phone: settings.phone,
-        address: settings.address,
-        brandLogoBase64: settings.logo ?? undefined,
+        displayName: next.salonName,
+        displayNameAr: next.salonNameAr,
+        brandEmail: next.email,
+        brandTaxNumber: next.taxNumber,
+        brandRegistrationNumber: next.registrationNumber,
+        brandPrimaryColor: next.primaryColor,
+        brandSecondaryColor: next.secondaryColor,
+        brandAccentColor: next.accentColor,
+        brandFooterText: next.footerText,
+        brandFooterTextAr: next.footerTextAr,
+        phone: next.phone,
+        address: next.address,
+        // Send null explicitly when the logo is cleared: the repository skips
+        // undefined fields, so `?? undefined` would leave the remote logo
+        // untouched and it would be restored on the next Supabase load.
+        brandLogoBase64: next.logo,
       }));
-      localStorage.setItem('lenabeauty_branding', JSON.stringify(settings));
-      if (settings.logo) localStorage.setItem('lenabeauty_logo', settings.logo);
+      // Single persistence path for the local cache: after Supabase accepts
+      // the save, update the branding singleton (which owns the cache keys
+      // and the logo storage — including removing the logo when it is null).
+      // printService and InvoicePrintLayout read this singleton, so the next
+      // printed document uses the new branding without a reload. Writing the
+      // cache through a separate path here would leave the two sources
+      // drifting apart.
+      brandingService.updateSettings(next);
       // Saved values feed the shared application tokens.
-      applyBrandTokens(settings);
+      applyBrandTokens(next);
       setSaved(true);
       showToast('success', t('Success'), t('Branding settings saved successfully'));
       setTimeout(() => setSaved(false), 3000);
@@ -214,6 +232,23 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    // Strict color contract at the UI boundary: the free-text color inputs
+    // accept anything, so refuse to persist unless all three are #RRGGBB.
+    // (The repository boundary independently normalizes, but a clear error
+    // here beats a silent value change.)
+    const invalidColors = [
+      settings.primaryColor,
+      settings.secondaryColor,
+      settings.accentColor,
+    ].filter((value) => !isValidBrandColor(value));
+    if (invalidColors.length > 0) {
+      showToast('error', t('Error'), t('Brand colors must be in #RRGGBB format'));
+      return;
+    }
+    await persistSettings(settings);
   };
 
   const handleExportSettings = () => {
@@ -233,12 +268,18 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const imported = JSON.parse(event.target?.result as string);
-        setSettings(imported);
-        if (imported.logo) setPreview(imported.logo);
-        handleSave();
+        // Strict structural validation FIRST: only a complete exported
+        // snapshot is accepted. Arrays, null, primitives, empty/unknown
+        // objects, and partial shapes are rejected before anything can be
+        // persisted — a malformed file must never overwrite the salon's
+        // branding with defaults. The validated snapshot is then persisted
+        // directly (no dependence on React state commits).
+        const validated = validateBrandingImport(JSON.parse(event.target?.result as string));
+        setSettings(validated);
+        if (validated.logo) setPreview(validated.logo);
+        void persistSettings(validated);
       } catch {
-        showToast('error', t('Error'), t('Logo file must be an image under 2MB'));
+        showToast('error', t('Error'), t('Invalid branding settings file'));
       }
     };
     reader.readAsText(file);

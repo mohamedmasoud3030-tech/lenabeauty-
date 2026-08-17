@@ -1,4 +1,4 @@
-import { LENA_BRAND_PALETTE } from '../../shared/theme/brandPalette';
+import { LENA_BRAND_PALETTE, normalizeBrandColor } from '../../shared/theme/brandPalette';
 
 /**
  * Branding Service
@@ -40,6 +40,58 @@ const DEFAULT_BRANDING: BrandingSettings = {
   footerTextAr: 'مدعوم بواسطة لينا بيوتي',
 };
 
+const BRANDING_STRING_FIELDS = [
+  'salonName', 'salonNameAr', 'address', 'addressAr', 'phone', 'email',
+  'taxNumber', 'registrationNumber', 'footerText', 'footerTextAr',
+] as const;
+
+const BRANDING_COLOR_FIELDS = ['primaryColor', 'secondaryColor', 'accentColor'] as const;
+
+/**
+ * Strict structural validation for a branding import file.
+ *
+ * The exporter always writes a COMPLETE snapshot, so an import is accepted
+ * only when it is a plain object containing every core string field and all
+ * three color fields with the correct types. Anything else — arrays, null,
+ * primitives, empty objects, unknown-only objects, or partial shapes — throws
+ * instead of silently persisting defaults over the salon's real branding.
+ * Colors are then normalized through the strict #RRGGBB contract.
+ */
+export function validateBrandingImport(raw: unknown): BrandingSettings {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Branding import must be a JSON object');
+  }
+  const src = raw as Record<string, unknown>;
+
+  const missingStrings = BRANDING_STRING_FIELDS.filter((key) => typeof src[key] !== 'string');
+  const missingColors = BRANDING_COLOR_FIELDS.filter((key) => typeof src[key] !== 'string');
+  if (missingStrings.length > 0 || missingColors.length > 0) {
+    throw new Error(
+      'Branding import is missing required fields (a complete exported snapshot is expected)',
+    );
+  }
+  if (src.logo !== undefined && src.logo !== null && typeof src.logo !== 'string') {
+    throw new Error('Branding import logo must be a string or null');
+  }
+
+  return {
+    salonName: src.salonName as string,
+    salonNameAr: src.salonNameAr as string,
+    address: src.address as string,
+    addressAr: src.addressAr as string,
+    phone: src.phone as string,
+    email: src.email as string,
+    taxNumber: src.taxNumber as string,
+    registrationNumber: src.registrationNumber as string,
+    footerText: src.footerText as string,
+    footerTextAr: src.footerTextAr as string,
+    logo: typeof src.logo === 'string' ? src.logo : null,
+    primaryColor: normalizeBrandColor(src.primaryColor, LENA_BRAND_PALETTE.primary),
+    secondaryColor: normalizeBrandColor(src.secondaryColor, LENA_BRAND_PALETTE.secondary),
+    accentColor: normalizeBrandColor(src.accentColor, LENA_BRAND_PALETTE.surfaceAccent),
+  };
+}
+
 class BrandingService {
   private static instance: BrandingService;
   private settings: BrandingSettings = DEFAULT_BRANDING;
@@ -57,14 +109,39 @@ class BrandingService {
 
   /**
    * Load branding settings from localStorage
+   *
+   * localStorage is a user-writable cache, so every value is re-validated on
+   * load: colors are strictly #RRGGBB (invalid/malicious values fall back to
+   * the defaults) and missing fields keep their defaults instead of being
+   * silently dropped.
    */
   private loadSettings(): void {
     try {
       const saved = localStorage.getItem('lenabeauty_branding');
       if (saved) {
-        this.settings = JSON.parse(saved);
+        const parsed: unknown = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const raw = parsed as Record<string, unknown>;
+          this.settings = {
+            ...DEFAULT_BRANDING,
+            ...(typeof raw.salonName === 'string' ? { salonName: raw.salonName } : {}),
+            ...(typeof raw.salonNameAr === 'string' ? { salonNameAr: raw.salonNameAr } : {}),
+            ...(typeof raw.address === 'string' ? { address: raw.address } : {}),
+            ...(typeof raw.addressAr === 'string' ? { addressAr: raw.addressAr } : {}),
+            ...(typeof raw.phone === 'string' ? { phone: raw.phone } : {}),
+            ...(typeof raw.email === 'string' ? { email: raw.email } : {}),
+            ...(typeof raw.taxNumber === 'string' ? { taxNumber: raw.taxNumber } : {}),
+            ...(typeof raw.registrationNumber === 'string' ? { registrationNumber: raw.registrationNumber } : {}),
+            ...(typeof raw.footerText === 'string' ? { footerText: raw.footerText } : {}),
+            ...(typeof raw.footerTextAr === 'string' ? { footerTextAr: raw.footerTextAr } : {}),
+            logo: typeof raw.logo === 'string' ? raw.logo : null,
+            primaryColor: normalizeBrandColor(raw.primaryColor, LENA_BRAND_PALETTE.primary),
+            secondaryColor: normalizeBrandColor(raw.secondaryColor, LENA_BRAND_PALETTE.secondary),
+            accentColor: normalizeBrandColor(raw.accentColor, LENA_BRAND_PALETTE.surfaceAccent),
+          };
+        }
       }
-      
+
       // Load logo separately
       const logo = localStorage.getItem('lenabeauty_logo');
       if (logo) {
@@ -94,14 +171,32 @@ class BrandingService {
    * Update branding settings
    */
   updateSettings(updates: Partial<BrandingSettings>): void {
-    this.settings = { ...this.settings, ...updates };
-    
-    // Save to localStorage
+    // Enforce the strict color contract at the in-memory boundary too: a
+    // malformed color never enters the cached settings or the saved cache.
+    const sanitized: Partial<BrandingSettings> = { ...updates };
+    if (sanitized.primaryColor !== undefined) {
+      sanitized.primaryColor = normalizeBrandColor(sanitized.primaryColor, this.settings.primaryColor);
+    }
+    if (sanitized.secondaryColor !== undefined) {
+      sanitized.secondaryColor = normalizeBrandColor(sanitized.secondaryColor, this.settings.secondaryColor);
+    }
+    if (sanitized.accentColor !== undefined) {
+      sanitized.accentColor = normalizeBrandColor(sanitized.accentColor, this.settings.accentColor);
+    }
+
+    this.settings = { ...this.settings, ...sanitized };
+
+    // Save to localStorage. The logo cache key must be removed when the logo
+    // is cleared (logo: null): loadSettings re-applies the separate key over
+    // the main cache, so a stale logo would otherwise be resurrected after
+    // reload.
     const { logo, ...settingsWithoutLogo } = this.settings;
     localStorage.setItem('lenabeauty_branding', JSON.stringify(settingsWithoutLogo));
-    
+
     if (logo) {
       localStorage.setItem('lenabeauty_logo', logo);
+    } else {
+      localStorage.removeItem('lenabeauty_logo');
     }
   }
 
@@ -127,104 +222,18 @@ class BrandingService {
   }
 
   /**
-   * Get header HTML for documents (invoices, reports, etc.)
-   */
-  getDocumentHeader(isArabic: boolean = false): string {
-    const { logo, salonName, salonNameAr, address, addressAr, phone, email, taxNumber } = this.settings;
-    const name = isArabic ? salonNameAr : salonName;
-    const addr = isArabic ? addressAr : address;
-
-    return `
-      <div class="document-header" style="text-align: ${isArabic ? 'right' : 'left'}; margin-bottom: 20px; border-bottom: 2px solid #8B5CF6; padding-bottom: 15px;">
-        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-          ${logo ? `<img src="${logo}" alt="Logo" style="height: 60px; max-width: 150px;" />` : ''}
-          <div>
-            <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1F2937;">${name}</h1>
-            <p style="margin: 5px 0 0 0; font-size: 12px; color: #6B7280;">${addr}</p>
-          </div>
-        </div>
-        <div style="display: flex; gap: 20px; font-size: 12px; color: #6B7280;">
-          <span>${isArabic ? 'الهاتف' : 'Phone'}: ${phone}</span>
-          <span>${isArabic ? 'البريد' : 'Email'}: ${email}</span>
-          ${taxNumber ? `<span>${isArabic ? 'الرقم الضريبي' : 'Tax ID'}: ${taxNumber}</span>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Get footer HTML for documents
-   */
-  getDocumentFooter(isArabic: boolean = false): string {
-    const footerText = this.getFooterText(isArabic);
-    const { registrationNumber } = this.settings;
-
-    return `
-      <div class="document-footer" style="text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF;">
-        <p style="margin: 5px 0;">${footerText}</p>
-        ${registrationNumber ? `<p style="margin: 5px 0; font-size: 10px;">${isArabic ? 'رقم التسجيل' : 'Registration'}: ${registrationNumber}</p>` : ''}
-        <p style="margin: 5px 0; font-size: 10px;">${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}</p>
-      </div>
-    `;
-  }
-
-  /**
    * Get CSS variables for styling
+   *
+   * Emission boundary: values are normalized here too, so a stylesheet can
+   * only ever receive strict #RRGGBB colors even if a caller bypasses
+   * updateSettings/loadSettings.
    */
   getCSSVariables(): Record<string, string> {
     return {
-      '--primary-color': this.settings.primaryColor,
-      '--secondary-color': this.settings.secondaryColor,
-      '--accent-color': this.settings.accentColor,
+      '--primary-color': normalizeBrandColor(this.settings.primaryColor, LENA_BRAND_PALETTE.primary),
+      '--secondary-color': normalizeBrandColor(this.settings.secondaryColor, LENA_BRAND_PALETTE.secondary),
+      '--accent-color': normalizeBrandColor(this.settings.accentColor, LENA_BRAND_PALETTE.surfaceAccent),
     };
-  }
-
-  /**
-   * Get print styles for consistent document appearance
-   */
-  getPrintStyles(): string {
-    return `
-      <style>
-        @media print {
-          body {
-            margin: 0;
-            padding: 10mm;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 12px;
-          }
-          .document-header {
-            margin-bottom: 20px;
-            border-bottom: 2px solid ${this.settings.primaryColor};
-            padding-bottom: 15px;
-          }
-          .document-footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #E5E7EB;
-            text-align: center;
-            font-size: 11px;
-            color: #9CA3AF;
-          }
-          .no-print {
-            display: none;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            border: 1px solid #E5E7EB;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background-color: ${this.settings.primaryColor};
-            color: white;
-            font-weight: bold;
-          }
-        }
-      </style>
-    `;
   }
 
   /**
@@ -237,6 +246,17 @@ class BrandingService {
   }
 
   /**
+   * Re-read the validated local cache into the singleton and return the
+   * snapshot. Used as the cache fallback when the remote source is
+   * unreachable: the singleton may have been constructed before the cache was
+   * seeded (e.g. another tab saved after this one loaded).
+   */
+  reloadFromCache(): BrandingSettings {
+    this.loadSettings();
+    return { ...this.settings };
+  }
+
+  /**
    * Export settings as JSON
    */
   exportSettings(): string {
@@ -245,11 +265,15 @@ class BrandingService {
 
   /**
    * Import settings from JSON
+   *
+   * Strict structural validation: only complete exported snapshots are
+   * accepted. Arrays, primitives, empty/unknown objects, and partial shapes
+   * are rejected — a malformed file must never overwrite the salon's branding
+   * with defaults.
    */
   importSettings(jsonString: string): boolean {
     try {
-      const imported = JSON.parse(jsonString);
-      this.updateSettings(imported);
+      this.updateSettings(validateBrandingImport(JSON.parse(jsonString)));
       return true;
     } catch (error) {
       console.error('Failed to import settings:', error);

@@ -114,7 +114,7 @@ npm run preflight:supabase   # verify live Supabase connectivity
 | Area | Backend | Notes |
 |---|---|---|
 | Auth, Customers, Employees, Services, Products, Appointments, Expenses, Invoices/POS, Settings, Dashboard, Reports | ✅ Supabase | Core v1.0 CRUD |
-| Attendance, Advances, Payroll, Staff Analytics | ⚠️ Demo only | UI complete but **not** backed by Supabase yet — flagged in-app with a "Demo preview" banner. |
+| Attendance, Advances, Payroll, Staff Analytics | ✅ Supabase | ADMIN-only: gated by `RequireAdmin` in the UI and `has_center_role` database policies. |
 | WhatsApp / notifications | ⚠️ Scaffolding | Service layer present; requires WhatsApp Business API credentials. |
 
 ## Security notes
