@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 import { ScreenState } from "../shared/components/ScreenState";
 import { GettingStartedCard } from "../shared/components/GettingStartedCard";
+import { NavigationNotice } from "../shared/components/NavigationNotice";
 import { getDisplayName } from "../shared/displayName";
 import { formatOMRAmount } from "../shared/money";
 
@@ -275,6 +276,10 @@ export default function DashboardPage() {
           </button>
         </div>
       </motion.div>
+
+      {/* Explains a redirect that already happened (admin-only route or an
+          unknown path) instead of leaving it silent. */}
+      <NavigationNotice />
 
       {/* One ordered path for a brand-new center. Self-retiring: it renders
           nothing once the center has services, a team and customers. */}

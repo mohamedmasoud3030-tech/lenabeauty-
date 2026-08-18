@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useTranslation } from "react-i18next";
 import { Lock, User, Eye, EyeOff, Sun, Moon, Globe } from "lucide-react";
@@ -14,8 +14,36 @@ const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
   { code: "en", label: "English", dir: "ltr" },
 ];
 
+/**
+ * Where to land after a successful sign-in.
+ *
+ * `RequireAuth` already records the location the user actually asked for
+ * (`state.from`), so a shared deep link such as `/#/reports` must survive the
+ * sign-in detour instead of silently dumping the user on the Dashboard.
+ *
+ * Only in-app absolute paths are accepted: anything else (a protocol-relative
+ * URL, an absolute URL, or a path back to `/login`) falls back to the
+ * Dashboard so this can never become an open-redirect.
+ */
+export function resolvePostLoginPath(from: unknown): string {
+  const fallback = "/dashboard";
+  if (typeof from !== "object" || from === null) return fallback;
+
+  const candidate = from as { pathname?: unknown; search?: unknown; hash?: unknown };
+  const pathname = typeof candidate.pathname === "string" ? candidate.pathname : "";
+
+  if (!pathname.startsWith("/")) return fallback;
+  if (pathname.startsWith("//")) return fallback;
+  if (pathname === "/" || pathname === "/login") return fallback;
+
+  const search = typeof candidate.search === "string" ? candidate.search : "";
+  const hash = typeof candidate.hash === "string" ? candidate.hash : "";
+  return `${pathname}${search}${hash}`;
+}
+
 export default function LoginPage() {
   const nav = useNavigate();
+  const location = useLocation();
   const { login: authenticate } = useAuth();
   const { isInitialized, sessionState } = useAppContext();
   const { theme, toggleTheme } = useTheme();
@@ -47,7 +75,8 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await authenticate(username, password);
-      nav("/dashboard", { replace: true });
+      // Return the user to the destination they originally requested.
+      nav(resolvePostLoginPath((location.state as { from?: unknown } | null)?.from), { replace: true });
     } catch (err) {
       const e = err as { code?: string; message?: string };
       if (e.code === "AUTH_NOT_CONFIGURED") {

@@ -1,24 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  LayoutDashboard,
-  Receipt,
-  CalendarDays,
-  Users,
-  UserCog,
-  Boxes,
-  Scissors,
   X,
-  Settings,
-  FileBarChart,
   Moon,
   Sun,
   Globe,
   LogOut,
   ChevronRight,
   ShieldCheck,
-  Gift,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "../../auth";
@@ -26,18 +16,7 @@ import { motion } from "motion/react";
 import { SalonLogo } from "../../shared/components/LazyImage";
 import { persistLanguage, persistTheme } from "../../preferences";
 import { useCases } from "../../app/composition/useCases";
-
-type NavItem = {
-  to: string;
-  labelKey: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  adminOnly?: boolean;
-};
-
-type NavGroup = {
-  titleKey: string;
-  items: NavItem[];
-};
+import { NAV_GROUPS, visibleDestinations, type NavDestination } from "../../app/navigation";
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { me, logout } = useAuth();
@@ -66,42 +45,21 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     return () => { active = false; };
   }, []);
 
-  const navGroups = useMemo<NavGroup[]>(() => {
-    const businessItems: NavItem[] = [
-      { to: "/customers", labelKey: "Customers", Icon: Users },
-      ...(optionalModules.giftCards ? [{ to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift }] : []),
-      { to: "/services", labelKey: "Services", Icon: Scissors },
-      ...(optionalModules.packages ? [{ to: "/packages", labelKey: "Packages", Icon: Boxes }] : []),
-      { to: "/inventory", labelKey: "Inventory", Icon: Boxes },
-      { to: "/employees", labelKey: "Employees", Icon: UserCog, adminOnly: true },
-    ];
+  // Grouping and naming come from the shared registry, so the sidebar, the
+  // mobile menus, the header title and Global Search can never drift apart.
+  const navGroups = useMemo(() => {
+    const visible = visibleDestinations({
+      isAdmin: me?.role === "ADMIN",
+      optionalModules,
+    });
 
-    return [
-      {
-        titleKey: "Daily Operations",
-        items: [
-          { to: "/dashboard", labelKey: "Dashboard", Icon: LayoutDashboard },
-          { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
-          { to: "/pos", labelKey: "POS", Icon: Receipt },
-        ],
-      },
-      // "Business" said nothing about its contents. This group is the center's
-      // catalog and the people attached to it.
-      { titleKey: "Catalog & People", items: businessItems },
-      {
-        titleKey: "Management",
-        items: [
-          { to: "/reports", labelKey: "Reports", Icon: FileBarChart, adminOnly: true },
-          { to: "/expenses", labelKey: "Expenses", Icon: Receipt, adminOnly: true },
-          { to: "/attendance", labelKey: "Attendance", Icon: CalendarDays, adminOnly: true },
-          { to: "/advances", labelKey: "Advances", Icon: Receipt, adminOnly: true },
-          { to: "/payroll", labelKey: "Payroll", Icon: FileBarChart, adminOnly: true },
-          { to: "/staff-analytics", labelKey: "Staff Analytics", Icon: UserCog, adminOnly: true },
-          { to: "/settings", labelKey: "Settings", Icon: Settings, adminOnly: true },
-        ],
-      },
-    ];
-  }, [optionalModules]);
+    return NAV_GROUPS
+      .map((group) => ({
+        titleKey: group.titleKey,
+        items: visible.filter((d) => d.group === group.id),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [me?.role, optionalModules]);
 
   function toggleTheme() {
     const next = !isDark;
@@ -157,39 +115,35 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <nav aria-label={t("Primary navigation")} className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 scrollbar-hide relative z-10">
-        {navGroups.map((group) => {
-          const visibleItems = group.items.filter((item) => !item.adminOnly || me?.role === "ADMIN");
-          if (visibleItems.length === 0) return null;
-          return (
-            <div key={group.titleKey} className="mb-4">
-              <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
-                {t(group.titleKey)}
-              </div>
-              <ul className="space-y-1">
-                {visibleItems.map(({ to, labelKey, Icon }, idx) => (
-                  <motion.li initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} key={to}>
-                    <NavLink
-                      to={to}
-                      onClick={onClose}
-                      className={({ isActive }) => clsx(
-                        "group flex min-h-11 items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
-                        isActive
-                          ? "border-primary/20 bg-primary text-primary-foreground"
-                          : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="truncate">{t(labelKey)}</span>
-                      </div>
-                      <ChevronRight className={clsx("h-4 w-4 opacity-40", i18n.language === "ar" && "rotate-180")} />
-                    </NavLink>
-                  </motion.li>
-                ))}
-              </ul>
+        {navGroups.map((group) => (
+          <div key={group.titleKey} className="mb-4">
+            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+              {t(group.titleKey)}
             </div>
-          );
-        })}
+            <ul className="space-y-1">
+              {group.items.map(({ path, labelKey, icon: Icon }: NavDestination, idx) => (
+                <motion.li initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} key={path}>
+                  <NavLink
+                    to={path}
+                    onClick={onClose}
+                    className={({ isActive }) => clsx(
+                      "group flex min-h-11 items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition-colors",
+                      isActive
+                        ? "border-primary/20 bg-primary text-primary-foreground"
+                        : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="truncate">{t(labelKey)}</span>
+                    </div>
+                    <ChevronRight aria-hidden="true" className={clsx("h-4 w-4 opacity-40", i18n.language === "ar" && "rotate-180")} />
+                  </NavLink>
+                </motion.li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="border-t border-border p-4 relative z-10 bg-card/60">

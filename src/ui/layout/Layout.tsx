@@ -1,7 +1,7 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, LayoutGrid, LayoutDashboard, CalendarDays, Receipt, Users, Settings, LogOut, MoreHorizontal, Scissors, Package, Gift, BarChart3, Settings2 } from "lucide-react";
+import { Menu, Bell, LayoutGrid, Settings, LogOut, MoreHorizontal } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
@@ -12,6 +12,14 @@ import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
 import { useKeyboardInset, useScrollFieldIntoView } from "../../shared/hooks/useKeyboardInset";
+import { useCases } from "../../app/composition/useCases";
+import {
+  MOBILE_MORE_PATHS,
+  MOBILE_PRIMARY_PATHS,
+  destinationLabelKey,
+  findDestination,
+  visibleDestinations,
+} from "../../app/navigation";
 
 export default function Layout() {
   const nav = useNavigate();
@@ -27,6 +35,25 @@ export default function Layout() {
   const location = useLocation();
   const { isOpen: isKeyboardOpen } = useKeyboardInset();
   useScrollFieldIntoView();
+
+  // Optional modules are resolved here with the same rule the sidebar uses, so
+  // the mobile menu can never advertise a module the sidebar hides. A failed
+  // read leaves them hidden rather than linking to an empty feature.
+  const [optionalModules, setOptionalModules] = useState({ giftCards: false, packages: false });
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      useCases.giftCards.list().catch(() => ({ ok: false as const })),
+      useCases.servicePackages.list().catch(() => ({ ok: false as const })),
+    ]).then(([giftCards, packages]) => {
+      if (!active) return;
+      setOptionalModules({
+        giftCards: giftCards.ok && Array.isArray(giftCards.data) && giftCards.data.length > 0,
+        packages: packages.ok && Array.isArray(packages.data) && packages.data.length > 0,
+      });
+    });
+    return () => { active = false; };
+  }, []);
 
   // Close more menu on click/tap outside (touch-first: mousedown alone misses taps).
   useEffect(() => {
@@ -97,35 +124,10 @@ export default function Layout() {
     setShowMoreMenu(false);
   }, [location.pathname]);
 
+  // Titles come from the shared registry: one canonical name per destination.
   const pageTitle = useMemo(() => {
-    const path = location.pathname;
-    const map: Record<string, string> = {
-      "/dashboard": "Dashboard",
-      "/pos": "POS",
-      "/appointments": "Appointments",
-      "/customers": "Customers",
-      "/gift-cards": "Gift Cards",
-      "/customer-experience": "Customer Experience",
-      "/forecasting": "Forecasting",
-      "/services": "Services",
-      "/inventory": "Inventory",
-      "/packages": "Packages",
-      "/employees": "Employees",
-      "/attendance": "Attendance",
-      "/advances": "Advances",
-      "/payroll": "Payroll",
-      "/staff-analytics": "Staff Analytics",
-      "/reports": "Reports",
-      "/expenses": "Expenses",
-      "/branding": "Branding",
-      "/settings": "Settings",
-      "/notifications": "Notifications",
-      "/payment-gateway": "Payment Gateway",
-      "/accounting": "Accounting",
-      "/advanced-automation": "Advanced Automation",
-    };
-    const key = map[path];
-    return key ? t(key) : t("Dashboard");
+    const key = destinationLabelKey(location.pathname);
+    return t(key ?? "Dashboard");
   }, [location.pathname, t]);
 
   useEffect(() => {
@@ -137,26 +139,37 @@ export default function Layout() {
 
   const isRtl = i18n.language === "ar";
 
-  // Mobile bottom navigation - 5 key daily functions
-  const bottomNavItems = [
-    { to: "/dashboard", labelKey: "Home", Icon: LayoutDashboard },
-    { to: "/appointments", labelKey: "Appointments", Icon: CalendarDays },
-    { to: "/pos", labelKey: "POS", Icon: Receipt },
-    { to: "/customers", labelKey: "Customers", Icon: Users },
+  // Mobile bottom navigation — exactly 5 slots, ordered by real usage
+  // frequency. "Home" is the one intentional alias: the bottom bar labels the
+  // dashboard as the app's home, while every other surface calls it Dashboard.
+  type BottomNavItem = {
+    to?: string;
+    labelKey: string;
+    Icon: typeof MoreHorizontal;
+    action?: () => void;
+  };
+
+  const bottomNavItems: BottomNavItem[] = [
+    ...MOBILE_PRIMARY_PATHS.map((path) => {
+      const destination = findDestination(path)!;
+      return {
+        to: destination.path,
+        labelKey: path === "/dashboard" ? "Home" : destination.labelKey,
+        Icon: destination.icon,
+      };
+    }),
     { labelKey: "More", Icon: MoreHorizontal, action: () => setShowMoreMenu(!showMoreMenu) },
   ];
 
-  // More menu items
-  const moreMenuItems = [
-    { to: "/services", labelKey: "Services", Icon: Scissors },
-    { to: "/inventory", labelKey: "Inventory", Icon: Package },
-    { to: "/gift-cards", labelKey: "Gift Cards", Icon: Gift },
-    { to: "/reports", labelKey: "Reports", Icon: BarChart3, adminOnly: true },
-    { to: "/employees", labelKey: "Employees", Icon: Users, adminOnly: true },
-    { to: "/settings", labelKey: "Settings", Icon: Settings2, adminOnly: true },
-  ];
-  const visibleMoreMenuItems = moreMenuItems.filter(
-    (item) => !item.adminOnly || me?.role === "ADMIN",
+  // Everything not in the bottom bar, so mobile reaches every destination
+  // desktop can. Optional modules use exactly the same rule as the sidebar, so
+  // mobile can never surface a destination the sidebar deliberately hides.
+  const visibleMoreMenuItems = useMemo(
+    () =>
+      visibleDestinations({ isAdmin: me?.role === "ADMIN", optionalModules }).filter(
+        (destination) => MOBILE_MORE_PATHS.includes(destination.path),
+      ),
+    [me?.role, optionalModules],
   );
 
   return (
@@ -406,10 +419,10 @@ export default function Layout() {
                 className="absolute bottom-full mb-2 inset-x-2 z-50 rounded-2xl bg-card border border-border shadow-2xl overflow-hidden"
               >
                 <div className="grid grid-cols-3 gap-1 p-2">
-                  {visibleMoreMenuItems.map(({ to, labelKey, Icon }) => (
+                  {visibleMoreMenuItems.map(({ path, labelKey, icon: Icon }) => (
                     <NavLink
-                      key={to}
-                      to={to}
+                      key={path}
+                      to={path}
                       className={({ isActive }) =>
                         clsx(
                           "flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all touch-target min-h-[72px]",
@@ -419,7 +432,7 @@ export default function Layout() {
                         )
                       }
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon aria-hidden="true" className="h-5 w-5" />
                       <span className="text-[10px] font-bold text-center leading-tight">{t(labelKey)}</span>
                     </NavLink>
                   ))}
