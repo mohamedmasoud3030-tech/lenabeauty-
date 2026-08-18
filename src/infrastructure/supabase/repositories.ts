@@ -113,6 +113,41 @@ function toDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * PostgREST caps every response at the project's `max_rows` (1000 on Supabase
+ * by default, and this repo's `supabase/config.toml` sets the same locally).
+ * The cap is applied SILENTLY: the request returns HTTP 200 with exactly the
+ * first N rows and no error, so a caller that simply reads `data` cannot tell a
+ * complete result from a truncated one.
+ *
+ * That is harmless for a screen that shows the newest 50 records, but it is
+ * data loss for a full-tenant export: a salon with more than 1000 invoices
+ * would silently receive a "successful" backup missing everything beyond the
+ * cap. This helper pages through with `.range()` until a short page proves the
+ * end of the set was reached.
+ *
+ * `PAGE_SIZE` stays at/below the server cap on purpose — asking for more does
+ * not raise the ceiling, PostgREST just clamps the request.
+ */
+const EXPORT_PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  buildQuery: () => any,
+  label: string,
+): Promise<{ rows: T[]; error: { message: string } | null }> {
+  const rows: T[] = [];
+  for (let offset = 0; ; offset += EXPORT_PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(offset, offset + EXPORT_PAGE_SIZE - 1);
+    if (error) return { rows: [], error: { message: `${label}: ${error.message}` } };
+    const page = (data || []) as T[];
+    rows.push(...page);
+    // A page shorter than the requested window means the result set is done.
+    if (page.length < EXPORT_PAGE_SIZE) return { rows, error: null };
+    // Defensive stop: never loop unbounded if the server ignores `range`.
+    if (offset > 500_000) return { rows, error: null };
+  }
+}
+
 async function resolveCenterAssetUrl(path: string | undefined): Promise<string | undefined> {
   if (!path) return undefined;
   if (/^(?:https?:|data:|blob:)/i.test(path)) return path;
@@ -1401,26 +1436,53 @@ class SupabaseSettingsAdapter implements SettingsRepository {
     if (!centerRes.ok) return centerRes as any;
     try {
       const client = getSupabaseClient();
+      // A backup must be COMPLETE. Every tenant-scoped table below is paged
+      // past the PostgREST row cap; ordering by a stable key keeps paging
+      // deterministic. `center_settings` is a single row and `list_employees_v1`
+      // is a bounded RPC, so neither needs paging.
+      const page = <T,>(table: string) => fetchAllRows<T>(
+        () => client.from(table).select('*').eq('center_id', centerRes.data).order('id', { ascending: true }),
+        table,
+      );
+
       const [customers, employees, services, appointments, products, expenses, settings, invoices, attendance, advances, payrollRuns, payrollLines] = await Promise.all([
-        client.from('customers').select('*').eq('center_id', centerRes.data),
+        page<any>('customers'),
         client.rpc('list_employees_v1', { p_center_id: centerRes.data }),
-        client.from('services').select('*').eq('center_id', centerRes.data),
-        client.from('appointments').select('*').eq('center_id', centerRes.data),
-        client.from('products').select('*').eq('center_id', centerRes.data),
-        client.from('expenses').select('*').eq('center_id', centerRes.data),
+        page<any>('services'),
+        page<any>('appointments'),
+        page<any>('products'),
+        page<any>('expenses'),
         client.from('center_settings').select('*').eq('center_id', centerRes.data).maybeSingle(),
-        client.from('invoices').select('*').eq('center_id', centerRes.data),
-        client.from('attendance_records').select('*').eq('center_id', centerRes.data),
-        client.from('employee_advances').select('*').eq('center_id', centerRes.data),
-        client.from('payroll_runs').select('*').eq('center_id', centerRes.data),
-        client.from('payroll_line_items').select('*').eq('center_id', centerRes.data)
+        page<any>('invoices'),
+        page<any>('attendance_records'),
+        page<any>('employee_advances'),
+        page<any>('payroll_runs'),
+        page<any>('payroll_line_items')
       ]);
 
-      const responses = [customers, employees, services, appointments, products, expenses, settings, invoices];
+      // EVERY response must be checked. Previously attendance/advances/payroll
+      // were omitted here, so a failure on those four queries was swallowed and
+      // `(data || [])` turned it into an empty array — producing a backup file
+      // that looked successful but silently contained no attendance, advance or
+      // payroll history. A backup that under-reports is worse than no backup.
+      const responses: { label: string; error: { message: string } | null }[] = [
+        { label: "customers", error: customers.error },
+        { label: "employees", error: employees.error },
+        { label: "services", error: services.error },
+        { label: "appointments", error: appointments.error },
+        { label: "products", error: products.error },
+        { label: "expenses", error: expenses.error },
+        { label: "center_settings", error: settings.error },
+        { label: "invoices", error: invoices.error },
+        { label: "attendance_records", error: attendance.error },
+        { label: "employee_advances", error: advances.error },
+        { label: "payroll_runs", error: payrollRuns.error },
+        { label: "payroll_line_items", error: payrollLines.error },
+      ];
       for (const response of responses) {
         if (response.error) {
           if (isMissingBackendFeature(response.error)) return { ok: false, error: createUnsupportedReadError("Settings.exportData") };
-          return { ok: false, error: createQueryError("Settings.exportData", response.error.message) };
+          return { ok: false, error: createQueryError("Settings.exportData", `${response.label}: ${response.error.message}`) };
         }
       }
 
@@ -1430,18 +1492,18 @@ class SupabaseSettingsAdapter implements SettingsRepository {
           version: "1.0.0",
           timestamp: new Date().toISOString(),
           data: {
-            customers: (customers.data || []).map(mapCustomer),
+            customers: customers.rows.map(mapCustomer),
             employees: (Array.isArray((employees.data as any)?.employees) ? (employees.data as any).employees : []).map(mapEmployee),
-            services: (services.data || []).map(mapService),
-            appointments: (appointments.data || []).map(mapAppointment),
-            products: (products.data || []).map(mapProduct),
-            expenses: (expenses.data || []).map(mapExpense),
+            services: services.rows.map(mapService),
+            appointments: appointments.rows.map(mapAppointment),
+            products: products.rows.map(mapProduct),
+            expenses: expenses.rows.map(mapExpense),
             settings: settings.data ? mapCenterSettings(settings.data) : undefined,
-            invoices: (invoices.data || []).map(mapInvoice),
-            attendance: (attendance.data || []).map(mapAttendanceRecord),
-            advances: (advances.data || []).map(mapEmployeeAdvance),
-            payrollRuns: (payrollRuns.data || []).map(mapPayrollRun),
-            payrollLines: (payrollLines.data || []).map(mapPayrollLineItem)
+            invoices: invoices.rows.map(mapInvoice),
+            attendance: attendance.rows.map(mapAttendanceRecord),
+            advances: advances.rows.map(mapEmployeeAdvance),
+            payrollRuns: payrollRuns.rows.map(mapPayrollRun),
+            payrollLines: payrollLines.rows.map(mapPayrollLineItem)
           }
         }
       };
@@ -1921,12 +1983,16 @@ class SupabaseReportAdapter implements ReportRepository {
           .eq('entry_type', 'REDEEM')
           .not('invoice_id', 'is', null)
           .in('invoice_id', chunk);
-        if (!ledgerRes.error) {
-          for (const entry of (ledgerRes.data || []) as any[]) {
-            if (typeof entry.invoice_id !== "string") continue;
-            const amount = Number(entry.amount) || 0;
-            redemptionByInvoice.set(entry.invoice_id, (redemptionByInvoice.get(entry.invoice_id) || 0) + amount);
-          }
+        // A failed redemption lookup must NOT be ignored. Silently skipping it
+        // reclassifies prepaid redemptions as ordinary cash revenue, so the
+        // Sales report would overstate real income with no visible warning.
+        if (ledgerRes.error) {
+          return { ok: false, error: createQueryError("Report.getSales", `entitlement_ledger: ${ledgerRes.error.message}`) };
+        }
+        for (const entry of (ledgerRes.data || []) as any[]) {
+          if (typeof entry.invoice_id !== "string") continue;
+          const amount = Number(entry.amount) || 0;
+          redemptionByInvoice.set(entry.invoice_id, (redemptionByInvoice.get(entry.invoice_id) || 0) + amount);
         }
       }
 
@@ -2305,6 +2371,22 @@ export class SupabaseEntitlementAdapter implements EntitlementRepository {
           .not('status', 'in', '("REFUNDED","VOID")'),
       ]);
 
+      // Every one of these four feeds a headline financial figure. Ignoring an
+      // error here would render a confident-looking but wrong number (for
+      // example a zero deferred liability when prepaid balances actually
+      // exist). Fail loudly instead of reporting fiction.
+      for (const [label, response] of [
+        ["payments", paymentsRes],
+        ["invoices", invoicesRes],
+        ["entitlement_ledger", ledgerRes],
+        ["customer_entitlements", liabilityRes],
+      ] as const) {
+        if (response.error) {
+          if (isMissingBackendFeature(response.error)) return { ok: false, error: createUnsupportedReadError("Entitlement.getSummary") };
+          return { ok: false, error: createQueryError("Entitlement.getSummary", `${label}: ${response.error.message}`) };
+        }
+      }
+
       const cashCollected = (paymentsRes.data || []).reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
       let earnedRevenue = 0;
       for (const row of (invoicesRes.data || []) as any[]) {
@@ -2498,7 +2580,17 @@ class SupabaseForecastAdapter implements ForecastRepository {
       const client = getSupabaseClient();
       const [productsRes, itemsRes] = await Promise.all([
         client.from('products').select('*').eq('center_id', centerRes.data),
-        client.from('invoice_items').select('product_id, quantity, created_at').not('product_id', 'is', null).gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString())
+        // `invoice_items` carries no center_id of its own; it inherits tenancy
+        // from its parent invoice. RLS already restricts the rows, but the
+        // filter is stated explicitly through the invoice relationship so the
+        // forecast stays correct if this user is ever a member of more than one
+        // center (multi-branch mode), where an unscoped read would blend
+        // another branch's product usage into this branch's reorder alerts.
+        client.from('invoice_items')
+          .select('product_id, quantity, created_at, invoices!inner(center_id)')
+          .eq('invoices.center_id', centerRes.data)
+          .not('product_id', 'is', null)
+          .gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString())
       ]);
       if (productsRes.error) return { ok:false, error:createQueryError("Forecast.getInventoryForecast", productsRes.error.message)};
       if (itemsRes.error) return { ok:false, error:createQueryError("Forecast.getInventoryForecast", itemsRes.error.message)};

@@ -1,5 +1,5 @@
 {
-  "files": 217,
+  "files": 218,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -97,11 +97,6 @@
           "embeds": []
         },
         {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
           "hasStar": false,
           "columns": [
             "id",
@@ -155,11 +150,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -243,10 +233,16 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
-        "center_id"
+        "center_id",
+        "id"
       ],
       "single": [
         "maybeSingle"
@@ -454,11 +450,6 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         }
       ],
       "filters": [
@@ -478,11 +469,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -584,11 +570,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -719,12 +700,22 @@
             "quantity",
             "created_at"
           ],
-          "embeds": []
+          "embeds": [
+            {
+              "relation": "invoices",
+              "join": "inner",
+              "columns": [
+                "center_id"
+              ],
+              "embeds": []
+            }
+          ]
         }
       ],
       "filters": [
         "created_at",
-        "invoice_id"
+        "invoice_id",
+        "invoices.center_id"
       ],
       "single": []
     },
@@ -752,11 +743,6 @@
               "embeds": []
             }
           ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         },
         {
           "hasStar": true,
@@ -922,11 +908,6 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         }
       ],
       "filters": [
@@ -942,11 +923,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -973,11 +949,6 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -1150,11 +1121,6 @@
               "embeds": []
             }
           ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         }
       ],
       "filters": [
@@ -1556,7 +1522,8 @@
       "key": "dynamic-from",
       "reason": "non-literal .from() argument (non-Supabase or dynamic)",
       "files": [
-        "src/infrastructure/services/printService.ts"
+        "src/infrastructure/services/printService.ts",
+        "src/infrastructure/supabase/repositories.ts"
       ]
     }
   ]
