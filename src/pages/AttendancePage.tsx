@@ -68,7 +68,7 @@ export default function AttendancePage() {
       setEmployees(emps);
     } catch (e) {
       console.error(e);
-      showToast("error", t("Error"), (e as Error).message || String(e));
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -167,7 +167,7 @@ export default function AttendancePage() {
       setShowModal(false);
       load();
     } catch (e) {
-      showToast("error", t("Error"), (e as Error).message || String(e));
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
 
@@ -190,23 +190,23 @@ export default function AttendancePage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm">{t("Attendance Rate")}</p>
+          <p className="text-neutral-600 text-sm">{t("Attendance Rate")}</p>
           <p className="text-3xl font-bold text-green-600">{summary.pct}%</p>
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-gray-600 text-sm">{t("Present Days")}</p>
+          <p className="text-neutral-600 text-sm">{t("Present Days")}</p>
           <p className="text-3xl font-bold text-blue-600">{summary.present}</p>
         </div>
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
-          <p className="text-gray-600 text-sm">{t("Late Days")}</p>
+          <p className="text-neutral-600 text-sm">{t("Late Days")}</p>
           <p className="text-3xl font-bold text-yellow-600">{summary.late}</p>
         </div>
         <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-l-4 border-red-500">
-          <p className="text-gray-600 text-sm">{t("Absent Days")}</p>
+          <p className="text-neutral-600 text-sm">{t("Absent Days")}</p>
           <p className="text-3xl font-bold text-red-600">{summary.absent}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-gray-600 text-sm">{t("Total Work Hours")}</p>
+          <p className="text-neutral-600 text-sm">{t("Total Work Hours")}</p>
           <p className="text-3xl font-bold text-purple-600">{summary.totalHours.toFixed(2)}</p>
         </div>
       </div>
@@ -238,25 +238,25 @@ export default function AttendancePage() {
           <table className="w-full">
             <thead className="bg-gray-100 border-b-2 border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Employee")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Date")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Check-in")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Check-out")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Hours")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Method")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700">{t("Status")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-gray-700"></th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Employee")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Date")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-in")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-out")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Hours")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Method")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Status")}</th>
+                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((rec) => (
                 <tr key={rec.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 font-bold text-gray-800">{employeeName(rec.employeeId)}</td>
-                  <td className="px-6 py-4 text-gray-600">{new Date(rec.date).toLocaleDateString("ar-SA")}</td>
-                  <td className="px-6 py-4 text-gray-600">{rec.checkInTime || "-"}</td>
-                  <td className="px-6 py-4 text-gray-600">{rec.checkOutTime || "-"}</td>
+                  <td className="px-6 py-4 font-bold text-neutral-800">{employeeName(rec.employeeId)}</td>
+                  <td className="px-6 py-4 text-neutral-600">{new Date(rec.date).toLocaleDateString("ar-SA")}</td>
+                  <td className="px-6 py-4 text-neutral-600">{rec.checkInTime || "-"}</td>
+                  <td className="px-6 py-4 text-neutral-600">{rec.checkOutTime || "-"}</td>
                   <td className="px-6 py-4 font-bold text-blue-600">{rec.workHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-gray-600">{t(METHOD_LABEL_KEYS[rec.method])}</td>
+                  <td className="px-6 py-4 text-neutral-600">{t(METHOD_LABEL_KEYS[rec.method])}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-sm font-bold ${statusBadge[rec.status]}`}>
                       {t(STATUS_LABEL_KEYS[rec.status])}
@@ -277,7 +277,7 @@ export default function AttendancePage() {
               ))}
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center text-gray-400">
+                  <td colSpan={8} className="px-6 py-20 text-center text-neutral-400">
                     {t("No attendance records for this period")}
                   </td>
                 </tr>
@@ -305,7 +305,7 @@ export default function AttendancePage() {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold"
+              className="flex-1 px-4 py-2 bg-gray-300 text-neutral-800 rounded-lg hover:bg-gray-400 transition font-bold"
             >
               {t("Cancel")}
             </button>
@@ -395,7 +395,7 @@ export default function AttendancePage() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-neutral-500">
                 <Clock className="w-4 h-4" />
                 {t("Calculated work hours")}: <span className="font-bold text-blue-600">{computeAttendanceWorkHours(checkIn, checkOut, status).toFixed(2)} {t("hours")}</span>
               </div>

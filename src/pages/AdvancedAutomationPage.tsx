@@ -16,7 +16,7 @@ export default function AdvancedAutomationPage() {
     try {
       setLeads(await unwrap(useCases.advanced.listAiBookingLeads()));
     } catch (err: any) {
-      showToast("error", t("Error"), err?.message || String(err));
+      showToast("error", t("Error"), t("Could not load leads. Please try again later."));
     }
   }
   useEffect(() => { void load(); }, []);
@@ -28,7 +28,7 @@ export default function AdvancedAutomationPage() {
       await load();
       showToast("success", t("Success"), t("AI booking lead saved successfully"));
     } catch (err: any) {
-      showToast("error", t("Error"), err?.message || String(err));
+      showToast("error", t("Error"), t("Could not load leads. Please try again later."));
     }
   }
 

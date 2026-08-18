@@ -52,7 +52,7 @@ export default function AdvancesPage() {
       setEmployees(emps);
     } catch (e) {
       console.error(e);
-      showToast("error", t("Error"), (e as Error).message || String(e));
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -106,7 +106,7 @@ export default function AdvancesPage() {
       setShowModal(false);
       load();
     } catch (e) {
-      showToast("error", t("Error"), (e as Error).message || String(e));
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
 
@@ -116,7 +116,7 @@ export default function AdvancesPage() {
       showToast("success", t("Success"), status === "APPROVED" ? t("Approved successfully") : t("Rejected successfully"));
       load();
     } catch (e) {
-      showToast("error", t("Error"), (e as Error).message || String(e));
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
 
@@ -139,22 +139,22 @@ export default function AdvancesPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
-          <p className="text-gray-600 text-sm">{t("Pending")}</p>
+          <p className="text-neutral-600 text-sm">{t("Pending")}</p>
           <p className="text-3xl font-bold text-yellow-600">{summary.pendingCount}</p>
-          <p className="text-xs text-gray-500 mt-1">{summary.pendingAmount.toFixed(2)} OMR</p>
+          <p className="text-xs text-neutral-500 mt-1">{summary.pendingAmount.toFixed(2)} OMR</p>
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-gray-600 text-sm">{t("Approved")}</p>
+          <p className="text-neutral-600 text-sm">{t("Approved")}</p>
           <p className="text-3xl font-bold text-blue-600">{summary.approvedAmount.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-1">OMR</p>
+          <p className="text-xs text-neutral-500 mt-1">OMR</p>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-gray-600 text-sm">{t("Deducted from payroll")}</p>
+          <p className="text-neutral-600 text-sm">{t("Deducted from payroll")}</p>
           <p className="text-3xl font-bold text-green-600">{summary.deductedAmount.toFixed(2)}</p>
-          <p className="text-xs text-gray-500 mt-1">OMR</p>
+          <p className="text-xs text-neutral-500 mt-1">OMR</p>
         </div>
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-gray-600 text-sm">{t("Total Requests")}</p>
+          <p className="text-neutral-600 text-sm">{t("Total Requests")}</p>
           <p className="text-3xl font-bold text-purple-600">{advances.length}</p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function AdvancesPage() {
             key={s}
             onClick={() => setFilterStatus(s)}
             className={`px-4 py-2 rounded-lg font-bold transition ${
-              filterStatus === s ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+              filterStatus === s ? "bg-blue-500 text-white" : "bg-gray-200 text-neutral-800 hover:bg-gray-300"
             }`}
           >
             {s === "all" ? t("All") : t(STATUS_LABEL_KEYS[s])}
@@ -180,23 +180,23 @@ export default function AdvancesPage() {
           <div key={adv.id} className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
               <div>
-                <p className="text-sm text-gray-600">{t("Employee")}</p>
-                <p className="font-bold text-gray-800">{employeeName(adv.employeeId)}</p>
+                <p className="text-sm text-neutral-600">{t("Employee")}</p>
+                <p className="font-bold text-neutral-800">{employeeName(adv.employeeId)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">{t("Amount")}</p>
+                <p className="text-sm text-neutral-600">{t("Amount")}</p>
                 <p className="font-bold text-lg text-orange-600">{adv.amount.toFixed(2)} OMR</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">{t("Date")}</p>
-                <p className="font-bold text-gray-800">{new Date(adv.advanceDate).toLocaleDateString("ar-SA")}</p>
+                <p className="text-sm text-neutral-600">{t("Date")}</p>
+                <p className="font-bold text-neutral-800">{new Date(adv.advanceDate).toLocaleDateString("ar-SA")}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">{t("Reason")}</p>
-                <p className="font-bold text-gray-800">{adv.reason || "-"}</p>
+                <p className="text-sm text-neutral-600">{t("Reason")}</p>
+                <p className="font-bold text-neutral-800">{adv.reason || "-"}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">{t("Status")}</p>
+                <p className="text-sm text-neutral-600">{t("Status")}</p>
                 <span className={`px-3 py-1 rounded-full text-sm font-bold inline-block ${statusBadge[adv.status]}`}>
                   {t(STATUS_LABEL_KEYS[adv.status])}
                 </span>
@@ -230,7 +230,7 @@ export default function AdvancesPage() {
           </div>
         ))}
         {filtered.length === 0 && !loading && (
-          <div className="bg-white rounded-lg shadow p-20 text-center text-gray-400">
+          <div className="bg-white rounded-lg shadow p-20 text-center text-neutral-400">
             {t("No advances with this status")}
           </div>
         )}
@@ -254,7 +254,7 @@ export default function AdvancesPage() {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition font-bold"
+              className="flex-1 px-4 py-2 bg-gray-300 text-neutral-800 rounded-lg hover:bg-gray-400 transition font-bold"
             >
               {t("Cancel")}
             </button>

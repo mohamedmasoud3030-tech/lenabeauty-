@@ -20,7 +20,7 @@ export default function AccountingPage() {
     try {
       setEntries(await unwrap(useCases.accounting.listJournalEntries()));
     } catch (err: any) {
-      showToast("error", t("Error"), err?.message || String(err));
+      showToast("error", t("Error"), t("Could not load journal entries. Please check your connection and try again."));
     }
   }
   useEffect(() => { void load(); }, []);
@@ -49,7 +49,7 @@ export default function AccountingPage() {
       await load();
       showToast("success", t("Success"), t("Journal entry saved successfully"));
     } catch (err: any) {
-      showToast("error", t("Error"), err?.message || String(err));
+      showToast("error", t("Error"), t("Could not load journal entries. Please check your connection and try again."));
     }
   }
 

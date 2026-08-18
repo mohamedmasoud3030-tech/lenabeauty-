@@ -138,7 +138,7 @@ export default function PayrollPageEnhanced() {
         <h1 className="text-4xl font-bold text-white mb-2">
           {t("Payroll Management")}
         </h1>
-        <p className="text-gray-400 mb-6">
+        <p className="text-neutral-400 mb-6">
           {t("Net salary = base − advances deducted in the same month")}
         </p>
 
@@ -172,7 +172,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{t("Employees")}</p>
+                  <p className="text-neutral-400 text-sm">{t("Employees")}</p>
                   <p className="text-2xl font-bold text-white">{totals.count}</p>
                 </div>
                 <Users className="w-10 h-10 text-purple-400 opacity-50" />
@@ -181,7 +181,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{t("Base Salaries")}</p>
+                  <p className="text-neutral-400 text-sm">{t("Base Salaries")}</p>
                   <p className="text-2xl font-bold text-white">{totals.base.toFixed(2)}</p>
                 </div>
                 <DollarSign className="w-10 h-10 text-green-400 opacity-50" />
@@ -190,7 +190,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{t("Advances Deducted")}</p>
+                  <p className="text-neutral-400 text-sm">{t("Advances Deducted")}</p>
                   <p className="text-2xl font-bold text-white">{totals.advances.toFixed(2)}</p>
                 </div>
                 <TrendingDown className="w-10 h-10 text-orange-400 opacity-50" />
@@ -199,7 +199,7 @@ export default function PayrollPageEnhanced() {
             <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">{t("Net Salary")}</p>
+                  <p className="text-neutral-400 text-sm">{t("Net Salary")}</p>
                   <p className="text-2xl font-bold text-white">{totals.net.toFixed(2)}</p>
                 </div>
                 <FileText className="w-10 h-10 text-blue-400 opacity-50" />
@@ -272,7 +272,7 @@ export default function PayrollPageEnhanced() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-16 text-gray-400">
+            <div className="text-center py-16 text-neutral-400">
               <CalendarClock className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p>{t("No payroll run for this month. Click Create Payroll Run.")}</p>
             </div>
