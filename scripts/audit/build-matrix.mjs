@@ -378,7 +378,27 @@ for (const t of frontend.tables) {
   for (const s of t.selects) {
     for (const c of s.columns) if (!colSet.has(c)) missingCols.add(c);
   }
-  for (const c of t.filters) if (!colSet.has(c)) missingCols.add(c);
+  // PostgREST can filter on an EMBEDDED resource's column using
+  // `embeddedTable.column` — e.g. `.eq('invoices.center_id', id)` paired with
+  // an `invoices!inner(...)` embed. Such a filter names a column on the
+  // embedded relation, NOT on this table, so it must be validated against that
+  // relation. Treating it as a local column produced a false "column-missing".
+  for (const c of t.filters) {
+    const separator = c.indexOf(".");
+    if (separator > 0) {
+      const relation = c.slice(0, separator);
+      const column = c.slice(separator + 1);
+      const embeddedCols = colsByTable.get(relation);
+      // Only resolve against a relation this table actually embeds.
+      const isEmbedded = t.selects.some((s) =>
+        (s.embeds ?? []).some((e) => e.relation === relation));
+      if (isEmbedded && embeddedCols) {
+        if (!embeddedCols.has(column)) missingCols.add(c);
+        continue;
+      }
+    }
+    if (!colSet.has(c)) missingCols.add(c);
+  }
   const row = { table: t.table, exists, missing_columns: [...missingCols], embed_results: [] };
 
   if (!exists) {

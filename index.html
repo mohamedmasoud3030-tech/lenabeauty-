@@ -6,11 +6,17 @@
     <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="HandheldFriendly" content="true" />
-    <title>Lena Beauty</title>
+    <title>LenaBeauty — نظام تشغيل مركز التجميل</title>
+    <meta
+      name="description"
+      content="LenaBeauty — نظام التشغيل اليومي لمركز تجميل واحد: المواعيد ونقطة البيع والعملاء والمخزون والموظفون في مكان واحد. للاستخدام من فريق المركز."
+    />
     <!-- PWA & Mobile Web Capabilities -->
     <!-- Manifest is injected automatically by vite-plugin-pwa (/manifest.webmanifest) -->
-    <meta name="theme-color" content="#caa348" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1e1b2e" media="(prefers-color-scheme: dark)" />
+    <!-- Theme colors must match the Lena brand tokens in src/index.css
+         (violet primary on plum surfaces) and the PWA manifest. -->
+    <meta name="theme-color" content="#8B5CF6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#17131F" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Lena Beauty" />
@@ -23,12 +29,16 @@
   </head>
   <body>
     <!-- Mobile loading screen with safe-area support -->
+    <!-- First paint uses the real brand mark and the Lena plum/violet tokens.
+         The previous navy gradient and emoji placeholder made the product look
+         like an unfinished template before React had even booted. -->
     <div id="root">
-      <div style="height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);color:#e2e8f0;font-family:sans-serif;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
+      <div style="height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#241C33 0%,#17131F 100%);color:#EDE9FE;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
         <div style="text-align:center">
-          <div style="font-size:2rem;margin-bottom:0.5rem">💇‍♀️</div>
-          <div style="font-size:0.875rem;font-weight:500">Lena Beauty</div>
-          <div style="font-size:0.75rem;margin-top:0.5rem;opacity:0.7">جاري التحميل...</div>
+          <img src="/lena-mark.svg" alt="" width="64" height="64" style="display:block;margin:0 auto 0.75rem" />
+          <div style="font-size:1rem;font-weight:600;letter-spacing:0.01em">LenaBeauty</div>
+          <div style="font-size:0.75rem;margin-top:0.375rem;opacity:0.72">نظام تشغيل مركز التجميل</div>
+          <div style="font-size:0.6875rem;margin-top:0.75rem;opacity:0.5">جاري التحميل…</div>
         </div>
       </div>
     </div>

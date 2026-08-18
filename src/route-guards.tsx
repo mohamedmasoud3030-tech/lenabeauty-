@@ -41,9 +41,22 @@ export function RequireAdmin() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Only ADMIN role can access admin-guarded routes
+  // Only ADMIN role can access admin-guarded routes.
+  //
+  // This is the authorization boundary. Navigation hides admin destinations
+  // from non-admins as a courtesy, but this guard is what actually blocks
+  // direct URL entry, deep links and browser history.
+  //
+  // The refusal carries a reason so the destination screen can explain what
+  // happened; a bare redirect is indistinguishable from a broken link.
   if (user.role !== UserRole.ADMIN) {
-    return <Navigate to="/dashboard" replace />;
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+        state={{ navigationNotice: "admin-only", attemptedPath: location.pathname }}
+      />
+    );
   }
 
   return <Outlet />;

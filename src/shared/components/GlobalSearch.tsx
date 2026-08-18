@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
+import { NAV_DESTINATIONS, NAV_GROUPS } from "../../app/navigation";
 
 interface SearchResult {
   id: string;
@@ -27,35 +28,25 @@ export function GlobalSearch({ userRole }: { userRole?: string }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
 
-  const allPages = useMemo<SearchResult[]>(() => [
-    { id: "dashboard", title: t("Dashboard"), category: t("Navigation"), path: "/dashboard", icon: "📊" },
-    { id: "pos", title: t("Sales & Invoices"), category: t("Navigation"), path: "/pos", icon: "🛒" },
-    { id: "services", title: t("Services"), category: t("Navigation"), path: "/services", icon: "✂️" },
-    { id: "appointments", title: t("Appointments"), category: t("Navigation"), path: "/appointments", icon: "📅" },
-    { id: "customers", title: t("Customers"), category: t("Navigation"), path: "/customers", icon: "👥" },
-    { id: "gift-cards", title: t("Gift Cards"), category: t("Navigation"), path: "/gift-cards", icon: "🎁" },
-    { id: "packages", title: t("Packages"), category: t("Navigation"), path: "/packages", icon: "📦" },
-    { id: "inventory", title: t("Inventory"), category: t("Navigation"), path: "/inventory", icon: "📦" },
-    { id: "employees", title: t("Employees"), category: t("Navigation"), path: "/employees", icon: "👔", adminOnly: true },
-    { id: "expenses", title: t("Expenses"), category: t("Navigation"), path: "/expenses", icon: "💰", adminOnly: true },
-    { id: "attendance", title: t("Attendance"), category: t("Navigation"), path: "/attendance", icon: "🕒", adminOnly: true },
-    { id: "advances", title: t("Advances"), category: t("Navigation"), path: "/advances", icon: "💵", adminOnly: true },
-    { id: "payroll", title: t("Payroll"), category: t("Navigation"), path: "/payroll", icon: "🧾", adminOnly: true },
-    { id: "staff-analytics", title: t("Staff Analytics"), category: t("Navigation"), path: "/staff-analytics", icon: "📊", adminOnly: true },
-    { id: "reports", title: t("Reports"), category: t("Navigation"), path: "/reports", icon: "📈", adminOnly: true },
-    { id: "settings", title: t("Settings"), category: t("Navigation"), path: "/settings", icon: "⚙️", adminOnly: true },
-    { id: "notifications", title: t("Notifications"), category: t("Navigation"), path: "/notifications", icon: "🔔", adminOnly: true },
-    { id: "payment-gateway", title: t("Payment Gateway"), category: t("Navigation"), path: "/payment-gateway", icon: "💳", adminOnly: true },
-    { id: "customer-experience", title: t("Customer Experience"), category: t("Navigation"), path: "/customer-experience", icon: "✨", adminOnly: true },
-    { id: "forecasting", title: t("Forecasting"), category: t("Navigation"), path: "/forecasting", icon: "📉", adminOnly: true },
-    { id: "accounting", title: t("Accounting"), category: t("Navigation"), path: "/accounting", icon: "📚", adminOnly: true },
-    { id: "advanced-automation", title: t("Advanced Automation"), category: t("Navigation"), path: "/advanced-automation", icon: "🤖", adminOnly: true },
-  ], [t]);
-
-  const visiblePages = useMemo(
-    () => allPages.filter((page) => !page.adminOnly || userRole === "ADMIN"),
-    [allPages, userRole],
-  );
+  // Search reads the shared registry, so a destination can never be named one
+  // thing in the menu and another in search, and a new destination cannot be
+  // added to navigation without becoming searchable.
+  const visiblePages = useMemo<SearchResult[]>(() => {
+    const groupTitle = new Map(NAV_GROUPS.map((group) => [group.id, group.titleKey]));
+    return NAV_DESTINATIONS
+      // Deferred modules are hidden here too. Previously they were searchable
+      // but absent from every menu, so search advertised unfinished screens.
+      .filter((destination) => !destination.deferred)
+      .filter((destination) => !destination.adminOnly || userRole === "ADMIN")
+      .map((destination) => ({
+        id: destination.path.replace(/^\//, ""),
+        title: t(destination.labelKey),
+        category: t(groupTitle.get(destination.group) ?? "Navigation"),
+        path: destination.path,
+        icon: destination.searchIcon,
+        adminOnly: destination.adminOnly,
+      }));
+  }, [t, userRole]);
 
   const results = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase(i18n.language);

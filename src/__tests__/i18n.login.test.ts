@@ -10,7 +10,7 @@ describe("LoginPage Arabic translations", () => {
       "Signing in...",
       "Welcome Back",
       "Enter credentials to continue",
-      "Username",
+      "Work email",
       "Password",
       "Invalid credentials",
       "Authentication not configured yet. Database setup required.",

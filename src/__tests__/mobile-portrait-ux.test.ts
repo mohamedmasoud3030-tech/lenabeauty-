@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { MOBILE_MORE_PATHS, NAV_DESTINATIONS, visibleDestinations } from "../app/navigation";
 import {
   applyKeyboardInset,
   clearKeyboardInset,
@@ -39,10 +40,27 @@ describe("small-phone portrait UX contracts", () => {
   });
 
   it("filters admin-only destinations from the mobile More menu", () => {
-    expect(layout).toContain('{ to: "/reports", labelKey: "Reports", Icon: BarChart3, adminOnly: true }');
-    expect(layout).toContain('{ to: "/employees", labelKey: "Employees", Icon: Users, adminOnly: true }');
-    expect(layout).toContain('{ to: "/settings", labelKey: "Settings", Icon: Settings2, adminOnly: true }');
+    // The menu is now derived from the shared navigation registry instead of a
+    // hardcoded list, so the guarantee is asserted against that registry: every
+    // admin destination reachable from the More menu is adminOnly, and the
+    // filter is actually applied at render time.
     expect(layout).toContain("visibleMoreMenuItems.map");
+    expect(layout).toContain("visibleDestinations");
+    expect(layout).toContain('isAdmin: me?.role === "ADMIN"');
+
+    for (const path of ["/reports", "/employees", "/settings"]) {
+      const destination = NAV_DESTINATIONS.find((d) => d.path === path);
+      expect(destination, `${path} must exist in the registry`).toBeDefined();
+      expect(destination!.adminOnly, `${path} must be admin-only`).toBe(true);
+      expect(MOBILE_MORE_PATHS, `${path} must be reachable from the More menu`).toContain(path);
+    }
+
+    // Staff must not receive any admin destination in the More menu.
+    const staffMore = visibleDestinations({
+      isAdmin: false,
+      optionalModules: { giftCards: true, packages: true },
+    }).filter((d) => MOBILE_MORE_PATHS.includes(d.path));
+    expect(staffMore.every((d) => !d.adminOnly)).toBe(true);
   });
 
   it("does not implement swipe actions on Customers (accidental delete risk)", () => {

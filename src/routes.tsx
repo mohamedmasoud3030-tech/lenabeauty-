@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import Layout from "./ui/layout/Layout";
 import { RequireAdmin, RequireAuth } from "./route-guards";
@@ -27,6 +27,23 @@ const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
 const AttendancePage = lazy(() => import("./pages/AttendancePage"));
 const AdvancesPage = lazy(() => import("./pages/AdvancesPage"));
 const StaffAnalyticsPage = lazy(() => import("./pages/StaffAnalyticsPage"));
+
+/**
+ * Unknown-route fallback for a signed-in user.
+ *
+ * Sends the user home like before, but records why. A silent redirect makes a
+ * mistyped or stale link look like the app ignored the request.
+ */
+function NotFoundRedirect() {
+  const location = useLocation();
+  return (
+    <Navigate
+      to="/dashboard"
+      replace
+      state={{ navigationNotice: "not-found", attemptedPath: location.pathname }}
+    />
+  );
+}
 
 export function AppRoutes() {
   return (
@@ -67,7 +84,9 @@ export function AppRoutes() {
             <Route path="/payment-gateway" element={<Navigate to="/settings?tab=payments" replace />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {/* Unknown authenticated path. Carries a reason so the Dashboard can
+              say the link was not found instead of appearing to ignore it. */}
+          <Route path="*" element={<NotFoundRedirect />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
