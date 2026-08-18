@@ -23,6 +23,9 @@ const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
 
+// Auth utility destination: intentionally not part of the in-app navigation registry.
+const PASSWORD_RESET_ROUTE = "/reset-password";
+
 // صفحات الموظفين والحضور
 const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
 const AttendancePage = lazy(() => import("./pages/AttendancePage"));
@@ -51,7 +54,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
-      <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
+      <Route path={PASSWORD_RESET_ROUTE} element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
