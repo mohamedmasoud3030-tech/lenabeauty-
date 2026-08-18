@@ -1,0 +1,46 @@
+name: Temporary Sonar reliability diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'fix/data-api-grant-contract-final'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install SonarJS rule engine without changing the repository
+        run: npm install --no-save --package-lock=false eslint@9 eslint-plugin-sonarjs@latest
+      - name: Run Reliability-class SonarJS rules on new JS/TS files
+        shell: bash
+        run: |
+          cat > /tmp/eslint.config.mjs <<'EOF'
+          import sonarjs from 'eslint-plugin-sonarjs';
+          const reliability = Object.fromEntries(
+            Object.entries(sonarjs.rules)
+              .filter(([, rule]) => rule?.meta?.type === 'problem')
+              .map(([name]) => [`sonarjs/${name}`, 'error'])
+          );
+          export default [{
+            files: ['**/*.{js,mjs,cjs,ts,mts,cts,tsx,jsx}'],
+            plugins: { sonarjs },
+            rules: reliability,
+          }];
+          EOF
+          echo "Reliability rules enabled:"
+          node --input-type=module -e "import p from 'eslint-plugin-sonarjs'; console.log(Object.entries(p.rules).filter(([,r])=>r?.meta?.type==='problem').map(([n])=>n).join('\n'))"
+          npx eslint \
+            scripts/audit/lib/rls-harness.mjs \
+            src/__tests__/supabase.data-api-grant-contract.test.mts \
+            src/__tests__/audit.replay.test.ts \
+            src/__tests__/audit.scanner.test.ts \
+            --config /tmp/eslint.config.mjs || true
