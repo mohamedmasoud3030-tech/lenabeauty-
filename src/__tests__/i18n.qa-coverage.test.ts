@@ -25,6 +25,8 @@ const QA_SCOPE_FILES = [
   "src/pages/SettingsPage.tsx",
   "src/ui/layout/Layout.tsx",
   "src/ui/layout/Sidebar.tsx",
+  "src/shared/components/GettingStartedCard.tsx",
+  "src/shared/components/EnvironmentBadge.tsx",
   "src/shared/components/ScreenState.tsx",
   "src/shared/components/ListState.tsx",
   "src/shared/components/PageHeader.tsx",

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
+import { EnvironmentBadge } from "../../shared/components/EnvironmentBadge";
 import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
@@ -214,7 +215,8 @@ export default function Layout() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-1 sm:gap-3 ml-auto">
+            <div className="flex items-center gap-1 sm:gap-3 ms-auto">
+              <EnvironmentBadge compact className="hidden md:inline-flex" />
               <CenterSwitcher />
               <GlobalSearch userRole={me?.role} />
 

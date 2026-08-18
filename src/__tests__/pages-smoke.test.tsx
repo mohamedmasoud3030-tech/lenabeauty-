@@ -48,12 +48,16 @@ describe("Login page smoke", () => {
       </ThemeProvider>,
     );
 
-    await waitFor(() => expect(screen.getByPlaceholderText(i18n.t("Username"))).toBeInTheDocument());
+    // The credential is an email: SupabaseAuthAdapter.login() calls
+    // signInWithPassword({ email: username }), so the field must ask for the
+    // format the server actually accepts.
+    await waitFor(() => expect(screen.getByPlaceholderText(i18n.t("Work email"))).toBeInTheDocument());
     expect(screen.getByPlaceholderText(i18n.t("Password"))).toBeInTheDocument();
     expect(screen.getByText(i18n.t("Sign In"))).toBeInTheDocument();
     // The form must be usable (not disabled) even after a failed bootstrap.
-    expect(screen.getByPlaceholderText(i18n.t("Username"))).not.toBeDisabled();
-    expect(screen.getByLabelText(i18n.t("Username"))).toHaveAttribute("autocomplete", "username");
+    expect(screen.getByPlaceholderText(i18n.t("Work email"))).not.toBeDisabled();
+    expect(screen.getByLabelText(i18n.t("Work email"))).toHaveAttribute("autocomplete", "email");
+    expect(screen.getByLabelText(i18n.t("Work email"))).toHaveAttribute("type", "email");
     expect(screen.getByLabelText(i18n.t("Password"))).toHaveAttribute("autocomplete", "current-password");
     const revealPassword = screen.getByRole("button", { name: i18n.t("Show password") });
     expect(revealPassword).toHaveClass("h-11", "w-11");

@@ -85,7 +85,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           { to: "/pos", labelKey: "POS", Icon: Receipt },
         ],
       },
-      { titleKey: "Business", items: businessItems },
+      // "Business" said nothing about its contents. This group is the center's
+      // catalog and the people attached to it.
+      { titleKey: "Catalog & People", items: businessItems },
       {
         titleKey: "Management",
         items: [

@@ -7,6 +7,7 @@ import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "motion/react";
 import { AppLanguage, isValidLanguage, persistLanguage } from "../preferences";
+import { EnvironmentBadge } from "../shared/components/EnvironmentBadge";
 
 const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
   { code: "ar", label: "العربية", dir: "rtl" },
@@ -216,15 +217,28 @@ export default function LoginPage() {
             >
               LenaBeauty
             </motion.h1>
-            <motion.p
-              className="mt-1 text-sm"
-              style={{ color: textMuted }}
+            {/* What this product is — a first-time user must be able to answer
+                "what is it / who is it for / what happens next" before being
+                asked for credentials. Only capabilities that actually ship are
+                named; public booking and the client portal are deny-by-default
+                and are deliberately never promised here. */}
+            <motion.div
+              className="mt-2 space-y-2 text-center"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.45 }}
             >
-              {t("Salon operations")}
-            </motion.p>
+              <p className="text-sm font-semibold leading-relaxed" style={{ color: textPrimary }}>
+                {t("The daily operations system for one beauty center.")}
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: textMuted }}>
+                {t("Appointments, point of sale, customers, stock and staff — in one place.")}
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: textMuted }}>
+                {t("For the center's team. This is not a customer booking site.")}
+              </p>
+              <EnvironmentBadge className="mt-1" />
+            </motion.div>
           </div>
 
           {/* Form */}
@@ -273,7 +287,7 @@ export default function LoginPage() {
                   className="mb-1.5 block text-xs font-semibold"
                   style={{ color: textPrimary }}
                 >
-                  {t("Username")}
+                  {t("Work email")}
                 </label>
                 <div className="relative group">
                   <User
@@ -286,12 +300,16 @@ export default function LoginPage() {
                   />
                   <input
                     id="login-username"
-                    name="username"
-                    autoComplete="username"
+                    name="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
                     required
-                    placeholder={t("Username")}
+                    placeholder={t("Work email")}
                     aria-invalid={Boolean(initError || error)}
-                    aria-describedby={initError || error ? "login-error" : undefined}
+                    aria-describedby={
+                      initError || error ? "login-error login-email-hint" : "login-email-hint"
+                    }
                     className="lb-input w-full py-3 rounded-xl outline-none transition-all duration-200 disabled:opacity-40"
                     style={{
                       background: inputBg,
@@ -307,6 +325,9 @@ export default function LoginPage() {
                     dir="ltr"
                   />
                 </div>
+                <p id="login-email-hint" className="mt-1.5 text-[11px] leading-relaxed" style={{ color: textMuted }}>
+                  {t("Use the work email your administrator registered for you.")}
+                </p>
               </motion.div>
 
               {/* Password */}
@@ -406,16 +427,27 @@ export default function LoginPage() {
               </motion.div>
             </form>
 
-            {/* Footer */}
-            <motion.p
-              className="text-center text-xs mt-6"
-              style={{ color: textMuted }}
+            {/* What happens next + how accounts are issued + where data lives.
+                These are verifiable facts, not marketing claims: there is no
+                public sign-up route in the product, so saying so is kinder
+                than leaving a first-time user at a silent dead end. */}
+            <motion.div
+              className="mt-6 space-y-2.5 rounded-xl px-4 py-3.5"
+              style={{ background: theme === "dark" ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.55)", border: `1px solid ${cardBorder}` }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }}
             >
-              {t("Staff sign in")}
-            </motion.p>
+              <p className="text-[11px] leading-relaxed" style={{ color: textMuted }}>
+                {t("After signing in you land on today's work: appointments, sales and stock alerts.")}
+              </p>
+              <p className="text-[11px] leading-relaxed" style={{ color: textMuted }}>
+                {t("Accounts are created by your center administrator. There is no public sign-up.")}
+              </p>
+              <p className="text-[11px] leading-relaxed" style={{ color: textMuted }}>
+                {t("Your data stays in your center's database and is visible only to its team.")}
+              </p>
+            </motion.div>
           </div>
         </div>
       </motion.div>

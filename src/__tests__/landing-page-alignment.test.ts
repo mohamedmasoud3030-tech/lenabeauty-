@@ -8,4 +8,13 @@ describe('operational entry route', () => {
     expect(routes).toContain('<Route path="/" element={<Navigate to="/login" replace />} />');
     expect(routes).not.toContain('LandingPage');
   });
+
+  it('no longer ships a marketing landing page in the source tree', () => {
+    // The unrouted LandingPage carried invented 5-star testimonials from
+    // fictional people and advertised deny-by-default capabilities (public
+    // booking, client portal, offline desktop). Keeping unreachable fake
+    // social proof in the shipped source is a standing risk of publishing it,
+    // so the file was removed rather than merely left unrouted.
+    expect(fs.existsSync('src/pages/LandingPage.tsx')).toBe(false);
+  });
 });

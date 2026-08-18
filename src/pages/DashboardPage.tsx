@@ -23,6 +23,8 @@ import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components
 import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 import { ScreenState } from "../shared/components/ScreenState";
+import { GettingStartedCard } from "../shared/components/GettingStartedCard";
+import { getDisplayName } from "../shared/displayName";
 import { formatOMRAmount } from "../shared/money";
 
 export default function DashboardPage() {
@@ -214,6 +216,13 @@ export default function DashboardPage() {
 
   const totalRevenue7Days = useMemo(() => chartData.reduce((sum, d) => sum + (d.revenue || 0), 0), [chartData]);
 
+  // "Welcome back" is only truthful once the center actually has history.
+  const hasCenterData = Boolean(
+    (summary?.customers ?? 0) > 0 ||
+    (summary?.appointments ?? 0) > 0 ||
+    (summary?.sales ?? 0) > 0,
+  );
+
   function formatChartDay(dateStr: string): string {
     const d = new Date(`${dateStr}T00:00:00`);
     if (isNaN(d.getTime())) return dateStr;
@@ -233,10 +242,13 @@ export default function DashboardPage() {
         <div className="space-y-2 sm:space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary shadow-sm w-fit">
             <Sparkles className="h-3 w-3" />
-            {t("Intelligence Dashboard")}
+            {t("Today at your center")}
           </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tighter text-foreground leading-tight">
-            {t("Welcome back")}{me?.username ? <>, <span className="text-primary">{me.username}</span></> : null}
+            {/* A first visit to an empty center must not be greeted as a
+                return. "Welcome back" only once the center has real data. */}
+            {t(hasCenterData ? "Welcome back" : "Welcome")}
+            {me?.username ? <>, <span className="text-primary">{getDisplayName(me, me.username)}</span></> : null}
           </h1>
           <p className="hidden sm:block text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
             {t("Here is the latest recorded information for your center.")}
@@ -264,15 +276,24 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
+      {/* One ordered path for a brand-new center. Self-retiring: it renders
+          nothing once the center has services, a team and customers. */}
+      <motion.div variants={item}>
+        <GettingStartedCard />
+      </motion.div>
+
       {/* Key Metrics Grid - 2x2 on mobile, 4 columns on desktop */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
+        {/* Tiles show measured values only. The former trend badge was a
+            hardcoded literal, never a computed comparison, so it is gone
+            rather than faked. A role that may not read revenue is told it is
+            restricted — never that the center earned nothing. */}
         <StatCard 
           variants={item}
           title={t("Today's Revenue")} 
           value={loading ? "…" : summary?.canViewRevenue ? formatOMRAmount(summary?.todayRevenue) : "—"}
-          subValue={summary?.canViewRevenue ? t("Invoices") : t("No data")}
+          subValue={summary?.canViewRevenue ? t("Invoices") : t("Restricted")}
           icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />}
-          trend={summary?.canViewRevenue ? "+0%" : "—"}
           color="emerald"
           compact
         />
@@ -282,7 +303,6 @@ export default function DashboardPage() {
           value={loading ? "…" : summary?.appointments ?? 0}
           subValue={t("Today")}
           icon={<CalendarDays className="h-4 w-4 sm:h-5 sm:w-5" />}
-          trend={`+${summary?.todayAppointments || 0}`}
           color="blue"
           compact
         />
@@ -292,7 +312,6 @@ export default function DashboardPage() {
           value={loading ? "…" : summary?.customers ?? 0}
           subValue={`+${summary?.newCustomersThisMonth || 0} ${t("New")}`}
           icon={<Users className="h-4 w-4 sm:h-5 sm:w-5" />}
-          trend={`+${summary?.newCustomersThisMonth || 0}`}
           color="purple"
           compact
         />
@@ -302,7 +321,6 @@ export default function DashboardPage() {
           value={loading ? "…" : summary?.lowStockCount ?? 0}
           subValue={t("Items")}
           icon={<AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />}
-          trend={(summary?.lowStockCount && summary.lowStockCount > 0) ? "⚠️" : "✓"}
           color={summary?.lowStockCount && summary.lowStockCount > 0 ? "rose" : "emerald"}
           compact
         />
@@ -584,7 +602,9 @@ export default function DashboardPage() {
             <div className="space-y-1">
               <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
                 <Activity className="h-5 w-5 text-primary" />
-                {t("Live Activity")}
+                {/* Not "Live": this is a polled 90-day window refreshed on
+                    demand, so it is named for what it actually is. */}
+                {t("Recent Activity")}
               </h2>
               <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Recent updates")}</p>
             </div>
@@ -661,12 +681,9 @@ export default function DashboardPage() {
               color="amber" 
               onClick={() => nav("/reports")}
             />
-            <QuickActionButton 
-              title={t("Settings")} 
-              icon={<MoreVertical className="h-4 w-4" />} 
-              color="slate" 
-              onClick={() => nav("/settings")}
-            />
+            {/* "Settings" was removed from Quick Actions: it is not a daily
+                task and it already has two permanent entry points (sidebar and
+                user menu). Fewer, ranked actions read as a clearer product. */}
           </div>
         </motion.div>
       </div>
@@ -674,12 +691,11 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ title, value, subValue, icon, trend, color, variants, compact = false }: {
+function StatCard({ title, value, subValue, icon, color, variants, compact = false }: {
   title: string
   value: string | number
   subValue: string
   icon: React.ReactNode
-  trend: string
   color: string
   variants: import("motion/react").Variants
   compact?: boolean
@@ -706,12 +722,6 @@ function StatCard({ title, value, subValue, icon, trend, color, variants, compac
           colorMap[color]
         )}>
           {icon}
-        </div>
-        <div className={clsx(
-          "flex items-center gap-0.5 rounded-lg px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider shadow-sm",
-          colorMap[color]
-        )}>
-          {trend}
         </div>
       </div>
       <div className={clsx("relative z-10", compact ? "mt-2 sm:mt-4" : "mt-4 sm:mt-6")}>
