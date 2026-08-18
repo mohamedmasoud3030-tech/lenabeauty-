@@ -23,6 +23,7 @@ describe("first-run onboarding resilience", () => {
     vi.spyOn(useCases.services, "list").mockRejectedValue(new Error("boom"));
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
     render(<MemoryRouter><GettingStartedCard /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByRole("region")).not.toBeInTheDocument());
   });
@@ -37,6 +38,7 @@ describe("first-run onboarding resilience", () => {
       vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
       vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
       vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
       render(<MemoryRouter><GettingStartedCard /></MemoryRouter>);
       expect(await screen.findByRole("region")).toBeInTheDocument();
     } finally {
@@ -51,6 +53,7 @@ describe("first-run onboarding resilience", () => {
     vi.spyOn(useCases.services, "list").mockReturnValue(new Promise(r => { resolveFn = r; }) as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
     const { unmount } = render(<MemoryRouter><GettingStartedCard /></MemoryRouter>);
     unmount();
     resolveFn({ ok: true, data: [] });

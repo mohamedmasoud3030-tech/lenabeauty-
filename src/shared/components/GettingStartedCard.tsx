@@ -1,38 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { clsx } from "clsx";
 import { Check, ChevronRight, Scissors, UserCog, Users, CalendarDays, Receipt, X } from "lucide-react";
 import { useCases } from "../../app/composition/useCases";
+import { UserRole } from "../../domain/entities/Session";
+import { hasActivationEvent, recordActivationEvent } from "../activation/events";
 
 /**
  * GettingStartedCard
  * ------------------
  * The single ordered path for a brand-new center.
  *
- * Problem it solves: on an empty center the Dashboard renders six independent
- * empty cards with ~12 equal-weight calls to action, and never reveals the real
- * domain dependency — nothing can be sold before Services exist. A first-time
- * user cannot tell what to do first.
+ * Steps follow the real data dependency: services → (team) → customers →
+ * appointment → sale. ADMIN can create the team; STAFF cannot open /employees,
+ * so that step is explained, not linked.
  *
- * Design rules, deliberately chosen:
- *  - Steps follow the actual data dependency: services -> employees ->
- *    customers -> appointment -> sale.
- *  - Completion is derived from REAL repository counts. Nothing is faked, and
- *    no step is ever marked done optimistically.
- *  - The card retires itself once the center is genuinely set up, so it never
- *    becomes permanent furniture for an established business.
- *  - Dismissal is remembered locally; it is a preference, not business data.
- *  - Read failures hide the card entirely rather than guessing — an
- *    authorization or network failure must never be shown as "step not done".
+ * Completion uses real repository counts. Failed reads hide the card.
  */
 
 const DISMISS_KEY = "lenabeauty_getting_started_dismissed";
 
 type StepId = "services" | "employees" | "customers" | "appointments" | "sales";
 
-interface SetupProgress {
+export interface SetupProgress {
   services: boolean;
   employees: boolean;
   customers: boolean;
@@ -41,13 +33,12 @@ interface SetupProgress {
 }
 
 export interface GettingStartedCardProps {
-  /** Real counts resolved by the caller; when omitted the card resolves them itself. */
   progress?: SetupProgress;
-  /** Center already has sales activity — used by the caller to skip mounting entirely. */
+  viewerRole?: UserRole;
   onDismiss?: () => void;
 }
 
-const STEP_META: Record<StepId, { labelKey: string; descriptionKey: string; route: string; Icon: typeof Scissors }> = {
+const STEP_META: Record<StepId, { labelKey: string; descriptionKey: string; route: string | null; Icon: typeof Scissors }> = {
   services: {
     labelKey: "Add your services",
     descriptionKey: "Nothing can be booked or sold until your service menu exists.",
@@ -80,9 +71,15 @@ const STEP_META: Record<StepId, { labelKey: string; descriptionKey: string; rout
   },
 };
 
-const STEP_ORDER: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
+const ADMIN_STEPS: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
+const STAFF_STEPS: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
 
-export function GettingStartedCard({ progress: providedProgress, onDismiss }: GettingStartedCardProps) {
+function stepsFor(role?: UserRole): StepId[] {
+  if (role === UserRole.STAFF || role === UserRole.MANAGER) return STAFF_STEPS;
+  return ADMIN_STEPS;
+}
+
+export function GettingStartedCard({ progress: providedProgress, viewerRole, onDismiss }: GettingStartedCardProps) {
   const { t, i18n } = useTranslation();
   const nav = useNavigate();
   const [progress, setProgress] = useState<SetupProgress | null>(providedProgress ?? null);
@@ -93,6 +90,10 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
       return false;
     }
   });
+  const shownRecorded = useRef(false);
+
+  const canManageTeam = viewerRole !== UserRole.STAFF && viewerRole !== UserRole.MANAGER;
+  const stepOrder = stepsFor(viewerRole);
 
   useEffect(() => {
     if (providedProgress) {
@@ -103,15 +104,16 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
     let active = true;
     void (async () => {
       try {
-        const [services, employees, customers] = await Promise.all([
+        const now = new Date();
+        const from = new Date(now.getFullYear() - 2, 0, 1);
+        const [services, employees, customers, appointments] = await Promise.all([
           useCases.services.list(),
           useCases.employees.list(),
           useCases.customers.list(),
+          useCases.appointments.list({ fromISO: from.toISOString(), toISO: now.toISOString() }),
         ]);
         if (!active) return;
 
-        // A failed read is not evidence of an empty center. If we cannot
-        // establish the truth we render nothing rather than mislead.
         if (!services.ok || !employees.ok || !customers.ok) {
           setProgress(null);
           return;
@@ -121,7 +123,7 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
           services: services.data.length > 0,
           employees: employees.data.length > 0,
           customers: customers.data.length > 0,
-          appointments: false,
+          appointments: appointments.ok && appointments.data.length > 0,
           sales: false,
         });
       } catch {
@@ -134,16 +136,25 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
     };
   }, [providedProgress]);
 
-  if (dismissed || !progress) return null;
+  const isSetUp = Boolean(progress?.services && progress.employees && progress.customers);
 
-  // Retire once the center is genuinely operational. Appointments and sales
-  // are progress signals, not prerequisites for hiding the guide — a center
-  // with a catalog, a team and customers no longer needs onboarding.
-  const isSetUp = progress.services && progress.employees && progress.customers;
+  useEffect(() => {
+    if (!progress || dismissed || isSetUp || shownRecorded.current) return;
+    if (!hasActivationEvent("guide_shown")) recordActivationEvent("guide_shown");
+    shownRecorded.current = true;
+  }, [progress, dismissed, isSetUp]);
+
+  useEffect(() => {
+    if (isSetUp && !hasActivationEvent("first_value_reached")) {
+      recordActivationEvent("first_value_reached");
+    }
+  }, [isSetUp]);
+
+  if (dismissed || !progress) return null;
   if (isSetUp) return null;
 
-  const completedCount = STEP_ORDER.filter((id) => progress[id]).length;
-  const nextStep = STEP_ORDER.find((id) => !progress[id]);
+  const completedCount = stepOrder.filter((id) => progress[id]).length;
+  const nextStep = stepOrder.find((id) => !progress[id]);
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -152,6 +163,7 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
     } catch {
       /* preference storage is best-effort */
     }
+    recordActivationEvent("guide_dismissed");
     onDismiss?.();
   };
 
@@ -189,68 +201,91 @@ export function GettingStartedCard({ progress: providedProgress, onDismiss }: Ge
             role="progressbar"
             aria-valuenow={completedCount}
             aria-valuemin={0}
-            aria-valuemax={STEP_ORDER.length}
+            aria-valuemax={stepOrder.length}
             aria-label={t("Setup progress")}
           >
             <div
               className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{ width: `${(completedCount / STEP_ORDER.length) * 100}%` }}
+              style={{ width: `${(completedCount / stepOrder.length) * 100}%` }}
             />
           </div>
           <span className="text-xs font-bold text-muted-foreground tabular-nums shrink-0">
-            {completedCount}/{STEP_ORDER.length}
+            {completedCount}/{stepOrder.length}
           </span>
         </div>
       </div>
 
       <ol className="p-4 sm:p-6 space-y-2">
-        {STEP_ORDER.map((id, index) => {
+        {stepOrder.map((id, index) => {
           const meta = STEP_META[id];
           const done = progress[id];
           const isNext = id === nextStep;
           const { Icon } = meta;
+          const teamBlocked = id === "employees" && !canManageTeam && !done;
+          const description = teamBlocked
+            ? t("Ask your administrator to add the team. You cannot open staff records.")
+            : t(meta.descriptionKey);
 
-          return (
-            <li key={id}>
-              <button
-                type="button"
-                onClick={() => nav(meta.route)}
+          const body = (
+            <>
+              <span
                 className={clsx(
-                  "group w-full min-h-11 touch-target flex items-center gap-3 rounded-xl border p-3 text-start transition-all",
-                  isNext
-                    ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
-                    : "border-border hover:bg-muted/40",
-                  done && "opacity-60",
+                  "h-9 w-9 shrink-0 rounded-lg flex items-center justify-center",
+                  done ? "bg-success/15 text-success" : isNext ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                 )}
               >
-                <span
-                  className={clsx(
-                    "h-9 w-9 shrink-0 rounded-lg flex items-center justify-center",
-                    done ? "bg-success/15 text-success" : isNext ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {done ? <Check aria-hidden="true" className="h-4 w-4" /> : <Icon aria-hidden="true" className="h-4 w-4" />}
-                </span>
+                {done ? <Check aria-hidden="true" className="h-4 w-4" /> : <Icon aria-hidden="true" className="h-4 w-4" />}
+              </span>
 
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{index + 1}</span>
-                    <span className={clsx("text-sm font-bold truncate", done ? "text-muted-foreground line-through" : "text-foreground")}>
-                      {t(meta.labelKey)}
-                    </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{index + 1}</span>
+                  <span className={clsx("text-sm font-bold truncate", done ? "text-muted-foreground line-through" : "text-foreground")}>
+                    {t(meta.labelKey)}
                   </span>
-                  {!done && (
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground leading-relaxed">
-                      {t(meta.descriptionKey)}
-                    </span>
-                  )}
                 </span>
+                {!done && (
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground leading-relaxed">
+                    {description}
+                  </span>
+                )}
+              </span>
 
+              {!teamBlocked && (
                 <ChevronRight
                   aria-hidden="true"
                   className={clsx("h-4 w-4 shrink-0 text-muted-foreground", i18n.language === "ar" && "rotate-180")}
                 />
-              </button>
+              )}
+            </>
+          );
+
+          return (
+            <li key={id}>
+              {teamBlocked ? (
+                <div
+                  className={clsx(
+                    "w-full min-h-11 touch-target flex items-center gap-3 rounded-xl border p-3 text-start",
+                    isNext ? "border-primary/40 bg-primary/5" : "border-border",
+                  )}
+                >
+                  {body}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => meta.route && nav(meta.route)}
+                  className={clsx(
+                    "group w-full min-h-11 touch-target flex items-center gap-3 rounded-xl border p-3 text-start transition-all",
+                    isNext
+                      ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                      : "border-border hover:bg-muted/40",
+                    done && "opacity-60",
+                  )}
+                >
+                  {body}
+                </button>
+              )}
             </li>
           );
         })}

@@ -221,6 +221,7 @@ describe("D — first-run guidance on an empty center", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
 
     renderGuide();
 
@@ -237,6 +238,7 @@ describe("D — first-run guidance on an empty center", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [{ id: "s1" }] } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [{ id: "e1" }] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [{ id: "c1" }] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
 
     renderGuide();
 
@@ -247,6 +249,7 @@ describe("D — first-run guidance on an empty center", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: false, error: { code: "X", message: "denied" } } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
 
     renderGuide();
 
@@ -385,6 +388,9 @@ describe("F — new surfaces are RTL-safe and touch-safe", () => {
       "Welcome",
       "Dismiss",
       "Catalog & People",
+      "Ask your administrator to add the team. You cannot open staff records.",
+      "Start with your service menu. Then you can book and sell.",
+      "Add products when you start tracking stock.",
     ];
 
     for (const lang of ["ar", "en"]) {
