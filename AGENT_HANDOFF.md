@@ -84,6 +84,19 @@ A single-center salon/spa operations PWA for the Omani/GCC market. Staff-only: t
 
 ---
 
+## 6b. Migration approval status — read before retrying
+
+The owner **approved** applying pending migrations to Demo/Staging on 2026-08-18. Execution is blocked by two independent facts, both verified, not assumed:
+
+1. **The agent token cannot dispatch workflows or read secrets** — `gh workflow run` and `gh secret list` both return `HTTP 403: Resource not accessible by integration`. The bot lacks `actions: write`.
+2. **The 8 required secrets are not configured.** Run `32069994473` (`workflow_dispatch`, 2026-08-17) skipped the live job with: *"Live Demo deployment is safely skipped because one or more required GitHub Actions secrets are not configured."*
+
+**Do not** attempt to work around this: never put credentials in `.env`, in the repo, or in chat, and never migrate a hosted database from a checkout. The owner must add the secrets and press Run in the Actions tab. Required names are listed in `FINAL_INDEPENDENT_REVIEW.md` §7b.
+
+**No migration has been applied to any hosted database.**
+
+---
+
 ## 7. If you pick this up next
 
 Start with milestone 1 in `FINAL_INDEPENDENT_REVIEW.md` §7: hosted Demo acceptance. It needs owner approval and CI-held credentials — do not ask for secrets in chat.

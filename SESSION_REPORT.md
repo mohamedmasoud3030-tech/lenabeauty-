@@ -93,6 +93,20 @@ Reason: hosted Supabase is unreachable from this sandbox (curl exit 35) and no b
 
 **None.** No migration was applied to any hosted database. No environment variable, secret, DNS, domain or provider setting was changed. No paid action was taken. `.env` was never created; the only committed key material is the public anon key already present at branch point.
 
+### Owner approved the Demo migration; execution is blocked upstream
+
+The owner approved applying pending migrations to Demo/Staging. I attempted it in-session and it is blocked by two verified facts:
+
+| Attempt | Result |
+|---|---|
+| `gh secret list` | HTTP 403 — token lacks secrets access |
+| `gh workflow run demo-supabase-migrations.yml` | HTTP 403 — token lacks `actions: write` |
+| Prior dispatch `32069994473` | Live job **skipped**: required secrets not configured |
+
+So the live job would skip today even with a successful dispatch. The owner must (1) add the 8 Actions secrets and (2) press Run in the Actions tab. Exact names and the full step-by-step behaviour of the run are documented in `FINAL_INDEPENDENT_REVIEW.md` §7b.
+
+Safety verified while waiting: the run performs a read-only preflight that aborts before changing any row if attendance integrity violations exist, pushes pending migrations only (seeds excluded), and every one of the 4 SQL acceptance suites ends in `ROLLBACK`, so no test data is committed.
+
 ---
 
 ## 6. Remaining defects

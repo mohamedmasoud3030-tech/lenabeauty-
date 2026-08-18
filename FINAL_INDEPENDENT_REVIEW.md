@@ -164,6 +164,59 @@ These are honest gaps, not assumed passes.
 
 ---
 
+## 7b. Owner approval received — execution blocked by token scope
+
+**2026-08-18 — the owner approved applying pending migrations to Demo/Staging only.** I attempted execution immediately. It is blocked, and the blocker is **not** the approval:
+
+| Attempt | Result |
+|---|---|
+| `gh secret list` | **HTTP 403** — `Resource not accessible by integration` |
+| `gh workflow run demo-supabase-migrations.yml` | **HTTP 403** — `Resource not accessible by integration` |
+| Direct DB / API reach from sandbox | Unreachable (curl exit 35) |
+
+The agent token (`arena-ai-coding-agent[bot]`) has no `actions: write` permission and cannot read secrets. **No migration was applied.**
+
+### Verified: the required secrets are not configured yet
+
+Run `32069994473` (`workflow_dispatch`, 18h ago) is decisive evidence:
+
+```
+✓ Static application and database gates      2m8s
+✓ Detect live Demo deployment credentials    3s
+- Live Demo migration and security gates     0s   ← skipped
+::notice:: Live Demo deployment is safely skipped because one or more
+           required GitHub Actions secrets are not configured.
+```
+
+So even a successful dispatch today would skip the live job. **Two owner actions are required, in order.**
+
+### Step 1 — add 8 repository secrets
+`Settings → Secrets and variables → Actions → New repository secret`:
+
+`SUPABASE_ACCESS_TOKEN` · `SUPABASE_PROJECT_REF` · `SUPABASE_DB_PASSWORD` · `DEMO_SUPABASE_PROJECT_REF` · `DEMO_SUPABASE_URL` · `DEMO_SUPABASE_PUBLISHABLE_KEY` · `DEMO_CENTER_ID` · `DEMO_SUPABASE_SERVICE_ROLE_KEY`
+
+Both project refs must equal `tuzzvqsnbtzvkffmazyf` — the workflow hard-refuses any other target. Never paste these in chat.
+
+### Step 2 — dispatch the workflow
+`Actions → "Apply Demo Supabase migrations" → Run workflow → branch arena/01a0153c-lenabeauty`.
+
+### What the run will do — read line by line from the committed workflow
+
+1. Full static gate set (tests, typecheck, lint, build, `npm audit`).
+2. Refuse unless both project refs equal the canonical Demo ref.
+3. Enforce password-change reauthentication via the Supabase Management API.
+4. Link the project and print remote migration state **before** any change.
+5. **Read-only preflight** — aborts without touching a row if attendance duplicates/invalid times exist, or if the `center-assets` bucket is missing.
+6. Record the manual admin bootstrap as applied without executing placeholder SQL.
+7. `supabase db push --linked --yes` — pending migrations only, in filename order. **Seeds are excluded.**
+8. Fail on any local/remote history drift.
+9. `npm run preflight:supabase` against the live schema.
+10. Run all 4 SQL acceptance suites — **each verified to end in `ROLLBACK`, so no test data is committed**.
+
+Any failure stops the run; later migrations are not marked applied. Rollback runbooks exist for every migration in `supabase/rollbacks/`.
+
+---
+
 ## 8. Owner / external actions required
 
 1. Approve applying pending migrations to **Demo/Staging** (not Production).
