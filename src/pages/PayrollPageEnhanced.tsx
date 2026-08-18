@@ -146,7 +146,7 @@ export default function PayrollPageEnhanced() {
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-6">
           <div className="flex flex-wrap gap-4 items-center justify-between">
             <div>
-              <label className="block text-sm text-gray-300 mb-2">{t("Select Month")}</label>
+              <label className="block text-sm text-neutral-300 mb-2">{t("Select Month")}</label>
               <input
                 type="month"
                 aria-label={t("Select Month")}
@@ -248,9 +248,9 @@ export default function PayrollPageEnhanced() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/20">
-                  <th className="text-right py-3 px-4 text-gray-300">{t("Employee")}</th>
-                  <th className="text-right py-3 px-4 text-gray-300">{t("Base")}</th>
-                  <th className="text-right py-3 px-4 text-gray-300">{t("Advances")}</th>
+                  <th className="text-right py-3 px-4 text-neutral-300">{t("Employee")}</th>
+                  <th className="text-right py-3 px-4 text-neutral-300">{t("Base")}</th>
+                  <th className="text-right py-3 px-4 text-neutral-300">{t("Advances")}</th>
                   <th className="text-right py-3 px-4 text-white font-bold">{t("Net")}</th>
                 </tr>
               </thead>
@@ -258,7 +258,7 @@ export default function PayrollPageEnhanced() {
                 {selectedRun.lines.map((l) => (
                   <tr key={l.id} className="border-b border-white/10 hover:bg-white/5 transition">
                     <td className="py-3 px-4 text-white">{employeeName(l.employeeId)}</td>
-                    <td className="py-3 px-4 text-right text-gray-300">{l.baseSalary.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-right text-neutral-300">{l.baseSalary.toFixed(3)}</td>
                     <td className="py-3 px-4 text-right text-orange-400">-{l.advancesDeducted.toFixed(3)}</td>
                     <td className="py-3 px-4 text-right text-white font-bold">{l.netSalary.toFixed(3)}</td>
                   </tr>
@@ -293,7 +293,7 @@ export default function PayrollPageEnhanced() {
                   onClick={() => setSelectedMonth(r.periodMonth)}
                 >
                   <span className="text-white font-bold">{r.periodMonth}</span>
-                  <span className="text-gray-300 text-sm">{new Date(r.runDate).toLocaleDateString(i18n.language)}</span>
+                  <span className="text-neutral-300 text-sm">{new Date(r.runDate).toLocaleDateString(i18n.language)}</span>
                 </div>
               ))}
             </div>
