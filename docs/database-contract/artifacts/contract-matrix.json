@@ -301,6 +301,14 @@
           ],
           "resolvable": true,
           "direction": "to-one"
+        },
+        {
+          "relation": "invoices",
+          "columns": [
+            "center_id"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
         }
       ]
     },
