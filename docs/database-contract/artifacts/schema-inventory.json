@@ -10105,6 +10105,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "accounting_journal_entries",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "accounting_journal_entries",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10217,6 +10224,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "ai_booking_leads",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "ai_booking_leads",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10329,6 +10343,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "appointments",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "appointments",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "appointments",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "appointments",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10441,6 +10476,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "attendance_records",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "attendance_records",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10609,6 +10665,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "center_memberships",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_memberships",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10777,6 +10840,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "center_settings",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_settings",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_settings",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_settings",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -10945,6 +11029,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "centers",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "centers",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -11288,6 +11379,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "customer_notification_timeline",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_timeline",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -11400,6 +11498,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "customer_reviews",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_reviews",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -11512,6 +11617,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "customers",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customers",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customers",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customers",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -11624,6 +11750,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "employee_advances",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "employee_advances",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "employee_advances",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "employee_advances",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -11967,6 +12114,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "expenses",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "expenses",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "expenses",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "expenses",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -12079,6 +12247,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "gift_card_transactions",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "gift_card_transactions",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -12191,6 +12366,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "gift_cards",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "gift_cards",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -15733,6 +15915,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "notification_settings",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_settings",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -16020,6 +16209,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "payment_gateway_settings",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "payment_gateway_settings",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -16657,6 +16853,27 @@
       "kind": "relation",
       "schema": "public",
       "object": "products",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
+      "grantee": "authenticated",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "products",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -16763,6 +16980,27 @@
       "schema": "public",
       "object": "products_pkey",
       "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "profiles",
+      "grantee": "authenticated",
       "privilege": "UPDATE"
     },
     {
@@ -17070,6 +17308,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_file_images",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_file_images",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -17182,6 +17427,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_files",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_files",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -17294,6 +17546,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_package_items",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_package_items",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -17462,6 +17721,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_packages",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_packages",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -17568,6 +17834,27 @@
       "schema": "public",
       "object": "service_packages_pkey",
       "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "services",
+      "grantee": "authenticated",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "services",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "services",
+      "grantee": "authenticated",
       "privilege": "UPDATE"
     },
     {
