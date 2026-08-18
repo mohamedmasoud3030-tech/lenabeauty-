@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -28,42 +28,18 @@ const requiredTables = [
   "entitlement_ledger",
 ];
 
-const canonicalMigrations = [
-  "20260623000001_initial_schema.sql",
-  "20260623000002_enable_rls_and_policies.sql",
-  "20260628000001_enable_rls.sql",
-  "20260628000002_admin_bootstrap.sql",
-  "20260628000003_checkout_rpc.sql",
-  "20260628000004_vat_support.sql",
-  "20260628000005_tier_discount.sql",
-  "20260628000006_public_booking.sql",
-  "20260628000007_gift_cards.sql",
-  "20260628000008_packages_bundles.sql",
-  "20260628000009_no_show_protection.sql",
-  "20260628000010_notifications_payment_gateway.sql",
-  "20260628000011_client_portal.sql",
-  "20260628000012_customer_experience_forecasting_accounting_advanced.sql",
-  "20260628000013_booking_reschedule_cancel.sql",
-  "20260628000014_client_portal_lockout.sql",
-  "20260628000015_attendance_advances_payroll.sql",
-  "20260628000016_validation_constraints.sql",
-  "20260809000001_delivery_security_hardening.sql",
-  "20260810000001_fix_invoice_items_packages.sql",
-  "20260810000002_operational_data_integrity.sql",
-  "20260810000003_appointment_overlap_integrity.sql",
-  "20260810000004_btree_gist_extension_schema.sql",
-  "20260810000005_security_hardening_auth.sql",
-  "20260810000006_security_grant_repair.sql",
-  "20260811004000_financial_entitlements.sql",
-  "20260811004100_checkout_overload_repair.sql",
-  "20260811004200_gift_card_redemption_units_repair.sql",
-  "20260811004300_refund_status_repair.sql",
-  "20260816000001_production_integrity_hardening.sql",
-  "20260816000002_checkout_idempotency.sql",
-  "20260817000001_authorization_boundary_repair.sql",
-  "20260817000002_financial_reporting_repair.sql",
-  "20260817000003_payroll_transaction_repair.sql",
-];
+// The canonical chain is DISCOVERED from disk, not hardcoded. A hardcoded list
+// silently stops verifying every migration added after it was last edited: it
+// had drifted to 34 entries while the chain held 37, so the three newest
+// migrations were never checked by the live preflight at all.
+const canonicalMigrations = readdirSync(migrationsDir)
+  .filter((file) => file.endsWith(".sql"))
+  .sort((a, b) => a.localeCompare(b));
+
+if (canonicalMigrations.length === 0) {
+  console.error("FAIL no canonical migrations were discovered");
+  process.exit(1);
+}
 
 function parseEnvFile(path) {
   if (!existsSync(path)) return {};
