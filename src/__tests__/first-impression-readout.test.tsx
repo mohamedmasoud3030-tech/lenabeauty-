@@ -133,6 +133,7 @@ describe.each([
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
   });
 
   it("tells an empty center exactly what to do first, in dependency order", async () => {

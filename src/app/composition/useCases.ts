@@ -22,6 +22,8 @@ export const useCases = {
     getSession: () => getRepositoryBundle().authAdapter.getSession(),
     onAuthStateChange: (callback: (event: string) => void) => getRepositoryBundle().authAdapter.onAuthStateChange(callback),
     getMyCenters: () => getRepositoryBundle().authAdapter.getMyCenters(),
+    requestPasswordReset: (email: string) => getRepositoryBundle().authAdapter.requestPasswordReset(email),
+    updatePassword: (password: string) => getRepositoryBundle().authAdapter.updatePassword(password),
   },
   dashboard: {
     getSummary: () => getRepositoryBundle().dashboardAdapter.getSummary(),

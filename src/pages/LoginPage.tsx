@@ -8,6 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "motion/react";
 import { AppLanguage, isValidLanguage, persistLanguage } from "../preferences";
 import { EnvironmentBadge } from "../shared/components/EnvironmentBadge";
+import { useCases } from "../app/composition/useCases";
 
 const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
   { code: "ar", label: "العربية", dir: "rtl" },
@@ -54,6 +55,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"sign-in" | "reset">("sign-in");
+  const [resetSent, setResetSent] = useState(false);
 
   const isRtl = i18n.language === "ar";
   const initError =
@@ -67,6 +70,25 @@ export default function LoginPage() {
     document.documentElement.dir = code === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = code;
     persistLanguage(code);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setResetSent(false);
+    setIsLoading(true);
+    try {
+      const result = await useCases.auth.requestPasswordReset(username);
+      if (!result.ok) {
+        setError(result.error.message || t("Login failed. Check your details."));
+        return;
+      }
+      setResetSent(true);
+    } catch (err) {
+      setError((err as Error).message || t("Login failed. Check your details."));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -304,7 +326,7 @@ export default function LoginPage() {
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={mode === "reset" ? handlePasswordReset : handleLogin} className="space-y-4">
               {/* Username */}
               <motion.div
                 initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
@@ -359,7 +381,7 @@ export default function LoginPage() {
                 </p>
               </motion.div>
 
-              {/* Password */}
+              {mode === "sign-in" && (
               <motion.div
                 initial={{ opacity: 0, x: isRtl ? 20 : -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -413,6 +435,13 @@ export default function LoginPage() {
                   </button>
                 </div>
               </motion.div>
+              )}
+
+              {resetSent && (
+                <p data-testid="password-reset-sent" className="text-sm leading-relaxed" style={{ color: textPrimary }}>
+                  {t("If an account exists for that email, a reset link has been sent.")}
+                </p>
+              )}
 
               {/* Submit */}
               <motion.div
@@ -448,13 +477,28 @@ export default function LoginPage() {
                       </motion.span>
                     ) : (
                       <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                        {t("Sign In")}
+                        {mode === "reset" ? t("Send reset link") : t("Sign In")}
                       </motion.span>
                     )}
                   </AnimatePresence>
                 </motion.button>
               </motion.div>
             </form>
+
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                className="min-h-11 px-3 text-xs font-medium underline-offset-2 hover:underline"
+                style={{ color: textMuted }}
+                onClick={() => {
+                  setMode((m) => (m === "sign-in" ? "reset" : "sign-in"));
+                  setError("");
+                  setResetSent(false);
+                }}
+              >
+                {mode === "sign-in" ? t("Forgot password?") : t("Back to sign in")}
+              </button>
+            </div>
 
             {/* What happens next + how accounts are issued + where data lives.
                 These are verifiable facts, not marketing claims: there is no

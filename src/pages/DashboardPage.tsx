@@ -27,6 +27,7 @@ import { GettingStartedCard } from "../shared/components/GettingStartedCard";
 import { NavigationNotice } from "../shared/components/NavigationNotice";
 import { getDisplayName } from "../shared/displayName";
 import { formatOMRAmount } from "../shared/money";
+import { UserRole } from "../domain/entities/Session";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   // تشغيلية حقيقية: مواعيد اليوم القادمة + تنبيهات المخزون
   const [todayAppts, setTodayAppts] = useState<{ id: string; time: string; customerName: string; serviceName?: string; status: string }[]>([]);
   const [lowStockItems, setLowStockItems] = useState<{ id: string; name: string; stock: number }[]>([]);
+  const [trackedProductCount, setTrackedProductCount] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -120,7 +122,9 @@ export default function DashboardPage() {
 
     try {
       const productsRes = await useCases.products.list();
-      const low = (productsRes.ok ? productsRes.data : [])
+      const catalog = productsRes.ok ? productsRes.data : [];
+      setTrackedProductCount(productsRes.ok ? catalog.length : null);
+      const low = catalog
         .filter((p) => p.isActive && p.trackInventory && p.stockQuantity <= (p.reorderLevel ?? 5))
         .sort((a, b) => a.stockQuantity - b.stockQuantity)
         .slice(0, 5)
@@ -223,6 +227,8 @@ export default function DashboardPage() {
     (summary?.appointments ?? 0) > 0 ||
     (summary?.sales ?? 0) > 0,
   );
+  const isFirstRun = !hasCenterData;
+  const isAdmin = me?.role === UserRole.ADMIN;
 
   function formatChartDay(dateStr: string): string {
     const d = new Date(`${dateStr}T00:00:00`);
@@ -251,8 +257,10 @@ export default function DashboardPage() {
             {t(hasCenterData ? "Welcome back" : "Welcome")}
             {me?.username ? <>, <span className="text-primary">{getDisplayName(me, me.username)}</span></> : null}
           </h1>
-          <p className="hidden sm:block text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
-            {t("Here is the latest recorded information for your center.")}
+          <p className="text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
+            {t(isFirstRun
+              ? "Start with your service menu. Then you can book and sell."
+              : "Here is the latest recorded information for your center.")}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -265,12 +273,12 @@ export default function DashboardPage() {
             <Zap className={clsx("h-5 w-5", loading && "animate-spin")} />
           </button>
           <button 
-            onClick={() => nav("/pos")}
+            onClick={() => nav(isFirstRun ? "/services" : "/pos")}
             className="group relative inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              {t("New Invoice")}
+              {t(isFirstRun ? "Add your services" : "New Invoice")}
             </span>
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
           </button>
@@ -284,7 +292,7 @@ export default function DashboardPage() {
       {/* One ordered path for a brand-new center. Self-retiring: it renders
           nothing once the center has services, a team and customers. */}
       <motion.div variants={item}>
-        <GettingStartedCard />
+        <GettingStartedCard viewerRole={me?.role} />
       </motion.div>
 
       {/* Key Metrics Grid - 2x2 on mobile, 4 columns on desktop */}
@@ -331,7 +339,10 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* تشغيل اليوم: مواعيد قادمة + تنبيهات — معلومة تؤدي إلى فعل */}
+      {/* On a first visit the setup card is the only daily action. Extra
+          empty "today" panels compete with it and claim healthy stock when
+          there is no catalog yet. */}
+      {!isFirstRun && (
       <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
         <motion.div variants={item} className="lg:col-span-2 rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
@@ -402,7 +413,9 @@ export default function DashboardPage() {
                 compact
                 icon={<CheckCircle2 className="h-6 w-6" />}
                 title={t("No low stock alerts")}
-                description={t("Inventory levels are healthy")}
+                description={trackedProductCount === 0
+                  ? t("Add products when you start tracking stock.")
+                  : t("Inventory levels are healthy")}
               />
             ) : (
               <div className="space-y-2">
@@ -426,6 +439,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
@@ -585,6 +599,7 @@ export default function DashboardPage() {
                   />
                 </div>
 
+                {isAdmin && (
                 <button 
                   onClick={() => nav("/reports")}
                   className="group w-full min-h-11 rounded-lg bg-secondary py-3 text-xs font-bold text-secondary-foreground transition-all hover:bg-secondary/80 flex items-center justify-center gap-2 shadow-lg mt-auto"
@@ -592,6 +607,7 @@ export default function DashboardPage() {
                   {t("View Detailed Reports")}
                   <ArrowRight className={clsx("h-4 w-4 transition-transform", i18n.language === "ar" ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1")} />
                 </button>
+                )}
               </div>
             )}
           </div>
@@ -680,15 +696,14 @@ export default function DashboardPage() {
               color="purple" 
               onClick={() => nav("/services")}
             />
+            {isAdmin && (
             <QuickActionButton 
               title={t("View Reports")} 
               icon={<BarChart3 className="h-4 w-4" />} 
               color="amber" 
               onClick={() => nav("/reports")}
             />
-            {/* "Settings" was removed from Quick Actions: it is not a daily
-                task and it already has two permanent entry points (sidebar and
-                user menu). Fewer, ranked actions read as a clearer product. */}
+            )}
           </div>
         </motion.div>
       </div>

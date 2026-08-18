@@ -5,6 +5,7 @@ import { RequireAdmin, RequireAuth } from "./route-guards";
 import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const PosInvoicesPage = lazy(() => import("./pages/PosInvoicesPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
@@ -21,6 +22,9 @@ const CustomerExperiencePage = lazy(() => import("./pages/CustomerExperiencePage
 const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
+
+// Auth utility destination: intentionally not part of the in-app navigation registry.
+const PASSWORD_RESET_ROUTE = "/reset-password";
 
 // صفحات الموظفين والحضور
 const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
@@ -50,6 +54,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
+      <Route path={PASSWORD_RESET_ROUTE} element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>

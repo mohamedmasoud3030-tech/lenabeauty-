@@ -26,6 +26,7 @@ import {
   mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
+import { passwordResetRedirectUrl } from "../../shared/auth/passwordResetRedirect";
 import {
   requiredText, optionalText, nonNegativeNumber, positiveNumber, positiveInteger, nonNegativeInteger,
   percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField,
@@ -276,6 +277,39 @@ class SupabaseAuthAdapter implements AuthRepository {
         return { ok: true, data: { status: "anonymous" } };
       }
       return { ok: true, data: sessionState };
+    } catch (e: unknown) {
+      return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", (e as Error).message) };
+    }
+  }
+
+  async requestPasswordReset(email: string): Promise<Result<void, AuthError>> {
+    const emailR = emailField(email, { required: true });
+    if (!emailR.ok || !okValue(emailR)) {
+      return { ok: false, error: createAuthError("INVALID_CREDENTIALS", "validation.email_invalid") };
+    }
+    try {
+      const { error } = await getSupabaseClient().auth.resetPasswordForEmail(okValue(emailR) as string, {
+        redirectTo: passwordResetRedirectUrl(),
+      });
+      if (error) {
+        return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", error.message) };
+      }
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", (e as Error).message) };
+    }
+  }
+
+  async updatePassword(newPassword: string): Promise<Result<void, AuthError>> {
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return { ok: false, error: createAuthError("INVALID_CREDENTIALS", "Password is required") };
+    }
+    try {
+      const { error } = await getSupabaseClient().auth.updateUser({ password: newPassword });
+      if (error) {
+        return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", error.message) };
+      }
+      return { ok: true, data: undefined };
     } catch (e: unknown) {
       return { ok: false, error: createAuthError("INFRASTRUCTURE_ERROR", (e as Error).message) };
     }
