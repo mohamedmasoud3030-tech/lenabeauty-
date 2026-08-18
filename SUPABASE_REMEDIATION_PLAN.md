@@ -107,11 +107,60 @@ nowhere.
 `supabase/rollbacks/20260818000001_data_api_grant_contract.md`. Reversible with
 two `ALTER DEFAULT PRIVILEGES` statements.
 
-> ### ❓ Do you approve applying migration `20260818000001` to the Demo/Staging project?
->
-> **Yes** — I apply it via the approval-gated CI workflow and verify.
-> **No** — it stays local; the branch is still fully tested and safe, and this
-> must be resolved before 2026-10-30.
+> ### ✅ APPROVED by the owner on 2026-08-18.
+
+### Apply status: blocked on two owner-only prerequisites
+
+I attempted the apply immediately after approval. It could not proceed, for two
+independent reasons — **neither is a defect in the migration**, and no live
+system was modified.
+
+**Blocker 1 — the workflow cannot be dispatched by my token.**
+`workflow_dispatch` returns `HTTP 403: Resource not accessible by integration`.
+The live job is additionally gated on `github.event_name == 'workflow_dispatch'`
+by design, so a PR run can never apply migrations. That guard is correct and was
+deliberately left untouched.
+
+**Blocker 2 — the Demo deployment secrets are not configured.**
+The workflow's credential probe reported `available=false`. This matters more
+than it first appears: a manual dispatch in this state would **skip the apply
+step and still report success**, giving false confidence that the migration had
+landed. All eight secrets must exist first:
+
+```
+SUPABASE_ACCESS_TOKEN     SUPABASE_PROJECT_REF        SUPABASE_DB_PASSWORD
+DEMO_SUPABASE_PROJECT_REF DEMO_SUPABASE_URL           DEMO_SUPABASE_PUBLISHABLE_KEY
+DEMO_CENTER_ID            DEMO_SUPABASE_SERVICE_ROLE_KEY
+```
+
+`SUPABASE_PROJECT_REF` and `DEMO_SUPABASE_PROJECT_REF` must both equal
+`tuzzvqsnbtzvkffmazyf`; the workflow refuses any other target.
+
+### What I did instead
+
+- Opened **PR #35**, where all static gates pass (665 tests, contract gate,
+  type check, migration chain, RPC contracts, lint, build, `npm audit`).
+- Added `supabase/tests/20260818000001_data_api_grant_contract.sql`, a
+  rollback-safe live acceptance test the workflow runs after `db push`, so the
+  apply verifies itself on the real database instead of assuming success.
+  Confirmed it rejects a simulated legacy auto-exposure state.
+- Fixed `scripts/supabase-live-preflight.mjs`, whose hardcoded migration list
+  had drifted to 34 while the chain held 37 — meaning the three newest
+  migrations, including this one, were never verified against the live project.
+
+### Owner steps to complete the apply
+
+1. Add the eight secrets under **Settings → Secrets and variables → Actions**.
+   Do not paste them into chat, a file, or a PR comment.
+2. **Actions → Apply Demo Supabase migrations → Run workflow**, branch
+   `arena/01a014db-lenabeauty`.
+3. The run verifies the target ref, takes a read-only attendance/Storage
+   snapshot and aborts on any pre-existing integrity violation, pushes, confirms
+   migration history alignment, runs `preflight:supabase`, then executes the SQL
+   acceptance tests.
+
+If the run reports `available=false` again, the secrets are still missing and
+nothing was applied.
 
 ---
 
