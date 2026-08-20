@@ -24,6 +24,7 @@ import {
 import { DedupStore, RateLimiter, buildDedupKey } from "./dedup";
 import { renderMessage } from "./templates";
 import { logger } from "../../shared/logger";
+import { createShortId } from "../../shared/ids";
 
 export interface NotificationServiceDeps {
   /** Channel adapters, keyed by channel id. Missing channels are skipped. */
@@ -180,7 +181,7 @@ export class NotificationService {
   ): NotificationResult {
     logger.debug("[NotificationService]", { skip: errorCode, event: context.eventId });
     return {
-      notificationId: `skip_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      notificationId: `skip_${Date.now()}_${createShortId(4)}`,
       context,
       channel: context.preferredChannel,
       deliveryStatus: status,

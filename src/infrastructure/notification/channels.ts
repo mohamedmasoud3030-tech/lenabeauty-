@@ -12,6 +12,7 @@ import {
   NotificationResult,
 } from "../../domain/notification";
 import { normalizePhone, buildWhatsAppLink } from "../services/whatsappService";
+import { createShortId } from "../../shared/ids";
 
 /**
  * Toast channel: surfaces staff notifications as in-app toasts.
@@ -39,7 +40,7 @@ export class ToastChannel implements NotificationChannel {
     const title = this.titleFor(context.eventId);
     this.sendToast(title, renderedMessage);
     return {
-      notificationId: `toast_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      notificationId: `toast_${Date.now()}_${createShortId(4)}`,
       context,
       channel: this.channelId,
       deliveryStatus: "SENT",
@@ -114,7 +115,7 @@ export class WhatsAppWaMeChannel implements NotificationChannel {
     // Opening a link is NOT delivery — keep status pending per the project's
     // truthful-logging rule (see whatsappService).
     return {
-      notificationId: `wa_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      notificationId: `wa_${Date.now()}_${createShortId(4)}`,
       context,
       channel: this.channelId,
       deliveryStatus: "QUEUED",

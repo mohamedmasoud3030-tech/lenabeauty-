@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatLocalizedDate } from "../shared/dateTime";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -189,7 +190,7 @@ export default function AdvancesPage() {
               </div>
               <div>
                 <p className="text-sm text-neutral-600">{t("Date")}</p>
-                <p className="font-bold text-neutral-800">{new Date(adv.advanceDate).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</p>
+                <p className="font-bold text-neutral-800">{formatLocalizedDate(adv.advanceDate, i18n.language)}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-600">{t("Reason")}</p>

@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { formatLocalizedDate } from "../shared/dateTime";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -225,7 +226,7 @@ function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boo
                   <div>
                     <p className="text-sm font-bold text-foreground">{i.serial ?? "—"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(i.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })} · {Number(i.total).toFixed(3)} OMR
+                      {formatLocalizedDate(i.date, i18n.language)} · {Number(i.total).toFixed(3)} OMR
                     </p>
                   </div>
                   <span className={clsx(

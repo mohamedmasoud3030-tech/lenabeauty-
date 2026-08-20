@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatLocalizedDate } from "../shared/dateTime";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -278,7 +279,7 @@ export default function ExpensesPage() {
                     <td>
                       <div className="flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-xl w-fit">
                         <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-foreground">{new Date(exp.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</span>
+                        <span className="font-bold text-foreground">{formatLocalizedDate(exp.date, i18n.language)}</span>
                       </div>
                     </td>
                     <td>
@@ -335,7 +336,7 @@ export default function ExpensesPage() {
                   </div>
                   <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{new Date(exp.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</span>
+                    <span className="font-bold text-foreground text-sm">{formatLocalizedDate(exp.date, i18n.language)}</span>
                   </div>
                 </div>
 

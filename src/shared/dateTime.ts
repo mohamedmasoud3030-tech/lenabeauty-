@@ -138,3 +138,30 @@ export function formatSalonDayHeader(date: Date | string | number, lang?: string
   if (isArabic(lang)) return `${AR_WEEKDAYS_SHORT[p.weekday]} ${p.day}`;
   return `${EN_WEEKDAYS_SHORT[p.weekday]} ${p.day}`;
 }
+
+
+/**
+ * Localized medium date — follows the active UI language (Arabic-first).
+ * Centralizes the locale choice so pages never hardcode a locale string.
+ */
+export function formatLocalizedDate(
+  date: Date | string | number,
+  lang?: string,
+  options: Intl.DateTimeFormatOptions = { dateStyle: "medium" },
+): string {
+  const d = date instanceof Date ? date : new Date(date);
+  const locale = lang === "ar" ? "ar-OM" : "en-US";
+  return d.toLocaleDateString(locale, options);
+}
+
+/**
+ * Localized short date+time — follows the active UI language.
+ */
+export function formatLocalizedDateTime(
+  date: Date | string | number,
+  lang?: string,
+): string {
+  const d = date instanceof Date ? date : new Date(date);
+  const locale = lang === "ar" ? "ar-OM" : "en-US";
+  return d.toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" });
+}

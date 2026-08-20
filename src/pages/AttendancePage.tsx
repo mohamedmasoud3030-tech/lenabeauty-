@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { formatLocalizedDate } from "../shared/dateTime";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -252,7 +253,7 @@ export default function AttendancePage() {
               {filtered.map((rec) => (
                 <tr key={rec.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
                   <td className="px-6 py-4 font-bold text-neutral-800">{employeeName(rec.employeeId)}</td>
-                  <td className="px-6 py-4 text-neutral-600">{new Date(rec.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</td>
+                  <td className="px-6 py-4 text-neutral-600">{formatLocalizedDate(rec.date, i18n.language)}</td>
                   <td className="px-6 py-4 text-neutral-600">{rec.checkInTime || "-"}</td>
                   <td className="px-6 py-4 text-neutral-600">{rec.checkOutTime || "-"}</td>
                   <td className="px-6 py-4 font-bold text-blue-600">{rec.workHours.toFixed(2)}</td>

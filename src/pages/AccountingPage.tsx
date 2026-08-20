@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatLocalizedDate } from "../shared/dateTime";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -75,7 +76,7 @@ export default function AccountingPage() {
         </div>
       </div>
       <div className="rounded-2xl border bg-card p-4 overflow-auto">
-        <table className="min-w-full text-sm"><thead><tr className="text-start text-muted-foreground"><th className="py-2">{t("Date")}</th><th>{t("Type")}</th><th>{t("Description")}</th><th>{t("Debit")}</th><th>{t("Credit")}</th><th>{t("Amount")}</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id} className="border-t"><td className="py-2">{new Date(entry.entryDate).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</td><td>{entry.entryType}</td><td>{entry.description}</td><td>{entry.debitAccount}</td><td>{entry.creditAccount}</td><td>{entry.amount.toFixed(2)} {entry.currency}</td></tr>)}</tbody></table>
+        <table className="min-w-full text-sm"><thead><tr className="text-start text-muted-foreground"><th className="py-2">{t("Date")}</th><th>{t("Type")}</th><th>{t("Description")}</th><th>{t("Debit")}</th><th>{t("Credit")}</th><th>{t("Amount")}</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id} className="border-t"><td className="py-2">{formatLocalizedDate(entry.entryDate, i18n.language)}</td><td>{entry.entryType}</td><td>{entry.description}</td><td>{entry.debitAccount}</td><td>{entry.creditAccount}</td><td>{entry.amount.toFixed(2)} {entry.currency}</td></tr>)}</tbody></table>
       </div>
     </div>
   );
