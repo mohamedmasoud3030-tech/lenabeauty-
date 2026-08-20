@@ -28,6 +28,29 @@ function readSettingsTab(value: string | null): SettingsTab {
   return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
 }
 
+/** Shared JSON download for both export entry points (module scope). */
+async function downloadOperationalExport(prefix: string, successMessage?: string) {
+  const { showToast } = useToast();
+  const { t } = useTranslation();
+  try {
+    const res = await unwrap(useCases.settings.exportData());
+    const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${prefix}_export_${new Date().toISOString().split("T")[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    if (successMessage) showToast("success", t("Success"), t(successMessage));
+  } catch (err: any) {
+    if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
+      showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+    } else {
+      showToast('error', t("Error"), err.message || t("Failed to export data"));
+    }
+  }
+}
+
 export default function SettingsPage() {
   const { showToast } = useToast();
   const { t } = useTranslation();
@@ -105,27 +128,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleExportData() {
-    try {
-      setBusy(true);
-      const res = await unwrap(useCases.settings.exportData());
-      const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `salon_data_export_${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err.message || t("Failed to export data"));
-      }
-    } finally {
-      setBusy(false);
-    }
-  }
+  const handleExportData = () => downloadOperationalExport("salon_data");
 
   if (!s) {
     if (loadError) {
@@ -450,24 +453,7 @@ function PrivacySection() {
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  async function handleExportMyData() {
-    try {
-      setBusy(true);
-      const res = await unwrap(useCases.settings.exportData());
-      const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `my_data_export_${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("success", t("Success"), t("Your data export was downloaded to this device."));
-    } catch (err: any) {
-      showToast("error", t("Error"), err?.message || t("Failed to export data"));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const handleExportMyData = () => downloadOperationalExport("my_data");
 
   async function handleRequestDeletion() {
     if (!confirmDelete) return;

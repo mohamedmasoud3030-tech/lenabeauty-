@@ -135,11 +135,16 @@ describe("HelpCenterPage render", () => {
     vi.restoreAllMocks();
     localStorage.clear();
     await i18n.changeLanguage("en");
-    vi.spyOn(useCases.help, "createTicket").mockResolvedValue({
-      ok: true,
-      data: { id: "t1", centerId: "c1", createdById: "u1", urgency: "normal", status: "NEW", createdAt: new Date() },
-    } as any);
+    mockCreateTicket();
   });
+
+/** Shared ticket-create mock used by the intake tests. */
+function mockCreateTicket() {
+  vi.spyOn(useCases.help, "createTicket").mockResolvedValue({
+    ok: true,
+    data: { id: "t1", centerId: "c1", createdById: "u1", urgency: "normal", status: "NEW", createdAt: new Date() },
+  } as any);
+}
 
   it("lists articles for a staff user", async () => {
     renderHelp();
@@ -169,11 +174,16 @@ describe("support intake validation", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     await i18n.changeLanguage("en");
-    vi.spyOn(useCases.help, "createTicket").mockResolvedValue({
-      ok: true,
-      data: { id: "t1", centerId: "c1", createdById: "u1", urgency: "normal", status: "NEW", createdAt: new Date() },
-    } as any);
+    mockCreateTicket();
   });
+
+/** Shared ticket-create mock used by the intake tests. */
+function mockCreateTicket() {
+  vi.spyOn(useCases.help, "createTicket").mockResolvedValue({
+    ok: true,
+    data: { id: "t1", centerId: "c1", createdById: "u1", urgency: "normal", status: "NEW", createdAt: new Date() },
+  } as any);
+}
 
   async function renderIntake() {
     renderHelp();
