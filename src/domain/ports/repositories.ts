@@ -305,3 +305,37 @@ export interface NotificationRepository {
   /** Update the delivery status of an event (retries, receipts). */
   updateStatus(id: string, deliveryStatus: string): Promise<Result<void, DomainError>>;
 }
+
+export interface SupportTicket {
+  id: string;
+  centerId: string;
+  createdById: string;
+  route?: string;
+  appVersion?: string;
+  environment?: string;
+  role?: string;
+  errorReference?: string;
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  contactEmail?: string;
+  urgency: "low" | "normal" | "high";
+  status: "NEW" | "ACKNOWLEDGED" | "RESOLVED";
+  createdAt: Date;
+}
+
+export interface SupportTicketRepository {
+  /** Create a support ticket (any authenticated center member). */
+  createTicket(input: {
+    route?: string;
+    appVersion?: string;
+    environment?: string;
+    role?: string;
+    errorReference?: string;
+    expectedBehavior?: string;
+    actualBehavior?: string;
+    contactEmail?: string;
+    urgency?: "low" | "normal" | "high";
+  }): Promise<Result<SupportTicket, DomainError>>;
+  /** List tickets for the active center (members can read; admin sees all). */
+  listTickets(centerId: string): Promise<Result<SupportTicket[], DomainError>>;
+}

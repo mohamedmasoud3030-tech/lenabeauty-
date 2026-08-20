@@ -147,6 +147,10 @@
     {
       "schema": "public",
       "name": "services"
+    },
+    {
+      "schema": "public",
+      "name": "support_tickets"
     }
   ],
   "columns": [
@@ -4059,6 +4063,146 @@
       "nullable": "YES",
       "default": null,
       "position": 11
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "created_by",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "route",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "app_version",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "environment",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 6
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "role",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 7
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "error_reference",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 8
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "expected_behavior",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 9
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "actual_behavior",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 10
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "contact_email",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 11
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "urgency",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": "'normal'::text",
+      "position": 12
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "status",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": "'NEW'::text",
+      "position": 13
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 14
     }
   ],
   "enums": [
@@ -6929,6 +7073,69 @@
       "name": "services_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_created_by_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_by"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_status_check",
+      "type": "c",
+      "definition": "CHECK ((status = ANY (ARRAY['NEW'::text, 'ACKNOWLEDGED'::text, 'RESOLVED'::text])))"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_status_not_null",
+      "type": "n",
+      "definition": "NOT NULL status"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_urgency_check",
+      "type": "c",
+      "definition": "CHECK ((urgency = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text])))"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_urgency_not_null",
+      "type": "n",
+      "definition": "NOT NULL urgency"
     }
   ],
   "foreign_keys": [
@@ -7611,6 +7818,22 @@
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_created_by_fkey",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "ref_schema": "auth",
+      "ref_table": "users"
     }
   ],
   "indexes": [
@@ -8603,6 +8826,24 @@
       "primary": true,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX services_pkey ON public.services USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "idx_support_tickets_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_support_tickets_center ON public.support_tickets USING btree (center_id, created_at DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)"
     }
   ],
   "triggers": [
@@ -9203,6 +9444,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.create_service_package_v1(p_center_id uuid, p_name text, p_description text DEFAULT NULL::text, p_package_price numeric DEFAULT 0, p_items jsonb DEFAULT '[]'::jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_package public.service_packages%ROWTYPE;\n  v_item JSONB;\n  v_service_id UUID;\n  v_qty INTEGER;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized package center' USING ERRCODE = '42501';\n  END IF;\n\n  IF length(btrim(COALESCE(p_name, ''))) = 0 THEN\n    RAISE EXCEPTION 'Package name is required' USING ERRCODE = '22023';\n  END IF;\n\n  IF COALESCE(p_package_price, 0) < 0 THEN\n    RAISE EXCEPTION 'Package price cannot be negative' USING ERRCODE = '22023';\n  END IF;\n\n  IF jsonb_typeof(COALESCE(p_items, '[]'::jsonb)) <> 'array' OR jsonb_array_length(COALESCE(p_items, '[]'::jsonb)) = 0 THEN\n    RAISE EXCEPTION 'Package items must be a non-empty array' USING ERRCODE = '22023';\n  END IF;\n\n  INSERT INTO public.service_packages (center_id, name, description, package_price, is_active)\n  VALUES (p_center_id, btrim(p_name), NULLIF(btrim(COALESCE(p_description, '')), ''), COALESCE(p_package_price, 0), true)\n  RETURNING * INTO v_package;\n\n  FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)\n  LOOP\n    v_service_id := NULLIF(v_item->>'serviceId', '')::UUID;\n    v_qty := GREATEST(1, COALESCE(NULLIF(v_item->>'quantity', '')::INTEGER, 1));\n\n    PERFORM 1 FROM public.services s\n    WHERE s.id = v_service_id AND s.center_id = p_center_id AND s.is_active = true;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'Service is not available for this center' USING ERRCODE = '23503';\n    END IF;\n\n    INSERT INTO public.service_package_items (package_id, service_id, quantity)\n    VALUES (v_package.id, v_service_id, v_qty);\n  END LOOP;\n\n  RETURN jsonb_build_object('service_package', to_jsonb(v_package));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "create_support_ticket_v1",
+      "identity_args": "p_center_id uuid, p_route text, p_app_version text, p_environment text, p_role text, p_error_reference text, p_expected_behavior text, p_actual_behavior text, p_contact_email text, p_urgency text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.create_support_ticket_v1(p_center_id uuid, p_route text DEFAULT NULL::text, p_app_version text DEFAULT NULL::text, p_environment text DEFAULT NULL::text, p_role text DEFAULT NULL::text, p_error_reference text DEFAULT NULL::text, p_expected_behavior text DEFAULT NULL::text, p_actual_behavior text DEFAULT NULL::text, p_contact_email text DEFAULT NULL::text, p_urgency text DEFAULT 'normal'::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_ticket public.support_tickets;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  IF p_urgency NOT IN ('low', 'normal', 'high') THEN\n    p_urgency := 'normal';\n  END IF;\n\n  IF length(btrim(COALESCE(p_expected_behavior, ''))) < 2\n     AND length(btrim(COALESCE(p_actual_behavior, ''))) < 2 THEN\n    RAISE EXCEPTION 'ticket_description_required' USING ERRCODE = '22023';\n  END IF;\n\n  INSERT INTO public.support_tickets (\n    center_id, created_by, route, app_version, environment, role,\n    error_reference, expected_behavior, actual_behavior, contact_email, urgency\n  ) VALUES (\n    p_center_id, auth.uid(),\n    NULLIF(left(btrim(COALESCE(p_route, '')), 200), ''),\n    NULLIF(left(btrim(COALESCE(p_app_version, '')), 32), ''),\n    NULLIF(left(btrim(COALESCE(p_environment, '')), 32), ''),\n    NULLIF(left(btrim(COALESCE(p_role, '')), 32), ''),\n    NULLIF(left(btrim(COALESCE(p_error_reference, '')), 64), ''),\n    NULLIF(left(btrim(COALESCE(p_expected_behavior, '')), 2000), ''),\n    NULLIF(left(btrim(COALESCE(p_actual_behavior, '')), 2000), ''),\n    NULLIF(left(btrim(COALESCE(p_contact_email, '')), 254), ''),\n    p_urgency\n  ) RETURNING * INTO v_ticket;\n\n  RETURN jsonb_build_object('ticket', to_jsonb(v_ticket));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10061,6 +10315,20 @@
       "schema": "public",
       "name": "create_service_package_v1",
       "identity_args": "p_center_id uuid, p_name text, p_description text, p_package_price numeric, p_items jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_support_ticket_v1",
+      "identity_args": "p_center_id uuid, p_route text, p_app_version text, p_environment text, p_role text, p_error_reference text, p_expected_behavior text, p_actual_behavior text, p_contact_email text, p_urgency text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "create_support_ticket_v1",
+      "identity_args": "p_center_id uuid, p_route text, p_app_version text, p_environment text, p_role text, p_error_reference text, p_expected_behavior text, p_actual_behavior text, p_contact_email text, p_urgency text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -11174,6 +11442,54 @@
       "cmd": "ALL",
       "qual": "(center_id = ANY (app_private.user_center_ids()))",
       "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_delete",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_insert",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
+      "name": "support_tickets_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "false",
+      "with_check": null
     }
   ],
   "grants": [
@@ -17480,6 +17796,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_support_tickets_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "invoice_items",
       "grantee": "authenticated",
       "privilege": "SELECT"
@@ -19770,6 +20142,118 @@
       "kind": "relation",
       "schema": "public",
       "object": "services_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "support_tickets_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -20134,6 +20618,20 @@
       "kind": "routine",
       "schema": "public",
       "object": "create_service_package_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_support_ticket_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "create_support_ticket_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -20806,6 +21304,12 @@
     {
       "schema": "public",
       "table": "services",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "support_tickets",
       "rls_enabled": true,
       "rls_forced": false
     }

@@ -302,6 +302,23 @@ export interface CenterSettings {
   brandLogoBase64?: string | null;
 }
 
+export interface SupportTicketEntity {
+  id: string;
+  centerId: string;
+  createdById: string;
+  route?: string;
+  appVersion?: string;
+  environment?: string;
+  role?: string;
+  errorReference?: string;
+  expectedBehavior?: string;
+  actualBehavior?: string;
+  contactEmail?: string;
+  urgency: "low" | "normal" | "high";
+  status: "NEW" | "ACKNOWLEDGED" | "RESOLVED";
+  createdAt: Date;
+}
+
 export interface NotificationSettingsEntity {
   id: string;
   centerId: string;

@@ -1,5 +1,5 @@
 {
-  "files": 249,
+  "files": 252,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1195,6 +1195,24 @@
       "single": [
         "maybeSingle"
       ]
+    },
+    {
+      "table": "support_tickets",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        }
+      ],
+      "filters": [
+        "center_id",
+        "created_at"
+      ],
+      "single": []
     }
   ],
   "rpc": [

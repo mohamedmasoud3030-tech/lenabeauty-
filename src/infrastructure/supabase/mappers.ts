@@ -3,7 +3,8 @@ import {
   AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
   CustomerEntitlement, EntitlementLedgerEntry, PackageEntitlementUnit,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
-  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
+  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem,
+  SupportTicketEntity
 } from "../../domain/entities";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
@@ -756,5 +757,28 @@ export function mapPayrollLineItem(row: unknown): PayrollLineItem {
     notes: typeof row.notes === "string" ? row.notes : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapPayrollLineItem"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapPayrollLineItem"),
+  };
+}
+
+export function mapSupportTicket(row: unknown): SupportTicketEntity {
+  const r = row as Record<string, any>;
+  if (!r || typeof r.id !== "string") {
+    throw createMappingError("mapSupportTicket", "Missing id");
+  }
+  return {
+    id: r.id,
+    centerId: r.center_id,
+    createdById: r.created_by,
+    route: typeof r.route === "string" ? r.route : undefined,
+    appVersion: typeof r.app_version === "string" ? r.app_version : undefined,
+    environment: typeof r.environment === "string" ? r.environment : undefined,
+    role: typeof r.role === "string" ? r.role : undefined,
+    errorReference: typeof r.error_reference === "string" ? r.error_reference : undefined,
+    expectedBehavior: typeof r.expected_behavior === "string" ? r.expected_behavior : undefined,
+    actualBehavior: typeof r.actual_behavior === "string" ? r.actual_behavior : undefined,
+    contactEmail: typeof r.contact_email === "string" ? r.contact_email : undefined,
+    urgency: (["low", "normal", "high"] as const).includes(r.urgency) ? r.urgency : "normal",
+    status: (["NEW", "ACKNOWLEDGED", "RESOLVED"] as const).includes(r.status) ? r.status : "NEW",
+    createdAt: parseDate(r.created_at, "created_at", "mapSupportTicket"),
   };
 }

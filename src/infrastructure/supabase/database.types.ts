@@ -2144,6 +2144,72 @@ export type Database = {
           }
         ]
       }
+      "support_tickets": {
+        Row: {
+          "id": string
+          "center_id": string
+          "created_by": string
+          "route": string | null
+          "app_version": string | null
+          "environment": string | null
+          "role": string | null
+          "error_reference": string | null
+          "expected_behavior": string | null
+          "actual_behavior": string | null
+          "contact_email": string | null
+          "urgency": string
+          "status": string
+          "created_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "created_by": string
+          "route"?: string | null
+          "app_version"?: string | null
+          "environment"?: string | null
+          "role"?: string | null
+          "error_reference"?: string | null
+          "expected_behavior"?: string | null
+          "actual_behavior"?: string | null
+          "contact_email"?: string | null
+          "urgency"?: string
+          "status"?: string
+          "created_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "created_by"?: string
+          "route"?: string | null
+          "app_version"?: string | null
+          "environment"?: string | null
+          "role"?: string | null
+          "error_reference"?: string | null
+          "expected_behavior"?: string | null
+          "actual_behavior"?: string | null
+          "contact_email"?: string | null
+          "urgency"?: string
+          "status"?: string
+          "created_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -2221,6 +2287,10 @@ export type Database = {
       },
       "create_service_package_v1": {
         Args: { "p_center_id": string | null; "p_name": string | null; "p_description": string | null; "p_package_price": number | null; "p_items": Json | null }
+        Returns: Json
+      },
+      "create_support_ticket_v1": {
+        Args: { "p_center_id": string | null; "p_route": string | null; "p_app_version": string | null; "p_environment": string | null; "p_role": string | null; "p_error_reference": string | null; "p_expected_behavior": string | null; "p_actual_behavior": string | null; "p_contact_email": string | null; "p_urgency": string | null }
         Returns: Json
       },
       "delete_payroll_run_v1": {

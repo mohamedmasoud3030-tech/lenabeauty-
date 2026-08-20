@@ -186,6 +186,15 @@ export const useCases = {
     reactivateEmployee: (centerId: string, employeeId: string, reason: string) =>
       getRepositoryBundle().adminSupportAdapter.reactivateEmployee(centerId, employeeId, reason),
   },
+  help: {
+    createTicket: (input: { route?: string; appVersion?: string; environment?: string; role?: string; errorReference?: string; expectedBehavior?: string; actualBehavior?: string; contactEmail?: string; urgency?: "low" | "normal" | "high" }) =>
+      getRepositoryBundle().supportTicketAdapter.createTicket(input),
+    listTickets: () => {
+      const center = useCases.tenant.getActiveCenterId();
+      if (!center) return Promise.resolve({ ok: false as const, error: new Error("No active center") });
+      return getRepositoryBundle().supportTicketAdapter.listTickets(center);
+    },
+  },
   notifications: {
     listRecent: (limit?: number) => getRepositoryBundle().notificationAdapter.listRecent(limit),
     recordEvent: (input: { customerId?: string; appointmentId?: string; channel: string; templateKey?: string; messagePreview: string; deliveryStatus: string }) =>

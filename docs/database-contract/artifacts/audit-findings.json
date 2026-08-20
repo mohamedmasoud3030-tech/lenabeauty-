@@ -1,21 +1,21 @@
 {
   "summary": {
     "schema": {
-      "tables": 37,
-      "columns": 391,
+      "tables": 38,
+      "columns": 405,
       "enum_types": 1,
       "enum_labels": 4,
-      "constraints": 406,
-      "foreign_keys": 85,
-      "indexes": 110,
+      "constraints": 415,
+      "foreign_keys": 87,
+      "indexes": 112,
       "triggers": 24,
       "views": 0,
-      "functions": 71,
-      "policies": 58,
-      "grants": 1344
+      "functions": 72,
+      "policies": 62,
+      "grants": 1370
     },
     "frontend": {
-      "tables": 28,
+      "tables": 29,
       "rpc": 32,
       "storage": 1
     },

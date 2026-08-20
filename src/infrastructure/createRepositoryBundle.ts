@@ -23,7 +23,8 @@ import {
   AdvanceRepository,
   PayrollRepository,
   NotificationRepository,
-  AdminSupportRepository
+  AdminSupportRepository,
+  SupportTicketRepository
 } from "../domain/ports/repositories";
 import {
   SupabaseAuthAdapter,
@@ -49,7 +50,8 @@ import {
   SupabaseAdvanceAdapter,
   SupabasePayrollAdapter,
   SupabaseNotificationAdapter,
-  SupabaseAdminSupportAdapter
+  SupabaseAdminSupportAdapter,
+  SupabaseSupportTicketAdapter
 } from "./supabase";
 
 export interface RepositoryBundle {
@@ -77,6 +79,7 @@ export interface RepositoryBundle {
   payrollAdapter: PayrollRepository;
   notificationAdapter: NotificationRepository;
   adminSupportAdapter: AdminSupportRepository;
+  supportTicketAdapter: SupportTicketRepository;
 }
 
 export class InfrastructureError extends Error {
@@ -112,7 +115,8 @@ export function createRepositoryBundle(): RepositoryBundle {
       advanceAdapter: new SupabaseAdvanceAdapter(),
       payrollAdapter: new SupabasePayrollAdapter(),
       notificationAdapter: new SupabaseNotificationAdapter(),
-      adminSupportAdapter: new SupabaseAdminSupportAdapter()
+      adminSupportAdapter: new SupabaseAdminSupportAdapter(),
+      supportTicketAdapter: new SupabaseSupportTicketAdapter()
     };
   }
 

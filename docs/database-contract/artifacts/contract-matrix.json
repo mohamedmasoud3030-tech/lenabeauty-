@@ -460,6 +460,12 @@
           "direction": "to-one"
         }
       ]
+    },
+    {
+      "table": "support_tickets",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
     }
   ],
   "rpc": [
@@ -1943,6 +1949,55 @@
       ],
       "missing_operations": [],
       "has_for_all": true
+    },
+    {
+      "table": "support_tickets",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "support_tickets_delete",
+          "command": "DELETE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "false",
+          "with_check": null,
+          "membership_only": false
+        },
+        {
+          "name": "support_tickets_insert",
+          "command": "INSERT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": null,
+          "with_check": "app_private.is_center_member(center_id)",
+          "membership_only": true
+        },
+        {
+          "name": "support_tickets_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        },
+        {
+          "name": "support_tickets_update",
+          "command": "UPDATE",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "false",
+          "with_check": null,
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [],
+      "has_for_all": false
     }
   ]
 }

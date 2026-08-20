@@ -23,6 +23,7 @@ const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
 const SupportOperationsPage = lazy(() => import("./pages/SupportOperationsPage"));
+const HelpCenterPage = lazy(() => import("./pages/HelpCenterPage"));
 
 // Auth utility destination: intentionally not part of the in-app navigation registry.
 const PASSWORD_RESET_ROUTE = "/reset-password";
@@ -67,6 +68,7 @@ export function AppRoutes() {
           <Route path="/gift-cards" element={<Suspense fallback={<PageLoader />}><GiftCardsPage /></Suspense>} />
           <Route path="/packages" element={<Suspense fallback={<PageLoader />}><PackagesPage /></Suspense>} />
           <Route path="/inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+          <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpCenterPage /></Suspense>} />
 
           <Route element={<RequireAdmin />}>
             <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />

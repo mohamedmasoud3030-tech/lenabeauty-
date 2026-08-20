@@ -86,6 +86,24 @@ Added a provider-neutral notification core with no live provider activation:
 - Tests: `src/__tests__/communication-system.test.ts` (32 tests) — interpolation, bilingual parity, dedup, rate limit, quiet hours, opt-out, channel behavior, test-mode prefix, unknown-event skip.
 - **Nothing was sent, enabled, or purchased.** No provider env vars are read; test mode prefixes `[TEST MODE]` and the factory marks external channels unavailable. Live WhatsApp API / SMS / email / push activation requires owner approval (single yes/no gate).
 
+## 5c. Help & support system (2026-08-20)
+
+- `HELP_SUPPORT_SYSTEM.md` — content map, ownership/update triggers, search/navigation,
+  safe support intake, privacy, urgency/escalation, freshness criteria.
+- `src/shared/help/articles.ts` — 12 verified bilingual task-based articles (onboarding,
+  POS, appointments, permissions, account, data, errors, offline, payments).
+- `/help` route (all authenticated roles) with search, category chips, deep links
+  (`/?help=slug`), article reader, related articles, and a support-intake form.
+- Header help button (?) on every page; ErrorBoundary now offers "Get help with this
+  error" carrying the report ID via sessionStorage.
+- Intake captures route/version/environment/role/error-ref/expected/actual only —
+  rejects secrets patterns, min description, 2000-char cap. Stored via
+  `create_support_ticket_v1` RPC into `support_tickets` (member-scoped RLS, immutable).
+- Migration `20260820000003_help_support.sql` (canonical count now 40).
+- Tests: `src/__tests__/help-system.test.tsx` (17) — registry freshness, bilingual
+  search, deep links, intake validation (secret rejection, empty rejection, submit,
+  route prefill). Full suite: 122 files / 843 tests pass; audit gate PASS.
+
 ## 6. What is NOT done
 
 **Blocking Production:** hosted acceptance of migrations `20260817000001`–`20260818000001` (R-01).

@@ -1,7 +1,7 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, LayoutGrid, Settings, LogOut, MoreHorizontal } from "lucide-react";
+import { Menu, LayoutGrid, Settings, LogOut, MoreHorizontal, HelpCircle } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
@@ -234,6 +234,14 @@ export default function Layout() {
               <CenterSwitcher />
               <GlobalSearch userRole={me?.role} />
 
+              <button
+                onClick={() => nav("/help")}
+                aria-label={t("Help Center")}
+                title={t("Help Center")}
+                className="h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm active:scale-95"
+              >
+                <HelpCircle aria-hidden="true" className="h-5 w-5" />
+              </button>
               <NotificationCenter isAdmin={me?.role === "ADMIN"} />
               
               <div aria-hidden="true" className="hidden sm:block h-8 w-px bg-border" />

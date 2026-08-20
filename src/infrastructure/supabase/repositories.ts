@@ -7,7 +7,8 @@ import {
   CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository,
   AttendanceRepository, AdvanceRepository, PayrollRepository,
   NotificationRepository, NotificationEventRecord,
-  AdminSupportRepository, AdminAuditEvent, CustomerSupportNote, AdminSearchResult
+  AdminSupportRepository, AdminAuditEvent, CustomerSupportNote, AdminSearchResult,
+  SupportTicketRepository, SupportTicket
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, AppointmentStatus, Product, Expense, Invoice,
@@ -25,7 +26,8 @@ import {
   mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
   mapCustomerEntitlement, mapEntitlementLedgerEntry,
   mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead,
-  mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
+  mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem,
+  mapSupportTicket
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
 import { passwordResetRedirectUrl } from "../../shared/auth/passwordResetRedirect";
@@ -3643,6 +3645,53 @@ class SupabaseAdminSupportAdapter implements AdminSupportRepository {
   }
 }
 
+class SupabaseSupportTicketAdapter implements SupportTicketRepository {
+  async createTicket(input: {
+    route?: string; appVersion?: string; environment?: string; role?: string;
+    errorReference?: string; expectedBehavior?: string; actualBehavior?: string;
+    contactEmail?: string; urgency?: "low" | "normal" | "high";
+  }): Promise<Result<SupportTicket, DomainError>> {
+    const centerRes = getCenterIdFor("SupportTicket.createTicket");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('create_support_ticket_v1', {
+        p_center_id: centerRes.data,
+        p_route: input.route ?? null,
+        p_app_version: input.appVersion ?? null,
+        p_environment: input.environment ?? null,
+        p_role: input.role ?? null,
+        p_error_reference: input.errorReference ?? null,
+        p_expected_behavior: input.expectedBehavior ?? null,
+        p_actual_behavior: input.actualBehavior ?? null,
+        p_contact_email: input.contactEmail ?? null,
+        p_urgency: input.urgency ?? 'normal',
+      });
+      if (error) return { ok: false, error: createQueryError("SupportTicket.createTicket", error.message) };
+      const t = (data as any)?.ticket;
+      if (!t) return { ok: false, error: createQueryError("SupportTicket.createTicket", "Invalid response") };
+      return { ok: true, data: mapSupportTicket(t) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("SupportTicket.createTicket", (e as Error).message) };
+    }
+  }
+
+  async listTickets(centerId: string): Promise<Result<SupportTicket[], DomainError>> {
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('support_tickets')
+        .select('*')
+        .eq('center_id', centerId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) return { ok: false, error: createQueryError("SupportTicket.listTickets", error.message) };
+      return { ok: true, data: (data || []).map(mapSupportTicket) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("SupportTicket.listTickets", (e as Error).message) };
+    }
+  }
+}
+
+
 export {
   SupabaseAuthAdapter,
   SupabaseCustomerAdapter,
@@ -3666,5 +3715,6 @@ export {
   SupabaseAdvanceAdapter,
   SupabasePayrollAdapter,
   SupabaseNotificationAdapter,
-  SupabaseAdminSupportAdapter
+  SupabaseAdminSupportAdapter,
+  SupabaseSupportTicketAdapter
 };

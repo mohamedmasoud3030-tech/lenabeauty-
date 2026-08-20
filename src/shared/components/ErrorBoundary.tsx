@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, LayoutDashboard } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LayoutDashboard, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { logger } from '../logger';
 
@@ -162,6 +162,21 @@ function ErrorFallback({
               </p>
             </div>
           )}
+
+          {/* Get help — deep link carries the report ID so support intake can
+              reference it without exposing any data. */}
+          <a
+            href={`#/help?help=error-codes`}
+            onClick={() => {
+              try {
+                if (reportId) sessionStorage.setItem("lenabeauty_error_ref", reportId);
+              } catch { /* storage unavailable */ }
+            }}
+            className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:underline touch-target"
+          >
+            <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("Get help with this error")}
+          </a>
 
           {/* One retry action + one navigation recovery action — no duplicates. */}
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">

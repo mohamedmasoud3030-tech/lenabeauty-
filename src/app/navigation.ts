@@ -18,6 +18,7 @@ import {
   Sparkles,
   Bot,
   Shield,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -120,6 +121,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
 
   // System.
   { path: "/support", labelKey: "Support Operations", icon: Shield, group: "system", adminOnly: true, searchIcon: "🛡️" },
+  { path: "/help", labelKey: "Help Center", icon: HelpCircle, group: "system", searchIcon: "❓" },
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },
 ];
 
