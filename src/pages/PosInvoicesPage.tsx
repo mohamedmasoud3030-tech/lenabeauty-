@@ -97,6 +97,14 @@ export default function PosInvoicesPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRequestRef = useRef(0);
+  /** STARTING_FROM inline price entry */
+  const [priceDialog, setPriceDialog] = useState<{ id: string; name: string; minPrice: number } | null>(null);
+  const [priceDialogValue, setPriceDialogValue] = useState("");
+  /** Track most-used services this session for quick-add */
+  const [usageCounts, setUsageCounts] = useState<Record<string, number>>({});
+  /** Auto-focus search on tab change */
+  const prevTabRef = useRef(activeTab);
+
 
   useEffect(() => {
     loadData();
@@ -122,6 +130,18 @@ export default function PosInvoicesPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cart, selectedCustomer, selectedEmployee]);
+
+  // Auto-focus search when tab changes
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      // hut is window.setTimout for next rame
+      const timer = window.setTimeout(() => {
+        itemSearchRef.current?.focus();
+      }, 100);
+      return () => window.clearTimeout(timer);
+    }
+  }, [activeTab]);
 
   async function loadData() {
     setLoading(true);
@@ -216,24 +236,62 @@ export default function PosInvoicesPage() {
 
     let finalPrice = item.price;
     if (type === "service" && item.pricingMode === "STARTING_FROM") {
-      const entered = window.prompt(
-        t("Enter the final selling price for this service"),
-        formatOMRAmount(item.price),
-      );
-      if (entered === null) return;
-      finalPrice = Number(entered);
-      if (!Number.isFinite(finalPrice) || finalPrice < item.price || finalPrice <= 0) {
-        showToast('error', t("Error"), t("Final price must be at least the starting price"));
-        return;
-      }
+      setPriceDialogValue(formatOMRAmount(item.price));
+      setPriceDialog({ id: item.id, name: item.name, minPrice: item.price });
+      return;
     }
 
-    setCart([...cart, { ...item, price: finalPrice, type, cartId: globalThis.crypto.randomUUID() }]);
+    const newItem = { ...item, price: finalPrice, type, cartId: globalThis.crypto.randomUUID() };
+    setCart((prev) => {
+      // Group by ID for same service/product/package — avoids duplicate rows
+      const existing = prev.find((i) => i.id === item.id && i.type === type && i.price === finalPrice);
+      if (existing) {
+        return prev.map((i) =>
+          i.cartId === existing.cartId ? { ...i, qty: (i.qty ?? 1) + 1 } : i,
+        );
+      }
+      return [...prev, newItem];
+    });
+    setUsageCounts((prev) => ({ ...prev, [item.id]: (prev[item.id] ?? 0) + 1 }));
     showToast('success', t("Added"), `${item.name} ${t("added to cart")}`);
   }
 
   function removeFromCart(cartId: string) {
     setCart(cart.filter(it => it.cartId !== cartId));
+  }
+
+  function confirmPriceDialog(enteredPrice: number) {
+    if (!priceDialog) return;
+    const { id, name, minPrice } = priceDialog;
+    if (!Number.isFinite(enteredPrice) || enteredPrice < minPrice || enteredPrice <= 0) {
+      showToast('error', t("Error"), t("Final price must be at least the starting price"));
+      return;
+    }
+    const service = services.find((s) => s.id === id);
+    if (!service) return;
+    addToCart({ ...service, price: enteredPrice }, "service");
+    setPriceDialog(null);
+    setPriceDialogValue("");
+  }
+
+  /** Increase qty for a grouped cart item. */
+  function cartIncrement(cartId: string) {
+    setCart((prev) =>
+      prev.map((i) =>
+        i.cartId === cartId ? { ...i, qty: (i.qty ?? 1) + 1 } : i,
+      ),
+    );
+  }
+
+  /** Decrease qty or remove for a grouped cart item. */
+  function cartDecrement(cartId: string) {
+    setCart((prev) => {
+      const item = prev.find((i) => i.cartId === cartId);
+      if (!item) return prev;
+      const qty = item.qty ?? 1;
+      if (qty <= 1) return prev.filter((i) => i.cartId !== cartId);
+      return prev.map((i) => (i.cartId === cartId ? { ...i, qty: qty - 1 } : i));
+    });
   }
 
   function clearCart() {
@@ -613,7 +671,32 @@ export default function PosInvoicesPage() {
                       </motion.button>
                     ))}
                   </AnimatePresence>
-                  {filteredItems.length === 0 && (
+                  {/* Most-used services this session — quick access row */}
+              {activeTab === "SERVICES" && !itemSearchQ.trim() && Object.keys(usageCounts).length > 0 && (
+                <div className="col-span-full mb-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(usageCounts)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 6)
+                      .map(([id]) => {
+                        const svc = services.find((s) => s.id === id);
+                        if (!svc) return null;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => addToCart(svc as any, "service")}
+                            className="flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-all touch-target"
+                          >
+                            <Zap className="h-3 w-3" aria-hidden="true" />
+                            {svc.name}
+                            <span className="text-[9px] opacity-60">×{usageCounts[id]}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+              {filteredItems.length === 0 && (
                     <div className="col-span-full">
                       <ScreenState
                         state="empty"
@@ -735,16 +818,26 @@ export default function PosInvoicesPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold truncate text-foreground leading-tight">{item.name}</p>
+                        {item.qty !== undefined && item.qty > 1 && (
+                          <p className="text-[9px] font-bold text-muted-foreground mt-0.5">×{item.qty} · {formatOMRAmount(item.price * item.qty)}</p>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)}</span>
-                        <button 
-                          onClick={() => removeFromCart(item.cartId)} 
-                          aria-label={t("Remove")}
-                          className="h-11 w-11 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all touch-target"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                      <div className="flex items-center gap-1.5">
+                        {item.qty !== undefined && item.qty > 1 ? (
+                          <>
+                            <span className="text-xs font-bold text-foreground min-w-[48px] text-end">{formatOMRAmount(item.price * item.qty)}</span>
+                            <div className="flex items-center rounded-lg border border-border bg-muted/30">
+                              <button onClick={() => cartDecrement(item.cartId)} aria-label={t("Remove")} className="h-8 w-8 flex items-center justify-center rounded-l-lg hover:bg-destructive/10 hover:text-destructive transition-all"><Minus className="h-3 w-3" /></button>
+                              <span className="h-8 px-2 text-xs font-bold flex items-center border-x border-border">{item.qty}</span>
+                              <button onClick={() => cartIncrement(item.cartId)} aria-label={t("Add")} className="h-8 w-8 flex items-center justify-center rounded-r-lg hover:bg-primary/10 hover:text-primary transition-all"><Plus className="h-3 w-3" /></button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)}</span>
+                            <button onClick={() => removeFromCart(item.cartId)} aria-label={t("Remove")} className="h-11 w-11 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all touch-target"><Trash2 className="h-3.5 w-3.5" /></button>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   ))

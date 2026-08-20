@@ -24,6 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { DashboardSummary, PnlData } from "../application/dto";
 import { ScreenState } from "../shared/components/ScreenState";
 import { GettingStartedCard } from "../shared/components/GettingStartedCard";
+import { WelcomeCompleted } from "../shared/components/WelcomeCompleted";
 import { NavigationNotice } from "../shared/components/NavigationNotice";
 import { getDisplayName } from "../shared/displayName";
 import { formatOMRAmount } from "../shared/money";
@@ -61,8 +62,17 @@ export default function DashboardPage() {
       const s = await unwrap(useCases.dashboard.getSummary());
       setSummary(s);
 
-      void loadActivity(s);
-      void loadTodayOps();
+      // On a first run (no services yet) the operational panels are hidden
+      // entirely — loading them would be wasted queries and empty noise.
+      const hasServices = (s?.customers ?? 0) > 0 || (s?.appointments ?? 0) > 0 || (s?.sales ?? 0) > 0;
+      if (hasServices || (s?.customers ?? 0) > 0) {
+        void loadActivity(s);
+        void loadTodayOps();
+      } else {
+        setActivity([]);
+        setTodayAppts([]);
+        setLowStockItems([]);
+      }
 
       if (s && s.canViewRevenue) {
         try {
@@ -294,6 +304,13 @@ export default function DashboardPage() {
       <motion.div variants={item}>
         <GettingStartedCard viewerRole={me?.role} />
       </motion.div>
+
+      {/* Post-setup completion card — shown 7 days after setup completes. */}
+      {!isFirstRun && (
+        <motion.div variants={item}>
+          <WelcomeCompleted />
+        </motion.div>
+      )}
 
       {/* Key Metrics Grid - 2x2 on mobile, 4 columns on desktop */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-4">
@@ -671,7 +688,8 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions — hidden on first run, the guide covers them */}
+        {!isFirstRun && (
         <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -706,6 +724,7 @@ export default function DashboardPage() {
             )}
           </div>
         </motion.div>
+        )}
       </div>
     </motion.div>
   );

@@ -1,8 +1,8 @@
 # AGENT_HANDOFF — LenaBeauty
 
-**Last updated:** 2026-08-18
-**Branch:** `arena/01a0153c-lenabeauty`
-**Head:** independent-review fix commit (see `git log`)
+**Last updated:** 2026-08-20
+**Branch:** `arena/01a01c90-lenabeauty`
+**Head:** communication system milestone (see `git log`)
 **Release status:** CONDITIONAL PASS — safe on Demo/Staging, not approved for Production with real data.
 
 Read this before touching anything. It is written for the next agent, not for the owner.
@@ -39,7 +39,7 @@ A single-center salon/spa operations PWA for the Omani/GCC market. Staff-only: t
 | `npm run typecheck` · `lint` | PASS (234 files) |
 | `npm test` | **111 files / 657 tests, all pass** |
 | `npm run build` | PASS — 56 precache entries |
-| `audit:gate` · `db:types:check` · `ci:migrations` · `ci:rpc-check` | PASS (36 migrations) |
+| `audit:gate` · `db:types:check` · `ci:migrations` · `ci:rpc-check` | PASS (38 migrations) |
 | `desktop:test` | PASS (14) |
 | `npm audit` | 0 vulnerabilities |
 | Hosted Supabase | **UNREACHABLE from sandbox** — hosted state unverified |
@@ -73,6 +73,18 @@ A single-center salon/spa operations PWA for the Omani/GCC market. Staff-only: t
 - **`fallbackLng: 'ar'` masks missing English keys** — a green i18n test proved nothing until the app-wide guard existed.
 
 ---
+
+## 5b. Communication system (2026-08-20)
+
+Added a provider-neutral notification core with no live provider activation:
+
+- `COMMUNICATION_SYSTEM_SPEC.md` — full event-channel matrix, templates, preferences, delivery lifecycle, provider boundary, retries, monitoring, cost controls, tests.
+- `src/domain/notification/` — types, event registry, bilingual template registry + validation, preference enforcement (opt-in + quiet hours), deduplication, rate limiting, and the `NotificationService` orchestrator.
+- `src/infrastructure/notification/` — `ToastChannel` (staff in-app), `WhatsAppWaMeChannel` (manual wa.me, truthful pending status), and a factory wiring real channels; SMS/email/push adapters exist as unavailable stubs (no credentials, no cost).
+- UI: `NotificationCenter` bell dropdown in the header (all roles; admin sees Configure link), `NotificationServiceProvider` in `App.tsx`, template previews on the Notifications settings page, and a staff-toast hook on appointment creation.
+- DB: migration `20260820000001_customer_notification_preferences.sql` — per-customer channel opt-in + quiet hours + opt-out RPC, dedup key column on the timeline + atomic dedup-check RPC, and an explicit EXECUTE grant for `add_customer_notification_event_v1` (now frontend-called; the 20260810000006 grant-repair whitelist predates it). Fingerprint-stable on re-application; audit gate PASS.
+- Tests: `src/__tests__/communication-system.test.ts` (32 tests) — interpolation, bilingual parity, dedup, rate limit, quiet hours, opt-out, channel behavior, test-mode prefix, unknown-event skip.
+- **Nothing was sent, enabled, or purchased.** No provider env vars are read; test mode prefixes `[TEST MODE]` and the factory marks external channels unavailable. Live WhatsApp API / SMS / email / push activation requires owner approval (single yes/no gate).
 
 ## 6. What is NOT done
 

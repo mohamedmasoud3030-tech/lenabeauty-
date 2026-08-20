@@ -171,6 +171,28 @@ export const useCases = {
     clientPortalLogin: (phone: string, token: string) => getRepositoryBundle().bookingAdapter.clientPortalLogin(phone, token),
     getClientPortalProfile: (customerId: string, phone: string, token: string) => getRepositoryBundle().bookingAdapter.getClientPortalProfile(customerId, phone, token),
   },
+  admin: {
+    search: (centerId: string, query: string) => getRepositoryBundle().adminSupportAdapter.search(centerId, query),
+    listAuditEvents: (centerId: string, options?: { limit?: number; offset?: number; action?: string; targetType?: string }) =>
+      getRepositoryBundle().adminSupportAdapter.listAuditEvents(centerId, options),
+    writeAuditEvent: (centerId: string, input: { action: string; targetType: string; targetId?: string; targetSummary?: string; reason?: string; details?: Record<string, any> }) =>
+      getRepositoryBundle().adminSupportAdapter.writeAuditEvent(centerId, input),
+    addCustomerSupportNote: (centerId: string, customerId: string, note: string) =>
+      getRepositoryBundle().adminSupportAdapter.addCustomerSupportNote(centerId, customerId, note),
+    listCustomerSupportNotes: (centerId: string, customerId: string) =>
+      getRepositoryBundle().adminSupportAdapter.listCustomerSupportNotes(centerId, customerId),
+    deactivateEmployee: (centerId: string, employeeId: string, reason: string) =>
+      getRepositoryBundle().adminSupportAdapter.deactivateEmployee(centerId, employeeId, reason),
+    reactivateEmployee: (centerId: string, employeeId: string, reason: string) =>
+      getRepositoryBundle().adminSupportAdapter.reactivateEmployee(centerId, employeeId, reason),
+  },
+  notifications: {
+    listRecent: (limit?: number) => getRepositoryBundle().notificationAdapter.listRecent(limit),
+    recordEvent: (input: { customerId?: string; appointmentId?: string; channel: string; templateKey?: string; messagePreview: string; deliveryStatus: string }) =>
+      getRepositoryBundle().notificationAdapter.recordEvent(input),
+    updateStatus: (id: string, deliveryStatus: string) =>
+      getRepositoryBundle().notificationAdapter.updateStatus(id, deliveryStatus),
+  },
   tenant: {
     setActiveCenterId: (id: string | null) => { setActiveCenter(id); },
     getActiveCenterId: () => {

@@ -1,12 +1,13 @@
 import { Outlet, useLocation, NavLink, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Menu, Bell, LayoutGrid, Settings, LogOut, MoreHorizontal } from "lucide-react";
+import { Menu, LayoutGrid, Settings, LogOut, MoreHorizontal } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
+import { NotificationCenter } from "../../shared/components/NotificationCenter";
 import { EnvironmentBadge } from "../../shared/components/EnvironmentBadge";
 import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
@@ -233,16 +234,7 @@ export default function Layout() {
               <CenterSwitcher />
               <GlobalSearch userRole={me?.role} />
 
-              {me?.role === "ADMIN" && (
-                <button
-                  onClick={() => nav("/settings?tab=notifications")}
-                  className="h-11 w-11 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-sm relative group active:scale-95"
-                  aria-label={t("Notifications")}
-                  title={t("Notifications")}
-                >
-                  <Bell aria-hidden="true" className="h-5 w-5 group-hover:rotate-12 transition-transform" />
-                </button>
-              )}
+              <NotificationCenter isAdmin={me?.role === "ADMIN"} />
               
               <div aria-hidden="true" className="hidden sm:block h-8 w-px bg-border" />
               

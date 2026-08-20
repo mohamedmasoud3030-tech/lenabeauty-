@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Sparkles,
   Bot,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +119,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { path: "/advanced-automation", labelKey: "Automation", icon: Bot, group: "growth", adminOnly: true, deferred: true, searchIcon: "🤖" },
 
   // System.
+  { path: "/support", labelKey: "Support Operations", icon: Shield, group: "system", adminOnly: true, searchIcon: "🛡️" },
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },
 ];
 

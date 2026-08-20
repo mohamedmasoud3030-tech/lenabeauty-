@@ -145,7 +145,8 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
   }, [progress, dismissed, isSetUp]);
 
   useEffect(() => {
-    if (isSetUp && !hasActivationEvent("first_value_reached")) {
+    if (isSetUp && !hasActivationEvent("center_fully_setup")) {
+      recordActivationEvent("center_fully_setup");
       recordActivationEvent("first_value_reached");
     }
   }, [isSetUp]);

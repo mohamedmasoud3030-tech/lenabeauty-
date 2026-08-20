@@ -9,6 +9,7 @@ import { PremiumCard, CardContent, CardHeader } from "../shared/components/Premi
 import { QuickNotificationSender } from "../shared/components/NotificationSystem";
 import { ScreenState } from "../shared/components/ScreenState";
 import { whatsappService } from "../infrastructure/services/whatsappService";
+import { renderMessage, validateTemplate, extractVariables } from "../domain/notification";
 
 const fallbackTemplates = {
   booking: "Hello {customer_name}! Your appointment is confirmed for {appointment_date} at {appointment_time}.",
@@ -16,8 +17,57 @@ const fallbackTemplates = {
   smsReminder: "Reminder: your appointment is tomorrow at {appointment_time}."
 };
 
-export default function NotificationsSettingsPage({ embedded = false }: { embedded?: boolean }) {
+/**
+ * TemplatePreview — renders what a template will look like with sample data.
+ * Uses the shared template engine; unknown variables are shown as placeholders.
+ */
+function TemplatePreview({ template, language }: { template: string; language: "ar" | "en" }) {
   const { t } = useTranslation();
+  const sampleVars: Record<string, string | number> = {
+    customer_name: language === "ar" ? "فاطمة" : "Fatima",
+    appointment_date: language === "ar" ? "20 أغسطس 2026" : "Aug 20, 2026",
+    appointment_time: language === "ar" ? "4:00 م" : "4:00 PM",
+    service_name: language === "ar" ? "قص وتصفيف" : "Haircut & Styling",
+    staff_name: language === "ar" ? "سارة" : "Sara",
+    center_name: "LenaBeauty",
+    payment_amount: "15.500 OMR",
+    payment_method: language === "ar" ? "نقد" : "Cash",
+    loyalty_points: "20",
+    total_points: "120",
+    tier_name: language === "ar" ? "ذهبي" : "Gold",
+    tier_discount: "10",
+    reward_name: language === "ar" ? "خصم 10%" : "10% discount",
+    days_left: "3",
+    invoice_serial: "INV-0001",
+  };
+  const errors = validateTemplate(template);
+  const rendered = interpolatePreview(template, sampleVars);
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-muted/30 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {t("Preview")}
+      </p>
+      <p dir={language === "ar" ? "rtl" : "ltr"} className="whitespace-pre-wrap text-xs text-foreground/90">
+        {rendered}
+      </p>
+      {errors.length > 0 && (
+        <p className="text-[10px] font-bold text-destructive">{errors.join(" · ")}</p>
+      )}
+      <p className="text-[10px] text-muted-foreground">
+        Variables: {extractVariables(template).join(", ") || "—"}
+      </p>
+    </div>
+  );
+}
+
+function interpolatePreview(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_m, name: string) =>
+    vars[name] !== undefined ? String(vars[name]) : `{${name}}`,
+  );
+}
+
+export default function NotificationsSettingsPage({ embedded = false }: { embedded?: boolean }) {
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -197,14 +247,17 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
             <label className="space-y-2 block">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Booking Confirmation Template")}</span>
               <textarea rows={4} className="w-full rounded-xl border border-border bg-card px-4 py-3 font-medium" value={form.whatsappTemplateBooking} onChange={(e) => update("whatsappTemplateBooking", e.target.value)} />
+              <TemplatePreview template={form.whatsappTemplateBooking} language={i18n.language === "ar" ? "ar" : "en"} />
             </label>
             <label className="space-y-2 block">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("WhatsApp Reminder Template")}</span>
               <textarea rows={4} className="w-full rounded-xl border border-border bg-card px-4 py-3 font-medium" value={form.whatsappTemplateReminder} onChange={(e) => update("whatsappTemplateReminder", e.target.value)} />
+              <TemplatePreview template={form.whatsappTemplateReminder} language={i18n.language === "ar" ? "ar" : "en"} />
             </label>
             <label className="space-y-2 block">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("SMS Reminder Template")}</span>
               <textarea rows={3} className="w-full rounded-xl border border-border bg-card px-4 py-3 font-medium" value={form.smsTemplateReminder} onChange={(e) => update("smsTemplateReminder", e.target.value)} />
+              <TemplatePreview template={form.smsTemplateReminder} language={i18n.language === "ar" ? "ar" : "en"} />
             </label>
 
             <button onClick={saveSettings} disabled={loading} className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 disabled:opacity-50"><Save className="h-4 w-4" />{loading ? t("Saving...") : t("Save Notification Settings")}</button>

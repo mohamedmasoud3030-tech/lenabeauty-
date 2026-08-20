@@ -71,6 +71,63 @@ export type Database = {
           }
         ]
       }
+      "admin_audit_events": {
+        Row: {
+          "id": string
+          "center_id": string
+          "actor_id": string
+          "actor_name": string
+          "action": string
+          "target_type": string
+          "target_id": string | null
+          "target_summary": string | null
+          "reason": string | null
+          "details": Json | null
+          "created_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "actor_id": string
+          "actor_name"?: string
+          "action": string
+          "target_type": string
+          "target_id"?: string | null
+          "target_summary"?: string | null
+          "reason"?: string | null
+          "details"?: Json | null
+          "created_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "actor_id"?: string
+          "actor_name"?: string
+          "action"?: string
+          "target_type"?: string
+          "target_id"?: string | null
+          "target_summary"?: string | null
+          "reason"?: string | null
+          "details"?: Json | null
+          "created_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_audit_events_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "ai_booking_leads": {
         Row: {
           "id": string
@@ -573,6 +630,57 @@ export type Database = {
           }
         ]
       }
+      "customer_notification_preferences": {
+        Row: {
+          "id": string
+          "center_id": string
+          "customer_id": string
+          "channel": string
+          "opt_in": boolean
+          "opt_in_token": string | null
+          "quiet_hour_start": string | null
+          "quiet_hour_end": string | null
+          "updated_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "customer_id": string
+          "channel": string
+          "opt_in"?: boolean
+          "opt_in_token"?: string | null
+          "quiet_hour_start"?: string | null
+          "quiet_hour_end"?: string | null
+          "updated_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "customer_id"?: string
+          "channel"?: string
+          "opt_in"?: boolean
+          "opt_in_token"?: string | null
+          "quiet_hour_start"?: string | null
+          "quiet_hour_end"?: string | null
+          "updated_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notification_preferences_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notification_preferences_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "customer_notification_timeline": {
         Row: {
           "id": string
@@ -586,6 +694,7 @@ export type Database = {
           "delivery_status": string
           "sent_at": string | null
           "created_at": string
+          "dedup_key": string | null
         }
         Insert: {
           "id"?: string
@@ -599,6 +708,7 @@ export type Database = {
           "delivery_status"?: string
           "sent_at"?: string | null
           "created_at"?: string
+          "dedup_key"?: string | null
         }
         Update: {
           "id"?: string
@@ -612,6 +722,7 @@ export type Database = {
           "delivery_status"?: string
           "sent_at"?: string | null
           "created_at"?: string
+          "dedup_key"?: string | null
         }
         Relationships: [
           {
@@ -688,6 +799,55 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      "customer_support_notes": {
+        Row: {
+          "id": string
+          "center_id": string
+          "customer_id": string
+          "actor_id": string
+          "note": string
+          "created_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "customer_id": string
+          "actor_id": string
+          "note": string
+          "created_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "customer_id"?: string
+          "actor_id"?: string
+          "note"?: string
+          "created_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_support_notes_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_support_notes_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_support_notes_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
@@ -1991,17 +2151,37 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_channel": string | null; "p_direction": string | null; "p_template_key": string | null; "p_message_preview": string | null; "p_delivery_status": string | null; "p_sent_at": string | null }
         Returns: Json
       },
+      "add_customer_support_note_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_note": string | null }
+        Returns: Json
+      },
       "admin_create_employee_v1": {
         Args: { "p_center_id": string | null; "p_employee": Json | null }
+        Returns: Json
+      },
+      "admin_deactivate_employee_v1": {
+        Args: { "p_center_id": string | null; "p_employee_id": string | null; "p_reason": string | null }
         Returns: Json
       },
       "admin_delete_employee_v1": {
         Args: { "p_center_id": string | null; "p_employee_id": string | null }
         Returns: Json
       },
+      "admin_global_search_v1": {
+        Args: { "p_center_id": string | null; "p_query": string | null; "p_limit": number | null }
+        Returns: Json
+      },
+      "admin_reactivate_employee_v1": {
+        Args: { "p_center_id": string | null; "p_employee_id": string | null; "p_reason": string | null }
+        Returns: Json
+      },
       "admin_update_employee_v1": {
         Args: { "p_center_id": string | null; "p_employee_id": string | null; "p_patch": Json | null }
         Returns: Json
+      },
+      "check_notification_dedup_v1": {
+        Args: { "p_center_id": string | null; "p_dedup_key": string | null; "p_window_minutes": number | null }
+        Returns: boolean
       },
       "create_accounting_journal_entry_admin_impl_v1": {
         Args: { "p_center_id": string | null; "p_entry_date": string | null; "p_entry_type": string | null; "p_reference_type": string | null; "p_reference_id": string | null; "p_description": string | null; "p_debit_account": string | null; "p_credit_account": string | null; "p_amount": number | null; "p_currency": string | null }
@@ -2071,12 +2251,28 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_code": string | null; "p_initial_balance": number | null; "p_customer_id": string | null; "p_note": string | null; "p_expires_at": string | null }
         Returns: Json
       },
+      "list_admin_audit_events_v1": {
+        Args: { "p_center_id": string | null; "p_limit": number | null; "p_offset": number | null; "p_action": string | null; "p_target_type": string | null }
+        Returns: Json
+      },
+      "list_customer_notification_preferences_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null }
+        Returns: Json
+      },
+      "list_customer_support_notes_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_limit": number | null }
+        Returns: Json
+      },
       "list_employees_v1": {
         Args: { "p_center_id": string | null }
         Returns: Json
       },
       "mark_appointment_no_show_v1": {
         Args: { "p_center_id": string | null; "p_appointment_id": string | null; "p_charge_no_show_fee": boolean | null; "p_note": string | null }
+        Returns: Json
+      },
+      "opt_out_customer_notification_v1": {
+        Args: { "p_opt_in_token": string | null }
         Returns: Json
       },
       "process_checkout_idempotent_v1": {
@@ -2139,6 +2335,10 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null }
         Returns: Json
       },
+      "upsert_customer_notification_preference_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_channel": string | null; "p_opt_in": boolean | null; "p_quiet_hour_start": string | null; "p_quiet_hour_end": string | null }
+        Returns: Json
+      },
       "upsert_notification_settings_admin_impl_v1": {
         Args: { "p_center_id": string | null; "p_whatsapp_enabled": boolean | null; "p_sms_enabled": boolean | null; "p_reminder_enabled": boolean | null; "p_reminder_hours_before": number | null; "p_whatsapp_sender_name": string | null; "p_sms_sender_name": string | null; "p_whatsapp_template_booking": string | null; "p_whatsapp_template_reminder": string | null; "p_sms_template_reminder": string | null }
         Returns: Json
@@ -2161,6 +2361,10 @@ export type Database = {
       },
       "void_entitlement_v1": {
         Args: { "p_entitlement_id": string | null; "p_reason": string | null; "p_actor_employee_id": string | null }
+        Returns: Json
+      },
+      "write_admin_audit_event_v1": {
+        Args: { "p_center_id": string | null; "p_action": string | null; "p_target_type": string | null; "p_target_id": string | null; "p_target_summary": string | null; "p_reason": string | null; "p_details": Json | null }
         Returns: Json
       }
     }

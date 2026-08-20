@@ -6,7 +6,12 @@
  */
 export const ACTIVATION_STORAGE_KEY = "lenabeauty_activation_events";
 
-export type ActivationEventName = "guide_shown" | "guide_dismissed" | "first_value_reached";
+export type ActivationEventName =
+  | "guide_shown"
+  | "guide_dismissed"
+  | "first_service_created"
+  | "center_fully_setup"
+  | "first_value_reached";
 
 export interface ActivationEvent {
   name: ActivationEventName;

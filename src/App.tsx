@@ -4,6 +4,7 @@ import { AppRoutes } from "./routes";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./shared/components/Toast";
+import { NotificationServiceProvider } from "./shared/hooks/useNotificationService";
 import { ConfirmProvider } from "./shared/components/ConfirmDialog";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
 import { NetworkStatus } from "./shared/components/NetworkStatus";
@@ -18,11 +19,13 @@ export default function App() {
         <AppProvider>
           <AuthProvider>
             <ToastProvider>
-              <ConfirmProvider>
+              <NotificationServiceProvider>
+                <ConfirmProvider>
                 <HashRouter>
                   <AppRoutes />
                 </HashRouter>
-              </ConfirmProvider>
+                </ConfirmProvider>
+              </NotificationServiceProvider>
             </ToastProvider>
           </AuthProvider>
         </AppProvider>

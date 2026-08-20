@@ -219,3 +219,89 @@ export interface PayrollRepository {
   createRun(input: { periodMonth: string; notes?: string }): Promise<Result<{ run: PayrollRun; lines: PayrollLineItem[] }, DomainError>>;
   deleteRun(id: string): Promise<Result<void, DomainError>>;
 }
+
+export interface AdminAuditEvent {
+  id: string;
+  centerId: string;
+  actorId: string;
+  actorName: string;
+  action: string;
+  targetType: string;
+  targetId?: string;
+  targetSummary?: string;
+  reason?: string;
+  details?: Record<string, any>;
+  createdAt: Date;
+}
+
+export interface CustomerSupportNote {
+  id: string;
+  note: string;
+  actorName: string;
+  createdAt: Date;
+}
+
+export interface AdminSearchResult {
+  customers: { id: string; name: string; phone?: string; type: "customer" }[];
+  employees: { id: string; name: string; role: string; type: "employee" }[];
+  invoices: { id: string; serial?: string; total: number; date: string; status: string; type: "invoice" }[];
+}
+
+export interface AdminSupportRepository {
+  /** Global search across customers, employees, and invoices. */
+  search(centerId: string, query: string): Promise<Result<AdminSearchResult, DomainError>>;
+  /** List audit events with optional filters. */
+  listAuditEvents(centerId: string, options?: {
+    limit?: number;
+    offset?: number;
+    action?: string;
+    targetType?: string;
+  }): Promise<Result<{ events: AdminAuditEvent[]; total: number }, DomainError>>;
+  /** Record a high-impact admin action (ADMIN only — RPC validates role). */
+  writeAuditEvent(centerId: string, input: {
+    action: string;
+    targetType: string;
+    targetId?: string;
+    targetSummary?: string;
+    reason?: string;
+    details?: Record<string, any>;
+  }): Promise<Result<AdminAuditEvent, DomainError>>;
+  /** Add a support note to a customer (ADMIN only). */
+  addCustomerSupportNote(centerId: string, customerId: string, note: string): Promise<Result<CustomerSupportNote, DomainError>>;
+  /** List support notes for a customer (center members — read-only). */
+  listCustomerSupportNotes(centerId: string, customerId: string): Promise<Result<CustomerSupportNote[], DomainError>>;
+  /** Deactivate employee with reason audit trail (ADMIN only). */
+  deactivateEmployee(centerId: string, employeeId: string, reason: string): Promise<Result<{ employeeId: string; name: string }, DomainError>>;
+  /** Reactivate employee with reason audit trail (ADMIN only). */
+  reactivateEmployee(centerId: string, employeeId: string, reason: string): Promise<Result<{ employeeId: string; name: string }, DomainError>>;
+}
+
+export interface NotificationEventRecord {
+  id: string;
+  centerId: string;
+  customerId?: string;
+  appointmentId?: string;
+  channel: string;
+  direction: string;
+  templateKey?: string;
+  messagePreview: string;
+  deliveryStatus: string;
+  sentAt?: Date;
+  createdAt: Date;
+}
+
+export interface NotificationRepository {
+  /** List the most recent notification events for the active center. */
+  listRecent(limit?: number): Promise<Result<NotificationEventRecord[], DomainError>>;
+  /** Persist a notification event via the server-governed RPC. */
+  recordEvent(input: {
+    customerId?: string;
+    appointmentId?: string;
+    channel: string;
+    templateKey?: string;
+    messagePreview: string;
+    deliveryStatus: string;
+  }): Promise<Result<NotificationEventRecord, DomainError>>;
+  /** Update the delivery status of an event (retries, receipts). */
+  updateStatus(id: string, deliveryStatus: string): Promise<Result<void, DomainError>>;
+}

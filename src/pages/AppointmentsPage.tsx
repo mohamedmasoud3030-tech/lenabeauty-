@@ -7,6 +7,7 @@ import {
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
+import { useNotificationService } from "../shared/hooks/useNotificationService";
 import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   formatSalonDate,
@@ -113,6 +114,7 @@ function statusClass(s: AppointmentStatus | string) {
 
 export default function AppointmentsPage() {
   const { showToast } = useToast();
+  const notify = useNotificationService();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   // Portrait phones: day first. Week view on a 320–360px screen is unreadable.
@@ -339,6 +341,13 @@ export default function AppointmentsPage() {
           noShowNote: noShowNote || undefined,
         }));
         showToast('success', t("Success"), t("Appointment created successfully"));
+        // Fire the staff notification pipeline (toast channel; dedup+prefs apply).
+        const activeCenter = useCases.tenant.getActiveCenterId();
+        if (activeCenter) {
+          void notify.notifyStaff("appointment_booked", activeCenter, {
+            customer_name: "Appointment",
+          }, `appt_${Date.now()}`).catch(() => undefined);
+        }
       }
       await load();
       setOpen(false);

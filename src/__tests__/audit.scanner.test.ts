@@ -36,11 +36,11 @@ describe("audit: SQL statement splitter", () => {
 });
 
 describe("audit: migration discovery", () => {
-  it("discovers 37 canonical migrations and excludes only the manual bootstrap", () => {
+  it("discovers 39 canonical migrations and excludes only the manual bootstrap", () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(37);
+    expect(all).toHaveLength(39);
     const automated = all.filter((m) => m.file !== "20260628000002_admin_bootstrap.sql");
-    expect(automated).toHaveLength(36);
+    expect(automated).toHaveLength(38);
     expect(all.some((m) => m.file === "20260628000002_admin_bootstrap.sql")).toBe(true);
   });
 });

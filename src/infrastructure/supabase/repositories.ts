@@ -5,7 +5,9 @@ import {
   BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository,
   EntitlementRepository,
   CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository,
-  AttendanceRepository, AdvanceRepository, PayrollRepository
+  AttendanceRepository, AdvanceRepository, PayrollRepository,
+  NotificationRepository, NotificationEventRecord,
+  AdminSupportRepository, AdminAuditEvent, CustomerSupportNote, AdminSearchResult
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, AppointmentStatus, Product, Expense, Invoice,
@@ -3374,6 +3376,273 @@ class SupabasePayrollAdapter implements PayrollRepository {
   }
 }
 
+class SupabaseNotificationAdapter implements NotificationRepository {
+  async listRecent(limit = 10): Promise<Result<NotificationEventRecord[], DomainError>> {
+    const centerRes = getCenterIdFor("Notification.listRecent");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('customer_notification_timeline')
+        .select('*')
+        .eq('center_id', centerRes.data)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (error) return { ok: false, error: createQueryError("Notification.listRecent", error.message) };
+      return {
+        ok: true,
+        data: (data || []).map((row: any) => ({
+          id: row.id,
+          centerId: row.center_id,
+          customerId: row.customer_id ?? undefined,
+          appointmentId: row.appointment_id ?? undefined,
+          channel: row.channel,
+          direction: row.direction,
+          templateKey: row.template_key ?? undefined,
+          messagePreview: row.message_preview,
+          deliveryStatus: row.delivery_status,
+          sentAt: row.sent_at ? new Date(row.sent_at) : undefined,
+          createdAt: new Date(row.created_at),
+        })),
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.listRecent", (e as Error).message) };
+    }
+  }
+
+  async recordEvent(input: {
+    customerId?: string;
+    appointmentId?: string;
+    channel: string;
+    templateKey?: string;
+    messagePreview: string;
+    deliveryStatus: string;
+  }): Promise<Result<NotificationEventRecord, DomainError>> {
+    const centerRes = getCenterIdFor("Notification.recordEvent");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data: row, error } = await getSupabaseClient().rpc('add_customer_notification_event_v1', {
+        p_center_id: centerRes.data,
+        p_customer_id: input.customerId || null,
+        p_appointment_id: input.appointmentId || null,
+        p_channel: input.channel,
+        p_direction: 'OUTBOUND',
+        p_template_key: input.templateKey || null,
+        p_message_preview: input.messagePreview,
+        p_delivery_status: input.deliveryStatus || 'QUEUED',
+        p_sent_at: null,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Notification.recordEvent") };
+        }
+        return { ok: false, error: createQueryError("Notification.recordEvent", error.message) };
+      }
+      const ev = (row as any)?.event;
+      if (!ev) return { ok: false, error: createQueryError("Notification.recordEvent", "Invalid response from notification RPC") };
+      return {
+        ok: true,
+        data: {
+          id: ev.id,
+          centerId: ev.center_id,
+          customerId: ev.customer_id ?? undefined,
+          appointmentId: ev.appointment_id ?? undefined,
+          channel: ev.channel,
+          direction: ev.direction,
+          templateKey: ev.template_key ?? undefined,
+          messagePreview: ev.message_preview,
+          deliveryStatus: ev.delivery_status,
+          sentAt: ev.sent_at ? new Date(ev.sent_at) : undefined,
+          createdAt: new Date(ev.created_at),
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.recordEvent", (e as Error).message) };
+    }
+  }
+
+  async updateStatus(id: string, deliveryStatus: string): Promise<Result<void, DomainError>> {
+    const centerRes = getCenterIdFor("Notification.updateStatus");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { error } = await getSupabaseClient()
+        .from('customer_notification_timeline')
+        .update({ delivery_status: deliveryStatus })
+        .eq('id', id)
+        .eq('center_id', centerRes.data);
+      if (error) return { ok: false, error: createQueryError("Notification.updateStatus", error.message) };
+      return { ok: true, data: undefined };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.updateStatus", (e as Error).message) };
+    }
+  }
+}
+
+class SupabaseAdminSupportAdapter implements AdminSupportRepository {
+  async search(centerId: string, query: string): Promise<Result<AdminSearchResult, DomainError>> {
+    try {
+      if (!query || query.trim().length < 2) {
+        return { ok: true, data: { customers: [], employees: [], invoices: [] } };
+      }
+      const { data, error } = await (getSupabaseClient().rpc as any)('admin_global_search_v1', {
+        p_center_id: centerId,
+        p_query: query.trim(),
+        p_limit: 20,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.search", error.message) };
+      const r = data as any;
+      return {
+        ok: true,
+        data: {
+          customers: r?.customers ?? [],
+          employees: r?.employees ?? [],
+          invoices: r?.invoices ?? [],
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.search", (e as Error).message) };
+    }
+  }
+
+  async listAuditEvents(centerId: string, options?: { limit?: number; offset?: number; action?: string; targetType?: string }): Promise<Result<{ events: AdminAuditEvent[]; total: number }, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('list_admin_audit_events_v1', {
+        p_center_id: centerId,
+        p_limit: options?.limit ?? 50,
+        p_offset: options?.offset ?? 0,
+        p_action: options?.action ?? null,
+        p_target_type: options?.targetType ?? null,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.listAuditEvents", error.message) };
+      const r = data as any;
+      return {
+        ok: true,
+        data: {
+          events: (r?.events ?? []).map((e: any) => ({
+            id: e.id,
+            centerId: e.center_id,
+            actorId: e.actor_id,
+            actorName: e.actor_name,
+            action: e.action,
+            targetType: e.target_type,
+            targetId: e.target_id ?? undefined,
+            targetSummary: e.target_summary ?? undefined,
+            reason: e.reason ?? undefined,
+            details: e.details ?? undefined,
+            createdAt: new Date(e.created_at),
+          })),
+          total: r?.total ?? 0,
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.listAuditEvents", (e as Error).message) };
+    }
+  }
+
+  async writeAuditEvent(centerId: string, input: { action: string; targetType: string; targetId?: string; targetSummary?: string; reason?: string; details?: Record<string, any> }): Promise<Result<AdminAuditEvent, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('write_admin_audit_event_v1', {
+        p_center_id: centerId,
+        p_action: input.action,
+        p_target_type: input.targetType,
+        p_target_id: input.targetId ?? null,
+        p_target_summary: input.targetSummary ?? null,
+        p_reason: input.reason ?? null,
+        p_details: input.details ?? {},
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.writeAuditEvent", error.message) };
+      const ev = (data as any)?.event;
+      if (!ev) return { ok: false, error: createQueryError("AdminSupport.writeAuditEvent", "Invalid response") };
+      return {
+        ok: true,
+        data: {
+          id: ev.id,
+          centerId: ev.center_id,
+          actorId: ev.actor_id,
+          actorName: ev.actor_name,
+          action: ev.action,
+          targetType: ev.target_type,
+          targetId: ev.target_id ?? undefined,
+          targetSummary: ev.target_summary ?? undefined,
+          reason: ev.reason ?? undefined,
+          details: ev.details ?? undefined,
+          createdAt: new Date(ev.created_at),
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.writeAuditEvent", (e as Error).message) };
+    }
+  }
+
+  async addCustomerSupportNote(centerId: string, customerId: string, note: string): Promise<Result<CustomerSupportNote, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('add_customer_support_note_v1', {
+        p_center_id: centerId,
+        p_customer_id: customerId,
+        p_note: note,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.addCustomerSupportNote", error.message) };
+      const n = (data as any)?.note;
+      if (!n) return { ok: false, error: createQueryError("AdminSupport.addCustomerSupportNote", "Invalid response") };
+      return {
+        ok: true,
+        data: { id: n.id, note: n.note, actorName: n.actor_name ?? "", createdAt: new Date(n.created_at) },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.addCustomerSupportNote", (e as Error).message) };
+    }
+  }
+
+  async listCustomerSupportNotes(centerId: string, customerId: string): Promise<Result<CustomerSupportNote[], DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('list_customer_support_notes_v1', {
+        p_center_id: centerId,
+        p_customer_id: customerId,
+        p_limit: 50,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.listCustomerSupportNotes", error.message) };
+      const notes = (data as any)?.notes ?? [];
+      return {
+        ok: true,
+        data: notes.map((n: any) => ({
+          id: n.id, note: n.note, actorName: n.actor_name ?? "", createdAt: new Date(n.created_at),
+        })),
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.listCustomerSupportNotes", (e as Error).message) };
+    }
+  }
+
+  async deactivateEmployee(centerId: string, employeeId: string, reason: string): Promise<Result<{ employeeId: string; name: string }, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('admin_deactivate_employee_v1', {
+        p_center_id: centerId,
+        p_employee_id: employeeId,
+        p_reason: reason,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.deactivateEmployee", error.message) };
+      const r = data as any;
+      return { ok: true, data: { employeeId: r.deactivated_employee_id, name: r.name ?? "" } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.deactivateEmployee", (e as Error).message) };
+    }
+  }
+
+  async reactivateEmployee(centerId: string, employeeId: string, reason: string): Promise<Result<{ employeeId: string; name: string }, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('admin_reactivate_employee_v1', {
+        p_center_id: centerId,
+        p_employee_id: employeeId,
+        p_reason: reason,
+      });
+      if (error) return { ok: false, error: createQueryError("AdminSupport.reactivateEmployee", error.message) };
+      const r = data as any;
+      return { ok: true, data: { employeeId: r.reactivated_employee_id, name: r.name ?? "" } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("AdminSupport.reactivateEmployee", (e as Error).message) };
+    }
+  }
+}
+
 export {
   SupabaseAuthAdapter,
   SupabaseCustomerAdapter,
@@ -3395,5 +3664,7 @@ export {
   SupabaseBookingAdapter,
   SupabaseAttendanceAdapter,
   SupabaseAdvanceAdapter,
-  SupabasePayrollAdapter
+  SupabasePayrollAdapter,
+  SupabaseNotificationAdapter,
+  SupabaseAdminSupportAdapter
 };

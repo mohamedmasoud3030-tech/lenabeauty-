@@ -1,22 +1,22 @@
 {
   "summary": {
     "schema": {
-      "tables": 34,
-      "columns": 364,
+      "tables": 37,
+      "columns": 391,
       "enum_types": 1,
       "enum_labels": 4,
-      "constraints": 382,
-      "foreign_keys": 78,
-      "indexes": 100,
-      "triggers": 23,
+      "constraints": 406,
+      "foreign_keys": 85,
+      "indexes": 110,
+      "triggers": 24,
       "views": 0,
-      "functions": 59,
-      "policies": 46,
-      "grants": 1215
+      "functions": 71,
+      "policies": 58,
+      "grants": 1344
     },
     "frontend": {
-      "tables": 27,
-      "rpc": 31,
+      "tables": 28,
+      "rpc": 32,
       "storage": 1
     },
     "findings_by_severity": {

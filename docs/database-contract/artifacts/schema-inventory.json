@@ -6,6 +6,10 @@
     },
     {
       "schema": "public",
+      "name": "admin_audit_events"
+    },
+    {
+      "schema": "public",
       "name": "ai_booking_leads"
     },
     {
@@ -38,11 +42,19 @@
     },
     {
       "schema": "public",
+      "name": "customer_notification_preferences"
+    },
+    {
+      "schema": "public",
       "name": "customer_notification_timeline"
     },
     {
       "schema": "public",
       "name": "customer_reviews"
+    },
+    {
+      "schema": "public",
+      "name": "customer_support_notes"
     },
     {
       "schema": "public",
@@ -277,6 +289,116 @@
       "nullable": "NO",
       "default": "now()",
       "position": 14
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "actor_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "actor_name",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": "'Unknown'::text",
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "action",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "target_type",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 6
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "target_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 7
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "target_summary",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 8
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "reason",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 9
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "details",
+      "type": "jsonb",
+      "udt": "jsonb",
+      "nullable": "YES",
+      "default": "'{}'::jsonb",
+      "position": 10
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 11
     },
     {
       "schema": "public",
@@ -1240,6 +1362,96 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "channel",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "opt_in",
+      "type": "boolean",
+      "udt": "bool",
+      "nullable": "NO",
+      "default": "true",
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "opt_in_token",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": "gen_random_uuid()",
+      "position": 6
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "quiet_hour_start",
+      "type": "time without time zone",
+      "udt": "time",
+      "nullable": "YES",
+      "default": null,
+      "position": 7
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "quiet_hour_end",
+      "type": "time without time zone",
+      "udt": "time",
+      "nullable": "YES",
+      "default": null,
+      "position": 8
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 9
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "name": "id",
       "type": "uuid",
@@ -1350,6 +1562,16 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_timeline",
+      "name": "dedup_key",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 12
+    },
+    {
+      "schema": "public",
       "table": "customer_reviews",
       "name": "id",
       "type": "uuid",
@@ -1437,6 +1659,66 @@
       "nullable": "NO",
       "default": "now()",
       "position": 9
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "actor_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "note",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 6
     },
     {
       "schema": "public",
@@ -3906,6 +4188,62 @@
     },
     {
       "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_action_not_null",
+      "type": "n",
+      "definition": "NOT NULL action"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_actor_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL actor_id"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_actor_name_not_null",
+      "type": "n",
+      "definition": "NOT NULL actor_name"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_target_type_not_null",
+      "type": "n",
+      "definition": "NOT NULL target_type"
+    },
+    {
+      "schema": "public",
       "table": "ai_booking_leads",
       "name": "ai_booking_leads_center_id_not_null",
       "type": "n",
@@ -4508,6 +4846,69 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "type": "u",
+      "definition": "UNIQUE (center_id, customer_id, channel)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_channel_check",
+      "type": "c",
+      "definition": "CHECK ((channel = ANY (ARRAY['WHATSAPP'::text, 'SMS'::text, 'EMAIL'::text, 'PUSH'::text, 'IN_APP'::text])))"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_channel_not_null",
+      "type": "n",
+      "definition": "NOT NULL channel"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_customer_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL customer_id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_opt_in_not_null",
+      "type": "n",
+      "definition": "NOT NULL opt_in"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "name": "customer_notification_timeline_center_id_not_null",
       "type": "n",
@@ -4659,6 +5060,55 @@
       "name": "customer_reviews_updated_at_not_null",
       "type": "n",
       "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_actor_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL actor_id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_customer_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL customer_id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_note_not_null",
+      "type": "n",
+      "definition": "NOT NULL note"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
     },
     {
       "schema": "public",
@@ -6500,6 +6950,22 @@
     },
     {
       "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_actor_id_fkey",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "ref_schema": "auth",
+      "ref_table": "users"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
       "table": "ai_booking_leads",
       "name": "ai_booking_leads_center_id_fkey",
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
@@ -6652,6 +7118,22 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_customer_id_fkey",
+      "definition": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "customers"
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "name": "customer_notification_timeline_appointment_id_fkey",
       "definition": "FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL",
@@ -6694,6 +7176,30 @@
       "schema": "public",
       "table": "customer_reviews",
       "name": "customer_reviews_customer_id_fkey",
+      "definition": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "customers"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_actor_id_fkey",
+      "definition": "FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "ref_schema": "auth",
+      "ref_table": "users"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_customer_id_fkey",
       "definition": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "customers"
@@ -7128,6 +7634,42 @@
     },
     {
       "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_events_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX admin_audit_events_pkey ON public.admin_audit_events USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "idx_admin_audit_action",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_admin_audit_action ON public.admin_audit_events USING btree (center_id, action)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "idx_admin_audit_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_admin_audit_center ON public.admin_audit_events USING btree (center_id, created_at DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "idx_admin_audit_target",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_admin_audit_target ON public.admin_audit_events USING btree (center_id, target_type, target_id) WHERE (target_id IS NOT NULL)"
+    },
+    {
+      "schema": "public",
       "table": "ai_booking_leads",
       "name": "ai_booking_leads_pkey",
       "unique": true,
@@ -7326,6 +7868,33 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX customer_notification_prefere_center_id_customer_id_channel_key ON public.customer_notification_preferences USING btree (center_id, customer_id, channel)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX customer_notification_preferences_pkey ON public.customer_notification_preferences USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "idx_customer_notification_preferences_customer",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_customer_notification_preferences_customer ON public.customer_notification_preferences USING btree (center_id, customer_id)"
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "name": "customer_notification_timeline_pkey",
       "unique": true,
@@ -7341,6 +7910,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_customer_notification_timeline_customer ON public.customer_notification_timeline USING btree (center_id, customer_id, created_at DESC)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_timeline",
+      "name": "idx_customer_notification_timeline_dedup",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_customer_notification_timeline_dedup ON public.customer_notification_timeline USING btree (center_id, dedup_key) WHERE (dedup_key IS NOT NULL)"
     },
     {
       "schema": "public",
@@ -7368,6 +7946,24 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX idx_customer_reviews_one_per_appointment ON public.customer_reviews USING btree (appointment_id) WHERE (appointment_id IS NOT NULL)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX customer_support_notes_pkey ON public.customer_support_notes USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "idx_customer_support_notes_customer",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_customer_support_notes_customer ON public.customer_support_notes USING btree (center_id, customer_id, created_at DESC)"
     },
     {
       "schema": "public",
@@ -8061,6 +8657,13 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "set_notification_preferences_updated_at",
+      "definition": "CREATE TRIGGER set_notification_preferences_updated_at BEFORE UPDATE ON public.customer_notification_preferences FOR EACH ROW EXECUTE FUNCTION app_private.set_notification_preferences_updated_at()",
+      "enabled": true
+    },
+    {
+      "schema": "public",
       "table": "customer_reviews",
       "name": "trg_customer_reviews_updated_at",
       "definition": "CREATE TRIGGER trg_customer_reviews_updated_at BEFORE UPDATE ON public.customer_reviews FOR EACH ROW EXECUTE FUNCTION touch_updated_at_generic()",
@@ -8267,6 +8870,17 @@
     },
     {
       "schema": "app_private",
+      "name": "set_notification_preferences_updated_at",
+      "identity_args": "",
+      "result": "trigger",
+      "security_definer": false,
+      "volatility": "v",
+      "return_type": "trigger",
+      "config": null,
+      "definition": "CREATE OR REPLACE FUNCTION app_private.set_notification_preferences_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "app_private",
       "name": "set_notification_settings_updated_at",
       "identity_args": "",
       "result": "trigger",
@@ -8358,6 +8972,19 @@
     },
     {
       "schema": "public",
+      "name": "add_customer_support_note_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_note text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.add_customer_support_note_v1(p_center_id uuid, p_customer_id uuid, p_note text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_note public.customer_support_notes;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  IF length(btrim(COALESCE(p_note, ''))) < 2 THEN\n    RAISE EXCEPTION 'note_too_short' USING ERRCODE = '22023';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  INSERT INTO public.customer_support_notes (center_id, customer_id, actor_id, note)\n  VALUES (p_center_id, p_customer_id, auth.uid(), btrim(p_note))\n  RETURNING * INTO v_note;\n\n  -- Also write an audit event\n  INSERT INTO public.admin_audit_events (\n    center_id, actor_id, actor_name, action, target_type,\n    target_id, target_summary, reason\n  ) VALUES (\n    p_center_id, auth.uid(),\n    COALESCE((SELECT full_name FROM public.profiles WHERE id = auth.uid()), 'Admin'),\n    'support_note_added', 'customer', p_customer_id,\n    (SELECT name FROM public.customers WHERE id = p_customer_id),\n    left(btrim(p_note), 200)\n  );\n\n  RETURN jsonb_build_object('note', to_jsonb(v_note));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "admin_create_employee_v1",
       "identity_args": "p_center_id uuid, p_employee jsonb",
       "result": "jsonb",
@@ -8368,6 +8995,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.admin_create_employee_v1(p_center_id uuid, p_employee jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.employees;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF length(btrim(COALESCE(p_employee->>'name', ''))) = 0 THEN\n    RAISE EXCEPTION 'employee_name_required' USING ERRCODE = '22023';\n  END IF;\n  INSERT INTO public.employees (\n    center_id, name, phone, role, salary, base_salary,\n    commission_percentage, is_active\n  ) VALUES (\n    p_center_id,\n    btrim(p_employee->>'name'),\n    NULLIF(btrim(COALESCE(p_employee->>'phone', '')), ''),\n    COALESCE(NULLIF(btrim(COALESCE(p_employee->>'role', '')), ''), 'Staff'),\n    COALESCE((p_employee->>'salary')::NUMERIC, 0),\n    COALESCE((p_employee->>'baseSalary')::NUMERIC, (p_employee->>'salary')::NUMERIC, 0),\n    COALESCE((p_employee->>'commissionPercentage')::NUMERIC, 0),\n    COALESCE((p_employee->>'isActive')::BOOLEAN, TRUE)\n  ) RETURNING * INTO v_row;\n  RETURN jsonb_build_object('employee', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "admin_deactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_deactivate_employee_v1(p_center_id uuid, p_employee_id uuid, p_reason text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_employee public.employees;\n  v_actor_name TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  IF length(btrim(COALESCE(p_reason, ''))) < 10 THEN\n    RAISE EXCEPTION 'reason_too_short' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_employee\n  FROM public.employees e\n  WHERE e.id = p_employee_id AND e.center_id = p_center_id;\n\n  IF v_employee.id IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n\n  IF NOT v_employee.is_active THEN\n    RAISE EXCEPTION 'employee_already_inactive' USING ERRCODE = '22023';\n  END IF;\n\n  UPDATE public.employees\n  SET is_active = FALSE, updated_at = now()\n  WHERE id = p_employee_id AND center_id = p_center_id;\n\n  SELECT COALESCE(full_name, 'Admin') INTO v_actor_name\n  FROM public.profiles WHERE id = auth.uid();\n\n  INSERT INTO public.admin_audit_events (\n    center_id, actor_id, actor_name, action, target_type,\n    target_id, target_summary, reason, details\n  ) VALUES (\n    p_center_id, auth.uid(), v_actor_name,\n    'employee_deactivate', 'employee', p_employee_id,\n    v_employee.name, p_reason,\n    jsonb_build_object('was_active', v_employee.is_active)\n  );\n\n  RETURN jsonb_build_object(\n    'deactivated_employee_id', p_employee_id,\n    'name', v_employee.name\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8384,6 +9024,32 @@
     },
     {
       "schema": "public",
+      "name": "admin_global_search_v1",
+      "identity_args": "p_center_id uuid, p_query text, p_limit integer",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_global_search_v1(p_center_id uuid, p_query text, p_limit integer DEFAULT 20)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_is_admin BOOLEAN;\n  v_customers JSONB;\n  v_employees JSONB;\n  v_invoices JSONB;\n  v_q TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);\n  v_q := '%' || COALESCE(NULLIF(trim(p_query), ''), '') || '%';\n\n  IF length(v_q) < 4 THEN\n    RETURN jsonb_build_object('customers', '[]'::jsonb, 'employees', '[]'::jsonb, 'invoices', '[]'::jsonb);\n  END IF;\n\n  -- Customers — search by name or phone\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_customers\n  FROM (\n    SELECT jsonb_build_object('id', c.id, 'name', c.name, 'phone', c.phone, 'type', 'customer') AS x\n    FROM public.customers c\n    WHERE c.center_id = p_center_id\n      AND (c.name ILIKE v_q OR c.phone ILIKE v_q)\n    ORDER BY c.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Employees — name only (compensation-sensitive, so check admin)\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_employees\n  FROM (\n    SELECT jsonb_build_object(\n      'id', e.id, 'name', e.name, 'role', e.role,\n      'type', 'employee'\n    ) AS x\n    FROM public.employees e\n    WHERE e.center_id = p_center_id AND e.name ILIKE v_q\n    ORDER BY e.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Invoices — serial number or customer name\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_invoices\n  FROM (\n    SELECT jsonb_build_object(\n      'id', i.id, 'serial', i.serial_number, 'total', i.total_amount,\n      'date', i.created_at, 'status', i.status, 'type', 'invoice'\n    ) AS x\n    FROM public.invoices i\n    WHERE i.center_id = p_center_id\n      AND (i.serial_number ILIKE v_q OR i.customer_name ILIKE v_q)\n    ORDER BY i.created_at DESC\n    LIMIT p_limit\n  ) sub;\n\n  RETURN jsonb_build_object(\n    'customers', v_customers,\n    'employees', v_employees,\n    'invoices', v_invoices\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "admin_reactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_reactivate_employee_v1(p_center_id uuid, p_employee_id uuid, p_reason text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_employee public.employees;\n  v_actor_name TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  IF length(btrim(COALESCE(p_reason, ''))) < 10 THEN\n    RAISE EXCEPTION 'reason_too_short' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_employee\n  FROM public.employees e\n  WHERE e.id = p_employee_id AND e.center_id = p_center_id;\n\n  IF v_employee.id IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n\n  IF v_employee.is_active THEN\n    RAISE EXCEPTION 'employee_already_active' USING ERRCODE = '22023';\n  END IF;\n\n  UPDATE public.employees\n  SET is_active = TRUE, updated_at = now()\n  WHERE id = p_employee_id AND center_id = p_center_id;\n\n  SELECT COALESCE(full_name, 'Admin') INTO v_actor_name\n  FROM public.profiles WHERE id = auth.uid();\n\n  INSERT INTO public.admin_audit_events (\n    center_id, actor_id, actor_name, action, target_type,\n    target_id, target_summary, reason, details\n  ) VALUES (\n    p_center_id, auth.uid(), v_actor_name,\n    'employee_reactivate', 'employee', p_employee_id,\n    v_employee.name, p_reason,\n    jsonb_build_object('was_active', FALSE)\n  );\n\n  RETURN jsonb_build_object(\n    'reactivated_employee_id', p_employee_id,\n    'name', v_employee.name\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "admin_update_employee_v1",
       "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
       "result": "jsonb",
@@ -8394,6 +9060,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.admin_update_employee_v1(p_center_id uuid, p_employee_id uuid, p_patch jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.employees;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_patch ? 'name' AND length(btrim(COALESCE(p_patch->>'name', ''))) = 0 THEN\n    RAISE EXCEPTION 'employee_name_required' USING ERRCODE = '22023';\n  END IF;\n  UPDATE public.employees e\n  SET\n    name = CASE WHEN p_patch ? 'name' THEN btrim(p_patch->>'name') ELSE e.name END,\n    phone = CASE WHEN p_patch ? 'phone' THEN NULLIF(btrim(COALESCE(p_patch->>'phone', '')), '') ELSE e.phone END,\n    role = CASE WHEN p_patch ? 'role' THEN COALESCE(NULLIF(btrim(p_patch->>'role'), ''), e.role) ELSE e.role END,\n    salary = CASE WHEN p_patch ? 'salary' THEN (p_patch->>'salary')::NUMERIC ELSE e.salary END,\n    base_salary = CASE WHEN p_patch ? 'baseSalary' THEN (p_patch->>'baseSalary')::NUMERIC ELSE e.base_salary END,\n    commission_percentage = CASE WHEN p_patch ? 'commissionPercentage' THEN (p_patch->>'commissionPercentage')::NUMERIC ELSE e.commission_percentage END,\n    is_active = CASE WHEN p_patch ? 'isActive' THEN (p_patch->>'isActive')::BOOLEAN ELSE e.is_active END\n  WHERE e.id = p_employee_id AND e.center_id = p_center_id\n  RETURNING * INTO v_row;\n  IF v_row.id IS NULL THEN\n    RAISE EXCEPTION 'employee_not_found' USING ERRCODE = 'P0002';\n  END IF;\n  RETURN jsonb_build_object('employee', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "check_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
+      "result": "boolean",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "boolean",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.check_notification_dedup_v1(p_center_id uuid, p_dedup_key text, p_window_minutes integer DEFAULT 1440)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_recent BOOLEAN;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n  IF p_dedup_key IS NULL OR length(trim(p_dedup_key)) = 0 THEN\n    RAISE EXCEPTION 'invalid_dedup_key' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT EXISTS (\n    SELECT 1\n    FROM public.customer_notification_timeline\n    WHERE center_id = p_center_id\n      AND dedup_key = p_dedup_key\n      AND created_at > now() - make_interval(mins => p_window_minutes)\n  ) INTO v_recent;\n\n  RETURN COALESCE(v_recent, FALSE);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8618,6 +9297,45 @@
     },
     {
       "schema": "public",
+      "name": "list_admin_audit_events_v1",
+      "identity_args": "p_center_id uuid, p_limit integer, p_offset integer, p_action text, p_target_type text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.list_admin_audit_events_v1(p_center_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0, p_action text DEFAULT NULL::text, p_target_type text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_rows JSONB;\n  v_total INTEGER;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT COUNT(*)::INTEGER INTO v_total\n  FROM public.admin_audit_events e\n  WHERE e.center_id = p_center_id\n    AND (p_action IS NULL OR e.action = p_action)\n    AND (p_target_type IS NULL OR e.target_type = p_target_type);\n\n  SELECT COALESCE(jsonb_agg(to_jsonb(e) ORDER BY e.created_at DESC), '[]'::jsonb) INTO v_rows\n  FROM (\n    SELECT * FROM public.admin_audit_events e\n    WHERE e.center_id = p_center_id\n      AND (p_action IS NULL OR e.action = p_action)\n      AND (p_target_type IS NULL OR e.target_type = p_target_type)\n    ORDER BY e.created_at DESC\n    LIMIT GREATEST(1, LEAST(p_limit, 200))\n    OFFSET GREATEST(0, p_offset)\n  ) e;\n\n  RETURN jsonb_build_object('events', v_rows, 'total', v_total);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_notification_preferences_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.list_customer_notification_preferences_v1(p_center_id uuid, p_customer_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_rows JSONB;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.channel), '[]'::jsonb)\n  INTO v_rows\n  FROM public.customer_notification_preferences p\n  WHERE p.center_id = p_center_id AND p.customer_id = p_customer_id;\n\n  RETURN jsonb_build_object('preferences', v_rows);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_support_notes_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_limit integer",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.list_customer_support_notes_v1(p_center_id uuid, p_customer_id uuid, p_limit integer DEFAULT 50)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_rows JSONB;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_rows\n  FROM (\n    SELECT jsonb_build_object(\n      'id', n.id,\n      'note', n.note,\n      'actor_name', COALESCE(p.full_name, 'Unknown'),\n      'created_at', n.created_at\n    ) AS x\n    FROM public.customer_support_notes n\n    LEFT JOIN public.profiles p ON p.id = n.actor_id\n    WHERE n.center_id = p_center_id AND n.customer_id = p_customer_id\n    ORDER BY n.created_at DESC\n    LIMIT GREATEST(1, LEAST(p_limit, 200))\n  ) sub;\n\n  RETURN jsonb_build_object('notes', v_rows);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "list_employees_v1",
       "identity_args": "p_center_id uuid",
       "result": "jsonb",
@@ -8641,6 +9359,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.mark_appointment_no_show_v1(p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean DEFAULT true, p_note text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_appt public.appointments%ROWTYPE;\n  v_charge NUMERIC(12,3) := 0;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized appointment center' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT *\n  INTO v_appt\n  FROM public.appointments\n  WHERE id = p_appointment_id\n    AND center_id = p_center_id\n  FOR UPDATE;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'Appointment is not available for this center' USING ERRCODE = '23503';\n  END IF;\n\n  v_charge := CASE\n    WHEN COALESCE(p_charge_no_show_fee, TRUE)\n      THEN GREATEST(COALESCE(v_appt.deposit_amount, 0), COALESCE(v_appt.no_show_fee_amount, 0))\n    ELSE 0\n  END;\n\n  UPDATE public.appointments\n  SET status = 'NO_SHOW',\n      no_show_fee_charged = v_charge,\n      no_show_marked_at = now(),\n      no_show_note = COALESCE(NULLIF(trim(p_note), ''), no_show_note),\n      updated_at = now()\n  WHERE id = p_appointment_id\n    AND center_id = p_center_id;\n\n  RETURN jsonb_build_object(\n    'appointment', (\n      SELECT to_jsonb(a)\n      FROM public.appointments a\n      WHERE a.id = p_appointment_id\n    ),\n    'charged_amount', v_charge\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "opt_out_customer_notification_v1",
+      "identity_args": "p_opt_in_token uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.opt_out_customer_notification_v1(p_opt_in_token uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.customer_notification_preferences%ROWTYPE;\nBEGIN\n  UPDATE public.customer_notification_preferences\n  SET opt_in = FALSE, updated_at = now()\n  WHERE opt_in_token = p_opt_in_token\n  RETURNING * INTO v_row;\n\n  IF v_row.id IS NULL THEN\n    RAISE EXCEPTION 'invalid_token' USING ERRCODE = '22023';\n  END IF;\n\n  RETURN jsonb_build_object('preference', to_jsonb(v_row));\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8865,6 +9596,19 @@
     },
     {
       "schema": "public",
+      "name": "upsert_customer_notification_preference_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_channel text, p_opt_in boolean, p_quiet_hour_start text, p_quiet_hour_end text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.upsert_customer_notification_preference_v1(p_center_id uuid, p_customer_id uuid, p_channel text, p_opt_in boolean, p_quiet_hour_start text DEFAULT NULL::text, p_quiet_hour_end text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_row public.customer_notification_preferences%ROWTYPE;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.customers c\n  WHERE c.id = p_customer_id AND c.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'customer_not_in_center' USING ERRCODE = '23503';\n  END IF;\n\n  IF p_channel NOT IN ('WHATSAPP', 'SMS', 'EMAIL', 'PUSH', 'IN_APP') THEN\n    RAISE EXCEPTION 'invalid_channel' USING ERRCODE = '22023';\n  END IF;\n\n  INSERT INTO public.customer_notification_preferences (\n    center_id, customer_id, channel, opt_in, quiet_hour_start, quiet_hour_end\n  )\n  VALUES (\n    p_center_id, p_customer_id, p_channel,\n    COALESCE(p_opt_in, TRUE),\n    NULLIF(trim(COALESCE(p_quiet_hour_start, '')), '')::time,\n    NULLIF(trim(COALESCE(p_quiet_hour_end, '')), '')::time\n  )\n  ON CONFLICT (center_id, customer_id, channel)\n  DO UPDATE SET\n    opt_in = EXCLUDED.opt_in,\n    quiet_hour_start = EXCLUDED.quiet_hour_start,\n    quiet_hour_end = EXCLUDED.quiet_hour_end,\n    updated_at = now()\n  RETURNING * INTO v_row;\n\n  RETURN jsonb_build_object('preference', to_jsonb(v_row));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "upsert_notification_settings_admin_impl_v1",
       "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
       "result": "jsonb",
@@ -8940,6 +9684,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.void_entitlement_v1(p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_center_id UUID;\nBEGIN\n  SELECT center_id INTO v_center_id\n  FROM public.customer_entitlements\n  WHERE id = p_entitlement_id;\n  IF v_center_id IS NULL OR NOT app_private.has_center_role(v_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.void_entitlement_admin_impl_v1(\n    p_entitlement_id, p_reason, p_actor_employee_id\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "write_admin_audit_event_v1",
+      "identity_args": "p_center_id uuid, p_action text, p_target_type text, p_target_id uuid, p_target_summary text, p_reason text, p_details jsonb",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.write_admin_audit_event_v1(p_center_id uuid, p_action text, p_target_type text, p_target_id uuid DEFAULT NULL::uuid, p_target_summary text DEFAULT NULL::text, p_reason text DEFAULT NULL::text, p_details jsonb DEFAULT '{}'::jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_actor_name TEXT;\n  v_event public.admin_audit_events;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT COALESCE(profiles.full_name, 'Admin') INTO v_actor_name\n  FROM public.profiles\n  WHERE id = auth.uid();\n\n  INSERT INTO public.admin_audit_events (\n    center_id, actor_id, actor_name, action, target_type,\n    target_id, target_summary, reason, details\n  ) VALUES (\n    p_center_id, auth.uid(), v_actor_name, p_action, p_target_type,\n    p_target_id, p_target_summary,\n    NULLIF(trim(COALESCE(p_reason, '')), ''),\n    COALESCE(p_details, '{}'::jsonb)\n  ) RETURNING * INTO v_event;\n\n  RETURN jsonb_build_object('event', to_jsonb(v_event));\nEND;\n$function$\n"
     }
   ],
   "function_acl": [
@@ -9008,6 +9765,13 @@
     },
     {
       "schema": "app_private",
+      "name": "set_notification_preferences_updated_at",
+      "identity_args": "",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "app_private",
       "name": "set_notification_settings_updated_at",
       "identity_args": "",
       "grantee": "postgres",
@@ -9066,6 +9830,27 @@
       "schema": "public",
       "name": "add_customer_notification_event_v1",
       "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_channel text, p_direction text, p_template_key text, p_message_preview text, p_delivery_status text, p_sent_at timestamp with time zone",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "add_customer_notification_event_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_channel text, p_direction text, p_template_key text, p_message_preview text, p_delivery_status text, p_sent_at timestamp with time zone",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "add_customer_support_note_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_note text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "add_customer_support_note_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_note text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9085,6 +9870,20 @@
     },
     {
       "schema": "public",
+      "name": "admin_deactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_deactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "admin_delete_employee_v1",
       "identity_args": "p_center_id uuid, p_employee_id uuid",
       "grantee": "authenticated",
@@ -9099,6 +9898,34 @@
     },
     {
       "schema": "public",
+      "name": "admin_global_search_v1",
+      "identity_args": "p_center_id uuid, p_query text, p_limit integer",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_global_search_v1",
+      "identity_args": "p_center_id uuid, p_query text, p_limit integer",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_reactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "admin_reactivate_employee_v1",
+      "identity_args": "p_center_id uuid, p_employee_id uuid, p_reason text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "admin_update_employee_v1",
       "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
       "grantee": "authenticated",
@@ -9108,6 +9935,20 @@
       "schema": "public",
       "name": "admin_update_employee_v1",
       "identity_args": "p_center_id uuid, p_employee_id uuid, p_patch jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "check_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "check_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9316,6 +10157,48 @@
     },
     {
       "schema": "public",
+      "name": "list_admin_audit_events_v1",
+      "identity_args": "p_center_id uuid, p_limit integer, p_offset integer, p_action text, p_target_type text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_admin_audit_events_v1",
+      "identity_args": "p_center_id uuid, p_limit integer, p_offset integer, p_action text, p_target_type text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_notification_preferences_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_notification_preferences_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_support_notes_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_limit integer",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_customer_support_notes_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_limit integer",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "list_employees_v1",
       "identity_args": "p_center_id uuid",
       "grantee": "authenticated",
@@ -9339,6 +10222,27 @@
       "schema": "public",
       "name": "mark_appointment_no_show_v1",
       "identity_args": "p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean, p_note text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "opt_out_customer_notification_v1",
+      "identity_args": "p_opt_in_token uuid",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "opt_out_customer_notification_v1",
+      "identity_args": "p_opt_in_token uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "opt_out_customer_notification_v1",
+      "identity_args": "p_opt_in_token uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9484,6 +10388,20 @@
     },
     {
       "schema": "public",
+      "name": "upsert_customer_notification_preference_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_channel text, p_opt_in boolean, p_quiet_hour_start text, p_quiet_hour_end text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "upsert_customer_notification_preference_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_channel text, p_opt_in boolean, p_quiet_hour_start text, p_quiet_hour_end text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "upsert_notification_settings_admin_impl_v1",
       "identity_args": "p_center_id uuid, p_whatsapp_enabled boolean, p_sms_enabled boolean, p_reminder_enabled boolean, p_reminder_hours_before integer, p_whatsapp_sender_name text, p_sms_sender_name text, p_whatsapp_template_booking text, p_whatsapp_template_reminder text, p_sms_template_reminder text",
       "grantee": "postgres",
@@ -9544,6 +10462,20 @@
       "identity_args": "p_entitlement_id uuid, p_reason text, p_actor_employee_id uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "write_admin_audit_event_v1",
+      "identity_args": "p_center_id uuid, p_action text, p_target_type text, p_target_id uuid, p_target_summary text, p_reason text, p_details jsonb",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "write_admin_audit_event_v1",
+      "identity_args": "p_center_id uuid, p_action text, p_target_type text, p_target_id uuid, p_target_summary text, p_reason text, p_details jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
     }
   ],
   "policies": [
@@ -9558,6 +10490,54 @@
       "cmd": "ALL",
       "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
       "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_delete",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_insert",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
+      "name": "admin_audit_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "false",
+      "with_check": null
     },
     {
       "schema": "public",
@@ -9669,6 +10649,54 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_delete_policy",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "public"
+      ],
+      "cmd": "DELETE",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_insert_policy",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "public"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_select_policy",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "public"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "customer_notification_preferences",
+      "name": "customer_notification_preferences_update_policy",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "public"
+      ],
+      "cmd": "UPDATE",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "name": "customer_notification_timeline_admin",
       "permissive": "PERMISSIVE",
@@ -9690,6 +10718,54 @@
       "cmd": "ALL",
       "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
       "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_delete",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_insert",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
+      "name": "customer_support_notes_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "false",
+      "with_check": null
     },
     {
       "schema": "public",
@@ -10223,6 +11299,118 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "admin_audit_events_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "ai_booking_leads",
       "grantee": "authenticated",
       "privilege": "SELECT"
@@ -11378,6 +12566,174 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_prefere_center_id_customer_id_channel_key",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_notification_preferences_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "customer_notification_timeline",
       "grantee": "authenticated",
       "privilege": "SELECT"
@@ -11610,6 +12966,118 @@
       "kind": "relation",
       "schema": "public",
       "object": "customer_reviews_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "customer_support_notes_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -12596,6 +14064,174 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_action",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_admin_audit_target",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_advances_center",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -13324,6 +14960,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_preferences_customer",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_customer_notification_timeline_customer",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -13374,6 +15066,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_customer_notification_timeline_customer",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_notification_timeline_dedup",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -13486,6 +15234,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_customer_reviews_one_per_appointment",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customer_support_notes_customer",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -18035,6 +19839,13 @@
     {
       "kind": "routine",
       "schema": "app_private",
+      "object": "set_notification_preferences_updated_at",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
       "object": "set_notification_settings_updated_at",
       "grantee": "postgres",
       "privilege": "EXECUTE"
@@ -18092,6 +19903,27 @@
       "kind": "routine",
       "schema": "public",
       "object": "add_customer_notification_event_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "add_customer_notification_event_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "add_customer_support_note_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "add_customer_support_note_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -18112,6 +19944,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "admin_deactivate_employee_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_deactivate_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "admin_delete_employee_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -18126,6 +19972,34 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "admin_global_search_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_global_search_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_reactivate_employee_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "admin_reactivate_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "admin_update_employee_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -18134,6 +20008,20 @@
       "kind": "routine",
       "schema": "public",
       "object": "admin_update_employee_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "check_notification_dedup_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "check_notification_dedup_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -18343,6 +20231,48 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "list_admin_audit_events_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_admin_audit_events_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_customer_notification_preferences_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_customer_notification_preferences_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_customer_support_notes_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_customer_support_notes_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "list_employees_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -18365,6 +20295,27 @@
       "kind": "routine",
       "schema": "public",
       "object": "mark_appointment_no_show_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "opt_out_customer_notification_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "opt_out_customer_notification_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "opt_out_customer_notification_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -18511,6 +20462,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "upsert_customer_notification_preference_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "upsert_customer_notification_preference_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "upsert_notification_settings_admin_impl_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
@@ -18572,6 +20537,20 @@
       "privilege": "EXECUTE"
     },
     {
+      "kind": "routine",
+      "schema": "public",
+      "object": "write_admin_audit_event_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "write_admin_audit_event_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
       "kind": "schema",
       "schema": "app_private",
       "object": "app_private",
@@ -18611,6 +20590,12 @@
     {
       "schema": "public",
       "table": "accounting_journal_entries",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "admin_audit_events",
       "rls_enabled": true,
       "rls_forced": false
     },
@@ -18664,6 +20649,12 @@
     },
     {
       "schema": "public",
+      "table": "customer_notification_preferences",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
       "table": "customer_notification_timeline",
       "rls_enabled": true,
       "rls_forced": false
@@ -18671,6 +20662,12 @@
     {
       "schema": "public",
       "table": "customer_reviews",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "customer_support_notes",
       "rls_enabled": true,
       "rls_forced": false
     },

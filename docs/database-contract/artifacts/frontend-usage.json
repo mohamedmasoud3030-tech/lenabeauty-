@@ -1,5 +1,5 @@
 {
-  "files": 231,
+  "files": 249,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -394,6 +394,25 @@
         "center_id",
         "created_at",
         "customer_id"
+      ],
+      "single": []
+    },
+    {
+      "table": "customer_notification_timeline",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        }
+      ],
+      "filters": [
+        "center_id",
+        "created_at",
+        "id"
       ],
       "single": []
     },
@@ -1179,6 +1198,23 @@
     }
   ],
   "rpc": [
+    {
+      "name": "add_customer_notification_event_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_channel",
+        "p_customer_id",
+        "p_delivery_status",
+        "p_direction",
+        "p_message_preview",
+        "p_sent_at",
+        "p_template_key"
+      ]
+    },
     {
       "name": "admin_create_employee_v1",
       "files": [
