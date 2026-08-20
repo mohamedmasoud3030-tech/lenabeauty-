@@ -22,7 +22,7 @@ const statusBadge: Record<AdvanceStatus, string> = {
 };
 
 export default function AdvancesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
 
   const [advances, setAdvances] = useState<EmployeeAdvance[]>([]);
@@ -189,7 +189,7 @@ export default function AdvancesPage() {
               </div>
               <div>
                 <p className="text-sm text-neutral-600">{t("Date")}</p>
-                <p className="font-bold text-neutral-800">{new Date(adv.advanceDate).toLocaleDateString("ar-SA")}</p>
+                <p className="font-bold text-neutral-800">{new Date(adv.advanceDate).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-600">{t("Reason")}</p>

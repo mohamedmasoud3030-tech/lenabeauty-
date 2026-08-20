@@ -28,7 +28,7 @@ import { clsx } from "clsx";
 type TabId = "search" | "audit" | "employees";
 
 export default function SupportOperationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { me } = useAuth();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -128,7 +128,7 @@ export default function SupportOperationsPage() {
  *  GLOBAL SEARCH TAB
  * ==================================================================== */
 function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<{ customers: any[]; employees: any[]; invoices: any[] } | null>(null);
@@ -225,7 +225,7 @@ function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boo
                   <div>
                     <p className="text-sm font-bold text-foreground">{i.serial ?? "—"}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(i.date).toLocaleDateString()} · {Number(i.total).toFixed(3)} OMR
+                      {new Date(i.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })} · {Number(i.total).toFixed(3)} OMR
                     </p>
                   </div>
                   <span className={clsx(
@@ -255,7 +255,7 @@ function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boo
  *  AUDIT TRAIL TAB
  * ==================================================================== */
 function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [events, setEvents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -354,14 +354,14 @@ function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boole
                 events.map((e: any) => (
                   <tr key={e.id} className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(e.createdAt).toLocaleString()}
+                      {new Date(e.createdAt).toLocaleString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium", timeStyle: "short" })}
                     </td>
                     <td className="px-4 py-3">
                       <span className={clsx("text-xs font-bold", actionColor(e.action))}>{e.action}</span>
                     </td>
                     <td className="px-4 py-3 text-xs text-foreground">
                       {e.targetSummary ?? e.targetType}
-                      {e.targetId && <span className="text-muted-foreground ml-1">({e.targetId.slice(0, 8)}…)</span>}
+                      {e.targetId && <span className="text-muted-foreground ms-1">({e.targetId.slice(0, 8)}…)</span>}
                     </td>
                     <td className="px-4 py-3 text-xs text-foreground">{e.actorName}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">

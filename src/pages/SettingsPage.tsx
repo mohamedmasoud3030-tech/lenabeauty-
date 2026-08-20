@@ -2,7 +2,8 @@ import React, { lazy, Suspense, useEffect, useState } from "react";
 import {
   Save, Download, Building2, Database,
   ShieldCheck, Globe, Phone, MapPin, Hash,
-  Coins, ChevronRight, Bell, Palette, CreditCard
+  Coins, ChevronRight, Bell, Palette, CreditCard,
+  UserRound, Trash2, FileJson, CheckCircle2
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
@@ -20,8 +21,8 @@ const BrandingSettingsSection = lazy(() => import("./BrandingSettingsPage"));
 const NotificationsSettingsSection = lazy(() => import("./NotificationsSettingsPage"));
 const PaymentGatewaySettingsSection = lazy(() => import("./PaymentGatewaySettingsPage"));
 
-type SettingsTab = "center" | "backup" | "branding" | "notifications" | "payments";
-const SETTINGS_TABS = new Set<SettingsTab>(["center", "backup", "branding", "notifications", "payments"]);
+type SettingsTab = "center" | "backup" | "branding" | "notifications" | "payments" | "privacy";
+const SETTINGS_TABS = new Set<SettingsTab>(["center", "backup", "branding", "notifications", "payments", "privacy"]);
 
 function readSettingsTab(value: string | null): SettingsTab {
   return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
@@ -147,6 +148,7 @@ export default function SettingsPage() {
     { id: "branding", label: t("Branding"), icon: Palette, desc: t("Manage salon visual identity") },
     { id: "notifications", label: t("Notifications"), icon: Bell, desc: t("Appointment reminders and messages") },
     { id: "payments", label: t("Payment Gateway"), icon: CreditCard, desc: t("Booking deposit configuration") },
+    { id: "privacy", label: t("Privacy & My Data"), icon: ShieldCheck, desc: t("Export or request deletion of your data") },
   ];
 
   return (
@@ -426,9 +428,156 @@ export default function SettingsPage() {
               </div>
             )}
 
+            {tab === "privacy" && (
+              <PrivacySection />
+            )}
+
           </motion.div>
         </AnimatePresence>
       </section>
+      </div>
+    </div>
+  );
+}
+
+/* ==================================================================== *
+ *  PRIVACY & MY DATA SECTION
+ * ==================================================================== */
+function PrivacySection() {
+  const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [deletionRequested, setDeletionRequested] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  async function handleExportMyData() {
+    try {
+      setBusy(true);
+      const res = await unwrap(useCases.settings.exportData());
+      const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `my_data_export_${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("success", t("Success"), t("Your data export was downloaded to this device."));
+    } catch (err: any) {
+      showToast("error", t("Error"), err?.message || t("Failed to export data"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRequestDeletion() {
+    if (!confirmDelete) return;
+    setBusy(true);
+    try {
+      const res = await useCases.help.createTicket({
+        route: "/settings?tab=privacy",
+        expectedBehavior: "My account and personal data should be deleted",
+        actualBehavior: "I request account deletion",
+        urgency: "high",
+      });
+      if (res.ok) {
+        setDeletionRequested(true);
+        showToast("success", t("Success"), t("Deletion request submitted to the center administrator."));
+      } else {
+        showToast("error", t("Error"), res.error?.message || t("Could not submit request"));
+      }
+    } catch (e: any) {
+      showToast("error", t("Error"), e?.message || t("Could not submit request"));
+    } finally {
+      setBusy(false);
+      setConfirmDelete(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Export */}
+      <div className="rounded-[2rem] border border-border bg-card p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <FileJson className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{t("Export my data")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("Download the operational records of this center as a JSON file to this device. Nothing is sent to a server.")}
+            </p>
+          </div>
+        </div>
+        <button
+          disabled={busy}
+          onClick={handleExportMyData}
+          className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+        >
+          <Download className="h-4 w-4" />
+          {busy ? t("Processing...") : t("Download my data")}
+        </button>
+      </div>
+
+      {/* Deletion request */}
+      <div className="rounded-[2rem] border border-destructive/25 bg-destructive/5 p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 shrink-0 rounded-2xl bg-destructive/10 flex items-center justify-center text-destructive">
+            <Trash2 className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">{t("Request account deletion")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("Submits a deletion request to the center administrator. The administrator confirms before any data is removed. Invoices and financial records may be retained for legal requirements.")}
+            </p>
+          </div>
+        </div>
+
+        {deletionRequested ? (
+          <div className="rounded-2xl border border-success/30 bg-success/10 p-4 flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-foreground">{t("Request submitted")}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t("The administrator will review it. You can follow its status in Support Operations.")}
+              </p>
+            </div>
+          </div>
+        ) : confirmDelete ? (
+          <div className="space-y-3 rounded-2xl border border-destructive/30 bg-card p-4">
+            <p className="text-sm font-bold text-foreground">{t("Are you sure?")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("This will hide your account from the app and notify the administrator. It does not immediately delete financial history.")}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="h-11 flex-1 rounded-xl border border-border text-sm font-bold hover:bg-muted/30 transition-all"
+              >
+                {t("Cancel")}
+              </button>
+              <button
+                onClick={handleRequestDeletion}
+                disabled={busy}
+                className="h-11 flex-1 rounded-xl bg-destructive text-white text-sm font-bold disabled:opacity-50 transition-all"
+              >
+                {busy ? t("Processing...") : t("Confirm request")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-card px-6 py-3 text-sm font-bold text-destructive hover:bg-destructive/10 transition-all"
+          >
+            <Trash2 className="h-4 w-4" />
+            {t("Request deletion")}
+          </button>
+        )}
+
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+          <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+          {t("This is a provider-neutral request workflow — no external service is used.")}
+        </p>
       </div>
     </div>
   );

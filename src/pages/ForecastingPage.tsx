@@ -40,7 +40,7 @@ export default function ForecastingPage() {
       <div className="rounded-2xl border bg-card p-4 overflow-auto">
         <h2 className="mb-3 font-bold">{t("Inventory Forecast")}</h2>
         <table className="min-w-full text-sm">
-          <thead><tr className="text-left text-muted-foreground"><th className="py-2">{t("Product")}</th><th>{t("Stock")}</th><th>{t("Avg Daily Units")}</th><th>{t("Days Remaining")}</th><th>{t("Alert")}</th></tr></thead>
+          <thead><tr className="text-start text-muted-foreground"><th className="py-2">{t("Product")}</th><th>{t("Stock")}</th><th>{t("Avg Daily Units")}</th><th>{t("Days Remaining")}</th><th>{t("Alert")}</th></tr></thead>
           <tbody>
             {inventory.map((row) => (
               <tr key={row.productId} className="border-t"><td className="py-2 font-medium">{row.productName}</td><td>{row.stockQuantity}</td><td>{row.averageDailyUnits}</td><td>{row.daysRemaining}</td><td>{row.reorderAlert ? t("Reorder soon") : t("Healthy")}</td></tr>

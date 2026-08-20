@@ -29,7 +29,7 @@ const statusBadge: Record<AttendanceStatus, string> = {
 };
 
 export default function AttendancePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
 
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -238,21 +238,21 @@ export default function AttendancePage() {
           <table className="w-full">
             <thead className="bg-gray-100 border-b-2 border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Employee")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Date")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-in")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-out")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Hours")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Method")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Status")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700"></th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Employee")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Date")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Check-in")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Check-out")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Hours")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Method")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700">{t("Status")}</th>
+                <th className="px-6 py-3 text-end text-sm font-bold text-neutral-700"></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((rec) => (
                 <tr key={rec.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
                   <td className="px-6 py-4 font-bold text-neutral-800">{employeeName(rec.employeeId)}</td>
-                  <td className="px-6 py-4 text-neutral-600">{new Date(rec.date).toLocaleDateString("ar-SA")}</td>
+                  <td className="px-6 py-4 text-neutral-600">{new Date(rec.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</td>
                   <td className="px-6 py-4 text-neutral-600">{rec.checkInTime || "-"}</td>
                   <td className="px-6 py-4 text-neutral-600">{rec.checkOutTime || "-"}</td>
                   <td className="px-6 py-4 font-bold text-blue-600">{rec.workHours.toFixed(2)}</td>

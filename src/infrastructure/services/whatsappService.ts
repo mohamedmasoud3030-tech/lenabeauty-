@@ -234,7 +234,7 @@ ${offerTitle}
    * Log notification to database
    */
   private async logNotification(log: WhatsAppNotificationLog): Promise<void> {
-    logger.log('[WhatsApp Log]', { id: log.id, type: log.type, status: log.status });
+    logger.debug('[WhatsApp Log]', { id: log.id.slice(-6), type: log.type, status: log.status });
     this.sentLogs.unshift(log);
     this.sentLogs = this.sentLogs.slice(0, 200);
   }
@@ -281,7 +281,10 @@ ${offerTitle}
    * Get notification history for a customer
    */
   async getNotificationHistory(customerId: string): Promise<WhatsAppNotificationLog[]> {
-    logger.log(`Fetching notification history for customer: ${customerId}`);
+    // Privacy: log only a short non-reversible suffix of the id, never the
+    // full customer identifier.
+    const safeRef = customerId.slice(-4);
+    logger.debug(`Fetching notification history for customer …${safeRef}`);
     return this.sentLogs.filter((log) => log.customerId === customerId);
   }
 
@@ -293,8 +296,8 @@ ${offerTitle}
     phone: string,
     optIn: boolean
   ): Promise<void> {
-    logger.log(
-      `Customer ${customerId} ${optIn ? 'opted in' : 'opted out'} from WhatsApp notifications`
+    logger.debug(
+      `Customer …${String(customerId).slice(-4)} ${optIn ? 'opted in' : 'opted out'} from WhatsApp notifications`
     );
     // This would update the database
   }

@@ -32,7 +32,10 @@ export class TauriClient {
     try {
       // In v2.0, this will invoke Tauri backend
       // For now: stub that returns empty results
-      logger.log('[Tauri] query:', sql, params);
+      // Privacy: log the statement shape only, never the bound parameters —
+      // params can carry customer names, phones, or other personal data.
+      const shape = sql.replace(/\s+/g, " ").slice(0, 120);
+      logger.debug('[Tauri] query:', shape);
       return { ok: true, data: [] };
     } catch (error) {
       console.error('[Tauri] query error:', error);

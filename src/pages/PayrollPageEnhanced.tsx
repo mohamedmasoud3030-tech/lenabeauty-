@@ -104,9 +104,9 @@ export default function PayrollPageEnhanced() {
     const lines = selectedRun.lines.map((l) => `
       <tr>
         <td>${escapePrintText(employeeName(l.employeeId))}</td>
-        <td class="text-right">${l.baseSalary.toFixed(3)}</td>
-        <td class="text-right">${l.advancesDeducted.toFixed(3)}</td>
-        <td class="text-right font-bold">${l.netSalary.toFixed(3)}</td>
+        <td class="text-end">${l.baseSalary.toFixed(3)}</td>
+        <td class="text-end">${l.advancesDeducted.toFixed(3)}</td>
+        <td class="text-end font-bold">${l.netSalary.toFixed(3)}</td>
       </tr>`).join("");
     return `
       <div class="section">
@@ -123,9 +123,9 @@ export default function PayrollPageEnhanced() {
           <tfoot>
             <tr style="background-color: var(--primary-color); color: white;">
               <td class="font-bold">${escapePrintText(t("Total"))}</td>
-              <td class="text-right">${totals.base.toFixed(3)}</td>
-              <td class="text-right">${totals.advances.toFixed(3)}</td>
-              <td class="text-right font-bold">${totals.net.toFixed(3)}</td>
+              <td class="text-end">${totals.base.toFixed(3)}</td>
+              <td class="text-end">${totals.advances.toFixed(3)}</td>
+              <td class="text-end font-bold">${totals.net.toFixed(3)}</td>
             </tr>
           </tfoot>
         </table>
@@ -248,26 +248,26 @@ export default function PayrollPageEnhanced() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/20">
-                  <th className="text-right py-3 px-4 text-neutral-300">{t("Employee")}</th>
-                  <th className="text-right py-3 px-4 text-neutral-300">{t("Base")}</th>
-                  <th className="text-right py-3 px-4 text-neutral-300">{t("Advances")}</th>
-                  <th className="text-right py-3 px-4 text-white font-bold">{t("Net")}</th>
+                  <th className="text-end py-3 px-4 text-neutral-300">{t("Employee")}</th>
+                  <th className="text-end py-3 px-4 text-neutral-300">{t("Base")}</th>
+                  <th className="text-end py-3 px-4 text-neutral-300">{t("Advances")}</th>
+                  <th className="text-end py-3 px-4 text-white font-bold">{t("Net")}</th>
                 </tr>
               </thead>
               <tbody>
                 {selectedRun.lines.map((l) => (
                   <tr key={l.id} className="border-b border-white/10 hover:bg-white/5 transition">
                     <td className="py-3 px-4 text-white">{employeeName(l.employeeId)}</td>
-                    <td className="py-3 px-4 text-right text-neutral-300">{l.baseSalary.toFixed(3)}</td>
-                    <td className="py-3 px-4 text-right text-orange-400">-{l.advancesDeducted.toFixed(3)}</td>
-                    <td className="py-3 px-4 text-right text-white font-bold">{l.netSalary.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-end text-neutral-300">{l.baseSalary.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-end text-orange-400">-{l.advancesDeducted.toFixed(3)}</td>
+                    <td className="py-3 px-4 text-end text-white font-bold">{l.netSalary.toFixed(3)}</td>
                   </tr>
                 ))}
                 <tr className="border-t-2 border-white/30 font-bold">
                   <td className="py-3 px-4 text-white">{t("Total")}</td>
-                  <td className="py-3 px-4 text-right text-white">{totals.base.toFixed(3)}</td>
-                  <td className="py-3 px-4 text-right text-orange-400">-{totals.advances.toFixed(3)}</td>
-                  <td className="py-3 px-4 text-right text-white">{totals.net.toFixed(3)}</td>
+                  <td className="py-3 px-4 text-end text-white">{totals.base.toFixed(3)}</td>
+                  <td className="py-3 px-4 text-end text-orange-400">-{totals.advances.toFixed(3)}</td>
+                  <td className="py-3 px-4 text-end text-white">{totals.net.toFixed(3)}</td>
                 </tr>
               </tbody>
             </table>

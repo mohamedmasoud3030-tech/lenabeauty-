@@ -45,7 +45,7 @@ export default function AdvancedAutomationPage() {
         <button onClick={saveLead} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">{t("Save Lead")}</button>
       </div>
       <div className="rounded-2xl border bg-card p-4 overflow-auto">
-        <table className="min-w-full text-sm"><thead><tr className="text-left text-muted-foreground"><th className="py-2">{t("Name")}</th><th>{t("Phone")}</th><th>{t("Status")}</th><th>{t("Summary")}</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.id} className="border-t"><td className="py-2">{lead.customerName}</td><td>{lead.customerPhone || "—"}</td><td>{lead.status}</td><td>{lead.summary || "—"}</td></tr>)}</tbody></table>
+        <table className="min-w-full text-sm"><thead><tr className="text-start text-muted-foreground"><th className="py-2">{t("Name")}</th><th>{t("Phone")}</th><th>{t("Status")}</th><th>{t("Summary")}</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.id} className="border-t"><td className="py-2">{lead.customerName}</td><td>{lead.customerPhone || "—"}</td><td>{lead.status}</td><td>{lead.summary || "—"}</td></tr>)}</tbody></table>
       </div>
       <div className="rounded-2xl border bg-card p-4 text-sm text-muted-foreground">
         <strong>{t("Tauri desktop status")}:</strong> {t("Documented foundation added in roadmap; app remains web-first until Tauri bootstrap is initialized.")}

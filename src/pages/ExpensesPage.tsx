@@ -17,7 +17,7 @@ import { Modal } from "../shared/components/Modal";
 
 export default function ExpensesPage() {
   const { showToast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -186,7 +186,7 @@ export default function ExpensesPage() {
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Current Period")}</span>
           </div>
           <div className="text-2xl font-bold text-foreground uppercase tracking-tight">
-            {new Date().toLocaleDateString("ar-OM", { month: "long", year: "numeric" })}
+            {new Date().toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { month: "long", year: "numeric" })}
           </div>
         </motion.div>
       </div>
@@ -278,7 +278,7 @@ export default function ExpensesPage() {
                     <td>
                       <div className="flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-xl w-fit">
                         <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-bold text-foreground">{new Date(exp.date).toLocaleDateString()}</span>
+                        <span className="font-bold text-foreground">{new Date(exp.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</span>
                       </div>
                     </td>
                     <td>
@@ -335,7 +335,7 @@ export default function ExpensesPage() {
                   </div>
                   <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">
                     <Calendar className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{new Date(exp.date).toLocaleDateString()}</span>
+                    <span className="font-bold text-foreground text-sm">{new Date(exp.date).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium" })}</span>
                   </div>
                 </div>
 

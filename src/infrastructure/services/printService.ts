@@ -308,11 +308,13 @@ class PrintService {
    */
   private getDocumentFooter(): string {
     const branding = brandingService.getSettings();
+    // Follow the app's active language for the printed date (Arabic-first).
+    const isAr = typeof window !== "undefined" && document.documentElement.lang === "ar";
     return `
       <div class="document-footer">
         <p>${escapePrintText(branding.footerText)}</p>
         ${branding.registrationNumber ? `<p>Registration: ${escapePrintText(branding.registrationNumber)}</p>` : ''}
-        <p>${new Date().toLocaleDateString()}</p>
+        <p>${new Date().toLocaleDateString(isAr ? 'ar-OM' : 'en-US', { dateStyle: 'medium' })}</p>
       </div>
     `;
   }
