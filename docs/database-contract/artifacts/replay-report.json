@@ -419,8 +419,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "6915532de3aaec1887d666e004ded9fad384a0f43c45af8caf391e9fe5f31d62",
-    "after_repeat": "6915532de3aaec1887d666e004ded9fad384a0f43c45af8caf391e9fe5f31d62",
+    "after_first_replay": "ae56e5541b1d74a9569b8309d77c53ae9a0421bade6d3b1cf5c86eb6b09a1779",
+    "after_repeat": "ae56e5541b1d74a9569b8309d77c53ae9a0421bade6d3b1cf5c86eb6b09a1779",
     "identical": true,
     "diff": {
       "changed_sections": [],

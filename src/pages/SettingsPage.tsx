@@ -166,7 +166,7 @@ export default function SettingsPage() {
 
           <nav aria-label={t("Settings")} className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:block lg:space-y-2">
             {navItems.map((item) => (
-              <button
+              <button type="button"
                 key={item.id}
                 onClick={() => selectTab(item.id)}
                 aria-current={tab === item.id ? "page" : undefined}
@@ -352,7 +352,7 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="pt-6 border-t border-border flex justify-end">
-                    <button
+                    <button type="button"
                       disabled={busy}
                       onClick={saveCenter}
                       className="group relative inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-10 py-4 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
-                  <button
+                  <button type="button"
                     disabled={busy}
                     onClick={handleExportData}
                     className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
@@ -444,7 +444,7 @@ export default function SettingsPage() {
  *  PRIVACY & MY DATA SECTION
  * ==================================================================== */
 function PrivacySection() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
   const [deletionRequested, setDeletionRequested] = useState(false);
@@ -508,7 +508,7 @@ function PrivacySection() {
             </p>
           </div>
         </div>
-        <button
+        <button type="button"
           disabled={busy}
           onClick={handleExportMyData}
           className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
@@ -532,47 +532,55 @@ function PrivacySection() {
           </div>
         </div>
 
-        {deletionRequested ? (
-          <div className="rounded-2xl border border-success/30 bg-success/10 p-4 flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-foreground">{t("Request submitted")}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {t("The administrator will review it. You can follow its status in Support Operations.")}
-              </p>
-            </div>
-          </div>
-        ) : confirmDelete ? (
-          <div className="space-y-3 rounded-2xl border border-destructive/30 bg-card p-4">
-            <p className="text-sm font-bold text-foreground">{t("Are you sure?")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("This will hide your account from the app and notify the administrator. It does not immediately delete financial history.")}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="h-11 flex-1 rounded-xl border border-border text-sm font-bold hover:bg-muted/30 transition-all"
-              >
-                {t("Cancel")}
-              </button>
-              <button
-                onClick={handleRequestDeletion}
-                disabled={busy}
-                className="h-11 flex-1 rounded-xl bg-destructive text-white text-sm font-bold disabled:opacity-50 transition-all"
-              >
-                {busy ? t("Processing...") : t("Confirm request")}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-card px-6 py-3 text-sm font-bold text-destructive hover:bg-destructive/10 transition-all"
-          >
-            <Trash2 className="h-4 w-4" />
-            {t("Request deletion")}
-          </button>
-        )}
+        {(() => {
+          if (deletionRequested) {
+            return (
+              <div className="rounded-2xl border border-success/30 bg-success/10 p-4 flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-bold text-foreground">{t("Request submitted")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t("The administrator will review it. You can follow its status in Support Operations.")}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          if (confirmDelete) {
+            return (
+              <div className="space-y-3 rounded-2xl border border-destructive/30 bg-card p-4">
+                <p className="text-sm font-bold text-foreground">{t("Are you sure?")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("This will hide your account from the app and notify the administrator. It does not immediately delete financial history.")}
+                </p>
+                <div className="flex gap-2">
+                  <button type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="h-11 flex-1 rounded-xl border border-border text-sm font-bold hover:bg-muted/30 transition-all"
+                  >
+                    {t("Cancel")}
+                  </button>
+                  <button type="button"
+                    onClick={handleRequestDeletion}
+                    disabled={busy}
+                    className="h-11 flex-1 rounded-xl bg-destructive text-white text-sm font-bold disabled:opacity-50 transition-all"
+                  >
+                    {busy ? t("Processing...") : t("Confirm request")}
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <button type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-card px-6 py-3 text-sm font-bold text-destructive hover:bg-destructive/10 transition-all"
+            >
+              <Trash2 className="h-4 w-4" />
+              {t("Request deletion")}
+            </button>
+          );
+        })()}
 
         <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
           <ShieldCheck className="h-3 w-3" aria-hidden="true" />

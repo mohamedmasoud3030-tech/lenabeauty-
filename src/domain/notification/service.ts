@@ -44,10 +44,10 @@ export interface NotificationServiceDeps {
 }
 
 export class NotificationService {
-  private dedup: DedupStore;
-  private rateLimiter: RateLimiter;
+  private readonly dedup: DedupStore;
+  private readonly rateLimiter: RateLimiter;
 
-  constructor(private deps: NotificationServiceDeps) {
+  constructor(private readonly deps: NotificationServiceDeps) {
     this.dedup = new DedupStore(deps.dedupWindowMinutes ?? 1440);
     this.rateLimiter = new RateLimiter(50, 60_000);
   }

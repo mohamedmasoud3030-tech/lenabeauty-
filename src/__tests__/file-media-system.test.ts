@@ -21,23 +21,14 @@ import {
  * ================================================================= */
 
 describe("logo file validation", () => {
-  it("accepts JPEG", () => {
-    const file = new File(["dummy"], "logo.jpg", { type: "image/jpeg" });
-    Object.defineProperty(file, "size", { value: 1024 });
-    expect(validateLogoFile(file).valid).toBe(true);
-  });
-
-  it("accepts PNG", () => {
-    const file = new File(["dummy"], "logo.png", { type: "image/png" });
-    Object.defineProperty(file, "size", { value: 1024 });
-    expect(validateLogoFile(file).valid).toBe(true);
-  });
-
-  it("accepts WebP", () => {
-    const file = new File(["dummy"], "logo.webp", { type: "image/webp" });
-    Object.defineProperty(file, "size", { value: 1024 });
-    expect(validateLogoFile(file).valid).toBe(true);
-  });
+  it.each(["image/jpeg", "image/png", "image/webp"])(
+    "accepts %s",
+    (mime) => {
+      const file = new File(["dummy"], `logo.${mime.split("/")[1]}`, { type: mime });
+      Object.defineProperty(file, "size", { value: 1024 });
+      expect(validateLogoFile(file).valid).toBe(true);
+    },
+  );
 
   it("rejects GIF", () => {
     const file = new File(["dummy"], "logo.gif", { type: "image/gif" });

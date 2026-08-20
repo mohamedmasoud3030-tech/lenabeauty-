@@ -30,9 +30,9 @@ export function buildDedupKey(
  * Persisted store (database) is provided by the repository layer.
  */
 export class DedupStore {
-  private recent = new Map<string, number>();
+  private readonly recent = new Map<string, number>();
 
-  constructor(private windowMinutes: number) {}
+  constructor(private readonly windowMinutes: number) {}
 
   /**
    * Check whether the key has been seen within the window.
@@ -62,11 +62,11 @@ export class DedupStore {
  * A small rate limiter: max N events per windowMs per key.
  */
 export class RateLimiter {
-  private hits = new Map<string, number[]>();
+  private readonly hits = new Map<string, number[]>();
 
   constructor(
-    private max: number,
-    private windowMs: number,
+    private readonly max: number,
+    private readonly windowMs: number,
   ) {}
 
   /** Whether sending now would exceed the limit. */

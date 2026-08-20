@@ -92,7 +92,7 @@ export default function SupportOperationsPage() {
           { id: "audit" as TabId, label: t("Audit Trail"), icon: Clock },
           { id: "employees" as TabId, label: t("Employee Management"), icon: UserCog },
         ].map((tab) => (
-          <button
+          <button type="button"
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
@@ -166,7 +166,7 @@ function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boo
             aria-label={t("Global search query")}
           />
         </div>
-        <button
+        <button type="button"
           onClick={handleSearch}
           disabled={searching || query.trim().length < 2}
           className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 hover:bg-primary/90 transition-all"
@@ -255,6 +255,14 @@ function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boo
 /* ==================================================================== *
  *  AUDIT TRAIL TAB
  * ==================================================================== */
+
+/** Action → color mapping for the audit table (outer scope). */
+function actionColor(action: string): string {
+  if (action.includes("deactivate")) return "text-destructive";
+  if (action.includes("reactivate")) return "text-success";
+  if (action.includes("void")) return "text-warning";
+  return "text-info";
+}
 function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
   const { t, i18n } = useTranslation();
   const [events, setEvents] = useState<any[]>([]);
@@ -292,13 +300,6 @@ function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boole
     void loadAudit();
   }
 
-  function actionColor(action: string): string {
-    if (action.includes("deactivate")) return "text-destructive";
-    if (action.includes("reactivate")) return "text-success";
-    if (action.includes("void")) return "text-warning";
-    return "text-info";
-  }
-
   return (
     <div className="space-y-6">
       {/* Filters */}
@@ -325,7 +326,7 @@ function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boole
           <option value="customer">{t("Customer")}</option>
           <option value="invoice">{t("Invoice")}</option>
         </select>
-        <button
+        <button type="button"
           onClick={handleFilter}
           className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 hover:bg-primary/90 transition-all"
         >
@@ -381,14 +382,14 @@ function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boole
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{t("Showing")} {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} {t("of")} {total}</p>
           <div className="flex gap-2">
-            <button
+            <button type="button"
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
               className="px-4 py-2 rounded-lg border border-border text-sm font-bold disabled:opacity-40 hover:bg-muted/30 transition-all"
             >
               {t("Previous")}
             </button>
-            <button
+            <button type="button"
               disabled={(page + 1) * PAGE_SIZE >= total}
               onClick={() => setPage((p) => p + 1)}
               className="px-4 py-2 rounded-lg border border-border text-sm font-bold disabled:opacity-40 hover:bg-muted/30 transition-all"
@@ -532,14 +533,14 @@ function EmployeeManagementTab({ centerId, isAdmin }: { centerId: string; isAdmi
                 </div>
                 <div className="flex items-center gap-2">
                   {emp.isActive ? (
-                    <button
+                    <button type="button"
                       onClick={() => handleDeactivate(emp)}
                       className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-bold hover:bg-destructive/20 transition-all"
                     >
                       {t("Deactivate")}
                     </button>
                   ) : (
-                    <button
+                    <button type="button"
                       onClick={() => handleReactivate(emp)}
                       className="px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-bold hover:bg-success/20 transition-all"
                     >
@@ -569,13 +570,13 @@ function EmployeeManagementTab({ centerId, isAdmin }: { centerId: string; isAdmi
             className="w-full rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm font-medium resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
           <div className="flex justify-end gap-2">
-            <button
+            <button type="button"
               onClick={() => setShowReasonInput(null)}
               className="px-4 py-2 rounded-lg border border-border text-sm font-bold hover:bg-muted/30 transition-all"
             >
               {t("Cancel")}
             </button>
-            <button
+            <button type="button"
               onClick={() => {
                 const emp = employees.find((e) => e.id === showReasonInput);
                 if (emp?.isActive) confirmDeactivate(showReasonInput);

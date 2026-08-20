@@ -111,11 +111,13 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_admin_required CONSTANT TEXT := 'admin_role_required';
+  c_denied_code CONSTANT TEXT := '42501';
   v_actor_name TEXT;
   v_event public.admin_audit_events;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN
-    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_admin_required USING ERRCODE = c_denied_code;
   END IF;
 
   SELECT COALESCE(profiles.full_name, 'Admin') INTO v_actor_name
@@ -201,10 +203,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_admin_required CONSTANT TEXT := 'admin_role_required';
+  c_denied_code CONSTANT TEXT := '42501';
   v_note public.customer_support_notes;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN
-    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_admin_required USING ERRCODE = c_denied_code;
   END IF;
 
   IF length(btrim(COALESCE(p_note, ''))) < 2 THEN
@@ -298,6 +302,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_employee_type CONSTANT TEXT := 'employee';
   v_is_admin BOOLEAN;
   v_customers JSONB;
   v_employees JSONB;
@@ -331,7 +336,7 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'id', e.id, 'name', e.name, 'role', e.role,
-      'type', 'employee'
+      'type', c_employee_type
     ) AS x
     FROM public.employees e
     WHERE e.center_id = p_center_id AND e.name ILIKE v_q
@@ -379,11 +384,13 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_admin_required CONSTANT TEXT := 'admin_role_required';
+  c_denied_code CONSTANT TEXT := '42501';
   v_employee public.employees;
   v_actor_name TEXT;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN
-    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_admin_required USING ERRCODE = c_denied_code;
   END IF;
 
   IF length(btrim(COALESCE(p_reason, ''))) < 10 THEN
@@ -443,11 +450,13 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_admin_required CONSTANT TEXT := 'admin_role_required';
+  c_denied_code CONSTANT TEXT := '42501';
   v_employee public.employees;
   v_actor_name TEXT;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN
-    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_admin_required USING ERRCODE = c_denied_code;
   END IF;
 
   IF length(btrim(COALESCE(p_reason, ''))) < 10 THEN

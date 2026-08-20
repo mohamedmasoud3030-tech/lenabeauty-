@@ -9,7 +9,7 @@ import { PremiumCard, CardContent, CardHeader } from "../shared/components/Premi
 import { QuickNotificationSender } from "../shared/components/NotificationSystem";
 import { ScreenState } from "../shared/components/ScreenState";
 import { whatsappService } from "../infrastructure/services/whatsappService";
-import { renderMessage, validateTemplate, extractVariables } from "../domain/notification";
+import { validateTemplate, extractVariables } from "../domain/notification";
 
 const fallbackTemplates = {
   booking: "Hello {customer_name}! Your appointment is confirmed for {appointment_date} at {appointment_time}.",

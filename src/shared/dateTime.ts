@@ -147,11 +147,12 @@ export function formatSalonDayHeader(date: Date | string | number, lang?: string
 export function formatLocalizedDate(
   date: Date | string | number,
   lang?: string,
-  options: Intl.DateTimeFormatOptions = { dateStyle: "medium" },
+  options?: Intl.DateTimeFormatOptions,
 ): string {
+  const fmt: Intl.DateTimeFormatOptions = options ?? { dateStyle: "medium" };
   const d = date instanceof Date ? date : new Date(date);
   const locale = lang === "ar" ? "ar-OM" : "en-US";
-  return d.toLocaleDateString(locale, options);
+  return d.toLocaleDateString(locale, fmt);
 }
 
 /**

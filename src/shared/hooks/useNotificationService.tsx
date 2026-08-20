@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 
 const NotificationServiceContext = createContext<NotificationService | null>(null);
 
-export function NotificationServiceProvider({ children }: { children: ReactNode }) {
+export function NotificationServiceProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { showToast } = useToast();
   const { i18n } = useTranslation();
 
@@ -40,12 +40,10 @@ export function NotificationServiceProvider({ children }: { children: ReactNode 
  */
 let noOpService: NotificationService | null = null;
 function getNoOpService(): NotificationService {
-  if (!noOpService) {
-    noOpService = createNotificationService({
-      showToast: () => undefined,
-      testMode: true,
-    });
-  }
+  noOpService ??= createNotificationService({
+    showToast: () => undefined,
+    testMode: true,
+  });
   return noOpService;
 }
 

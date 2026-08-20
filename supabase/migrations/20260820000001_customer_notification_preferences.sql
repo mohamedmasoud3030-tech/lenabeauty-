@@ -79,10 +79,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_denied CONSTANT TEXT := 'insufficient_privilege';
+  c_denied_code CONSTANT TEXT := '42501';
   v_row public.customer_notification_preferences%ROWTYPE;
 BEGIN
   IF NOT app_private.is_center_member(p_center_id) THEN
-    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;
   END IF;
 
   PERFORM 1 FROM public.customers c
@@ -162,10 +164,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_denied CONSTANT TEXT := 'insufficient_privilege';
+  c_denied_code CONSTANT TEXT := '42501';
   v_rows JSONB;
 BEGIN
   IF NOT app_private.is_center_member(p_center_id) THEN
-    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;
   END IF;
 
   SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.channel), '[]'::jsonb)
@@ -206,10 +210,12 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_denied CONSTANT TEXT := 'insufficient_privilege';
+  c_denied_code CONSTANT TEXT := '42501';
   v_recent BOOLEAN;
 BEGIN
   IF NOT app_private.is_center_member(p_center_id) THEN
-    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;
   END IF;
   IF p_dedup_key IS NULL OR length(trim(p_dedup_key)) = 0 THEN
     RAISE EXCEPTION 'invalid_dedup_key' USING ERRCODE = '22023';

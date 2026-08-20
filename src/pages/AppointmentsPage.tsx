@@ -303,17 +303,24 @@ export default function AppointmentsPage() {
     setOpen(true);
   }
 
-  async function submitBooking() {
-    if (!slotDate) return;
+  /** Validates the booking form; shows a toast and returns false on the first problem. */
+  function validateBookingForm(): boolean {
     const existingAppointment = editApptId ? appts.find((entry) => entry.id === editApptId) : undefined;
     if (existingAppointment && existingAppointment.status !== AppointmentStatus.SCHEDULED) {
-      return showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+      showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+      return false;
     }
-    if (!customerId) return showToast('error', t("Error"), t("Please select a customer"));
-    if (!serviceId) return showToast('error', t("Error"), t("Please select a service"));
-    if (!employeeId) return showToast('error', t("Error"), t("Please select an employee"));
-    if (isNaN(Number(depositAmount)) || Number(depositAmount) < 0) return showToast('error', t("Error"), t("Deposit cannot be negative"));
-    if (isNaN(Number(noShowFeeAmount)) || Number(noShowFeeAmount) < 0) return showToast('error', t("Error"), t("No-show fee cannot be negative"));
+    if (!customerId) { showToast('error', t("Error"), t("Please select a customer")); return false; }
+    if (!serviceId) { showToast('error', t("Error"), t("Please select a service")); return false; }
+    if (!employeeId) { showToast('error', t("Error"), t("Please select an employee")); return false; }
+    if (isNaN(Number(depositAmount)) || Number(depositAmount) < 0) { showToast('error', t("Error"), t("Deposit cannot be negative")); return false; }
+    if (isNaN(Number(noShowFeeAmount)) || Number(noShowFeeAmount) < 0) { showToast('error', t("Error"), t("No-show fee cannot be negative")); return false; }
+    return true;
+  }
+
+  async function submitBooking() {
+    if (!slotDate) return;
+    if (!validateBookingForm()) return;
 
     setBusy(true);
     try {

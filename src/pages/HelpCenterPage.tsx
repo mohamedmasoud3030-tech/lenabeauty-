@@ -12,8 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
-  Search, BookOpen, LifeBuoy, ChevronRight, ChevronLeft, ArrowRight,
-  HelpCircle, AlertTriangle, Send, CheckCircle2, X, ShieldAlert,
+  Search, BookOpen, LifeBuoy, ChevronRight, ChevronLeft,
+  HelpCircle, AlertTriangle, Send, X, ShieldAlert,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -94,7 +94,7 @@ export default function HelpCenterPage() {
 
       {/* View switcher */}
       <div className="flex gap-2">
-        <button
+        <button type="button"
           onClick={backToList}
           className={clsx(
             "px-4 py-2.5 rounded-xl text-sm font-bold transition-all touch-target",
@@ -103,7 +103,7 @@ export default function HelpCenterPage() {
         >
           {t("Articles")}
         </button>
-        <button
+        <button type="button"
           onClick={() => setShowContact(true)}
           className={clsx(
             "px-4 py-2.5 rounded-xl text-sm font-bold transition-all touch-target",
@@ -147,7 +147,7 @@ export default function HelpCenterPage() {
 
             {/* Category chips */}
             <div className="flex gap-2 overflow-x-auto pb-1 mt-4 scrollbar-hide" aria-label={t("Categories")}>
-              <button
+              <button type="button"
                 onClick={() => setCategory("all")}
                 className={clsx(
                   "shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold transition-colors min-h-[40px] touch-target",
@@ -157,7 +157,7 @@ export default function HelpCenterPage() {
                 {t("All")}
               </button>
               {Object.entries(HELP_CATEGORY_LABELS).map(([key, label]) => (
-                <button
+                <button type="button"
                   key={key}
                   onClick={() => setCategory(key as HelpCategory)}
                   className={clsx(
@@ -179,7 +179,7 @@ export default function HelpCenterPage() {
                 </div>
               ) : (
                 filtered.map((article) => (
-                  <button
+                  <button type="button"
                     key={article.slug}
                     onClick={() => openArticle(article.slug)}
                     className="group w-full min-h-11 text-start rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md touch-target"
@@ -218,12 +218,12 @@ function ArticleView({
   lang,
   onBack,
   onRelated,
-}: {
+}: Readonly<{
   slug: string;
   lang: "ar" | "en";
   onBack: () => void;
   onRelated: (slug: string) => void;
-}) {
+}>) {
   const { t } = useTranslation();
   const article = getHelpArticle(slug);
   if (!article) return null;
@@ -235,7 +235,7 @@ function ArticleView({
   return (
     <article className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       <div className="border-b border-border px-4 sm:px-6 py-4 bg-muted/20 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
           className="h-11 w-11 rounded-lg bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-primary transition-all touch-target"
           aria-label={t("Back to articles")}
@@ -251,8 +251,8 @@ function ArticleView({
       </div>
 
       <div className="px-4 sm:px-6 py-5 space-y-3">
-        {article.body[lang].map((paragraph, idx) => (
-          <p key={idx} className="text-sm text-foreground/90 leading-relaxed">
+        {article.body[lang].map((paragraph, paragraphIndex) => (
+          <p key={`${article.slug}-${lang}-${paragraphIndex}`} className="text-sm text-foreground/90 leading-relaxed">
             {paragraph}
           </p>
         ))}
@@ -264,7 +264,7 @@ function ArticleView({
               <p className="text-xs text-muted-foreground">{t("No related articles")}</p>
             ) : (
               related.map((r) => (
-                <button
+                <button type="button"
                   key={r.slug}
                   onClick={() => onRelated(r.slug)}
                   className="rounded-full border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/10 transition-all touch-target"
@@ -283,15 +283,13 @@ function ArticleView({
 /* ==================================================================== *
  *  SUPPORT INTAKE FORM
  * ==================================================================== */
-function SupportIntakeForm({ role, onDone }: { role?: string; onDone: () => void }) {
+function SupportIntakeForm({ role, onDone }: Readonly<{ role?: string; onDone: () => void }>) {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const location = useLocation();
   const lang: "ar" | "en" = i18n.language === "ar" ? "ar" : "en";
 
-  const [route, setRoute] = useState(() =>
-    `${location.pathname}${location.search}`.trim() || "/dashboard",
-  );
+  const route = `${location.pathname}${location.search}`.trim() || "/dashboard";
   const [errorReference, setErrorReference] = useState("");
   const [expected, setExpected] = useState("");
   const [actual, setActual] = useState("");

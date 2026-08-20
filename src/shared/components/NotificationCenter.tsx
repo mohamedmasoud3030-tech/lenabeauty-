@@ -22,7 +22,7 @@ export interface NotificationCenterItem {
 }
 
 interface NotificationCenterProps {
-  isAdmin: boolean;
+  readonly isAdmin: boolean;
 }
 
 export function NotificationCenter({ isAdmin }: NotificationCenterProps) {
@@ -69,7 +69,7 @@ export function NotificationCenter({ isAdmin }: NotificationCenterProps) {
         setItems(
           res.data.map((record) => ({
             id: record.id,
-            title: record.templateKey ? record.templateKey.replace(/_/g, " ") : record.channel,
+            title: record.templateKey ? record.templateKey.replaceAll("_", " ") : record.channel,
             message: record.messagePreview,
             channel: record.channel,
             deliveryStatus: record.deliveryStatus,
@@ -100,7 +100,7 @@ export function NotificationCenter({ isAdmin }: NotificationCenterProps) {
 
   return (
     <div ref={containerRef} className="relative">
-      <button
+      <button type="button"
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         aria-label={t("Notifications")}
@@ -130,7 +130,7 @@ export function NotificationCenter({ isAdmin }: NotificationCenterProps) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <p className="text-sm font-bold text-foreground">{t("Notifications")}</p>
               {isAdmin && (
-                <button
+                <button type="button"
                   onClick={() => { setOpen(false); nav("/settings?tab=notifications"); }}
                   className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                 >

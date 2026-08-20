@@ -262,7 +262,7 @@ export default function PosInvoicesPage() {
 
   function confirmPriceDialog(enteredPrice: number) {
     if (!priceDialog) return;
-    const { id, name, minPrice } = priceDialog;
+    const { id, minPrice } = priceDialog;
     if (!Number.isFinite(enteredPrice) || enteredPrice < minPrice || enteredPrice <= 0) {
       showToast('error', t("Error"), t("Final price must be at least the starting price"));
       return;
@@ -517,7 +517,7 @@ export default function PosInvoicesPage() {
         <div className="px-0 pt-1">
           {/* One-handed catalog / cart toggle — thumb-width targets, no duplicate category row */}
           <div className="flex gap-2">
-            <button
+            <button type="button"
               onClick={() => setShowCheckoutSummary(false)}
               className={clsx(
                 "flex-1 min-h-11 py-2.5 rounded-xl font-bold text-xs transition-all touch-target",
@@ -528,7 +528,7 @@ export default function PosInvoicesPage() {
             >
               {t("Catalog")}
             </button>
-            <button
+            <button type="button"
               onClick={() => setShowCheckoutSummary(true)}
               className={clsx(
                 "flex-1 min-h-11 py-2.5 rounded-xl font-bold text-xs transition-all relative touch-target",
@@ -561,7 +561,7 @@ export default function PosInvoicesPage() {
                   <p className="hidden lg:block text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{t("Press F1 to search")}</p>
                 </div>
                 <div className="flex bg-muted rounded-xl p-1 shadow-inner w-full sm:w-auto">
-                  <button 
+                  <button type="button" 
                     onClick={() => setActiveTab("SERVICES")}
                     className={clsx(
                       "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
@@ -571,7 +571,7 @@ export default function PosInvoicesPage() {
                     <Scissors className="h-4 w-4 shrink-0" />
                     {t("Services")}
                   </button>
-                  <button 
+                  <button type="button" 
                     onClick={() => setActiveTab("PRODUCTS")}
                     className={clsx(
                       "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
@@ -581,7 +581,7 @@ export default function PosInvoicesPage() {
                     <Package className="h-4 w-4 shrink-0" />
                     {t("Products")}
                   </button>
-                  <button 
+                  <button type="button" 
                     onClick={() => setActiveTab("PACKAGES")}
                     className={clsx(
                       "flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 lg:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
@@ -682,7 +682,7 @@ export default function PosInvoicesPage() {
                         const svc = services.find((s) => s.id === id);
                         if (!svc) return null;
                         return (
-                          <button
+                          <button type="button"
                             key={id}
                             onClick={() => addToCart(svc as any, "service")}
                             className="flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-all touch-target"
@@ -746,7 +746,7 @@ export default function PosInvoicesPage() {
                       value={giftCardSaleValue}
                       onChange={(e) => setGiftCardSaleValue(e.target.value)}
                     />
-                    <button
+                    <button type="button"
                       onClick={addGiftCardToCart}
                       className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
                     >
@@ -827,15 +827,15 @@ export default function PosInvoicesPage() {
                           <>
                             <span className="text-xs font-bold text-foreground min-w-[48px] text-end">{formatOMRAmount(item.price * item.qty)}</span>
                             <div className="flex items-center rounded-lg border border-border bg-muted/30">
-                              <button onClick={() => cartDecrement(item.cartId)} aria-label={t("Remove")} className="h-8 w-8 flex items-center justify-center rounded-l-lg hover:bg-destructive/10 hover:text-destructive transition-all"><Minus className="h-3 w-3" /></button>
+                              <button type="button" onClick={() => cartDecrement(item.cartId)} aria-label={t("Remove")} className="h-8 w-8 flex items-center justify-center rounded-l-lg hover:bg-destructive/10 hover:text-destructive transition-all"><Minus className="h-3 w-3" /></button>
                               <span className="h-8 px-2 text-xs font-bold flex items-center border-x border-border">{item.qty}</span>
-                              <button onClick={() => cartIncrement(item.cartId)} aria-label={t("Add")} className="h-8 w-8 flex items-center justify-center rounded-r-lg hover:bg-primary/10 hover:text-primary transition-all"><Plus className="h-3 w-3" /></button>
+                              <button type="button" onClick={() => cartIncrement(item.cartId)} aria-label={t("Add")} className="h-8 w-8 flex items-center justify-center rounded-r-lg hover:bg-primary/10 hover:text-primary transition-all"><Plus className="h-3 w-3" /></button>
                             </div>
                           </>
                         ) : (
                           <>
                             <span className="text-xs font-bold text-foreground">{formatOMRAmount(item.price)}</span>
-                            <button onClick={() => removeFromCart(item.cartId)} aria-label={t("Remove")} className="h-11 w-11 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all touch-target"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button type="button" onClick={() => removeFromCart(item.cartId)} aria-label={t("Remove")} className="h-11 w-11 flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 transition-all touch-target"><Trash2 className="h-3.5 w-3.5" /></button>
                           </>
                         )}
                       </div>
@@ -871,7 +871,7 @@ export default function PosInvoicesPage() {
                             <span className="text-xs font-bold text-foreground block truncate">{getDisplayName(selectedCustomer, t("Unnamed"))}</span>
                           </div>
                         </div>
-                        <button 
+                        <button type="button" 
                           onClick={() => setSelectedCustomer(null)} 
                           className="h-8 w-8 flex items-center justify-center rounded-lg bg-background border border-border text-destructive hover:bg-destructive/10 transition-all shrink-0"
                         >
@@ -888,7 +888,7 @@ export default function PosInvoicesPage() {
                           value={searchQ}
                           onChange={(e) => searchCustomers(e.target.value)}
                         />
-                        <button
+                        <button type="button"
                           onClick={() => { setShowNewCustomer(v => !v); setCustomers([]); }}
                           className="absolute end-1 top-1/2 -translate-y-1/2 h-8 px-2 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-1 text-[10px] font-bold touch-target"
                           title={t("New customer")}
@@ -904,7 +904,7 @@ export default function PosInvoicesPage() {
                               className="absolute bottom-full inset-x-0 mb-2 rounded-lg border border-border bg-card shadow-xl max-h-44 overflow-auto z-50 p-1"
                             >
                               {customers.map(c => (
-                                <button 
+                                <button type="button" 
                                   key={c.id} 
                                   onClick={() => { void selectCustomer(c); }}
                                   className="w-full flex items-center gap-2 px-2.5 py-2 hover:bg-muted rounded-lg text-start transition-all touch-target"
@@ -933,7 +933,7 @@ export default function PosInvoicesPage() {
                           value={newCustomerName}
                           onChange={(e) => setNewCustomerName(e.target.value)}
                         />
-                        <button
+                        <button type="button"
                           onClick={() => void handleCreateCustomer()}
                           disabled={creatingCustomer || !newCustomerName.trim()}
                           className="w-full h-10 rounded-lg bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 touch-target"
@@ -1001,7 +1001,7 @@ export default function PosInvoicesPage() {
                         {selectedCustomer.loyaltyPoints} {t("Points")} (-{formatOMRAmount(loyaltyDiscount)})
                       </p>
                     </div>
-                    <button 
+                    <button type="button" 
                       onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
                       role="switch"
                       aria-checked={useLoyaltyPoints}
@@ -1045,7 +1045,7 @@ export default function PosInvoicesPage() {
                   </div>
                 </div>
 
-                <button 
+                <button type="button" 
                   onClick={handleCheckout}
                   disabled={checkingOut || cart.length === 0 || !selectedCustomer || !selectedEmployee}
                   className="group relative w-full min-h-12 rounded-xl bg-primary py-3.5 lg:py-4 font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2 text-sm touch-target"
