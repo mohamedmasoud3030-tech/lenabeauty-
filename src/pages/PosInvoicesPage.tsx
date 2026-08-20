@@ -22,6 +22,8 @@ import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../doma
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
+import { setNotificationPreferences } from "../shared/notificationPreferencesStore";
+import type { NotificationChannelId } from "../domain/notification";
 import { escapePrintText } from "../infrastructure/services/printService";
 import {
   ALL_SERVICE_CATEGORIES,
@@ -314,6 +316,18 @@ export default function PosInvoicesPage() {
       if (res.ok) setEntitlements(res.data.filter((e) => e.kind === "PACKAGE"));
     } catch {
       setEntitlements([]);
+    }
+    // Load the customer's real notification preferences so the send pipeline
+    // honors opt-in/quiet hours (no silent defaults).
+    const center = useCases.tenant.getActiveCenterId();
+    if (center) {
+      const prefRes = await useCases.notifications.listCustomerNotificationPreferences(center, customer.id);
+      if (prefRes.ok) {
+        setNotificationPreferences(
+          customer.id,
+          prefRes.data.map((p) => ({ channelId: channelFromDb(p.channel), optIn: p.optIn, updatedAt: new Date() })),
+        );
+      }
     }
   }
 
@@ -1059,4 +1073,15 @@ export default function PosInvoicesPage() {
       </div>
     </div>
   );
+}
+
+/** Maps a DB channel name to the notification-domain channel id. */
+function channelFromDb(channel: string): NotificationChannelId {
+  switch (channel) {
+    case "WHATSAPP": return "whatsapp_wa_me";
+    case "IN_APP": return "in_app";
+    case "PUSH": return "push";
+    case "EMAIL": return "email";
+    default: return "sms";
+  }
 }

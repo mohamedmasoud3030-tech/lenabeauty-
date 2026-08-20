@@ -1,18 +1,18 @@
 {
   "summary": {
     "schema": {
-      "tables": 38,
-      "columns": 405,
+      "tables": 39,
+      "columns": 408,
       "enum_types": 1,
       "enum_labels": 4,
-      "constraints": 415,
-      "foreign_keys": 87,
-      "indexes": 112,
+      "constraints": 419,
+      "foreign_keys": 88,
+      "indexes": 113,
       "triggers": 24,
       "views": 0,
-      "functions": 72,
-      "policies": 62,
-      "grants": 1370
+      "functions": 73,
+      "policies": 66,
+      "grants": 1388
     },
     "frontend": {
       "tables": 29,

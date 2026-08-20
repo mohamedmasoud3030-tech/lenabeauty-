@@ -10,7 +10,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SettingsPage from "../pages/SettingsPage";
 import { readActivationEvents, recordActivationEvent } from "../shared/activation/events";
@@ -69,6 +69,28 @@ describe("sensitive-data logging controls", () => {
   });
 });
 
+describe("support RPC authorization contract", () => {
+  it("admin_global_search_v1 requires ADMIN or MANAGER (not mere membership)", () => {
+    const sql = readFileSync(
+      resolve(SRC, "../supabase/migrations/20260820000002_admin_audit_support.sql"),
+      "utf8",
+    );
+    // The search function must gate on has_center_role(ADMIN, MANAGER).
+    const searchFn = sql.split("admin_global_search_v1")[1] ?? "";
+    expect(searchFn).toContain("has_center_role(p_center_id, ARRAY['ADMIN', 'MANAGER'])");
+    expect(searchFn).not.toMatch(/IF p_center_id IS NULL OR NOT app_private\.is_center_member/);
+  });
+
+  it("claim_notification_dedup_v1 is a real atomic INSERT ... ON CONFLICT claim", () => {
+    const sql = readFileSync(
+      resolve(SRC, "../supabase/migrations/20260820000004_notification_dedup_claim.sql"),
+      "utf8",
+    );
+    expect(sql).toContain("ON CONFLICT (center_id, dedup_key) DO NOTHING");
+    expect(sql).toContain("PRIMARY KEY (center_id, dedup_key)");
+  });
+});
+
 describe("localStorage PII boundaries", () => {
   it("activation events contain no emails or phone numbers", () => {
     recordActivationSample();
@@ -107,5 +129,28 @@ describe("privacy settings surface", () => {
     );
     expect(await screen.findByText("Export my data")).toBeInTheDocument();
     expect(screen.getByText("Request account deletion")).toBeInTheDocument();
+  });
+
+  it("downloads my personal data (not the center export) when clicked — no hook-call crash", async () => {
+    const exportSpy = vi.spyOn(useCases.settings, "exportData");
+    const sessionSpy = vi.spyOn(useCases.auth, "getSession").mockResolvedValue({
+      ok: true,
+      data: { status: "authenticated", session: { user: { id: "u1", username: "op", role: "ADMIN" } } },
+    } as any);
+    vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({
+      ok: true,
+      data: [{ id: "c1", name: "Center", role: "ADMIN" }],
+    } as any);
+    render(
+      <MemoryRouter initialEntries={["/settings?tab=privacy"]}>
+        <ToastProvider>
+          <SettingsPage />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByText("Download my data"));
+    await waitFor(() => expect(sessionSpy).toHaveBeenCalledTimes(1));
+    // The personal export must NOT reuse the center-wide operational export.
+    expect(exportSpy).not.toHaveBeenCalled();
   });
 });

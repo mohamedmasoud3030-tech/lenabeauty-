@@ -309,8 +309,11 @@ DECLARE
   v_invoices JSONB;
   v_q TEXT;
 BEGIN
-  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN
-    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';
+  -- Read-only investigation is open to ADMIN and MANAGER only, matching the
+  -- support contract; a plain STAFF member must not call this RPC directly.
+  IF p_center_id IS NULL
+     OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN', 'MANAGER']) THEN
+    RAISE EXCEPTION 'admin_or_manager_role_required' USING ERRCODE = '42501';
   END IF;
 
   v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);

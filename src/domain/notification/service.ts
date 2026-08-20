@@ -41,6 +41,12 @@ export interface NotificationServiceDeps {
   testMode?: boolean;
   /** Dedup window override (minutes). */
   dedupWindowMinutes?: number;
+  /**
+   * Optional cross-session dedup claimer (e.g. Supabase-backed atomic claim).
+   * When provided it REPLACES the in-memory DedupStore so a reload or another
+   * device cannot resend. Must return true only when this caller won the claim.
+   */
+  claimDedup?: (centerId: string, dedupKey: string) => Promise<boolean>;
 }
 
 export class NotificationService {
@@ -89,9 +95,21 @@ export class NotificationService {
       );
     }
 
-    // 2. Dedup check (deterministic key).
+    // 2. Dedup check (deterministic key). When a cross-session claimer is
+    //    configured it is authoritative (atomic, survives reloads); otherwise
+    //    the in-memory store guards within this session.
     const dedupKey = buildDedupKey(context, channelId);
-    if (this.dedup.isDuplicate(dedupKey)) {
+    if (this.deps.claimDedup) {
+      const claimed = await this.deps.claimDedup(context.centerId, dedupKey);
+      if (!claimed) {
+        return this.skipped(
+          context,
+          "SKIPPED_DUPLICATE" as never,
+          "DUPLICATE",
+          "Duplicate notification (atomic claim lost)",
+        );
+      }
+    } else if (this.dedup.isDuplicate(dedupKey)) {
       return this.skipped(
         context,
         "SKIPPED_DUPLICATE" as never,
@@ -140,8 +158,9 @@ export class NotificationService {
       rendered = `[TEST MODE] ${rendered}`;
     }
 
-    // 7. Send via the channel.
-    this.dedup.mark(dedupKey);
+    // 7. Send via the channel. In-memory mark is redundant (but harmless)
+    //    when the atomic claimer already recorded the key.
+    if (!this.deps.claimDedup) this.dedup.mark(dedupKey);
     const result = await channel.send(context, rendered);
     logger.debug("[NotificationService]", { event: context.eventId, channel: channelId, status: result.deliveryStatus });
     return result;

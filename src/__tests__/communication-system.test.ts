@@ -351,6 +351,39 @@ describe("NotificationService orchestration", () => {
     expect(second.deliveryStatus).toBe("SKIPPED_DUPLICATE");
   });
 
+  it("uses the atomic cross-session claimer when provided (not the in-memory store)", async () => {
+    const claims = new Set<string>();
+    const service = new NotificationService({
+      channels: { whatsapp_wa_me: new WhatsAppWaMeChannel(() => "+96891234567", () => {}) },
+      getPreferences: () => undefined,
+      getLanguage: () => "en",
+      claimDedup: async (_centerId, key) => {
+        if (claims.has(key)) return false;
+        claims.add(key);
+        return true;
+      },
+    });
+    const ctx = { ...bookingCtx };
+    const first = await service.dispatch(ctx as any);
+    expect(first.deliveryStatus).toBe("QUEUED");
+    const second = await service.dispatch(ctx as any);
+    expect(second.deliveryStatus).toBe("SKIPPED_DUPLICATE");
+    // The claimer must be consulted instead of the in-memory store, so a
+    // fresh service instance (simulating a reload) still sees the claim.
+    const fresh = new NotificationService({
+      channels: { whatsapp_wa_me: new WhatsAppWaMeChannel(() => "+96891234567", () => {}) },
+      getPreferences: () => undefined,
+      getLanguage: () => "en",
+      claimDedup: async (_centerId, key) => {
+        if (claims.has(key)) return false;
+        claims.add(key);
+        return true;
+      },
+    });
+    const afterReload = await fresh.dispatch(ctx as any);
+    expect(afterReload.deliveryStatus).toBe("SKIPPED_DUPLICATE");
+  });
+
   it("respects opt-out preferences", async () => {
     const service = buildService({
       getPreferences: () => [

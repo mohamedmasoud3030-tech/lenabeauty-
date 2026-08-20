@@ -3477,6 +3477,37 @@ class SupabaseNotificationAdapter implements NotificationRepository {
       return { ok: false, error: createQueryError("Notification.updateStatus", (e as Error).message) };
     }
   }
+
+  async claimDedup(centerId: string, dedupKey: string): Promise<Result<boolean, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('claim_notification_dedup_v1', {
+        p_center_id: centerId,
+        p_dedup_key: dedupKey,
+        p_window_minutes: 1440,
+      });
+      if (error) return { ok: false, error: createQueryError("Notification.claimDedup", error.message) };
+      return { ok: true, data: Boolean(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.claimDedup", (e as Error).message) };
+    }
+  }
+
+  async listCustomerNotificationPreferences(centerId: string, customerId: string): Promise<Result<{ channel: string; optIn: boolean }[], DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('list_customer_notification_preferences_v1', {
+        p_center_id: centerId,
+        p_customer_id: customerId,
+      });
+      if (error) return { ok: false, error: createQueryError("Notification.listPreferences", error.message) };
+      const prefs = (data as any)?.preferences ?? [];
+      return {
+        ok: true,
+        data: prefs.map((p: any) => ({ channel: p.channel, optIn: p.opt_in })),
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.listPreferences", (e as Error).message) };
+    }
+  }
 }
 
 class SupabaseAdminSupportAdapter implements AdminSupportRepository {

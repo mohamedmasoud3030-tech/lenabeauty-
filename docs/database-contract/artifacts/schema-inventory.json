@@ -94,6 +94,10 @@
     },
     {
       "schema": "public",
+      "name": "notification_dedup_claims"
+    },
+    {
+      "schema": "public",
       "name": "notification_settings"
     },
     {
@@ -2863,6 +2867,36 @@
       "nullable": "NO",
       "default": "0",
       "position": 22
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "dedup_key",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "claimed_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 3
     },
     {
       "schema": "public",
@@ -6061,6 +6095,34 @@
     },
     {
       "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_claimed_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL claimed_at"
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_dedup_key_not_null",
+      "type": "n",
+      "definition": "NOT NULL dedup_key"
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (center_id, dedup_key)"
+    },
+    {
+      "schema": "public",
       "table": "notification_settings",
       "name": "notification_settings_center_id_key",
       "type": "u",
@@ -7613,6 +7675,14 @@
     },
     {
       "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
       "table": "notification_settings",
       "name": "notification_settings_center_id_fkey",
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
@@ -8487,6 +8557,15 @@
     },
     {
       "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX notification_dedup_claims_pkey ON public.notification_dedup_claims USING btree (center_id, dedup_key)"
+    },
+    {
+      "schema": "public",
       "table": "notification_settings",
       "name": "notification_settings_center_id_key",
       "unique": true,
@@ -9274,7 +9353,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.admin_global_search_v1(p_center_id uuid, p_query text, p_limit integer DEFAULT 20)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_employee_type CONSTANT TEXT := 'employee';\n  v_is_admin BOOLEAN;\n  v_customers JSONB;\n  v_employees JSONB;\n  v_invoices JSONB;\n  v_q TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);\n  v_q := '%' || COALESCE(NULLIF(trim(p_query), ''), '') || '%';\n\n  IF length(v_q) < 4 THEN\n    RETURN jsonb_build_object('customers', '[]'::jsonb, 'employees', '[]'::jsonb, 'invoices', '[]'::jsonb);\n  END IF;\n\n  -- Customers — search by name or phone\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_customers\n  FROM (\n    SELECT jsonb_build_object('id', c.id, 'name', c.name, 'phone', c.phone, 'type', 'customer') AS x\n    FROM public.customers c\n    WHERE c.center_id = p_center_id\n      AND (c.name ILIKE v_q OR c.phone ILIKE v_q)\n    ORDER BY c.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Employees — name only (compensation-sensitive, so check admin)\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_employees\n  FROM (\n    SELECT jsonb_build_object(\n      'id', e.id, 'name', e.name, 'role', e.role,\n      'type', c_employee_type\n    ) AS x\n    FROM public.employees e\n    WHERE e.center_id = p_center_id AND e.name ILIKE v_q\n    ORDER BY e.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Invoices — serial number or customer name\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_invoices\n  FROM (\n    SELECT jsonb_build_object(\n      'id', i.id, 'serial', i.serial_number, 'total', i.total_amount,\n      'date', i.created_at, 'status', i.status, 'type', 'invoice'\n    ) AS x\n    FROM public.invoices i\n    WHERE i.center_id = p_center_id\n      AND (i.serial_number ILIKE v_q OR i.customer_name ILIKE v_q)\n    ORDER BY i.created_at DESC\n    LIMIT p_limit\n  ) sub;\n\n  RETURN jsonb_build_object(\n    'customers', v_customers,\n    'employees', v_employees,\n    'invoices', v_invoices\n  );\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.admin_global_search_v1(p_center_id uuid, p_query text, p_limit integer DEFAULT 20)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_employee_type CONSTANT TEXT := 'employee';\n  v_is_admin BOOLEAN;\n  v_customers JSONB;\n  v_employees JSONB;\n  v_invoices JSONB;\n  v_q TEXT;\nBEGIN\n  -- Read-only investigation is open to ADMIN and MANAGER only, matching the\n  -- support contract; a plain STAFF member must not call this RPC directly.\n  IF p_center_id IS NULL\n     OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN', 'MANAGER']) THEN\n    RAISE EXCEPTION 'admin_or_manager_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  v_is_admin := app_private.has_center_role(p_center_id, ARRAY['ADMIN']);\n  v_q := '%' || COALESCE(NULLIF(trim(p_query), ''), '') || '%';\n\n  IF length(v_q) < 4 THEN\n    RETURN jsonb_build_object('customers', '[]'::jsonb, 'employees', '[]'::jsonb, 'invoices', '[]'::jsonb);\n  END IF;\n\n  -- Customers — search by name or phone\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_customers\n  FROM (\n    SELECT jsonb_build_object('id', c.id, 'name', c.name, 'phone', c.phone, 'type', 'customer') AS x\n    FROM public.customers c\n    WHERE c.center_id = p_center_id\n      AND (c.name ILIKE v_q OR c.phone ILIKE v_q)\n    ORDER BY c.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Employees — name only (compensation-sensitive, so check admin)\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_employees\n  FROM (\n    SELECT jsonb_build_object(\n      'id', e.id, 'name', e.name, 'role', e.role,\n      'type', c_employee_type\n    ) AS x\n    FROM public.employees e\n    WHERE e.center_id = p_center_id AND e.name ILIKE v_q\n    ORDER BY e.name\n    LIMIT p_limit\n  ) sub;\n\n  -- Invoices — serial number or customer name\n  SELECT COALESCE(jsonb_agg(sub.x), '[]'::jsonb) INTO v_invoices\n  FROM (\n    SELECT jsonb_build_object(\n      'id', i.id, 'serial', i.serial_number, 'total', i.total_amount,\n      'date', i.created_at, 'status', i.status, 'type', 'invoice'\n    ) AS x\n    FROM public.invoices i\n    WHERE i.center_id = p_center_id\n      AND (i.serial_number ILIKE v_q OR i.customer_name ILIKE v_q)\n    ORDER BY i.created_at DESC\n    LIMIT p_limit\n  ) sub;\n\n  RETURN jsonb_build_object(\n    'customers', v_customers,\n    'employees', v_employees,\n    'invoices', v_invoices\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -9314,6 +9393,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.check_notification_dedup_v1(p_center_id uuid, p_dedup_key text, p_window_minutes integer DEFAULT 1440)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_denied CONSTANT TEXT := 'insufficient_privilege';\n  c_denied_code CONSTANT TEXT := '42501';\n  v_recent BOOLEAN;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;\n  END IF;\n  IF p_dedup_key IS NULL OR length(trim(p_dedup_key)) = 0 THEN\n    RAISE EXCEPTION 'invalid_dedup_key' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT EXISTS (\n    SELECT 1\n    FROM public.customer_notification_timeline\n    WHERE center_id = p_center_id\n      AND dedup_key = p_dedup_key\n      AND created_at > now() - make_interval(mins => p_window_minutes)\n  ) INTO v_recent;\n\n  RETURN COALESCE(v_recent, FALSE);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "claim_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
+      "result": "boolean",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "boolean",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.claim_notification_dedup_v1(p_center_id uuid, p_dedup_key text, p_window_minutes integer DEFAULT 1440)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_denied CONSTANT TEXT := 'insufficient_privilege';\n  c_denied_code CONSTANT TEXT := '42501';\n  v_claimed BOOLEAN;\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;\n  END IF;\n  IF p_dedup_key IS NULL OR length(trim(p_dedup_key)) = 0 THEN\n    RAISE EXCEPTION 'invalid_dedup_key' USING ERRCODE = '22023';\n  END IF;\n\n  -- Prune expired claims so the key becomes claimable again.\n  DELETE FROM public.notification_dedup_claims\n  WHERE center_id = p_center_id\n    AND claimed_at <= now() - make_interval(mins => p_window_minutes);\n\n  INSERT INTO public.notification_dedup_claims (center_id, dedup_key)\n  VALUES (p_center_id, p_dedup_key)\n  ON CONFLICT (center_id, dedup_key) DO NOTHING\n  RETURNING TRUE INTO v_claimed;\n\n  RETURN COALESCE(v_claimed, FALSE);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10202,6 +10294,20 @@
     {
       "schema": "public",
       "name": "check_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "claim_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "claim_notification_dedup_v1",
       "identity_args": "p_center_id uuid, p_dedup_key text, p_window_minutes integer",
       "grantee": "postgres",
       "privilege": "EXECUTE"
@@ -11177,6 +11283,54 @@
       ],
       "cmd": "SELECT",
       "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_delete",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "false",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_insert",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
+      "name": "notification_dedup_claims_update",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "false",
       "with_check": null
     },
     {
@@ -18090,6 +18244,118 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "notification_dedup_claims_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "notification_settings",
       "grantee": "authenticated",
       "privilege": "SELECT"
@@ -20512,6 +20778,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "claim_notification_dedup_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "claim_notification_dedup_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "create_accounting_journal_entry_admin_impl_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
@@ -21220,6 +21500,12 @@
     {
       "schema": "public",
       "table": "invoices",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "notification_dedup_claims",
       "rls_enabled": true,
       "rls_forced": false
     },

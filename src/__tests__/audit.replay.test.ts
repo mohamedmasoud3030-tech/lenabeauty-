@@ -58,11 +58,11 @@ async function functionSignatureSet(db: PGlite): Promise<string[]> {
  * bootstrap excluded, and only the two *known* idempotency gaps may surface.
  */
 describe("audit: deterministic migration replay (PGlite)", () => {
-  it("replays 39 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
+  it("replays 40 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(40);
+    expect(all).toHaveLength(41);
     const automated = automatedMigrations(all);
-    expect(automated).toHaveLength(39);
+    expect(automated).toHaveLength(40);
 
     const db = new PGlite();
     const { failures, nonIdem } = await replayInto(db);

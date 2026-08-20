@@ -28,25 +28,28 @@ function readSettingsTab(value: string | null): SettingsTab {
   return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
 }
 
-/** Shared JSON download for both export entry points (module scope). */
-async function downloadOperationalExport(prefix: string, successMessage?: string) {
-  const { showToast } = useToast();
-  const { t } = useTranslation();
+/** Shared JSON downloader — pure function; hooks must come from the caller. */
+async function downloadJsonExport(
+  fetchData: () => Promise<any>,
+  filename: string,
+  toast: (type: "success" | "error", title: string, msg?: string) => void,
+  messages: { success?: string; backendRequired: string; failed: string },
+) {
   try {
-    const res = await unwrap(useCases.settings.exportData());
+    const res = await fetchData();
     const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${prefix}_export_${new Date().toISOString().split("T")[0]}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
-    if (successMessage) showToast("success", t("Success"), t(successMessage));
+    if (messages.success) toast("success", messages.success, messages.success);
   } catch (err: any) {
     if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-      showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      toast('error', messages.backendRequired, messages.backendRequired);
     } else {
-      showToast('error', t("Error"), err.message || t("Failed to export data"));
+      toast('error', messages.failed, err.message || messages.failed);
     }
   }
 }
@@ -128,7 +131,15 @@ export default function SettingsPage() {
     }
   }
 
-  const handleExportData = () => downloadOperationalExport("salon_data");
+  async function handleExportData() {
+    const filename = `salon_data_export_${new Date().toISOString().split("T")[0]}.json`;
+    await downloadJsonExport(
+      () => unwrap(useCases.settings.exportData()),
+      filename,
+      (type, title, msg) => showToast(type, title, msg),
+      { backendRequired: t("Backend Required"), failed: t("Failed to export data") },
+    );
+  }
 
   if (!s) {
     if (loadError) {
@@ -453,7 +464,29 @@ function PrivacySection() {
   const [deletionRequested, setDeletionRequested] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const handleExportMyData = () => downloadOperationalExport("my_data");
+  async function handleExportMyData() {
+    const filename = `my_data_export_${new Date().toISOString().split("T")[0]}.json`;
+    await downloadJsonExport(
+      // Personal-data export: the signed-in user's own profile and center
+      // memberships — NOT the center's operational dataset (which is the
+      // separate "Data Export" tab).
+      async () => {
+        const session = await useCases.auth.getSession();
+        const memberships = await useCases.auth.getMyCenters();
+        const sessionData = session.ok ? session.data : null;
+        return {
+          exported_at: new Date().toISOString(),
+          user: sessionData && sessionData.status === "authenticated"
+            ? { id: sessionData.session.user.id, role: sessionData.session.user.role }
+            : null,
+          center_memberships: memberships.ok ? memberships.data : [],
+        };
+      },
+      filename,
+      (type, title, msg) => showToast(type, title, msg),
+      { success: t("Your data export was downloaded to this device."), backendRequired: t("Backend Required"), failed: t("Failed to export data") },
+    );
+  }
 
   async function handleRequestDeletion() {
     if (!confirmDelete) return;

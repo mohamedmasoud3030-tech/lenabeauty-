@@ -69,6 +69,7 @@ export function AppRoutes() {
           <Route path="/packages" element={<Suspense fallback={<PageLoader />}><PackagesPage /></Suspense>} />
           <Route path="/inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
           <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpCenterPage /></Suspense>} />
+          <Route path="/support" element={<Suspense fallback={<PageLoader />}><SupportOperationsPage /></Suspense>} />
 
           <Route element={<RequireAdmin />}>
             <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />
@@ -85,7 +86,6 @@ export function AppRoutes() {
             <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
             <Route path="/accounting" element={<Suspense fallback={<PageLoader />}><AccountingPage /></Suspense>} />
             <Route path="/advanced-automation" element={<Suspense fallback={<PageLoader />}><AdvancedAutomationPage /></Suspense>} />
-            <Route path="/support" element={<Suspense fallback={<PageLoader />}><SupportOperationsPage /></Suspense>} />
 
             {/* Legacy deep links land in the matching Settings section. */}
             <Route path="/branding" element={<Navigate to="/settings?tab=branding" replace />} />

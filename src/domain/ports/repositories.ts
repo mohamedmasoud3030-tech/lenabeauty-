@@ -304,6 +304,10 @@ export interface NotificationRepository {
   }): Promise<Result<NotificationEventRecord, DomainError>>;
   /** Update the delivery status of an event (retries, receipts). */
   updateStatus(id: string, deliveryStatus: string): Promise<Result<void, DomainError>>;
+  /** Read a customer's per-channel notification preferences (member-scoped). */
+  listCustomerNotificationPreferences(centerId: string, customerId: string): Promise<Result<{ channel: string; optIn: boolean }[], DomainError>>;
+  /** Atomically claim a dedup key; true = this caller may send. */
+  claimDedup(centerId: string, dedupKey: string): Promise<Result<boolean, DomainError>>;
 }
 
 export interface SupportTicket {

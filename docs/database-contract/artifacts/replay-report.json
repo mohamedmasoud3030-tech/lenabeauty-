@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 40,
-    "automated": 39,
+    "total": 41,
+    "automated": 40,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -200,6 +200,11 @@
     },
     {
       "file": "20260820000003_help_support.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260820000004_notification_dedup_claim.sql",
       "status": "ok",
       "error": null
     }
@@ -399,6 +404,11 @@
       "file": "20260820000003_help_support.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260820000004_notification_dedup_claim.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -419,8 +429,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "fc42fac9f374c3f8f0bc11863f5c2762e22b0a1668b9985196aa009f153fd10c",
-    "after_repeat": "fc42fac9f374c3f8f0bc11863f5c2762e22b0a1668b9985196aa009f153fd10c",
+    "after_first_replay": "5c90519c29e8f935de5db20bb351b4ed7d1c09df4ea86eed079f19fc9460b2f2",
+    "after_repeat": "5c90519c29e8f935de5db20bb351b4ed7d1c09df4ea86eed079f19fc9460b2f2",
     "identical": true,
     "diff": {
       "changed_sections": [],

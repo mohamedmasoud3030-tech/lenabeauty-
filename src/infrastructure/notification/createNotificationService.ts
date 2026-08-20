@@ -11,6 +11,8 @@ import {
 } from "../../domain/notification";
 import { ToastChannel, WhatsAppWaMeChannel } from "./channels";
 import { config } from "../../config/env";
+import { getNotificationPreferences } from "../../shared/notificationPreferencesStore";
+import { useCases } from "../../app/composition/useCases";
 
 /**
  * Options for building the notification service.
@@ -77,8 +79,18 @@ export function createNotificationService(
 
   return new NotificationService({
     channels,
-    getPreferences: () => undefined,
+    getPreferences: (customerId) => getNotificationPreferences(customerId),
     getLanguage: options.getLanguage ?? (() => "ar"),
     testMode,
+    // Atomic cross-session dedup: the database unique-constraint claim is the
+    // authority; the in-memory store is only a same-session fallback.
+    claimDedup: async (centerId, dedupKey) => {
+      try {
+        const res = await useCases.notifications.claimDedup(centerId, dedupKey);
+        return res.ok ? res.data : true; // RPC unavailable → allow (log-only guard)
+      } catch {
+        return true;
+      }
+    },
   });
 }

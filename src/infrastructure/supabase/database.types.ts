@@ -1462,6 +1462,32 @@ export type Database = {
           }
         ]
       }
+      "notification_dedup_claims": {
+        Row: {
+          "center_id": string
+          "dedup_key": string
+          "claimed_at": string
+        }
+        Insert: {
+          "center_id": string
+          "dedup_key": string
+          "claimed_at"?: string
+        }
+        Update: {
+          "center_id"?: string
+          "dedup_key"?: string
+          "claimed_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_dedup_claims_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "notification_settings": {
         Row: {
           "id": string
@@ -2246,6 +2272,10 @@ export type Database = {
         Returns: Json
       },
       "check_notification_dedup_v1": {
+        Args: { "p_center_id": string | null; "p_dedup_key": string | null; "p_window_minutes": number | null }
+        Returns: boolean
+      },
+      "claim_notification_dedup_v1": {
         Args: { "p_center_id": string | null; "p_dedup_key": string | null; "p_window_minutes": number | null }
         Returns: boolean
       },

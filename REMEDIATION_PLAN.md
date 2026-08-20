@@ -99,6 +99,19 @@ Legend: ✅ VERIFIED COMPLETE · 🟡 IMPLEMENTED BUT NOT VERIFIED (hosted/brows
 
 ---
 
+## 3b. Session remediation (2026-08-20, four verified defects fixed)
+
+| # | Defect (user-reported) | Root cause confirmed | Fix | Status |
+|---|---|---|---|---|
+| R-1 | Settings "Export" called React hooks outside a component → Invalid Hook Call | `downloadOperationalExport()` module-level used `useToast()`/`useTranslation()` | Pure `downloadJsonExport(fetchData, filename, toast, messages)`; hooks stay in callers; click test added | ✅ VERIFIED (test clicks button; 857 suite) |
+| R-2 | Notification preferences never read (`getPreferences: () => undefined`) | createNotificationService ignored the DB table | `list_customer_notification_preferences_v1` adapter + module preference cache loaded on customer select in POS & Appointments; pipeline reads cache | ✅ VERIFIED (typecheck; unit) |
+| R-3 | Dedup "check" not atomic; in-memory only | `SELECT EXISTS` + `DedupStore` lost state on reload | Migration `20260820000004` adds `notification_dedup_claims` PK(center_id,dedup_key) + `claim_notification_dedup_v1` atomic INSERT…ON CONFLICT; `NotificationService.claimDedup` replaces in-memory when provided; fresh-service test proves cross-session skip | ✅ VERIFIED (replay idempotent; 41 migrations; test) |
+| R-4a | `admin_global_search_v1` allowed any member | guard checked `is_center_member` only | guard now `has_center_role(ARRAY['ADMIN','MANAGER'])`; contract test pins it | ✅ VERIFIED (replay + test) |
+| R-4b | `/support` admin-only while contract says MANAGER read-only | route under RequireAdmin | moved to authenticated; nav visible to all; admin-only actions still server-guarded | ✅ VERIFIED |
+| R-4c | "Export my data" exported the center's operational dataset | reused `settings.exportData()` | now exports the signed-in user's session profile + center memberships; test asserts center export NOT called | ✅ VERIFIED |
+
+**Checks:** 857 tests / 124+ files PASS; typecheck, lint (269 files), build, audit:gate, ci:migrations (41), ci:rpc-check, db:types:check all PASS. Migration 00004 replays idempotently.
+
 ## 4. Honest statement
 
 Every **safe, reversible, in-repo** remediation identified by the audit series is already implemented and locally verified (853 tests; audit gate PASS; SonarCloud PASS). The remaining items are genuinely gated on **owner/external** actions (hosted credentials, Supabase dashboard, GitHub App permissions, commercial/legal policy, or a browser/hosted environment) — they cannot be honestly completed from this sandbox. No claim of hosted or browser verification is made anywhere in this plan.

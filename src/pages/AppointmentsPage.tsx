@@ -28,6 +28,8 @@ type Service = { id: string; name: string; category: string; durationMins: numbe
 type Employee = { id: string; name: string };
 
 import { AppointmentStatus, Appointment } from "../domain/entities";
+import type { NotificationChannelId } from "../domain/notification";
+import { setNotificationPreferences } from "../shared/notificationPreferencesStore";
 
 type Appt = Appointment & {
   customer: Customer;
@@ -301,6 +303,23 @@ export default function AppointmentsPage() {
     setChargeNoShowFee((appt.noShowFeeAmount ?? 0) > 0 || (appt.depositAmount ?? 0) > 0);
     setNoShowNote(appt.noShowNote ?? "");
     setOpen(true);
+  }
+
+  /** Loads a customer's notification preferences for the send pipeline. */
+  async function loadCustomerNotificationPreferences(customerId: string) {
+    const center = useCases.tenant.getActiveCenterId();
+    if (!center) return;
+    try {
+      const res = await useCases.notifications.listCustomerNotificationPreferences(center, customerId);
+      if (res.ok) {
+        setNotificationPreferences(
+          customerId,
+          res.data.map((p) => ({ channelId: appointmentChannelFromDb(p.channel), optIn: p.optIn, updatedAt: new Date() })),
+        );
+      }
+    } catch {
+      // Best-effort: pipeline falls back to defaults.
+    }
   }
 
   /** Validates the booking form; shows a toast and returns false on the first problem. */
@@ -926,7 +945,7 @@ export default function AppointmentsPage() {
                           {customers.map((c) => (
                             <button
                               key={c.id}
-                              onClick={() => { setCustomerId(c.id); setCustomerQ(c.name); }}
+                              onClick={() => { setCustomerId(c.id); setCustomerQ(c.name); void loadCustomerNotificationPreferences(c.id); }}
                               className="flex w-full items-center justify-between px-6 py-4 rounded-2xl text-start text-sm hover:bg-muted transition-all group/item"
                             >
                               <div className="flex items-center gap-4">
@@ -1125,4 +1144,15 @@ export default function AppointmentsPage() {
       </Modal>
     </div>
   );
+}
+
+/** Maps a DB channel name to the notification-domain channel id. */
+function appointmentChannelFromDb(channel: string): NotificationChannelId {
+  switch (channel) {
+    case "WHATSAPP": return "whatsapp_wa_me";
+    case "IN_APP": return "in_app";
+    case "PUSH": return "push";
+    case "EMAIL": return "email";
+    default: return "sms";
+  }
 }
