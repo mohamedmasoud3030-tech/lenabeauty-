@@ -295,6 +295,16 @@ describe("toast channel", () => {
 });
 
 describe("NotificationService orchestration", () => {
+  const bookingCtx = {
+    centerId: "c1",
+    customerId: "cu1",
+    eventId: "appointment_booked",
+    referenceId: "a1",
+    templateKey: "appointment_booked",
+    variables: {},
+    preferredChannel: "whatsapp_wa_me",
+    triggeredAt: new Date(),
+  };
   function buildService(overrides: any = {}) {
     const channels = overrides.channels ?? {
       toast: new ToastChannel(() => {}, () => true),
@@ -334,16 +344,7 @@ describe("NotificationService orchestration", () => {
 
   it("skips duplicates for the same event+reference", async () => {
     const service = buildService();
-    const ctx = {
-      centerId: "c1",
-      customerId: "cu1",
-      eventId: "appointment_booked",
-      referenceId: "a1",
-      templateKey: "appointment_booked",
-      variables: {},
-      preferredChannel: "whatsapp_wa_me",
-      triggeredAt: new Date(),
-    };
+    const ctx = bookingCtx;
     const first = await service.dispatch(ctx as any);
     expect(first.deliveryStatus).toBe("QUEUED");
     const second = await service.dispatch(ctx as any);

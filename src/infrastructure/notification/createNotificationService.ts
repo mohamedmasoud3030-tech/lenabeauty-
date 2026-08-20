@@ -39,71 +39,39 @@ export function createNotificationService(
     toast: toastChannel,
     in_app: toastChannel, // in-app center uses the same toast adapter for now
     whatsapp_wa_me: whatsappChannel,
-    whatsapp_api: {
-      channelId: "whatsapp_api",
-      audience: "customer",
-      displayNameKey: "WhatsApp API",
-      isAvailable: () => false,
-      isConfigured: () => false,
-      send: async () => ({
-        notificationId: "unavailable",
-        context: {} as any,
-        channel: "whatsapp_api",
-        deliveryStatus: "FAILED",
-        attemptedAt: new Date(),
-        errorMessage: "WhatsApp Business API not configured",
-        dedupKey: "n/a",
-      }),
-    },
-    sms: {
-      channelId: "sms",
-      audience: "customer",
-      displayNameKey: "SMS",
-      isAvailable: () => false,
-      isConfigured: () => false,
-      send: async () => ({
-        notificationId: "unavailable",
-        context: {} as any,
-        channel: "sms",
-        deliveryStatus: "FAILED",
-        attemptedAt: new Date(),
-        errorMessage: "SMS provider not configured",
-        dedupKey: "n/a",
-      }),
-    },
-    email: {
-      channelId: "email",
-      audience: "customer",
-      displayNameKey: "Email",
-      isAvailable: () => false,
-      isConfigured: () => false,
-      send: async () => ({
-        notificationId: "unavailable",
-        context: {} as any,
-        channel: "email",
-        deliveryStatus: "FAILED",
-        attemptedAt: new Date(),
-        errorMessage: "Email provider not configured",
-        dedupKey: "n/a",
-      }),
-    },
-    push: {
-      channelId: "push",
-      audience: "customer",
-      displayNameKey: "Push",
-      isAvailable: () => false,
-      isConfigured: () => false,
-      send: async () => ({
-        notificationId: "unavailable",
-        context: {} as any,
-        channel: "push",
-        deliveryStatus: "FAILED",
-        attemptedAt: new Date(),
-        errorMessage: "Push provider not configured",
-        dedupKey: "n/a",
-      }),
-    },
+    whatsapp_api: unavailableChannel("whatsapp_api", "WhatsApp API", "WhatsApp Business API not configured"),
+    sms: unavailableChannel("sms", "SMS", "SMS provider not configured"),
+    email: unavailableChannel("email", "Email", "Email provider not configured"),
+    push: unavailableChannel("push", "Push", "Push provider not configured"),
   };
+
+  /**
+   * Shared unavailable-channel adapter: every future provider channel has the
+   * same disabled shape (no credentials, no delivery) until owner approval
+   * activates it. Keeps the four stubs from duplicating identical blocks.
+   */
+  function unavailableChannel(
+    channelId: NotificationChannelId,
+    displayNameKey: string,
+    errorMessage: string,
+  ): any {
+    return {
+      channelId,
+      audience: "customer",
+      displayNameKey,
+      isAvailable: () => false,
+      isConfigured: () => false,
+      send: async () => ({
+        notificationId: "unavailable",
+        context: {} as any,
+        channel: channelId,
+        deliveryStatus: "FAILED",
+        attemptedAt: new Date(),
+        errorMessage,
+        dedupKey: "n/a",
+      }),
+    };
+  }
 
   const testMode = options.testMode ?? config.environment === "development";
 

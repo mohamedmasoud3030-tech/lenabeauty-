@@ -20,6 +20,19 @@ import { useCases } from "../app/composition/useCases";
 import { ToastProvider } from "../shared/components/Toast";
 import i18n from "../i18n";
 
+/** Shared render helper for the Help Center page. */
+function renderHelp(initialEntry = "/help") {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <ToastProvider>
+        <Routes>
+          <Route path="/help" element={<HelpCenterPage />} />
+        </Routes>
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("help article registry", () => {
   it("contains a known verified set of articles", () => {
     const slugs = HELP_ARTICLES.map((a) => a.slug).sort();
@@ -129,37 +142,19 @@ describe("HelpCenterPage render", () => {
   });
 
   it("lists articles for a staff user", async () => {
-    render(
-      <MemoryRouter initialEntries={["/help"]}>
-        <Routes>
-          <Route path="/help" element={<HelpCenterPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderHelp();
     expect(await screen.findByText("Help Center")).toBeInTheDocument();
     expect(screen.getByText("First login and your role")).toBeInTheDocument();
   });
 
   it("opens an article from a deep link", async () => {
-    render(
-      <MemoryRouter initialEntries={["/help?help=permissions"]}>
-        <Routes>
-          <Route path="/help" element={<HelpCenterPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderHelp("/help?help=permissions");
     expect(await screen.findByText("Who can see what")).toBeInTheDocument();
     expect(screen.getByText(/Only ADMIN can open Employees/i)).toBeInTheDocument();
   });
 
   it("filters articles by search", async () => {
-    render(
-      <MemoryRouter initialEntries={["/help"]}>
-        <Routes>
-          <Route path="/help" element={<HelpCenterPage />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderHelp();
     await screen.findByText("Help Center");
     const search = screen.getByLabelText("Search help articles");
     fireEvent.change(search, { target: { value: "password" } });
@@ -181,15 +176,7 @@ describe("support intake validation", () => {
   });
 
   async function renderIntake() {
-    render(
-      <MemoryRouter initialEntries={["/help"]}>
-        <ToastProvider>
-          <Routes>
-            <Route path="/help" element={<HelpCenterPage />} />
-          </Routes>
-        </ToastProvider>
-      </MemoryRouter>,
-    );
+    renderHelp();
     await screen.findByText("Help Center");
     fireEvent.click(screen.getByText("Contact support"));
     await screen.findByText("Report a problem");
@@ -222,15 +209,7 @@ describe("support intake validation", () => {
   });
 
   it("prefills route from the current hash", async () => {
-    render(
-      <MemoryRouter initialEntries={["/help"]}>
-        <ToastProvider>
-          <Routes>
-            <Route path="/help" element={<HelpCenterPage />} />
-          </Routes>
-        </ToastProvider>
-      </MemoryRouter>,
-    );
+    renderHelp();
     await screen.findByText("Help Center");
     fireEvent.click(screen.getByText("Contact support"));
     expect(await screen.findByText("/help")).toBeInTheDocument();

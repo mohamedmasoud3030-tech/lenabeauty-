@@ -3,9 +3,9 @@ import {
   AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
   CustomerEntitlement, EntitlementLedgerEntry, PackageEntitlementUnit,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
-  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem,
-  SupportTicketEntity
+  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
 } from "../../domain/entities";
+import { SupportTicket } from "../../domain/ports/repositories";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
 import { Session as SupabaseSession } from "@supabase/supabase-js";
@@ -760,7 +760,7 @@ export function mapPayrollLineItem(row: unknown): PayrollLineItem {
   };
 }
 
-export function mapSupportTicket(row: unknown): SupportTicketEntity {
+export function mapSupportTicket(row: unknown): SupportTicket {
   const r = row as Record<string, any>;
   if (!r || typeof r.id !== "string") {
     throw createMappingError("mapSupportTicket", "Missing id");
