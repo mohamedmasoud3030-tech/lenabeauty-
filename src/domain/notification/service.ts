@@ -30,9 +30,10 @@ export interface NotificationServiceDeps {
   /** Channel adapters, keyed by channel id. Missing channels are skipped. */
   channels: Partial<Record<NotificationChannelId, NotificationChannel>>;
   /** Per-customer preferences (undefined = defaults). */
+  /** Per-customer preferences; `null` means explicitly unknown (fail closed). */
   getPreferences: (
     customerId: string | undefined,
-  ) => CustomerNotificationPreference[] | undefined;
+  ) => CustomerNotificationPreference[] | undefined | null;
   /** Language for message rendering. */
   getLanguage: () => "ar" | "en";
   /** Custom templates override (optional, from settings). */
@@ -43,10 +44,12 @@ export interface NotificationServiceDeps {
   dedupWindowMinutes?: number;
   /**
    * Optional cross-session dedup claimer (e.g. Supabase-backed atomic claim).
-   * When provided it REPLACES the in-memory DedupStore so a reload or another
-   * device cannot resend. Must return true only when this caller won the claim.
+   * When provided it is the authoritative dedup so a reload or another device
+   * cannot resend. Must return true only when this caller won the claim.
    */
   claimDedup?: (centerId: string, dedupKey: string) => Promise<boolean>;
+  /** Releases a claim after a FAILED send so retries are not blocked. */
+  releaseDedup?: (centerId: string, dedupKey: string) => Promise<void>;
 }
 
 export class NotificationService {
@@ -95,21 +98,11 @@ export class NotificationService {
       );
     }
 
-    // 2. Dedup check (deterministic key). When a cross-session claimer is
-    //    configured it is authoritative (atomic, survives reloads); otherwise
-    //    the in-memory store guards within this session.
+    // 2. Early same-session dedup check (in-memory). The authoritative atomic
+    //    claim happens later, immediately before send, so skipped attempts
+    //    (preferences, availability, rate limit) never reserve the key.
     const dedupKey = buildDedupKey(context, channelId);
-    if (this.deps.claimDedup) {
-      const claimed = await this.deps.claimDedup(context.centerId, dedupKey);
-      if (!claimed) {
-        return this.skipped(
-          context,
-          "SKIPPED_DUPLICATE" as never,
-          "DUPLICATE",
-          "Duplicate notification (atomic claim lost)",
-        );
-      }
-    } else if (this.dedup.isDuplicate(dedupKey)) {
+    if (this.dedup.isDuplicate(dedupKey)) {
       return this.skipped(
         context,
         "SKIPPED_DUPLICATE" as never,
@@ -120,6 +113,17 @@ export class NotificationService {
 
     // 3. Preference gate (opt-in + quiet hours).
     const prefs = this.deps.getPreferences(context.customerId);
+    const preferencesUnknown = context.customerId !== undefined && prefs === null;
+    if (preferencesUnknown) {
+      // Fail closed: a customer whose preferences failed to load must not be
+      // auto-messaged on the default opt-in assumption.
+      return this.skipped(
+        context,
+        "SKIPPED_PREFERENCE" as never,
+        "PREFERENCES_UNKNOWN",
+        "Customer notification preferences could not be loaded",
+      );
+    }
     if (!canDeliver(prefs, channelId, { bypassQuietHours: meta.bypassQuietHours })) {
       return this.skipped(
         context,
@@ -158,10 +162,34 @@ export class NotificationService {
       rendered = `[TEST MODE] ${rendered}`;
     }
 
-    // 7. Send via the channel. In-memory mark is redundant (but harmless)
-    //    when the atomic claimer already recorded the key.
-    if (!this.deps.claimDedup) this.dedup.mark(dedupKey);
+    // 7. Atomically claim the key immediately before send. The claim happens
+    //    only after every gate passed, so failed/skipped attempts never block
+    //    a legitimate retry for the whole dedup window.
+    if (this.deps.claimDedup) {
+      const claimed = await this.deps.claimDedup(context.centerId, dedupKey);
+      if (!claimed) {
+        return this.skipped(
+          context,
+          "SKIPPED_DUPLICATE" as never,
+          "DUPLICATE",
+          "Duplicate notification (atomic claim lost)",
+        );
+      }
+    } else {
+      this.dedup.mark(dedupKey);
+    }
+
     const result = await channel.send(context, rendered);
+
+    // Release the claim on a failed attempt so the same event can be retried.
+    if (result.deliveryStatus === "FAILED") {
+      if (this.deps.releaseDedup) {
+        await this.deps.releaseDedup(context.centerId, dedupKey);
+      } else {
+        this.dedup.prune(Date.now()); // in-memory fallback: forget marks
+      }
+    }
+
     logger.debug("[NotificationService]", { event: context.eventId, channel: channelId, status: result.deliveryStatus });
     return result;
   }

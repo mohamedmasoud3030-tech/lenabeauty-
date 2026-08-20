@@ -167,7 +167,7 @@ export default function Layout() {
   // mobile can never surface a destination the sidebar deliberately hides.
   const visibleMoreMenuItems = useMemo(
     () =>
-      visibleDestinations({ isAdmin: me?.role === "ADMIN", optionalModules }).filter(
+      visibleDestinations({ isAdmin: me?.role === "ADMIN", isManager: me?.role === "MANAGER", optionalModules }).filter(
         (destination) => MOBILE_MORE_PATHS.includes(destination.path),
       ),
     [me?.role, optionalModules],

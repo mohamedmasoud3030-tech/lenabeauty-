@@ -29,6 +29,34 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
+/** ADMIN or MANAGER boundary — used by read-only investigation surfaces whose
+ * server RPCs require has_center_role(ADMIN, MANAGER). STAFF is refused here
+ * (never shown a UI whose RPCs would reject it). */
+export function RequireAdminOrManager() {
+  const { isInitialized, sessionState, user } = useAppContext();
+  const location = useLocation();
+
+  if (!isInitialized || sessionState.status === "loading") {
+    return <PageLoader />;
+  }
+
+  if (sessionState.status !== "authenticated" || !user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+        state={{ navigationNotice: "admin-only", attemptedPath: location.pathname }}
+      />
+    );
+  }
+
+  return <Outlet />;
+}
+
 export function RequireAdmin() {
   const { isInitialized, sessionState, user } = useAppContext();
   const location = useLocation();

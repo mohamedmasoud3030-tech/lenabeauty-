@@ -76,10 +76,12 @@ export function isInQuietHours(
  * `bypassQuietHours` is true for urgent events (appointment booked, cancelled).
  */
 export function canDeliver(
-  preferences: CustomerNotificationPreference[] | undefined,
+  preferences: CustomerNotificationPreference[] | undefined | null,
   channelId: NotificationChannelId,
   options: { bypassQuietHours: boolean; now?: Date },
 ): boolean {
+  // Fail closed: null = preferences unknown, never default-opt-in.
+  if (preferences === null) return false;
   if (!isOptedIn(preferences, channelId)) return false;
   if (options.bypassQuietHours) return true;
   return !isInQuietHours(preferences, channelId, options.now);

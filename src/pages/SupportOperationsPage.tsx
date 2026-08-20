@@ -24,7 +24,7 @@ import { useConfirm } from "../shared/components/ConfirmDialog";
 import { ScreenState } from "../shared/components/ScreenState";
 import { clsx } from "clsx";
 
-type TabId = "search" | "audit" | "employees";
+type TabId = "search" | "audit" | "tickets" | "employees";
 
 export default function SupportOperationsPage() {
   const { t } = useTranslation();
@@ -87,6 +87,7 @@ export default function SupportOperationsPage() {
         {[
           { id: "search" as TabId, label: t("Global Search"), icon: Search },
           { id: "audit" as TabId, label: t("Audit Trail"), icon: Clock },
+          { id: "tickets" as TabId, label: t("Support Tickets"), icon: FileText },
           { id: "employees" as TabId, label: t("Employee Management"), icon: UserCog },
         ].map((tab) => (
           <button type="button"
@@ -116,6 +117,7 @@ export default function SupportOperationsPage() {
       >
         {activeTab === "search" && <GlobalSearchTab centerId={centerId} isAdmin={isAdmin} />}
         {activeTab === "audit" && <AuditTrailTab centerId={centerId} isAdmin={isAdmin} />}
+        {activeTab === "tickets" && <SupportTicketsTab centerId={centerId} />}
         {activeTab === "employees" && <EmployeeManagementTab centerId={centerId} isAdmin={isAdmin} />}
       </motion.div>
     </div>
@@ -394,6 +396,85 @@ function AuditTrailTab({ centerId, isAdmin }: Readonly<{ centerId: string; isAdm
               {t("Next")}
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==================================================================== *
+ *  SUPPORT TICKETS TAB (read-only tracking for ADMIN/MANAGER)
+ * ==================================================================== */
+function SupportTicketsTab({ centerId }: Readonly<{ centerId: string }>) {
+  const { t, i18n } = useTranslation();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  async function loadTickets() {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await useCases.help.listTickets();
+      if (res.ok) setTickets(res.data);
+      else setLoadError(res.error.message);
+    } catch (e: any) {
+      setLoadError(e?.message ?? String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { void loadTickets(); }, []);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {t("Tickets submitted by center members appear here. High-urgency items are shown first.")}
+        </p>
+        <button type="button" onClick={() => void loadTickets()}
+          className="px-4 py-2 rounded-lg border border-border text-sm font-bold hover:bg-muted/30 transition-all touch-target">
+          {t("Refresh")}
+        </button>
+      </div>
+
+      {loadError ? (
+        <ScreenState state="error" title={t("Failed to load tickets")} description={loadError}
+          actionLabel={t("Retry")} onAction={() => void loadTickets()} />
+      ) : loading ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">{t("Loading...")}</p>
+      ) : tickets.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">{t("No support tickets yet")}</p>
+      ) : (
+        <div className="rounded-xl border border-border bg-card divide-y divide-border/60 overflow-hidden">
+          {tickets.map((tk: any) => (
+            <div key={tk.id} className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={clsx(
+                    "text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full font-bold shrink-0",
+                    tk.urgency === "high" ? "text-destructive bg-destructive/10"
+                      : tk.urgency === "low" ? "text-muted-foreground bg-muted/50"
+                      : "text-info bg-info/10",
+                  )}>
+                    {tk.urgency}
+                  </span>
+                  <span className={clsx(
+                    "text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full font-bold shrink-0",
+                    tk.status === "RESOLVED" ? "text-success bg-success/10" : "text-warning bg-warning/10",
+                  )}>
+                    {tk.status}
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                  {new Date(tk.createdAt).toLocaleString(i18n.language === "ar" ? "ar-OM" : "en-US", { dateStyle: "medium", timeStyle: "short" })}
+                </span>
+              </div>
+              <p className="mt-2 text-sm font-bold text-foreground">{tk.expectedBehavior || tk.actualBehavior}</p>
+              {tk.route && <p className="text-[10px] text-muted-foreground mt-0.5" dir="ltr">{tk.route}</p>}
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Suspense, lazy } from "react";
 import Layout from "./ui/layout/Layout";
-import { RequireAdmin, RequireAuth } from "./route-guards";
+import { RequireAdmin, RequireAdminOrManager, RequireAuth } from "./route-guards";
 import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -69,7 +69,9 @@ export function AppRoutes() {
           <Route path="/packages" element={<Suspense fallback={<PageLoader />}><PackagesPage /></Suspense>} />
           <Route path="/inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
           <Route path="/help" element={<Suspense fallback={<PageLoader />}><HelpCenterPage /></Suspense>} />
-          <Route path="/support" element={<Suspense fallback={<PageLoader />}><SupportOperationsPage /></Suspense>} />
+          <Route element={<RequireAdminOrManager />}>
+            <Route path="/support" element={<Suspense fallback={<PageLoader />}><SupportOperationsPage /></Suspense>} />
+          </Route>
 
           <Route element={<RequireAdmin />}>
             <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />

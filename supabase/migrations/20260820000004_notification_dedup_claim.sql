@@ -85,4 +85,35 @@ $$;
 REVOKE ALL ON FUNCTION public.claim_notification_dedup_v1(UUID, TEXT, INTEGER) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.claim_notification_dedup_v1(UUID, TEXT, INTEGER) TO authenticated;
 
+-- ------------------------------------------------------------
+-- Release a claim so a failed send can be retried within the window.
+-- No-op when the key is not claimed (idempotent).
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.release_notification_dedup_v1(
+  p_center_id UUID,
+  p_dedup_key TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, app_private
+AS $$
+DECLARE
+  c_denied CONSTANT TEXT := 'insufficient_privilege';
+  c_denied_code CONSTANT TEXT := '42501';
+BEGIN
+  IF NOT app_private.is_center_member(p_center_id) THEN
+    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;
+  END IF;
+
+  DELETE FROM public.notification_dedup_claims
+  WHERE center_id = p_center_id AND dedup_key = p_dedup_key;
+
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.release_notification_dedup_v1(UUID, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.release_notification_dedup_v1(UUID, TEXT) TO authenticated;
+
 COMMIT;

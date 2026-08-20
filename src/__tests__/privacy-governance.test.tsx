@@ -81,6 +81,18 @@ describe("support RPC authorization contract", () => {
     expect(searchFn).not.toMatch(/IF p_center_id IS NULL OR NOT app_private\.is_center_member/);
   });
 
+  it("support_tickets reads are RPC-only: no direct SELECT policy, read RPC granted to authenticated", () => {
+    const sql = readFileSync(
+      resolve(SRC, "../supabase/migrations/20260820000003_help_support.sql"),
+      "utf8",
+    );
+    // Direct table SELECT policy must be absent (least privilege).
+    expect(sql).not.toMatch(/CREATE POLICY support_tickets_select/);
+    // Read path is the explicit RPC.
+    expect(sql).toContain("CREATE OR REPLACE FUNCTION public.list_support_tickets_v1");
+    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.list_support_tickets_v1\(UUID, INTEGER\) TO authenticated/);
+  });
+
   it("claim_notification_dedup_v1 is a real atomic INSERT ... ON CONFLICT claim", () => {
     const sql = readFileSync(
       resolve(SRC, "../supabase/migrations/20260820000004_notification_dedup_claim.sql"),
@@ -135,7 +147,7 @@ describe("privacy settings surface", () => {
     const exportSpy = vi.spyOn(useCases.settings, "exportData");
     const sessionSpy = vi.spyOn(useCases.auth, "getSession").mockResolvedValue({
       ok: true,
-      data: { status: "authenticated", session: { user: { id: "u1", username: "op", role: "ADMIN" } } },
+      data: { status: "authenticated", session: { user: { id: "u1", username: "op", role: "ADMIN", name: "Op" } } },
     } as any);
     vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({
       ok: true,
@@ -152,5 +164,24 @@ describe("privacy settings surface", () => {
     await waitFor(() => expect(sessionSpy).toHaveBeenCalledTimes(1));
     // The personal export must NOT reuse the center-wide operational export.
     expect(exportSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails loudly when session or membership fetch fails — never exports partial data", async () => {
+    const sessionSpy = vi.spyOn(useCases.auth, "getSession").mockResolvedValue({ ok: false, error: new Error("boom") } as any);
+    vi.spyOn(useCases.auth, "getMyCenters").mockResolvedValue({ ok: true, data: [] } as any);
+    // Guard against accidental download: spy on URL.createObjectURL so a
+    // partial export would create a blob.
+    const blobSpy = vi.spyOn(URL, "createObjectURL");
+    render(
+      <MemoryRouter initialEntries={["/settings?tab=privacy"]}>
+        <ToastProvider>
+          <SettingsPage />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByText("Download my data"));
+    await waitFor(() => expect(sessionSpy).toHaveBeenCalledTimes(1));
+    // The failed fetch must NOT produce a download (no partial file).
+    expect(blobSpy).not.toHaveBeenCalled();
   });
 });

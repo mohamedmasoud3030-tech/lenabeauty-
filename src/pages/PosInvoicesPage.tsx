@@ -22,7 +22,7 @@ import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../doma
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
-import { setNotificationPreferences } from "../shared/notificationPreferencesStore";
+import { setNotificationPreferences, setNotificationPreferencesUnknown } from "../shared/notificationPreferencesStore";
 import type { NotificationChannelId } from "../domain/notification";
 import { escapePrintText } from "../infrastructure/services/printService";
 import {
@@ -325,8 +325,18 @@ export default function PosInvoicesPage() {
       if (prefRes.ok) {
         setNotificationPreferences(
           customer.id,
-          prefRes.data.map((p) => ({ channelId: channelFromDb(p.channel), optIn: p.optIn, updatedAt: new Date() })),
+          prefRes.data.map((p) => ({
+            channelId: channelFromDb(p.channel),
+            optIn: p.optIn,
+            quietHourStart: p.quietHourStart,
+            quietHourEnd: p.quietHourEnd,
+            updatedAt: new Date(),
+          })),
         );
+      } else {
+        // Fail closed: never auto-send on default opt-in when preferences are
+        // unknown (e.g. network error).
+        setNotificationPreferencesUnknown(customer.id);
       }
     }
   }

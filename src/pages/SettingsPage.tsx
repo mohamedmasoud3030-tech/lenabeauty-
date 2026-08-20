@@ -467,19 +467,30 @@ function PrivacySection() {
   async function handleExportMyData() {
     const filename = `my_data_export_${new Date().toISOString().split("T")[0]}.json`;
     await downloadJsonExport(
-      // Personal-data export: the signed-in user's own profile and center
-      // memberships — NOT the center's operational dataset (which is the
-      // separate "Data Export" tab).
+      // Personal-data export: the signed-in user's own account and center
+      // memberships — NOT the center's operational dataset. Fails loudly if
+      // any fetch fails instead of exporting a partial/empty file.
       async () => {
-        const session = await useCases.auth.getSession();
-        const memberships = await useCases.auth.getMyCenters();
-        const sessionData = session.ok ? session.data : null;
+        const [sessionRes, membershipsRes] = await Promise.all([
+          useCases.auth.getSession(),
+          useCases.auth.getMyCenters(),
+        ]);
+        if (!sessionRes.ok) throw new Error("Failed to load session");
+        if (!membershipsRes.ok) throw new Error("Failed to load memberships");
+        const sessionData = sessionRes.data;
+        if (sessionData.status !== "authenticated" || !sessionData.session?.user) {
+          throw new Error("No authenticated session");
+        }
+        const user = sessionData.session.user;
         return {
           exported_at: new Date().toISOString(),
-          user: sessionData && sessionData.status === "authenticated"
-            ? { id: sessionData.session.user.id, role: sessionData.session.user.role }
-            : null,
-          center_memberships: memberships.ok ? memberships.data : [],
+          user: {
+            id: user.id,
+            username: user.username,
+            name: user.name ?? null,
+            role: user.role,
+          },
+          center_memberships: membershipsRes.data,
         };
       },
       filename,
@@ -523,7 +534,7 @@ function PrivacySection() {
           <div>
             <h2 className="text-xl font-bold">{t("Export my data")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t("Download the operational records of this center as a JSON file to this device. Nothing is sent to a server.")}
+              {t("Download your account and center memberships as a JSON file to this device. Nothing is sent to a server.")}
             </p>
           </div>
         </div>
@@ -570,7 +581,7 @@ function PrivacySection() {
               <div className="space-y-3 rounded-2xl border border-destructive/30 bg-card p-4">
                 <p className="text-sm font-bold text-foreground">{t("Are you sure?")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {t("This will hide your account from the app and notify the administrator. It does not immediately delete financial history.")}
+                  {t("This submits a request to the administrator, who reviews and approves it before any change. Your access stays the same until then.")}
                 </p>
                 <div className="flex gap-2">
                   <button type="button"

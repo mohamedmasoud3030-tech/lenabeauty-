@@ -2367,6 +2367,10 @@ export type Database = {
         Args: { "p_center_id": string | null }
         Returns: Json
       },
+      "list_support_tickets_v1": {
+        Args: { "p_center_id": string | null; "p_limit": number | null }
+        Returns: Json
+      },
       "mark_appointment_no_show_v1": {
         Args: { "p_center_id": string | null; "p_appointment_id": string | null; "p_charge_no_show_fee": boolean | null; "p_note": string | null }
         Returns: Json
@@ -2430,6 +2434,10 @@ export type Database = {
       "refund_entitlement_v1": {
         Args: { "p_entitlement_id": string | null; "p_amount": number | null; "p_reason": string | null; "p_actor_employee_id": string | null }
         Returns: Json
+      },
+      "release_notification_dedup_v1": {
+        Args: { "p_center_id": string | null; "p_dedup_key": string | null }
+        Returns: boolean
       },
       "rotate_customer_portal_token_v1": {
         Args: { "p_center_id": string | null; "p_customer_id": string | null }

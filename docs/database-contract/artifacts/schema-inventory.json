@@ -9695,6 +9695,19 @@
     },
     {
       "schema": "public",
+      "name": "list_support_tickets_v1",
+      "identity_args": "p_center_id uuid, p_limit integer",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.list_support_tickets_v1(p_center_id uuid, p_limit integer DEFAULT 100)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_denied CONSTANT TEXT := 'insufficient_privilege';\n  c_denied_code CONSTANT TEXT := '42501';\n  v_rows JSONB;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;\n  END IF;\n\n  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb)\n  INTO v_rows\n  FROM (\n    SELECT * FROM public.support_tickets t\n    WHERE t.center_id = p_center_id\n    ORDER BY t.created_at DESC\n    LIMIT GREATEST(1, LEAST(p_limit, 200))\n  ) t;\n\n  RETURN jsonb_build_object('tickets', v_rows);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "mark_appointment_no_show_v1",
       "identity_args": "p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean, p_note text",
       "result": "jsonb",
@@ -9900,6 +9913,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.refund_entitlement_v1(p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_center_id UUID;\nBEGIN\n  SELECT center_id INTO v_center_id\n  FROM public.customer_entitlements\n  WHERE id = p_entitlement_id;\n  IF v_center_id IS NULL OR NOT app_private.has_center_role(v_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  RETURN public.refund_entitlement_admin_impl_v1(\n    p_entitlement_id, p_amount, p_reason, p_actor_employee_id\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "release_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text",
+      "result": "boolean",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "boolean",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.release_notification_dedup_v1(p_center_id uuid, p_dedup_key text)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  c_denied CONSTANT TEXT := 'insufficient_privilege';\n  c_denied_code CONSTANT TEXT := '42501';\nBEGIN\n  IF NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;\n  END IF;\n\n  DELETE FROM public.notification_dedup_claims\n  WHERE center_id = p_center_id AND dedup_key = p_dedup_key;\n\n  RETURN TRUE;\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10587,6 +10613,20 @@
     },
     {
       "schema": "public",
+      "name": "list_support_tickets_v1",
+      "identity_args": "p_center_id uuid, p_limit integer",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "list_support_tickets_v1",
+      "identity_args": "p_center_id uuid, p_limit integer",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "mark_appointment_no_show_v1",
       "identity_args": "p_center_id uuid, p_appointment_id uuid, p_charge_no_show_fee boolean, p_note text",
       "grantee": "authenticated",
@@ -10729,6 +10769,20 @@
       "schema": "public",
       "name": "refund_entitlement_v1",
       "identity_args": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "release_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "release_notification_dedup_v1",
+      "identity_args": "p_center_id uuid, p_dedup_key text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -11620,18 +11674,6 @@
       "cmd": "INSERT",
       "qual": null,
       "with_check": "app_private.is_center_member(center_id)"
-    },
-    {
-      "schema": "public",
-      "table": "support_tickets",
-      "name": "support_tickets_select",
-      "permissive": "PERMISSIVE",
-      "roles": [
-        "authenticated"
-      ],
-      "cmd": "SELECT",
-      "qual": "app_private.is_center_member(center_id)",
-      "with_check": null
     },
     {
       "schema": "public",
@@ -21065,6 +21107,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "list_support_tickets_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "list_support_tickets_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "mark_appointment_no_show_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -21206,6 +21262,20 @@
       "kind": "routine",
       "schema": "public",
       "object": "refund_entitlement_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "release_notification_dedup_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "release_notification_dedup_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },

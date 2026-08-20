@@ -50,6 +50,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const navGroups = useMemo(() => {
     const visible = visibleDestinations({
       isAdmin: me?.role === "ADMIN",
+      isManager: me?.role === "MANAGER",
       optionalModules,
     });
 

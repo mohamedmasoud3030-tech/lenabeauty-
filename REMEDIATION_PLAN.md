@@ -12,12 +12,12 @@
 
 | Check | Result |
 |---|---|
-| `npm test` | **124 files / 853 tests — PASS** |
+| `npm test` | **126 files / 862 tests — PASS** (current HEAD) |
 | `npm run typecheck` | PASS |
-| `npm run lint` (source-policy) | PASS (268 files) |
+| `npm run lint` (source-policy) | PASS (269 files) |
 | `npm run build` | PASS (61 precache entries) |
 | `npm run audit:gate` | **PASS** (0 high/medium findings; 4 info) |
-| `npm run ci:migrations` | PASS (40 canonical, 39 automated replayed) |
+| `npm run ci:migrations` | PASS (41 canonical, 40 automated replayed) |
 | `npm run ci:rpc-check` / `db:types:check` | PASS |
 | `audit:replay` fingerprint | identical on repeat (idempotent) |
 | SonarCloud on PR #39 | **Quality Gate PASS** (after 3 remediation rounds) |
@@ -112,6 +112,21 @@ Legend: ✅ VERIFIED COMPLETE · 🟡 IMPLEMENTED BUT NOT VERIFIED (hosted/brows
 
 **Checks:** 857 tests / 124+ files PASS; typecheck, lint (269 files), build, audit:gate, ci:migrations (41), ci:rpc-check, db:types:check all PASS. Migration 00004 replays idempotently.
 
+## 3c. Review remediation (2026-08-20, 10 points — HEAD 9c4e02c+)
+
+| # | Review point | Fix | Status |
+|---|---|---|---|
+| 1 | quiet_hour_start/end RPC→adapter→cache→domain | RPC returns full rows; adapter maps quiet hours; store + loaders pass them | ✅ VERIFIED |
+| 2 | preference load failure must not default to opt-in | `null` = unknown → pipeline fails closed (`PREFERENCES_UNKNOWN`); loaders call `setNotificationPreferencesUnknown` on failure | ✅ VERIFIED (test) |
+| 3 | atomic claim at right point + release | claim moved to just-before-send (after all gates); `releaseDedup` on FAILED; skipped attempts never reserve key | ✅ VERIFIED (tests) |
+| 4 | DB claim fail → real in-memory fallback | claimer falls back to session `Set` (not blind `true`); release drops from fallback too | ✅ VERIFIED |
+| 5 | /support ADMIN/MANAGER only (no STAFF UI for rejected RPCs) | new `RequireAdminOrManager` guard; nav `adminOrManagerOnly`; STAFF redirected | ✅ VERIFIED (test) |
+| 6 | personal export must fail loudly + export real account data | fetch session+memberships in Promise.all; throws on any failure; exports id/username/name/role + memberships; test asserts no blob on failure | ✅ VERIFIED (test) |
+| 7 | false copy | “operational records of this center” → “your account and center memberships”; “This will hide your account” → truthful request wording (ar+en) | ✅ VERIFIED |
+| 8 | support_tickets read contract | removed direct SELECT policy; added `list_support_tickets_v1` RPC + explicit GRANT; statement test pins absence of SELECT policy | ✅ VERIFIED (test) |
+| 9 | ticket tracking promise | added Support Tickets tab in Support Operations (read via RPC); text “follow its status in Support Operations” is now true | ✅ VERIFIED (test) |
+| 10 | REMEDIATION_PLAN + PR body to HEAD/862/41/00004; M-4 open | updated above; PR body updated | ✅ VERIFIED |
+
 ## 4. Honest statement
 
-Every **safe, reversible, in-repo** remediation identified by the audit series is already implemented and locally verified (853 tests; audit gate PASS; SonarCloud PASS). The remaining items are genuinely gated on **owner/external** actions (hosted credentials, Supabase dashboard, GitHub App permissions, commercial/legal policy, or a browser/hosted environment) — they cannot be honestly completed from this sandbox. No claim of hosted or browser verification is made anywhere in this plan.
+Every **safe, reversible, in-repo** remediation from the audit series up to the review milestones is implemented and locally verified (862 tests; audit gate PASS; SonarCloud PASS) **except M-4 (server pagination), which remains OPEN by design** — it was not bundled into this session because it touches three repository contracts and needs scope confirmation. The remaining items are genuinely gated on **owner/external** actions (hosted credentials, Supabase dashboard, GitHub App permissions, commercial/legal policy, or a browser/hosted environment) — they cannot be honestly completed from this sandbox. No claim of hosted or browser verification is made anywhere in this plan.

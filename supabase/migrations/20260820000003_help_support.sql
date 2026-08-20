@@ -28,11 +28,6 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_center
 
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS support_tickets_select ON public.support_tickets;
-CREATE POLICY support_tickets_select ON public.support_tickets
-  FOR SELECT TO authenticated
-  USING (app_private.is_center_member(center_id));
-
 DROP POLICY IF EXISTS support_tickets_insert ON public.support_tickets;
 CREATE POLICY support_tickets_insert ON public.support_tickets
   FOR INSERT TO authenticated
@@ -47,6 +42,42 @@ DROP POLICY IF EXISTS support_tickets_delete ON public.support_tickets;
 CREATE POLICY support_tickets_delete ON public.support_tickets
   FOR DELETE TO authenticated
   USING (false);
+
+-- Read-only listing for center members (used by Support Operations Tickets).
+CREATE OR REPLACE FUNCTION public.list_support_tickets_v1(
+  p_center_id UUID,
+  p_limit INTEGER DEFAULT 100
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, app_private
+AS $$
+DECLARE
+  c_denied CONSTANT TEXT := 'insufficient_privilege';
+  c_denied_code CONSTANT TEXT := '42501';
+  v_rows JSONB;
+BEGIN
+  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN
+    RAISE EXCEPTION '%', c_denied USING ERRCODE = c_denied_code;
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT * FROM public.support_tickets t
+    WHERE t.center_id = p_center_id
+    ORDER BY t.created_at DESC
+    LIMIT GREATEST(1, LEAST(p_limit, 200))
+  ) t;
+
+  RETURN jsonb_build_object('tickets', v_rows);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_support_tickets_v1(UUID, INTEGER) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.list_support_tickets_v1(UUID, INTEGER) TO authenticated;
 
 -- Server-governed create: validates membership, trims input, and
 -- enforces a max length on free-text fields to prevent abuse.

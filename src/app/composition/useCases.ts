@@ -201,6 +201,8 @@ export const useCases = {
       getRepositoryBundle().notificationAdapter.listCustomerNotificationPreferences(centerId, customerId),
     claimDedup: (centerId: string, dedupKey: string) =>
       getRepositoryBundle().notificationAdapter.claimDedup(centerId, dedupKey),
+    releaseDedup: (centerId: string, dedupKey: string) =>
+      getRepositoryBundle().notificationAdapter.releaseDedup(centerId, dedupKey),
     recordEvent: (input: { customerId?: string; appointmentId?: string; channel: string; templateKey?: string; messagePreview: string; deliveryStatus: string }) =>
       getRepositoryBundle().notificationAdapter.recordEvent(input),
     updateStatus: (id: string, deliveryStatus: string) =>

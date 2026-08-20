@@ -29,7 +29,7 @@ type Employee = { id: string; name: string };
 
 import { AppointmentStatus, Appointment } from "../domain/entities";
 import type { NotificationChannelId } from "../domain/notification";
-import { setNotificationPreferences } from "../shared/notificationPreferencesStore";
+import { setNotificationPreferences, setNotificationPreferencesUnknown } from "../shared/notificationPreferencesStore";
 
 type Appt = Appointment & {
   customer: Customer;
@@ -314,11 +314,20 @@ export default function AppointmentsPage() {
       if (res.ok) {
         setNotificationPreferences(
           customerId,
-          res.data.map((p) => ({ channelId: appointmentChannelFromDb(p.channel), optIn: p.optIn, updatedAt: new Date() })),
+          res.data.map((p) => ({
+            channelId: appointmentChannelFromDb(p.channel),
+            optIn: p.optIn,
+            quietHourStart: p.quietHourStart,
+            quietHourEnd: p.quietHourEnd,
+            updatedAt: new Date(),
+          })),
         );
+      } else {
+        setNotificationPreferencesUnknown(customerId);
       }
     } catch {
-      // Best-effort: pipeline falls back to defaults.
+      // Fail closed: unknown preferences must never default to opt-in.
+      setNotificationPreferencesUnknown(customerId);
     }
   }
 

@@ -3478,6 +3478,19 @@ class SupabaseNotificationAdapter implements NotificationRepository {
     }
   }
 
+  async releaseDedup(centerId: string, dedupKey: string): Promise<Result<boolean, DomainError>> {
+    try {
+      const { data, error } = await (getSupabaseClient().rpc as any)('release_notification_dedup_v1', {
+        p_center_id: centerId,
+        p_dedup_key: dedupKey,
+      });
+      if (error) return { ok: false, error: createQueryError("Notification.releaseDedup", error.message) };
+      return { ok: true, data: Boolean(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Notification.releaseDedup", (e as Error).message) };
+    }
+  }
+
   async claimDedup(centerId: string, dedupKey: string): Promise<Result<boolean, DomainError>> {
     try {
       const { data, error } = await (getSupabaseClient().rpc as any)('claim_notification_dedup_v1', {
@@ -3492,7 +3505,7 @@ class SupabaseNotificationAdapter implements NotificationRepository {
     }
   }
 
-  async listCustomerNotificationPreferences(centerId: string, customerId: string): Promise<Result<{ channel: string; optIn: boolean }[], DomainError>> {
+  async listCustomerNotificationPreferences(centerId: string, customerId: string): Promise<Result<{ channel: string; optIn: boolean; quietHourStart?: string; quietHourEnd?: string }[], DomainError>> {
     try {
       const { data, error } = await (getSupabaseClient().rpc as any)('list_customer_notification_preferences_v1', {
         p_center_id: centerId,
@@ -3502,7 +3515,12 @@ class SupabaseNotificationAdapter implements NotificationRepository {
       const prefs = (data as any)?.preferences ?? [];
       return {
         ok: true,
-        data: prefs.map((p: any) => ({ channel: p.channel, optIn: p.opt_in })),
+        data: prefs.map((p: any) => ({
+          channel: p.channel,
+          optIn: p.opt_in,
+          quietHourStart: p.quiet_hour_start ?? undefined,
+          quietHourEnd: p.quiet_hour_end ?? undefined,
+        })),
       };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Notification.listPreferences", (e as Error).message) };
@@ -3708,14 +3726,13 @@ class SupabaseSupportTicketAdapter implements SupportTicketRepository {
 
   async listTickets(centerId: string): Promise<Result<SupportTicket[], DomainError>> {
     try {
-      const { data, error } = await getSupabaseClient()
-        .from('support_tickets')
-        .select('*')
-        .eq('center_id', centerId)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data, error } = await (getSupabaseClient().rpc as any)('list_support_tickets_v1', {
+        p_center_id: centerId,
+        p_limit: 100,
+      });
       if (error) return { ok: false, error: createQueryError("SupportTicket.listTickets", error.message) };
-      return { ok: true, data: (data || []).map(mapSupportTicket) };
+      const tickets = (data as any)?.tickets ?? [];
+      return { ok: true, data: tickets.map(mapSupportTicket) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("SupportTicket.listTickets", (e as Error).message) };
     }

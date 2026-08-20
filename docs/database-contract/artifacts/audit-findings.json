@@ -10,12 +10,12 @@
       "indexes": 113,
       "triggers": 24,
       "views": 0,
-      "functions": 73,
-      "policies": 66,
-      "grants": 1388
+      "functions": 75,
+      "policies": 65,
+      "grants": 1392
     },
     "frontend": {
-      "tables": 29,
+      "tables": 28,
       "rpc": 32,
       "storage": 1
     },

@@ -384,6 +384,59 @@ describe("NotificationService orchestration", () => {
     expect(afterReload.deliveryStatus).toBe("SKIPPED_DUPLICATE");
   });
 
+  it("fails closed when customer preferences are unknown (null), not default opt-in", async () => {
+    const service = new NotificationService({
+      channels: { whatsapp_wa_me: new WhatsAppWaMeChannel(() => "+96891234567", () => {}) },
+      getPreferences: () => null, // load failed
+      getLanguage: () => "en",
+    });
+    const result = await service.dispatch({ ...bookingCtx } as any);
+    expect(result.deliveryStatus).toBe("SKIPPED_PREFERENCE");
+    expect(result.errorMessage).toContain("could not be loaded");
+  });
+
+  it("claims dedup only after all gates pass (preference skip does not reserve the key)", async () => {
+    const claims: string[] = [];
+    const service = new NotificationService({
+      channels: { whatsapp_wa_me: new WhatsAppWaMeChannel(() => "+96891234567", () => {}) },
+      getPreferences: () => [{ channelId: "whatsapp_wa_me" as any, optIn: false, updatedAt: new Date() }],
+      getLanguage: () => "en",
+      claimDedup: async (_c, key) => { claims.push(key); return true; },
+    });
+    await service.dispatch({ ...bookingCtx } as any);
+    expect(claims).toEqual([]); // no claim because preference gate blocked it
+  });
+
+  it("releases the claim after a FAILED send so a retry is not blocked", async () => {
+    const claims = new Set<string>();
+    const released: string[] = [];
+    const failingChannel: any = {
+      channelId: "whatsapp_wa_me",
+      audience: "customer",
+      displayNameKey: "WhatsApp",
+      isAvailable: () => true,
+      isConfigured: () => true,
+      send: async () => ({
+        notificationId: "x",
+        context: {},
+        channel: "whatsapp_wa_me",
+        deliveryStatus: "FAILED",
+        attemptedAt: new Date(),
+        dedupKey: "k",
+      }),
+    };
+    const service = new NotificationService({
+      channels: { whatsapp_wa_me: failingChannel },
+      getPreferences: () => undefined,
+      getLanguage: () => "en",
+      claimDedup: async (_c, key) => { if (claims.has(key)) return false; claims.add(key); return true; },
+      releaseDedup: async (_c, key) => { released.push(key); },
+    });
+    const result = await service.dispatch({ ...bookingCtx } as any);
+    expect(result.deliveryStatus).toBe("FAILED");
+    expect(released.length).toBe(1); // claim released for retry
+  });
+
   it("respects opt-out preferences", async () => {
     const service = buildService({
       getPreferences: () => [

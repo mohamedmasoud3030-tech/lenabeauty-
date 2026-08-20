@@ -52,6 +52,12 @@ export function createNotificationService(
    * same disabled shape (no credentials, no delivery) until owner approval
    * activates it. Keeps the four stubs from duplicating identical blocks.
    */
+  function sessionDedupGuard(seen: Set<string>, key: string): boolean {
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }
+
   function unavailableChannel(
     channelId: NotificationChannelId,
     displayNameKey: string,
@@ -77,20 +83,36 @@ export function createNotificationService(
 
   const testMode = options.testMode ?? config.environment === "development";
 
+  // Same-session fallback used when the DB claim RPC is unavailable, so a
+  // DB outage still prevents duplicate sends within this session instead of
+  // silently allowing them.
+  const sessionDedup = new Set<string>();
+
   return new NotificationService({
     channels,
     getPreferences: (customerId) => getNotificationPreferences(customerId),
     getLanguage: options.getLanguage ?? (() => "ar"),
     testMode,
     // Atomic cross-session dedup: the database unique-constraint claim is the
-    // authority; the in-memory store is only a same-session fallback.
+    // authority. On DB failure we fall back to a real in-memory set (same
+    // session) rather than returning true unconditionally.
     claimDedup: async (centerId, dedupKey) => {
       try {
         const res = await useCases.notifications.claimDedup(centerId, dedupKey);
-        return res.ok ? res.data : true; // RPC unavailable → allow (log-only guard)
+        if (res.ok) return res.data;
+        // RPC returned an error → use in-memory fallback.
+        return sessionDedupGuard(sessionDedup, dedupKey);
       } catch {
-        return true;
+        return sessionDedupGuard(sessionDedup, dedupKey);
       }
+    },
+    releaseDedup: async (centerId, dedupKey) => {
+      try {
+        await useCases.notifications.releaseDedup(centerId, dedupKey);
+      } catch {
+        // Best-effort: also drop from the session fallback below.
+      }
+      sessionDedup.delete(dedupKey);
     },
   });
 }

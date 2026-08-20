@@ -56,6 +56,8 @@ export interface NavDestination {
   group: NavGroupId;
   /** Visibility hint only — never an authorization control. */
   adminOnly?: boolean;
+  /** Visible to ADMIN and MANAGER (server RPCs require ADMIN/MANAGER). */
+  adminOrManagerOnly?: boolean;
   /**
    * Deliberately kept out of navigation AND search while the module is
    * unfinished (`src/routes.tsx`: "Deferred modules keep their routes/data but
@@ -120,7 +122,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { path: "/advanced-automation", labelKey: "Automation", icon: Bot, group: "growth", adminOnly: true, deferred: true, searchIcon: "🤖" },
 
   // System.
-  { path: "/support", labelKey: "Support Operations", icon: Shield, group: "system", searchIcon: "🛡️" },
+  { path: "/support", labelKey: "Support Operations", icon: Shield, group: "system", adminOrManagerOnly: true, searchIcon: "🛡️" },
   { path: "/help", labelKey: "Help Center", icon: HelpCircle, group: "system", searchIcon: "❓" },
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },
 ];
@@ -151,6 +153,7 @@ export function destinationLabelKey(path: string): string | undefined {
 
 export interface VisibilityContext {
   isAdmin: boolean;
+  isManager?: boolean;
   /** Optional modules that hold real data; absent means "not yet known". */
   optionalModules?: { giftCards: boolean; packages: boolean };
 }
@@ -165,6 +168,7 @@ export function visibleDestinations(ctx: VisibilityContext): NavDestination[] {
   return NAV_DESTINATIONS.filter((d) => {
     if (d.deferred) return false;
     if (d.adminOnly && !ctx.isAdmin) return false;
+    if (d.adminOrManagerOnly && !ctx.isAdmin && !ctx.isManager) return false;
     if (d.optionalModule) {
       if (!ctx.optionalModules) return false;
       return ctx.optionalModules[d.optionalModule];
