@@ -15,24 +15,21 @@ import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Search, Shield, FileText, Users, UserCog,
-  Clock, AlertCircle, CheckCircle2, XCircle,
-  PlusCircle, ChevronDown, ChevronUp, Save,
+  Clock, Save,
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { useAuth } from "../auth";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { ScreenState } from "../shared/components/ScreenState";
-import { ListState } from "../shared/components/ListState";
 import { clsx } from "clsx";
 
 type TabId = "search" | "audit" | "employees";
 
 export default function SupportOperationsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { me } = useAuth();
   const { showToast } = useToast();
-  const { confirm } = useConfirm();
   const isAdmin = me?.role === "ADMIN";
 
   const [activeTab, setActiveTab] = useState<TabId>("search");
@@ -128,7 +125,7 @@ export default function SupportOperationsPage() {
 /* ==================================================================== *
  *  GLOBAL SEARCH TAB
  * ==================================================================== */
-function GlobalSearchTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
+function GlobalSearchTab({ centerId, isAdmin }: Readonly<{ centerId: string; isAdmin: boolean }>) {
   const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -263,7 +260,7 @@ function actionColor(action: string): string {
   if (action.includes("void")) return "text-warning";
   return "text-info";
 }
-function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
+function AuditTrailTab({ centerId, isAdmin }: Readonly<{ centerId: string; isAdmin: boolean }>) {
   const { t, i18n } = useTranslation();
   const [events, setEvents] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -406,7 +403,7 @@ function AuditTrailTab({ centerId, isAdmin }: { centerId: string; isAdmin: boole
 /* ==================================================================== *
  *  EMPLOYEE MANAGEMENT TAB (safe deactivation/reactivation with reason)
  * ==================================================================== */
-function EmployeeManagementTab({ centerId, isAdmin }: { centerId: string; isAdmin: boolean }) {
+function EmployeeManagementTab({ centerId, isAdmin }: Readonly<{ centerId: string; isAdmin: boolean }>) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -520,14 +517,7 @@ function EmployeeManagementTab({ centerId, isAdmin }: { centerId: string; isAdmi
                 <div>
                   <div className="flex items-center gap-3">
                     <p className="text-sm font-bold text-foreground">{emp.name}</p>
-                    <span className={clsx(
-                      "text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full font-bold",
-                      emp.isActive
-                        ? "text-success bg-success/10"
-                        : "text-muted-foreground bg-muted/50",
-                    )}>
-                      {emp.isActive ? t("Active") : t("Inactive")}
-                    </span>
+                    <EmployeeStatusBadge isActive={emp.isActive} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{emp.role}</p>
                 </div>
@@ -598,7 +588,7 @@ function EmployeeManagementTab({ centerId, isAdmin }: { centerId: string; isAdmi
 /* ==================================================================== *
  *  SHARED SECTION CARD
  * ==================================================================== */
-function SectionCard({ title, icon: Icon, count, children }: { title: string; icon: any; count: number; children: React.ReactNode }) {
+function SectionCard({ title, icon: Icon, count, children }: Readonly<{ title: string; icon: any; count: number; children: React.ReactNode }>) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/20">
@@ -612,5 +602,23 @@ function SectionCard({ title, icon: Icon, count, children }: { title: string; ic
       </div>
       {children}
     </div>
+  );
+}
+
+
+/** Small status badge for employee active state. */
+function EmployeeStatusBadge({ isActive }: Readonly<{ isActive: boolean }>) {
+  const { t } = useTranslation();
+  const active = isActive;
+  const badgeClass = active
+    ? "text-success bg-success/10"
+    : "text-muted-foreground bg-muted/50";
+  return (
+    <span className={clsx(
+      "text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full font-bold",
+      badgeClass,
+    )}>
+      {active ? t("Active") : t("Inactive")}
+    </span>
   );
 }

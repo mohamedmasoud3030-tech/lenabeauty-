@@ -28,7 +28,6 @@ interface NotificationCenterProps {
 export function NotificationCenter({ isAdmin }: NotificationCenterProps) {
   const { t } = useTranslation();
   const nav = useNavigate();
-  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationCenterItem[]>([]);
   const [loading, setLoading] = useState(false);

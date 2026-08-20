@@ -313,8 +313,8 @@ export default function AppointmentsPage() {
     if (!customerId) { showToast('error', t("Error"), t("Please select a customer")); return false; }
     if (!serviceId) { showToast('error', t("Error"), t("Please select a service")); return false; }
     if (!employeeId) { showToast('error', t("Error"), t("Please select an employee")); return false; }
-    if (isNaN(Number(depositAmount)) || Number(depositAmount) < 0) { showToast('error', t("Error"), t("Deposit cannot be negative")); return false; }
-    if (isNaN(Number(noShowFeeAmount)) || Number(noShowFeeAmount) < 0) { showToast('error', t("Error"), t("No-show fee cannot be negative")); return false; }
+    if (Number.isNaN(Number(depositAmount)) || Number(depositAmount) < 0) { showToast('error', t("Error"), t("Deposit cannot be negative")); return false; }
+    if (Number.isNaN(Number(noShowFeeAmount)) || Number(noShowFeeAmount) < 0) { showToast('error', t("Error"), t("No-show fee cannot be negative")); return false; }
     return true;
   }
 

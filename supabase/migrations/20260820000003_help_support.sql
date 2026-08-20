@@ -68,14 +68,15 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, app_private
 AS $$
 DECLARE
+  c_default_urgency CONSTANT TEXT := 'normal';
   v_ticket public.support_tickets;
 BEGIN
   IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN
-    RAISE EXCEPTION 'insufficient_privilege' USING ERRCODE = '42501';
+    RAISE EXCEPTION '%', 'insufficient_privilege' USING ERRCODE = '42501';
   END IF;
 
-  IF p_urgency NOT IN ('low', 'normal', 'high') THEN
-    p_urgency := 'normal';
+  IF p_urgency NOT IN ('low', c_default_urgency, 'high') THEN
+    p_urgency := c_default_urgency;
   END IF;
 
   IF length(btrim(COALESCE(p_expected_behavior, ''))) < 2

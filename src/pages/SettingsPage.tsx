@@ -3,7 +3,7 @@ import {
   Save, Download, Building2, Database,
   ShieldCheck, Globe, Phone, MapPin, Hash,
   Coins, ChevronRight, Bell, Palette, CreditCard,
-  UserRound, Trash2, FileJson, CheckCircle2
+  Trash2, FileJson, CheckCircle2
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";

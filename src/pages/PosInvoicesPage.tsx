@@ -271,7 +271,6 @@ export default function PosInvoicesPage() {
     if (!service) return;
     addToCart({ ...service, price: enteredPrice }, "service");
     setPriceDialog(null);
-    setPriceDialogValue("");
   }
 
   /** Increase qty for a grouped cart item. */

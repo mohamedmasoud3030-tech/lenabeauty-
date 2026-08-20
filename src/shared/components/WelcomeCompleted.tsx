@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Receipt, X, Sparkles } from "lucide-react";
-import { hasActivationEvent, recordActivationEvent } from "../activation/events";
+import { hasActivationEvent } from "../activation/events";
 
 const COMPLETED_KEY = "lenabeauty_welcome_completed_shown_at";
 const DISMISS_KEY = "lenabeauty_welcome_completed_dismissed";

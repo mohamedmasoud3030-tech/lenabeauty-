@@ -20,12 +20,12 @@ import { createShortId } from "../../shared/ids";
  */
 export class ToastChannel implements NotificationChannel {
   readonly channelId: NotificationChannelId = "toast";
-  readonly audience: "staff" = "staff";
+  readonly audience = "staff" as const;
   readonly displayNameKey = "In-App Alert";
 
   constructor(
-    private sendToast: (title: string, message: string, level?: "success" | "error" | "info" | "warning") => void,
-    private isBrowser: () => boolean = () => typeof window !== "undefined",
+    private readonly sendToast: (title: string, message: string, level?: "success" | "error" | "info" | "warning") => void,
+    private readonly isBrowser: () => boolean = () => typeof window !== "undefined",
   ) {}
 
   isAvailable(): boolean {
@@ -75,12 +75,12 @@ export class ToastChannel implements NotificationChannel {
  */
 export class WhatsAppWaMeChannel implements NotificationChannel {
   readonly channelId: NotificationChannelId = "whatsapp_wa_me";
-  readonly audience: "customer" = "customer";
+  readonly audience = "customer" as const;
   readonly displayNameKey = "WhatsApp";
 
   constructor(
-    private getPhone: (customerId: string) => string | undefined,
-    private openLink: (phone: string, message: string) => void = (phone, message) => {
+    private readonly getPhone: (customerId: string) => string | undefined,
+    private readonly openLink: (phone: string, message: string) => void = (phone, message) => {
       if (typeof window !== "undefined") {
         window.open(buildWhatsAppLink(phone, message), "_blank", "noopener,noreferrer");
       }

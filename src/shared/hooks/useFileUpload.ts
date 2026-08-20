@@ -87,7 +87,7 @@ export function validateServiceImageFile(file: File): UploadValidation {
  */
 export function sanitizeFilename(name: string): string {
   return name
-    .replace(/[/\\]/g, "_")    // replace path separators
+    .replaceAll("/", "_").replaceAll("\\", "_")    // replace path separators
     .replace(/\0/g, "")        // strip null bytes
     .replace(/[^a-zA-Z0-9._-]/g, "_")  // replace special chars
     .replace(/\.{2,}/g, ".")   // collapse consecutive dots

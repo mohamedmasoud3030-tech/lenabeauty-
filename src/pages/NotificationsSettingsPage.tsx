@@ -66,7 +66,7 @@ function interpolatePreview(template: string, vars: Record<string, string | numb
   );
 }
 
-export default function NotificationsSettingsPage({ embedded = false }: { embedded?: boolean }) {
+export default function NotificationsSettingsPage({ embedded = false }: Readonly<{ embedded?: boolean }>) {
   const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);

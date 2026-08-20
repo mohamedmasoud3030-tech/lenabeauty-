@@ -126,10 +126,10 @@ export function validateBilingualTemplate(
   const errors: string[] = [];
 
   errors.push(
-    ...validateTemplate(template.ar, _eventId).map((e) => `[ar] ${e}`),
-  );
-  errors.push(
-    ...validateTemplate(template.en, _eventId).map((e) => `[en] ${e}`),
+    ...[
+      ...validateTemplate(template.ar, _eventId).map((e) => `[ar] ${e}`),
+      ...validateTemplate(template.en, _eventId).map((e) => `[en] ${e}`),
+    ],
   );
 
   for (const v of enVars) {

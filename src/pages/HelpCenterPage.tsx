@@ -13,7 +13,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   Search, BookOpen, LifeBuoy, ChevronRight, ChevronLeft,
-  HelpCircle, AlertTriangle, Send, X, ShieldAlert,
+  HelpCircle, AlertTriangle, Send, ShieldAlert,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -114,23 +114,30 @@ export default function HelpCenterPage() {
         </button>
       </div>
 
-      {showContact ? (
-          <motion.div key="contact" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            <SupportIntakeForm
-              role={me?.role}
-              onDone={() => { setShowContact(false); setView("list"); }}
-            />
-          </motion.div>
-        ) : view === "article" && activeArticle ? (
-          <motion.div key="article" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-            <ArticleView
-              slug={activeArticle.slug}
-              lang={lang}
-              onBack={backToList}
-              onRelated={openArticle}
-            />
-          </motion.div>
-        ) : (
+      {(() => {
+        if (showContact) {
+          return (
+            <motion.div key="contact" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <SupportIntakeForm
+                role={me?.role}
+                onDone={() => { setShowContact(false); setView("list"); }}
+              />
+            </motion.div>
+          );
+        }
+        if (view === "article" && activeArticle) {
+          return (
+            <motion.div key="article" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <ArticleView
+                slug={activeArticle.slug}
+                lang={lang}
+                onBack={backToList}
+                onRelated={openArticle}
+              />
+            </motion.div>
+          );
+        }
+        return (
           <motion.div key="list" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
             {/* Search */}
             <div className="relative">
@@ -205,7 +212,8 @@ export default function HelpCenterPage() {
               )}
             </div>
           </motion.div>
-        )}
+        );
+      })()}
     </div>
   );
 }
