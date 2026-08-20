@@ -32,7 +32,12 @@ function walk(dir) {
   });
 }
 
-const sourceFiles = walk(SRC_DIR).filter((p) => /\.(ts|tsx)$/.test(p));
+// Deterministic ordering: readdirSync order varies by filesystem (ext4 inode
+// order vs CI runners), which would make the generated frontend-usage.json
+// artifact differ between environments and trip the stale-artifact gate.
+const sourceFiles = walk(SRC_DIR)
+  .filter((p) => /\.(ts|tsx)$/.test(p))
+  .sort(byLocale);
 
 /** Find every `.method(` occurrence; returns `[{start, argsStart}]`. */
 function findMethodCalls(source, method) {
