@@ -32,3 +32,18 @@
 - Consistent status/payment badges.
 - Empty, error, permission, offline, and success copy.
 - Focus and form semantics where verified locally.
+
+## Execution status — 2026-08-21
+
+| Item | Status | Evidence |
+|---|---|---|
+| P0.1 Today Workspace | IN PROGRESS | Dashboard now prioritises today’s schedule and exposes an operational CTA; build/browser verification pending. |
+| P0.2 Appointment Card Contract | IN PROGRESS | Lifecycle and payment handoff labels are separate in desktop/mobile appointment cards; true payment state is not in Appointment. |
+| P0.3 Needs Attention | IN PROGRESS | Derived from late scheduled appointments and low-stock records only; no fabricated failures. |
+| P1.1 Check-in → Service → Completion | BLOCKED | No corresponding state or safe existing use case found in the current appointment contract. |
+| P1.2 Checkout review step | NOT STARTED | Existing POS/atomic checkout preserved; not changed without rendered verification. |
+| P1.3 Receipt → Rebooking | NOT STARTED | Existing customer/POS capabilities remain; continuity handoff not yet implemented. |
+| P2 Role-based depth | NOT STARTED | Existing route guards preserved. |
+| P3 Readiness and trust | NOT STARTED | Existing environment disclosure preserved; hosted verification still required. |
+
+**Verification boundary:** No claim of PASS is made until CI/build and a rendered browser walkthrough run against this branch.
