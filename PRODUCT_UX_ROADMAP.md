@@ -4,34 +4,36 @@
 
 ### P0.1 Today workspace
 
-**Change:** Make today’s appointments, quick booking, check-in, exceptions, and quick checkout the dominant dashboard experience.
+**Change:** Make today’s appointments and exception resolution the dominant dashboard experience, reusing existing appointment, inventory, and navigation capabilities.
 
-**Acceptance criteria:**
+**Acceptance criteria for this UI-only baseline:**
 
-- Staff can identify the next appointment without opening multiple modules.
-- Each appointment exposes one clear next action.
-- Empty day, loading, failed query, and permission states are explicit.
-- Mobile Arabic layout has no horizontal clipping or hidden primary action.
+- The dashboard loads the real ordered appointment list for today and exposes one primary action to open the schedule.
+- Each listed appointment exposes a lifecycle label and one next action.
+- The existing empty, loading, failed-query, and permission states remain explicit; rendered verification is still pending.
+- The mobile Arabic/RTL layout keeps the primary action reachable; rendered verification is still pending.
+- Check-in and quick checkout are not claimed as implemented here because the current appointment contract has no corresponding state/use case; they remain P1 work.
 
 ### P0.2 Appointment card contract
 
-**Change:** Show customer, service, time/duration, assigned specialist, lifecycle status, payment status, and next action in a consistent card.
+**Change:** Show customer, service, time/duration, assigned specialist, lifecycle status, a truthful payment handoff, and next action in a consistent card.
 
-**Acceptance criteria:**
+**Acceptance criteria for the current contract:**
 
-- Lifecycle and payment badges are visually separate.
-- `CANCELLED` and `NO_SHOW` are never presented as successful completion.
-- A reschedule/cancel/no-show action requires confirmation and preserves reason/history where applicable.
+- Lifecycle and payment handoff are visually separate.
+- The UI does not label an appointment `PAID` or `UNPAID` because `Appointment` has no verified payment field or invoice link; it shows `Payment at checkout` or `Deposit configured`.
+- `CANCELLED` and `NO_SHOW` are not presented as successful completion.
+- Existing reschedule/cancel/no-show actions are preserved; confirmation/reason/history behavior remains a rendered verification item and was not expanded in this batch.
 
 ### P0.3 Exception queue
 
-**Change:** Add a “Needs attention” section for late/overdue appointments, failed writes, unconfirmed bookings, unpaid completed visits, and stock warnings.
+**Change:** Add a “Needs Attention” section for the exceptions that the current source can prove: late scheduled appointments and low-stock warnings.
 
-**Acceptance criteria:**
+**Acceptance criteria for the current source:**
 
-- Each item has a reason, severity, timestamp, owner/role, and direct corrective action.
-- Resolved items disappear only after the underlying state changes.
-- No fabricated data appears when a query fails.
+- Each surfaced item has a reason, severity styling, and a direct corrective route to Appointments or Inventory.
+- The queue is derived only from loaded records and does not fabricate failed-write, unconfirmed-booking, or unpaid-completion states.
+- Timestamp/owner fields and resolution disappearance require source data or mutation behavior that are not present in the current contract; they remain deferred rather than invented.
 
 ## P1 — Make the visit trustworthy
 
@@ -86,4 +88,4 @@ Once a local checkout is available, implement P0.1, P0.2, and P0.3 first. These 
 
 ### Verification blocker
 
-P0 remains **IN PROGRESS**, not DONE. GitHub Actions run 50 failed before recording any step and the Vercel preview is blocked by the free-plan deployment rate limit. P1 remains blocked by the missing check-in/service contract as previously recorded.
+P0 remains **IN PROGRESS**, not DONE. GitHub Actions run 52 failed before recording any step; SonarQube Cloud Quality Gate passed, but the Vercel preview is blocked by the free-plan deployment rate limit. P1 remains blocked by the missing check-in/service contract as previously recorded.
