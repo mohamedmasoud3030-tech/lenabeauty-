@@ -88,4 +88,4 @@ Once a local checkout is available, implement P0.1, P0.2, and P0.3 first. These 
 
 ### Verification blocker
 
-P0 remains **IN PROGRESS**, not DONE. GitHub Actions run 52 failed before recording any step; SonarQube Cloud Quality Gate passed, but the Vercel preview is blocked by the free-plan deployment rate limit. P1 remains blocked by the missing check-in/service contract as previously recorded.
+P0 remains **IN PROGRESS**, not DONE. GitHub Actions run 54 failed before recording any step; SonarQube Cloud Quality Gate passed, but the Vercel preview is blocked by the free-plan deployment rate limit. P1 remains blocked by the missing check-in/service contract as previously recorded.
