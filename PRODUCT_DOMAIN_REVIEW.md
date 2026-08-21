@@ -105,3 +105,9 @@ The original acceptance language implied that a paid/unpaid state could be rende
 - P0.2 Appointment Card Contract: **IN PROGRESS** — lifecycle/payment separation implemented; true payment state remains unverified by contract.
 - P0.3 Needs Attention: **IN PROGRESS** — late appointments and low stock implemented from real loaded data; failed-write/unconfirmed-payment signals remain unavailable without a source.
 - P1: **BLOCKED** for check-in/service state until the existing contract is verified or owner-approved schema work is required.
+
+### Verification attempt
+
+- GitHub Actions run 50 was triggered for PR #40 but both jobs failed before any step was recorded (steps: []); the failure is runner/infrastructure-level and does not identify a source assertion.
+- The Vercel preview status is blocked by the external free-plan deployment limit (api-deployments-free-per-day).
+- Therefore rendered-browser, build, and hosted-flow acceptance remain **BLOCKED**, and no P0 item is marked DONE.
