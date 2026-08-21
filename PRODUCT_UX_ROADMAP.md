@@ -83,3 +83,7 @@ Once a local checkout is available, implement P0.1, P0.2, and P0.3 first. These 
 - **Verified:** existing code loads today appointments and low-stock products; appointment lifecycle is SCHEDULED/COMPLETED/CANCELLED/NO_SHOW; no payment status is present on Appointment; checkout is a separate repository/use-case path.
 - **Assumption:** a future payment-status display can be added without schema work. This is **not accepted** until an existing invoice relationship is proven.
 - **Blocked owner decision:** tax, deposit, cancellation/no-show, refund, gateway, legal identity, and retention policies remain unchanged and unconfigured by this batch.
+
+### Verification blocker
+
+P0 remains **IN PROGRESS**, not DONE. GitHub Actions run 50 failed before recording any step and the Vercel preview is blocked by the free-plan deployment rate limit. P1 remains blocked by the missing check-in/service contract as previously recorded.
