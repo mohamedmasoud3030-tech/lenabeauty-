@@ -66,4 +66,4 @@ The following cannot be safely inferred from code or generic research:
 
 ### Verification boundary
 
-PR #40 remains Draft because GitHub Actions failed before executing steps and the Vercel preview is rate-limited. No merge or P1 continuation is justified until the branch has a successful build and rendered walkthrough.
+PR #40 remains Draft because GitHub Actions run 52 failed before executing steps and the Vercel preview is rate-limited. SonarQube Cloud Quality Gate passed, but build and rendered acceptance are still missing. No merge or P1 continuation is justified until the branch has a successful build and rendered walkthrough.
