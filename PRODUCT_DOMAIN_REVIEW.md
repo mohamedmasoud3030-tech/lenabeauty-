@@ -108,6 +108,6 @@ The original acceptance language implied that a paid/unpaid state could be rende
 
 ### Verification attempt
 
-- GitHub Actions run 50 was triggered for PR #40 but both jobs failed before any step was recorded (steps: []); the failure is runner/infrastructure-level and does not identify a source assertion.
+- GitHub Actions run 52 was triggered for PR #40. The static-gates and credential-probe jobs failed before any step was recorded (`steps: null`); the failure is runner/infrastructure-level and does not identify a source assertion. SonarQube Cloud separately reports Quality Gate passed.
 - The Vercel preview status is blocked by the external free-plan deployment limit (api-deployments-free-per-day).
-- Therefore rendered-browser, build, and hosted-flow acceptance remain **BLOCKED**, and no P0 item is marked DONE.
+- Therefore rendered-browser, build, and hosted-flow acceptance remain **BLOCKED**, and no P0 item is marked DONE. The hosted Demo migration job was skipped; no hosted database was changed.
