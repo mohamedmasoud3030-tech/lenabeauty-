@@ -63,3 +63,7 @@ The following cannot be safely inferred from code or generic research:
 - The current P0 changes are UI-only and reuse existing queries, routes, ScreenState, translations, and design tokens.
 - No VAT, deposit, cancellation, no-show, refund, gateway, RLS, tenant, or checkout contract was changed.
 - P1.1 is blocked pending evidence of an existing check-in/service state or explicit owner approval for a contract change.
+
+### Verification boundary
+
+PR #40 remains Draft because GitHub Actions failed before executing steps and the Vercel preview is rate-limited. No merge or P1 continuation is justified until the branch has a successful build and rendered walkthrough.
