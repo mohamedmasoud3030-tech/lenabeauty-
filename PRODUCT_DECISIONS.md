@@ -55,3 +55,11 @@ The following cannot be safely inferred from code or generic research:
 2. Deposit amount/type and cancellation/no-show policy.
 3. Refund authority and payment-gateway production activation.
 4. Legal business identity, privacy retention, and customer consent wording.
+
+## Implementation record — 2026-08-21
+
+- Decision 2 is now reflected in DashboardPage: the primary non-first-run action opens today’s schedule, and the dashboard includes a derived Needs Attention queue.
+- Decision 3 is enforced conservatively in AppointmentsPage: lifecycle status is rendered separately from payment handoff. The UI does not claim PAID or UNPAID because the current Appointment contract does not expose that fact.
+- The current P0 changes are UI-only and reuse existing queries, routes, ScreenState, translations, and design tokens.
+- No VAT, deposit, cancellation, no-show, refund, gateway, RLS, tenant, or checkout contract was changed.
+- P1.1 is blocked pending evidence of an existing check-in/service state or explicit owner approval for a contract change.
