@@ -50,4 +50,4 @@
 
 ### Current verification blocker
 
-The branch has not received a trustworthy build or rendered preview: GitHub Actions failed before recording steps, and Vercel is rate-limited. Scores and P0 statuses remain provisional until a real build and browser walkthrough complete.
+The branch has not received a trustworthy build or rendered preview: GitHub Actions run 52 failed before recording steps, and Vercel is rate-limited. SonarQube Cloud Quality Gate passed, but it is not a build or browser acceptance. Scores and P0 statuses remain provisional until a real build and browser walkthrough complete.
