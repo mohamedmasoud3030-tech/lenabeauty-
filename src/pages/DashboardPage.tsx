@@ -116,7 +116,6 @@ export default function DashboardPage() {
       const upcoming = (apptsRes.ok ? apptsRes.data : [])
         .filter((a) => a.status !== "CANCELLED")
         .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
-        .slice(0, 8)
         .map((a) => ({
           id: a.id,
           time: a.dateTime.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US", { hour: "2-digit", minute: "2-digit" }),
@@ -407,7 +406,7 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="space-y-2">
-                {todayAppts.map((a) => (
+                {todayAppts.slice(0, 8).map((a) => (
                   <button
                     key={a.id}
                     onClick={() => nav("/appointments")}
