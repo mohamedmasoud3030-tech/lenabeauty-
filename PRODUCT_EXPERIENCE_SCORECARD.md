@@ -47,3 +47,7 @@
 | P3 Readiness and trust | NOT STARTED | Existing environment disclosure preserved; hosted verification still required. |
 
 **Verification boundary:** No claim of PASS is made until CI/build and a rendered browser walkthrough run against this branch.
+
+### Current verification blocker
+
+The branch has not received a trustworthy build or rendered preview: GitHub Actions failed before recording steps, and Vercel is rate-limited. Scores and P0 statuses remain provisional until a real build and browser walkthrough complete.
