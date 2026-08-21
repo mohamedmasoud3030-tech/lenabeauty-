@@ -85,3 +85,23 @@ This is an information-architecture recommendation only; it does not delete rout
 - [WCAG 2.2](https://www.w3.org/TR/WCAG22/) requires identifiable text errors, labels/instructions, and error prevention for financial or data-changing actions.
 - [W3C mobile guidance](https://www.w3.org/TR/wcag2mobile-22/) confirms WCAG 2.2 should be applied to mobile web/PWA experiences.
 - Industry workflow references consistently position scheduling, staff assignment, reminders, deposits/no-show handling, service records, payment, and rebooking as a connected salon journey. These are product expectations, not legal requirements; examples include [OctopusPro](https://octopuspro.com/salon-management-software/) and [Bookr](https://bookr.co/blog/7-must-have-features-in-salon-management-software).
+
+## Execution baseline — 2026-08-21
+
+### Verified against current source
+
+- DashboardPage already loaded today appointments and low-stock products.
+- AppointmentsPage already had real loading, error, empty, status-filter, and role-protected route behavior.
+- Appointment has lifecycle statuses and deposit/no-show policy fields, but no paymentStatus, invoice link, or check-in/service state.
+- Checkout remains a separate atomic POS flow; no new database or payment policy was introduced.
+
+### Contradiction resolved
+
+The original acceptance language implied that a paid/unpaid state could be rendered on appointment cards. The current contract cannot prove that state. The implementation therefore renders a truthful payment handoff label (Payment at checkout or Deposit configured) and keeps lifecycle status separate. A real paid/unpaid badge remains blocked until an existing invoice relationship or approved contract is verified.
+
+### Execution status
+
+- P0.1 Today Workspace: **IN PROGRESS** — implemented in source; browser and hosted-flow verification pending.
+- P0.2 Appointment Card Contract: **IN PROGRESS** — lifecycle/payment separation implemented; true payment state remains unverified by contract.
+- P0.3 Needs Attention: **IN PROGRESS** — late appointments and low stock implemented from real loaded data; failed-write/unconfirmed-payment signals remain unavailable without a source.
+- P1: **BLOCKED** for check-in/service state until the existing contract is verified or owner-approved schema work is required.
