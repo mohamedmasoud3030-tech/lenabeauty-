@@ -96,15 +96,82 @@ describe("Environment Configuration Tests", () => {
         }, { isProductionBuild: true })).toThrowError("INVALID_SUPABASE_CONFIGURATION");
     });
 
-    it("keeps the optimized Demo fallback limited to Staging", () => {
-        const env = parseEnv({
+    it("fails closed when a production build omits Supabase configuration (no demo fallback)", () => {
+        // Previously an optimized build defaulted to staging and silently
+        // inherited demo credentials. P0.2: a production build must never fall
+        // back to demo credentials.
+        expect(() => parseEnv({
             VITE_ENVIRONMENT: "staging",
-        }, { isProductionBuild: true });
-        expect(env.environment).toBe("staging");
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        }, { isProductionBuild: true })).toThrowError(/INVALID_SUPABASE_CONFIGURATION/);
+    });
+
+    it("fails closed even when a production build explicitly requests demo credentials", () => {
+        // The demo opt-in is a non-production-build escape hatch only; a
+        // production build ignores it and fails closed without explicit values.
+        expect(() => parseEnv({
+            VITE_ENVIRONMENT: "staging",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000",
+            VITE_USE_DEMO_CREDENTIALS: "true"
+        }, { isProductionBuild: true })).toThrowError(/INVALID_SUPABASE_CONFIGURATION/);
+    });
+
+    it("fails closed when an explicit production environment requests demo credentials", () => {
+        // Even in a non-production build, an explicit `production` environment
+        // never uses demo credentials.
+        expect(() => parseEnv({
+            VITE_ENVIRONMENT: "production",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000",
+            VITE_USE_DEMO_CREDENTIALS: "true"
+        })).toThrowError(/INVALID_SUPABASE_CONFIGURATION/);
+    });
+
+    it("fails closed in a non-production build without the demo opt-in when configuration is missing", () => {
+        expect(() => parseEnv({
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        })).toThrowError(/INVALID_SUPABASE_CONFIGURATION/);
+    });
+
+    it("uses demo credentials only when explicitly opted in on a non-production build", () => {
+        const env = parseEnv({
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_USE_DEMO_CREDENTIALS: "true"
+        });
+        expect(env.environment).toBe("development");
         expect(env.backend).toBe("supabase");
         expect(env.supabaseUrl).toMatch(/^https:\/\//);
         expect(env.supabasePublishableKey).toBeTruthy();
         expect(env.centerId).toMatch(/^[0-9a-f-]{36}$/i);
+    });
+
+    it("honors the demo opt-in on an explicit staging environment of a non-production build", () => {
+        const env = parseEnv({
+            VITE_ENVIRONMENT: "staging",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_USE_DEMO_CREDENTIALS: "true"
+        });
+        expect(env.environment).toBe("staging");
+        expect(env.supabaseUrl).toMatch(/^https:\/\//);
+        expect(env.supabasePublishableKey).toBeTruthy();
+    });
+
+    it("does not apply demo credentials when the opt-in is not exactly true", () => {
+        expect(() => parseEnv({
+            VITE_DATA_BACKEND: "supabase",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000",
+            VITE_USE_DEMO_CREDENTIALS: "1"
+        })).toThrowError(/INVALID_SUPABASE_CONFIGURATION/);
     });
 
     it("rejects an unsupported VITE_ENVIRONMENT value", () => {

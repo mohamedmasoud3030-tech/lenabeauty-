@@ -3,6 +3,22 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+// Node version enforcement (P0.3): this script uses Map.groupBy, which exists
+// only on Node >= 21. The repository supports Node 22 per .nvmrc and the
+// package.json "engines" field. Fail with an actionable message instead of
+// crashing with a TypeError.
+const REQUIRED_NODE_MAJOR = 22;
+const currentNodeMajor = Number(process.versions.node.split(".")[0]);
+if (!Number.isFinite(currentNodeMajor) || currentNodeMajor < REQUIRED_NODE_MAJOR) {
+  console.error(
+    `\nERROR: This script requires Node.js >= ${REQUIRED_NODE_MAJOR} (see .nvmrc and package.json "engines").\n` +
+    `       Current runtime: ${process.version}.\n` +
+    `       Install the supported runtime, e.g.:  nvm install 22 && nvm use\n` +
+    `       (or use your Node version manager: fnm, volta, asdf...).\n`,
+  );
+  process.exit(1);
+}
+
 const root = resolve(import.meta.dirname, "..");
 const inventoryPath = resolve(root, "docs/database-contract/artifacts/schema-inventory.json");
 const outputPath = resolve(root, "src/infrastructure/supabase/database.types.ts");
