@@ -16,7 +16,10 @@ describe("role-aware first-run guide", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
-    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.dashboard, "getSummary").mockResolvedValue({
+      ok: true,
+      data: { customers: 0, appointments: 0, sales: 0, revenue: 0 },
+    } as any);
   });
 
   it("does not send staff to the admin-only employees page", async () => {
@@ -29,6 +32,46 @@ describe("role-aware first-run guide", () => {
     expect(await screen.findByText("Ask your administrator to add the team. You cannot open staff records.")).toBeInTheDocument();
     const team = screen.getByText("Add your team").closest("button");
     expect(team).toBeNull();
+  });
+
+  it("keeps the guide visible through the first booking and first sale", () => {
+    render(
+      <MemoryRouter>
+        <GettingStartedCard
+          viewerRole={UserRole.ADMIN}
+          progress={{
+            services: true,
+            employees: true,
+            customers: true,
+            appointments: false,
+            sales: false,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Book your first appointment")).toBeInTheDocument();
+    expect(screen.getByText("Record your first sale")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
+  });
+
+  it("retires only after all five setup steps are complete", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <GettingStartedCard
+          viewerRole={UserRole.ADMIN}
+          progress={{
+            services: true,
+            employees: true,
+            customers: true,
+            appointments: true,
+            sales: true,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("records an anonymous guide_shown event without personal data", async () => {
