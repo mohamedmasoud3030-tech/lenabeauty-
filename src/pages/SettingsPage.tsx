@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import {
   Save, Download, Building2, Database,
   Globe, Phone, MapPin, Hash, Coins,
@@ -390,7 +390,7 @@ export default function SettingsPage() {
   );
 }
 
-function Field({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Field({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
   return (
     <label className="space-y-2">
       <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
