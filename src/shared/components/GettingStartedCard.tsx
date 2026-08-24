@@ -108,7 +108,10 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
           employees: employees.data.length > 0,
           customers: customers.data.length > 0,
           appointments: summary.data.appointments > 0,
-          sales: summary.data.sales > 0,
+          // Checkout updates customer.totalSpent atomically. This is historical,
+          // role-safe evidence of a completed sale, unlike dashboard.sales,
+          // which intentionally contains only the current day's ADMIN count.
+          sales: customers.data.some((customer) => Number(customer.totalSpent) > 0),
         });
       } catch {
         if (active) setProgress(null);
