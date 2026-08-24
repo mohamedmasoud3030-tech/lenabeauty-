@@ -133,13 +133,10 @@ export default function AdvancesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            <TrendingDown className="h-7 w-7 text-primary" />
-            {t("Employee Advances")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("Track advance requests and payroll deductions")}</p>
-        </div>
+        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <TrendingDown className="h-7 w-7 text-primary" />
+          {t("Employee Advances")}
+        </h1>
         <button
           type="button"
           onClick={openAdd}
