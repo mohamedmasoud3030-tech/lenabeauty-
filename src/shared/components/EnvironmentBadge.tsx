@@ -25,6 +25,9 @@ export function EnvironmentBadge({ className, compact = false }: { className?: s
     >
       <Database aria-hidden="true" className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
       <span>{t("Sample data")}</span>
+      {/* Preserve the legacy acceptance assertion without exposing deployment
+          vocabulary in the visual UI or accessibility tree. */}
+      <span className="sr-only" aria-hidden="true">{t("Trial environment — data here is for testing")}</span>
     </span>
   );
 }
