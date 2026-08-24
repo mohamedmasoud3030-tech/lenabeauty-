@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -255,7 +255,7 @@ function Metric({ label, value, valueClass }: { label: string; value: string; va
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
       <h2 className="mb-4 text-lg font-bold text-foreground sm:text-xl">{title}</h2>
