@@ -4,10 +4,6 @@ import { motion } from "motion/react";
 import { AlertCircle, Inbox, RefreshCw, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 
-/**
- * ScreenState — the app-wide, reusable pattern for the three data states:
- * loading / empty / error.
- */
 interface ScreenStateProps {
   state: "loading" | "empty" | "error";
   icon?: ReactNode;
@@ -18,6 +14,11 @@ interface ScreenStateProps {
   errorDetail?: string;
   compact?: boolean;
   className?: string;
+}
+
+function looksTechnical(value?: string): boolean {
+  if (!value) return false;
+  return /(BACKEND_METHOD_UNSUPPORTED|supabase|postgrest|PGRST\d*|\bRPC\b|schema cache|failed to fetch|networkerror|fetch failed)/i.test(value);
 }
 
 export function ScreenState({
@@ -51,8 +52,15 @@ export function ScreenState({
     },
   } as const;
 
-  const resolvedTitle = title || defaults[state].title;
-  const resolvedDescription = description || defaults[state].description;
+  const requestedTitle = title || defaults[state].title;
+  const requestedDescription = description || defaults[state].description;
+  const resolvedTitle = state === "error" && looksTechnical(requestedTitle)
+    ? defaults.error.title
+    : requestedTitle;
+  const resolvedDescription = state === "error" && looksTechnical(requestedDescription)
+    ? defaults.error.description
+    : requestedDescription;
+  const safeErrorDetail = state === "error" && !looksTechnical(errorDetail) ? errorDetail : undefined;
   const resolvedIcon = icon || defaults[state].icon;
 
   return (
@@ -94,9 +102,9 @@ export function ScreenState({
         )}>
           {resolvedDescription}
         </p>
-        {state === "error" && errorDetail && (
-          <p className="text-xs text-muted-foreground/70 font-mono break-words bg-muted/40 rounded-lg p-2 max-h-20 overflow-auto">
-            {errorDetail}
+        {safeErrorDetail && (
+          <p className="text-xs text-muted-foreground/70 break-words bg-muted/40 rounded-lg p-2 max-h-20 overflow-auto">
+            {safeErrorDetail}
           </p>
         )}
       </div>
