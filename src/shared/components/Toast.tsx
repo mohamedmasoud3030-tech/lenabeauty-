@@ -28,9 +28,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const { t: translate } = useTranslation();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  function sanitizeUserFacingToast(title: string, message?: string) {
+    const technicalUnsupported =
+      title === "Backend Required"
+      || title === translate("Backend Required")
+      || message === "BACKEND_METHOD_UNSUPPORTED"
+      || message === translate("BACKEND_METHOD_UNSUPPORTED");
+
+    if (technicalUnsupported) {
+      return {
+        title: translate("Error"),
+        message: translate("An unexpected error occurred. Please try again."),
+      };
+    }
+
+    return { title, message };
+  }
+
   function showToast(type: ToastType, title: string, message?: string) {
+    const safe = sanitizeUserFacingToast(title, message);
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setToasts((prev) => [...prev, { id, type, title: safe.title, message: safe.message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
