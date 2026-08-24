@@ -22,11 +22,13 @@ const METHOD_LABEL_KEYS: Record<AttendanceMethod, string> = {
 };
 
 const statusBadge: Record<AttendanceStatus, string> = {
-  PRESENT: "bg-green-100 text-green-700",
-  LATE: "bg-yellow-100 text-yellow-700",
-  ABSENT: "bg-red-100 text-red-700",
-  HALF_DAY: "bg-blue-100 text-blue-700",
+  PRESENT: "border-success/25 bg-success/10 text-success",
+  LATE: "border-warning/25 bg-warning/10 text-warning",
+  ABSENT: "border-destructive/25 bg-destructive/10 text-destructive",
+  HALF_DAY: "border-primary/25 bg-primary/10 text-primary",
 };
+
+const fieldClass = "w-full min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 export default function AttendancePage() {
   const { t } = useTranslation();
@@ -38,7 +40,6 @@ export default function AttendancePage() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  // Add / edit modal
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [empId, setEmpId] = useState("");
@@ -50,7 +51,7 @@ export default function AttendancePage() {
   const [notes, setNotes] = useState("");
 
   const employeeName = useMemo(() => {
-    const map = new Map(employees.map((e) => [e.id, e.name]));
+    const map = new Map(employees.map((employee) => [employee.id, employee.name]));
     return (id: string) => map.get(id) || id;
   }, [employees]);
 
@@ -66,8 +67,8 @@ export default function AttendancePage() {
       ]);
       setRecords(recs);
       setEmployees(emps);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     } finally {
       setLoading(false);
@@ -76,20 +77,18 @@ export default function AttendancePage() {
 
   useEffect(() => { void load(); }, [selectedMonth]);
 
-  const filtered = useMemo(() => {
-    return records.filter((r) => {
-      const empOk = selectedEmployee === "all" || r.employeeId === selectedEmployee;
-      const monthOk = new Date(r.date).toISOString().slice(0, 7) === selectedMonth;
-      return empOk && monthOk;
-    });
-  }, [records, selectedEmployee, selectedMonth]);
+  const filtered = useMemo(() => records.filter((record) => {
+    const employeeMatches = selectedEmployee === "all" || record.employeeId === selectedEmployee;
+    const monthMatches = new Date(record.date).toISOString().slice(0, 7) === selectedMonth;
+    return employeeMatches && monthMatches;
+  }), [records, selectedEmployee, selectedMonth]);
 
   const summary = useMemo(() => {
-    const present = filtered.filter((r) => r.status === "PRESENT").length;
-    const late = filtered.filter((r) => r.status === "LATE").length;
-    const absent = filtered.filter((r) => r.status === "ABSENT").length;
-    const half = filtered.filter((r) => r.status === "HALF_DAY").length;
-    const totalHours = filtered.reduce((s, r) => s + (r.workHours || 0), 0);
+    const present = filtered.filter((record) => record.status === "PRESENT").length;
+    const late = filtered.filter((record) => record.status === "LATE").length;
+    const absent = filtered.filter((record) => record.status === "ABSENT").length;
+    const half = filtered.filter((record) => record.status === "HALF_DAY").length;
+    const totalHours = filtered.reduce((sum, record) => sum + (record.workHours || 0), 0);
     const days = filtered.length || 1;
     const pct = Math.round(((present + late * 0.5 + half * 0.5) / days) * 100);
     return { present, late, absent, half, totalHours, pct };
@@ -107,15 +106,15 @@ export default function AttendancePage() {
     setShowModal(true);
   }
 
-  function openEdit(rec: AttendanceRecord) {
-    setEditingId(rec.id);
-    setEmpId(rec.employeeId);
-    setDate(new Date(rec.date).toISOString().slice(0, 10));
-    setCheckIn(rec.checkInTime || "09:00");
-    setCheckOut(rec.checkOutTime || "17:00");
-    setStatus(rec.status);
-    setMethod(rec.method);
-    setNotes(rec.notes || "");
+  function openEdit(record: AttendanceRecord) {
+    setEditingId(record.id);
+    setEmpId(record.employeeId);
+    setDate(new Date(record.date).toISOString().slice(0, 10));
+    setCheckIn(record.checkInTime || "09:00");
+    setCheckOut(record.checkOutTime || "17:00");
+    setStatus(record.status);
+    setMethod(record.method);
+    setNotes(record.notes || "");
     setShowModal(true);
   }
 
@@ -137,157 +136,131 @@ export default function AttendancePage() {
       showToast("error", t("Error"), t("Attendance already exists for this employee and date"));
       return;
     }
+
     const workHours = computeAttendanceWorkHours(checkIn, checkOut, status);
     try {
+      const payload = {
+        employeeId: empId,
+        date: new Date(date),
+        checkInTime: checkIn || undefined,
+        checkOutTime: checkOut || undefined,
+        status,
+        method,
+        workHours,
+        notes: notes || undefined,
+      };
       if (editingId) {
-        await unwrap(useCases.attendance.update(editingId, {
-          employeeId: empId,
-          date: new Date(date),
-          checkInTime: checkIn || undefined,
-          checkOutTime: checkOut || undefined,
-          status,
-          method,
-          workHours,
-          notes: notes || undefined,
-        }));
+        await unwrap(useCases.attendance.update(editingId, payload));
         showToast("success", t("Success"), t("Attendance record updated"));
       } else {
-        await unwrap(useCases.attendance.create({
-          employeeId: empId,
-          date: new Date(date),
-          checkInTime: checkIn || undefined,
-          checkOutTime: checkOut || undefined,
-          status,
-          method,
-          workHours,
-          notes: notes || undefined,
-        }));
+        await unwrap(useCases.attendance.create(payload));
         showToast("success", t("Success"), t("Attendance recorded"));
       }
       setShowModal(false);
-      load();
-    } catch (e) {
+      void load();
+    } catch {
       showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
 
+  const summaryCards = [
+    { label: t("Attendance Rate"), value: `${summary.pct}%`, tone: "text-success" },
+    { label: t("Present Days"), value: String(summary.present), tone: "text-primary" },
+    { label: t("Late Days"), value: String(summary.late), tone: "text-warning" },
+    { label: t("Absent Days"), value: String(summary.absent), tone: "text-destructive" },
+    { label: t("Total Work Hours"), value: summary.totalHours.toFixed(1), tone: "text-secondary" },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Fingerprint className="w-8 h-8 text-blue-600" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <Fingerprint className="h-7 w-7 text-primary" />
           {t("Attendance")}
         </h1>
         <button
+          type="button"
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           {t("Record Attendance")}
         </button>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-neutral-600 text-sm">{t("Attendance Rate")}</p>
-          <p className="text-3xl font-bold text-green-600">{summary.pct}%</p>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-neutral-600 text-sm">{t("Present Days")}</p>
-          <p className="text-3xl font-bold text-blue-600">{summary.present}</p>
-        </div>
-        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
-          <p className="text-neutral-600 text-sm">{t("Late Days")}</p>
-          <p className="text-3xl font-bold text-yellow-600">{summary.late}</p>
-        </div>
-        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-l-4 border-red-500">
-          <p className="text-neutral-600 text-sm">{t("Absent Days")}</p>
-          <p className="text-3xl font-bold text-red-600">{summary.absent}</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-neutral-600 text-sm">{t("Total Work Hours")}</p>
-          <p className="text-3xl font-bold text-purple-600">{summary.totalHours.toFixed(2)}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-medium text-muted-foreground sm:text-sm">{card.label}</p>
+            <p className={`mt-2 text-2xl font-bold sm:text-3xl ${card.tone}`}>{card.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={selectedEmployee}
-          onChange={(e) => setSelectedEmployee(e.target.value)}
-          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-        >
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center">
+        <select value={selectedEmployee} onChange={(event) => setSelectedEmployee(event.target.value)} className={fieldClass}>
           <option value="all">{t("All Employees")}</option>
-          {employees.map((e) => (
-            <option key={e.id} value={e.id}>{e.name}</option>
-          ))}
+          {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
         </select>
         <input
           type="month"
           aria-label={t("Month")}
           value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
+          onChange={(event) => setSelectedMonth(event.target.value)}
+          className={fieldClass}
         />
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 border-b-2 border-gray-200">
+          <table className="min-w-[860px] w-full">
+            <thead className="border-b border-border bg-muted/55">
               <tr>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Employee")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Date")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-in")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Check-out")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Hours")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Method")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700">{t("Status")}</th>
-                <th className="px-6 py-3 text-right text-sm font-bold text-neutral-700"></th>
+                {["Employee", "Date", "Check-in", "Check-out", "Hours", "Method", "Status"].map((label) => (
+                  <th key={label} className="px-4 py-3 text-start text-xs font-bold text-muted-foreground">{t(label)}</th>
+                ))}
+                <th className="px-4 py-3" aria-label={t("Action")} />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((rec) => (
-                <tr key={rec.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 font-bold text-neutral-800">{employeeName(rec.employeeId)}</td>
-                  <td className="px-6 py-4 text-neutral-600">{new Date(rec.date).toLocaleDateString("ar-SA")}</td>
-                  <td className="px-6 py-4 text-neutral-600">{rec.checkInTime || "-"}</td>
-                  <td className="px-6 py-4 text-neutral-600">{rec.checkOutTime || "-"}</td>
-                  <td className="px-6 py-4 font-bold text-blue-600">{rec.workHours.toFixed(2)}</td>
-                  <td className="px-6 py-4 text-neutral-600">{t(METHOD_LABEL_KEYS[rec.method])}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${statusBadge[rec.status]}`}>
-                      {t(STATUS_LABEL_KEYS[rec.status])}
+              {filtered.map((record) => (
+                <tr key={record.id} className="border-b border-border/70 transition last:border-b-0 hover:bg-muted/35">
+                  <td className="px-4 py-4 font-bold text-foreground">{employeeName(record.employeeId)}</td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{new Date(record.date).toLocaleDateString("ar-OM")}</td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{record.checkInTime || "—"}</td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{record.checkOutTime || "—"}</td>
+                  <td className="px-4 py-4 font-bold text-primary">{record.workHours.toFixed(1)}</td>
+                  <td className="px-4 py-4 text-sm text-muted-foreground">{t(METHOD_LABEL_KEYS[record.method])}</td>
+                  <td className="px-4 py-4">
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadge[record.status]}`}>
+                      {t(STATUS_LABEL_KEYS[record.status])}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => openEdit(rec)}
-                        className="p-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition"
-                        title={t("Edit")}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    </div>
+                  <td className="px-4 py-4">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(record)}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-muted/55 text-foreground transition hover:border-primary/30 hover:bg-primary/10 hover:text-primary"
+                      title={t("Edit")}
+                      aria-label={t("Edit")}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && !loading && (
+              {filtered.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-20 text-center text-neutral-400">
+                  <td colSpan={8} className="px-4 py-14 text-center text-sm text-muted-foreground">
                     {t("No attendance records for this period")}
                   </td>
                 </tr>
-              )}
+              ) : null}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add / Edit Modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -295,111 +268,69 @@ export default function AttendancePage() {
         title={editingId ? t("Edit Attendance Record") : t("Record Attendance")}
         footer={
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
-            >
+            <button type="button" onClick={handleSave} className="min-h-11 flex-1 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground transition hover:bg-primary/90">
               {editingId ? t("Save Changes") : t("Record")}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowModal(false)}
-              className="flex-1 px-4 py-2 bg-gray-300 text-neutral-800 rounded-lg hover:bg-gray-400 transition font-bold"
-            >
+            <button type="button" onClick={() => setShowModal(false)} className="min-h-11 flex-1 rounded-xl bg-muted px-4 py-2 font-bold text-foreground transition hover:bg-muted/80">
               {t("Cancel")}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Employee")}</label>
-                <select
-                  value={empId}
-                  onChange={(e) => setEmpId(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                >
-                  {employees.map((e) => (
-                    <option key={e.id} value={e.id}>{e.name}</option>
-                  ))}
-                </select>
-              </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Employee")}</label>
+            <select value={empId} onChange={(event) => setEmpId(event.target.value)} className={fieldClass}>
+              {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+            </select>
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-bold mb-2">{t("Date")}</label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">{t("Status")}</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as AttendanceStatus)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                  >
-                    <option value="PRESENT">{t("Present")}</option>
-                    <option value="LATE">{t("Late")}</option>
-                    <option value="ABSENT">{t("Absent")}</option>
-                    <option value="HALF_DAY">{t("Half Day")}</option>
-                  </select>
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-foreground">{t("Date")}</label>
+              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className={fieldClass} />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-foreground">{t("Status")}</label>
+              <select value={status} onChange={(event) => setStatus(event.target.value as AttendanceStatus)} className={fieldClass}>
+                <option value="PRESENT">{t("Present")}</option>
+                <option value="LATE">{t("Late")}</option>
+                <option value="ABSENT">{t("Absent")}</option>
+                <option value="HALF_DAY">{t("Half Day")}</option>
+              </select>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-bold mb-2">{t("Check-in Time")}</label>
-                  <input
-                    type="time"
-                    value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold mb-2">{t("Check-out Time")}</label>
-                  <input
-                    type="time"
-                    value={checkOut}
-                    onChange={(e) => setCheckOut(e.target.value)}
-                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-foreground">{t("Check-in Time")}</label>
+              <input type="time" value={checkIn} onChange={(event) => setCheckIn(event.target.value)} className={fieldClass} />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-foreground">{t("Check-out Time")}</label>
+              <input type="time" value={checkOut} onChange={(event) => setCheckOut(event.target.value)} className={fieldClass} />
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Recording Method")}</label>
-                <select
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value as AttendanceMethod)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                >
-                  <option value="MANUAL">{t("Manual")}</option>
-                  <option value="BIOMETRIC">{t("Biometric")}</option>
-                  <option value="MOBILE">{t("Mobile")}</option>
-                </select>
-              </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Recording Method")}</label>
+            <select value={method} onChange={(event) => setMethod(event.target.value as AttendanceMethod)} className={fieldClass}>
+              <option value="MANUAL">{t("Manual")}</option>
+              <option value="BIOMETRIC">{t("Biometric")}</option>
+              <option value="MOBILE">{t("Mobile")}</option>
+            </select>
+          </div>
 
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Notes")}</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                />
-              </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Notes")}</label>
+            <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={fieldClass} />
+          </div>
 
-              <div className="flex items-center gap-2 text-sm text-neutral-500">
-                <Clock className="w-4 h-4" />
-                {t("Calculated work hours")}: <span className="font-bold text-blue-600">{computeAttendanceWorkHours(checkIn, checkOut, status).toFixed(2)} {t("hours")}</span>
-              </div>
-
+          <div className="flex items-center gap-2 rounded-xl bg-muted/55 px-3 py-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4 text-primary" />
+            {t("Calculated work hours")}:
+            <span className="font-bold text-foreground">{computeAttendanceWorkHours(checkIn, checkOut, status).toFixed(1)} {t("hours")}</span>
+          </div>
         </div>
       </Modal>
     </div>
