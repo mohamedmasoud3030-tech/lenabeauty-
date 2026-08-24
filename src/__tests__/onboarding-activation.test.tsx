@@ -74,6 +74,28 @@ describe("role-aware first-run guide", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("uses historical customer spend instead of the ADMIN-only daily sales count", async () => {
+    vi.mocked(useCases.services.list).mockResolvedValue({ ok: true, data: [{ id: "service-1" }] } as any);
+    vi.mocked(useCases.employees.list).mockResolvedValue({ ok: true, data: [{ id: "employee-1" }] } as any);
+    vi.mocked(useCases.customers.list).mockResolvedValue({
+      ok: true,
+      data: [{ id: "customer-1", totalSpent: 12.345 }],
+    } as any);
+    vi.mocked(useCases.dashboard.getSummary).mockResolvedValue({
+      ok: true,
+      data: { customers: 1, appointments: 1, sales: 0, revenue: 0 },
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <GettingStartedCard viewerRole={UserRole.STAFF} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(useCases.dashboard.getSummary).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText("Set up your center")).not.toBeInTheDocument());
+  });
+
   it("records an anonymous guide_shown event without personal data", async () => {
     render(
       <MemoryRouter>
