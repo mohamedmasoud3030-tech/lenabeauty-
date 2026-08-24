@@ -22,7 +22,6 @@ export default function CenterSwitcher() {
       const res = await useCases.auth.getMyCenters();
       if (res.ok) {
         setCenters(res.data);
-        // Default to the first center if none selected yet.
         const current = useCases.tenant.getActiveCenterId();
         if (!current && res.data.length > 0) {
           useCases.tenant.setActiveCenterId(res.data[0].id);
@@ -32,7 +31,6 @@ export default function CenterSwitcher() {
     })();
   }, [isMulti]);
 
-  // Only rendered in multi-branch mode.
   if (!isMulti) return null;
 
   const activeName = centers.find((c) => c.id === activeId)?.name || t("Select branch");
@@ -41,41 +39,43 @@ export default function CenterSwitcher() {
     useCases.tenant.setActiveCenterId(id);
     setActiveId(id);
     setOpen(false);
-    // Reload so every page re-fetches data scoped to the new center.
     window.location.reload();
   }
 
   return (
     <div className="relative">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={t("Switch branch")}
-        className="flex min-h-11 items-center gap-2 rounded-lg bg-muted/50 px-3 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+        aria-expanded={open}
+        className="flex min-h-11 items-center gap-2 rounded-lg bg-muted/50 px-3 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary"
       >
         <Building2 className="h-4 w-4" />
-        <span className="hidden sm:inline text-xs font-bold max-w-[120px] truncate">{activeName}</span>
-        <ChevronDown className="h-3 w-3" />
+        <span className="hidden max-w-[120px] truncate text-sm font-bold sm:inline">{activeName}</span>
+        <ChevronDown className="h-3.5 w-3.5" />
       </button>
 
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full mt-2 end-0 z-50 w-56 rounded-lg border border-border bg-card shadow-xl py-1">
-            <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="absolute end-0 top-full z-50 mt-2 w-56 rounded-xl border border-border bg-card py-1 shadow-xl">
+            <p className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
               {t("Branches")}
             </p>
-            {centers.map((c) => (
+            {centers.map((center) => (
               <button
-                key={c.id}
-                onClick={() => choose(c.id)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-muted/50 transition-all"
+                key={center.id}
+                type="button"
+                onClick={() => choose(center.id)}
+                className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-sm font-semibold text-foreground transition-all hover:bg-muted/50"
               >
-                <span className="truncate">{c.name}</span>
-                {c.id === activeId && <Check className="h-4 w-4 text-primary shrink-0" />}
+                <span className="truncate">{center.name}</span>
+                {center.id === activeId && <Check className="h-4 w-4 shrink-0 text-primary" />}
               </button>
             ))}
             {centers.length === 0 && (
-              <p className="px-3 py-2 text-xs text-muted-foreground">{t("No branches found.")}</p>
+              <p className="px-3 py-2 text-sm text-muted-foreground">{t("No branches found.")}</p>
             )}
           </div>
         </>

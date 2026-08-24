@@ -45,8 +45,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     return () => { active = false; };
   }, []);
 
-  // Grouping and naming come from the shared registry, so the sidebar, the
-  // mobile menus, the header title and Global Search can never drift apart.
   const navGroups = useMemo(() => {
     const visible = visibleDestinations({
       isAdmin: me?.role === "ADMIN",
@@ -56,7 +54,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     return NAV_GROUPS
       .map((group) => ({
         titleKey: group.titleKey,
-        items: visible.filter((d) => d.group === group.id),
+        items: visible.filter((destination) => destination.group === group.id),
       }))
       .filter((group) => group.items.length > 0);
   }, [me?.role, optionalModules]);
@@ -76,11 +74,19 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     document.documentElement.dir = nextLang === "ar" ? "rtl" : "ltr";
   }
 
-  return (
-    <aside className="flex h-full flex-col border-e border-border bg-card/95 backdrop-blur-xl relative overflow-hidden">
-      <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-primary/8 to-transparent pointer-events-none" />
+  const roleLabel = me?.role === "ADMIN"
+    ? t("Administrator")
+    : me?.role === "MANAGER"
+      ? t("Manager")
+      : me?.role === "STAFF"
+        ? t("Staff Member")
+        : "";
 
-      <div className="flex h-20 flex-col justify-center border-b border-border px-4 sm:px-6 relative z-10">
+  return (
+    <aside className="relative flex h-full flex-col overflow-hidden border-e border-border bg-card/95 backdrop-blur-xl">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-primary/8 to-transparent" />
+
+      <div className="relative z-10 flex h-20 flex-col justify-center border-b border-border px-4 sm:px-6">
         <div className="flex items-center gap-3">
           {logoUrl ? (
             <SalonLogo logoUrl={logoUrl} salonName="LenaBeauty" size="md" />
@@ -89,40 +95,40 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               <img src="/lena-mark.svg" alt="Lena Beauty" className="h-full w-full" />
             </div>
           )}
-          <div className="flex flex-col min-w-0">
-            <span className="text-base font-bold tracking-tight text-foreground leading-none">LenaBeauty</span>
-            <span className="text-[9px] uppercase tracking-[0.2em] text-primary font-bold mt-1">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-base font-bold leading-none tracking-tight text-foreground">LenaBeauty</span>
+            <span className="mt-1 text-xs font-bold uppercase tracking-wide text-primary">
               {t("Salon operations")}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 relative z-10 gap-2">
+      <div className="relative z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
-          <button onClick={toggleLanguage} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" aria-label={t("Change Language")} title={t("Change Language")}>
+          <button type="button" onClick={toggleLanguage} className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-primary" aria-label={t("Change Language")} title={t("Change Language")}>
             <Globe aria-hidden="true" className="h-4 w-4" />
           </button>
-          <button onClick={toggleTheme} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-primary" aria-label={t("Change Theme")} aria-pressed={isDark} title={t("Change Theme")}>
+          <button type="button" onClick={toggleTheme} className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-primary" aria-label={t("Change Theme")} aria-pressed={isDark} title={t("Change Theme")}>
             {isDark ? <Sun aria-hidden="true" className="h-4 w-4" /> : <Moon aria-hidden="true" className="h-4 w-4" />}
           </button>
         </div>
         {onClose && (
-          <button onClick={onClose} className="h-11 w-11 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:text-destructive lg:hidden ms-auto" aria-label={t("Close")}>
+          <button type="button" onClick={onClose} className="ms-auto flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-destructive lg:hidden" aria-label={t("Close")}>
             <X className="h-5 w-5" />
           </button>
         )}
       </div>
 
-      <nav aria-label={t("Primary navigation")} className="flex-1 overflow-y-auto px-3 sm:px-4 py-2 scrollbar-hide relative z-10">
+      <nav aria-label={t("Primary navigation")} className="relative z-10 flex-1 overflow-y-auto px-3 py-2 scrollbar-hide sm:px-4">
         {navGroups.map((group) => (
           <div key={group.titleKey} className="mb-4">
-            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">
+            <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground/80">
               {t(group.titleKey)}
             </div>
             <ul className="space-y-1">
-              {group.items.map(({ path, labelKey, icon: Icon }: NavDestination, idx) => (
-                <motion.li initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.02 }} key={path}>
+              {group.items.map(({ path, labelKey, icon: Icon }: NavDestination, index) => (
+                <motion.li initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.02 }} key={path}>
                   <NavLink
                     to={path}
                     onClick={onClose}
@@ -133,7 +139,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                         : "border-transparent text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex min-w-0 items-center gap-3">
                       <Icon className="h-5 w-5 flex-shrink-0" />
                       <span className="truncate">{t(labelKey)}</span>
                     </div>
@@ -146,20 +152,22 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-border p-4 relative z-10 bg-card/60">
-        <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3 mb-3">
-          <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
+      <div className="relative z-10 border-t border-border bg-card/60 p-4">
+        <div className="mb-3 flex items-center gap-3 rounded-xl bg-muted/60 p-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             {me?.username?.[0]?.toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-bold text-foreground">{me?.username}</div>
-            <div className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-success font-bold mt-0.5">
-              <ShieldCheck className="h-3 w-3" />
-              {me?.role}
-            </div>
+            <div className="truncate text-sm font-bold text-foreground">{me?.username}</div>
+            {roleLabel ? (
+              <div className="mt-0.5 flex items-center gap-1 text-xs font-bold text-success">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {roleLabel}
+              </div>
+            ) : null}
           </div>
         </div>
-        <button onClick={() => void logout()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 text-xs font-bold text-destructive hover:bg-destructive hover:text-destructive-foreground">
+        <button type="button" onClick={() => void logout()} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 text-sm font-bold text-destructive transition hover:bg-destructive hover:text-destructive-foreground">
           <LogOut className="h-4 w-4" />
           {t("Logout")}
         </button>
