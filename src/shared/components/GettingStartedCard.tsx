@@ -8,18 +8,6 @@ import { useCases } from "../../app/composition/useCases";
 import { UserRole } from "../../domain/entities/Session";
 import { hasActivationEvent, recordActivationEvent } from "../activation/events";
 
-/**
- * GettingStartedCard
- * ------------------
- * The single ordered path for a brand-new center.
- *
- * Steps follow the real data dependency: services → (team) → customers →
- * appointment → sale. ADMIN can create the team; STAFF cannot open /employees,
- * so that step is explained, not linked.
- *
- * Completion uses real repository counts. Failed reads hide the card.
- */
-
 const DISMISS_KEY = "lenabeauty_getting_started_dismissed";
 
 type StepId = "services" | "employees" | "customers" | "appointments" | "sales";
@@ -71,12 +59,10 @@ const STEP_META: Record<StepId, { labelKey: string; descriptionKey: string; rout
   },
 };
 
-const ADMIN_STEPS: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
-const STAFF_STEPS: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
+const STEPS: StepId[] = ["services", "employees", "customers", "appointments", "sales"];
 
-function stepsFor(role?: UserRole): StepId[] {
-  if (role === UserRole.STAFF || role === UserRole.MANAGER) return STAFF_STEPS;
-  return ADMIN_STEPS;
+function stepsFor(_role?: UserRole): StepId[] {
+  return STEPS;
 }
 
 export function GettingStartedCard({ progress: providedProgress, viewerRole, onDismiss }: GettingStartedCardProps) {
@@ -104,17 +90,15 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
     let active = true;
     void (async () => {
       try {
-        const now = new Date();
-        const from = new Date(now.getFullYear() - 2, 0, 1);
-        const [services, employees, customers, appointments] = await Promise.all([
+        const [services, employees, customers, summary] = await Promise.all([
           useCases.services.list(),
           useCases.employees.list(),
           useCases.customers.list(),
-          useCases.appointments.list({ fromISO: from.toISOString(), toISO: now.toISOString() }),
+          useCases.dashboard.getSummary(),
         ]);
         if (!active) return;
 
-        if (!services.ok || !employees.ok || !customers.ok) {
+        if (!services.ok || !employees.ok || !customers.ok || !summary.ok) {
           setProgress(null);
           return;
         }
@@ -123,8 +107,8 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
           services: services.data.length > 0,
           employees: employees.data.length > 0,
           customers: customers.data.length > 0,
-          appointments: appointments.ok && appointments.data.length > 0,
-          sales: false,
+          appointments: summary.data.appointments > 0,
+          sales: summary.data.sales > 0,
         });
       } catch {
         if (active) setProgress(null);
@@ -136,7 +120,7 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
     };
   }, [providedProgress]);
 
-  const isSetUp = Boolean(progress?.services && progress.employees && progress.customers);
+  const isSetUp = Boolean(progress && stepOrder.every((id) => progress[id]));
 
   useEffect(() => {
     if (!progress || dismissed || isSetUp || shownRecorded.current) return;
@@ -150,8 +134,7 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
     }
   }, [isSetUp]);
 
-  if (dismissed || !progress) return null;
-  if (isSetUp) return null;
+  if (dismissed || !progress || isSetUp) return null;
 
   const completedCount = stepOrder.filter((id) => progress[id]).length;
   const nextStep = stepOrder.find((id) => !progress[id]);
@@ -172,14 +155,14 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       aria-labelledby="getting-started-title"
-      className="rounded-2xl sm:rounded-3xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-xl overflow-hidden"
+      className="overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-card shadow-xl sm:rounded-3xl"
     >
-      <div className="flex items-start justify-between gap-3 border-b border-border px-4 sm:px-6 py-4">
+      <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
         <div className="min-w-0 space-y-1">
-          <h2 id="getting-started-title" className="text-lg sm:text-xl font-bold text-foreground">
+          <h2 id="getting-started-title" className="text-lg font-bold text-foreground sm:text-xl">
             {t("Set up your center")}
           </h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             {t("Follow these steps in order. Each one unlocks the next.")}
           </p>
         </div>
@@ -188,16 +171,16 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
           onClick={handleDismiss}
           aria-label={t("Dismiss")}
           title={t("Dismiss")}
-          className="h-11 w-11 shrink-0 rounded-xl bg-muted/60 flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <X aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="px-4 sm:px-6 pt-4">
+      <div className="px-4 pt-4 sm:px-6">
         <div className="flex items-center gap-3">
           <div
-            className="h-2 flex-1 rounded-full bg-muted overflow-hidden"
+            className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-valuenow={completedCount}
             aria-valuemin={0}
@@ -209,13 +192,13 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
               style={{ width: `${(completedCount / stepOrder.length) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-bold text-muted-foreground tabular-nums shrink-0">
+          <span className="shrink-0 text-xs font-bold tabular-nums text-muted-foreground">
             {completedCount}/{stepOrder.length}
           </span>
         </div>
       </div>
 
-      <ol className="p-4 sm:p-6 space-y-2">
+      <ol className="space-y-2 p-4 sm:p-6">
         {stepOrder.map((id, index) => {
           const meta = STEP_META[id];
           const done = progress[id];
@@ -230,7 +213,7 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
             <>
               <span
                 className={clsx(
-                  "h-9 w-9 shrink-0 rounded-lg flex items-center justify-center",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                   done ? "bg-success/15 text-success" : isNext ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                 )}
               >
@@ -239,13 +222,13 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
 
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-muted-foreground tabular-nums">{index + 1}</span>
-                  <span className={clsx("text-sm font-bold truncate", done ? "text-muted-foreground line-through" : "text-foreground")}>
+                  <span className="text-xs font-bold tabular-nums text-muted-foreground">{index + 1}</span>
+                  <span className={clsx("truncate text-sm font-bold", done ? "text-muted-foreground line-through" : "text-foreground")}>
                     {t(meta.labelKey)}
                   </span>
                 </span>
                 {!done && (
-                  <span className="mt-0.5 block text-[11px] text-muted-foreground leading-relaxed">
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground sm:text-sm">
                     {description}
                   </span>
                 )}
@@ -265,7 +248,7 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
               {teamBlocked ? (
                 <div
                   className={clsx(
-                    "w-full min-h-11 touch-target flex items-center gap-3 rounded-xl border p-3 text-start",
+                    "touch-target flex min-h-11 w-full items-center gap-3 rounded-xl border p-3 text-start",
                     isNext ? "border-primary/40 bg-primary/5" : "border-border",
                   )}
                 >
@@ -276,7 +259,7 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
                   type="button"
                   onClick={() => meta.route && nav(meta.route)}
                   className={clsx(
-                    "group w-full min-h-11 touch-target flex items-center gap-3 rounded-xl border p-3 text-start transition-all",
+                    "group touch-target flex min-h-11 w-full items-center gap-3 rounded-xl border p-3 text-start transition-all",
                     isNext
                       ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
                       : "border-border hover:bg-muted/40",
