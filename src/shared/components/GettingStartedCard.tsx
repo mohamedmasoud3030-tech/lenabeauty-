@@ -9,6 +9,8 @@ import { UserRole } from "../../domain/entities/Session";
 import { hasActivationEvent, recordActivationEvent } from "../activation/events";
 
 const DISMISS_KEY = "lenabeauty_getting_started_dismissed";
+const ONBOARDING_FROM_ISO = "2000-01-01T00:00:00.000Z";
+const ONBOARDING_TO_ISO = "2100-01-01T00:00:00.000Z";
 
 type StepId = "services" | "employees" | "customers" | "appointments" | "sales";
 
@@ -90,15 +92,18 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
     let active = true;
     void (async () => {
       try {
-        const [services, employees, customers, summary] = await Promise.all([
+        // Keep onboarding on the oldest stable operational contracts. The
+        // hosted Demo may lag newer dashboard RPC migrations, but services,
+        // employees, customers and appointments are canonical core tables.
+        const [services, employees, customers, appointments] = await Promise.all([
           useCases.services.list(),
           useCases.employees.list(),
           useCases.customers.list(),
-          useCases.dashboard.getSummary(),
+          useCases.appointments.list({ fromISO: ONBOARDING_FROM_ISO, toISO: ONBOARDING_TO_ISO }),
         ]);
         if (!active) return;
 
-        if (!services.ok || !employees.ok || !customers.ok || !summary.ok) {
+        if (!services.ok || !employees.ok || !customers.ok || !appointments.ok) {
           setProgress(null);
           return;
         }
@@ -107,10 +112,10 @@ export function GettingStartedCard({ progress: providedProgress, viewerRole, onD
           services: services.data.length > 0,
           employees: employees.data.length > 0,
           customers: customers.data.length > 0,
-          appointments: summary.data.appointments > 0,
-          // Checkout updates customer.totalSpent atomically. This is historical,
-          // role-safe evidence of a completed sale, unlike dashboard.sales,
-          // which intentionally contains only the current day's ADMIN count.
+          appointments: appointments.data.length > 0,
+          // Checkout updates customer.totalSpent atomically. This remains
+          // historical, role-safe evidence of a completed sale without using
+          // the newer role-governed dashboard reporting RPCs.
           sales: customers.data.some((customer) => Number(customer.totalSpent) > 0),
         });
       } catch {
