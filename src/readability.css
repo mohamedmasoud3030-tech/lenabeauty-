@@ -1,0 +1,16 @@
+/*
+ * Operational readability floor
+ * -----------------------------
+ * Older screens used 8–11px arbitrary Tailwind sizes for real labels, status
+ * text and actions. Keep compact hierarchy, but never render operational text
+ * below 12px on screen. Print layouts are intentionally excluded.
+ */
+@media screen {
+  #main-content .text-\[8px\],
+  #main-content .text-\[9px\],
+  #main-content .text-\[10px\],
+  #main-content .text-\[11px\] {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+  }
+}

@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './readability.css';
 import './i18n';
 import { getStoredLanguage, getStoredTheme } from './preferences';
 
@@ -9,7 +10,6 @@ const savedLang = getStoredLanguage();
 document.documentElement.lang = savedLang;
 document.documentElement.dir = savedLang === "ar" ? "rtl" : "ltr";
 
-// Load theme from localStorage
 const savedTheme = getStoredTheme();
 if (savedTheme === "light") {
   document.documentElement.classList.remove("dark");

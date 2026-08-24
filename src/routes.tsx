@@ -6,7 +6,7 @@ import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const DashboardPage = lazy(() => import("./pages/DashboardPage"));
+const DashboardPage = lazy(() => import("./pages/DashboardCompatPage"));
 const PosInvoicesPage = lazy(() => import("./pages/PosInvoicesPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 const AppointmentsPage = lazy(() => import("./pages/AppointmentsPage"));
@@ -23,21 +23,13 @@ const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
 
-// Auth utility destination: intentionally not part of the in-app navigation registry.
 const PASSWORD_RESET_ROUTE = "/reset-password";
 
-// صفحات الموظفين والحضور
 const PayrollPageEnhanced = lazy(() => import("./pages/PayrollPageEnhanced"));
 const AttendancePage = lazy(() => import("./pages/AttendancePage"));
 const AdvancesPage = lazy(() => import("./pages/AdvancesPage"));
 const StaffAnalyticsPage = lazy(() => import("./pages/StaffAnalyticsPage"));
 
-/**
- * Unknown-route fallback for a signed-in user.
- *
- * Sends the user home like before, but records why. A silent redirect makes a
- * mistyped or stale link look like the app ignored the request.
- */
 function NotFoundRedirect() {
   const location = useLocation();
   return (
@@ -71,8 +63,6 @@ export function AppRoutes() {
             <Route path="/employees" element={<Suspense fallback={<PageLoader />}><EmployeesPage /></Suspense>} />
             <Route path="/reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
             <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
-
-            {/* Deferred modules keep their routes/data but stay out of trial navigation. */}
             <Route path="/customer-experience" element={<Suspense fallback={<PageLoader />}><CustomerExperiencePage /></Suspense>} />
             <Route path="/forecasting" element={<Suspense fallback={<PageLoader />}><ForecastingPage /></Suspense>} />
             <Route path="/expenses" element={<Suspense fallback={<PageLoader />}><ExpensesPage /></Suspense>} />
@@ -82,15 +72,11 @@ export function AppRoutes() {
             <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
             <Route path="/accounting" element={<Suspense fallback={<PageLoader />}><AccountingPage /></Suspense>} />
             <Route path="/advanced-automation" element={<Suspense fallback={<PageLoader />}><AdvancedAutomationPage /></Suspense>} />
-
-            {/* Legacy deep links land in the matching Settings section. */}
             <Route path="/branding" element={<Navigate to="/settings?tab=branding" replace />} />
             <Route path="/notifications" element={<Navigate to="/settings?tab=notifications" replace />} />
             <Route path="/payment-gateway" element={<Navigate to="/settings?tab=payments" replace />} />
           </Route>
 
-          {/* Unknown authenticated path. Carries a reason so the Dashboard can
-              say the link was not found instead of appearing to ignore it. */}
           <Route path="*" element={<NotFoundRedirect />} />
         </Route>
       </Route>

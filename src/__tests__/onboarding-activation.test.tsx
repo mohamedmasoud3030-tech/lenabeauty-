@@ -31,6 +31,70 @@ describe("role-aware first-run guide", () => {
     expect(team).toBeNull();
   });
 
+  it("keeps the guide visible through the first booking and first sale", () => {
+    render(
+      <MemoryRouter>
+        <GettingStartedCard
+          viewerRole={UserRole.ADMIN}
+          progress={{
+            services: true,
+            employees: true,
+            customers: true,
+            appointments: false,
+            sales: false,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Book your first appointment")).toBeInTheDocument();
+    expect(screen.getByText("Record your first sale")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
+  });
+
+  it("retires only after all five setup steps are complete", () => {
+    const { container } = render(
+      <MemoryRouter>
+        <GettingStartedCard
+          viewerRole={UserRole.ADMIN}
+          progress={{
+            services: true,
+            employees: true,
+            customers: true,
+            appointments: true,
+            sales: true,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("uses stable operational sources instead of the newer dashboard reporting RPC", async () => {
+    vi.mocked(useCases.services.list).mockResolvedValue({ ok: true, data: [{ id: "service-1" }] } as any);
+    vi.mocked(useCases.employees.list).mockResolvedValue({ ok: true, data: [{ id: "employee-1" }] } as any);
+    vi.mocked(useCases.customers.list).mockResolvedValue({
+      ok: true,
+      data: [{ id: "customer-1", totalSpent: 12.345 }],
+    } as any);
+    vi.mocked(useCases.appointments.list).mockResolvedValue({
+      ok: true,
+      data: [{ id: "appointment-1" }],
+    } as any);
+    const dashboardSpy = vi.spyOn(useCases.dashboard, "getSummary");
+
+    render(
+      <MemoryRouter>
+        <GettingStartedCard viewerRole={UserRole.STAFF} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(useCases.appointments.list).toHaveBeenCalled());
+    expect(dashboardSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText("Set up your center")).not.toBeInTheDocument());
+  });
+
   it("records an anonymous guide_shown event without personal data", async () => {
     render(
       <MemoryRouter>
