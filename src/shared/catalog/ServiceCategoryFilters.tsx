@@ -26,10 +26,6 @@ export function getServiceCategoryCounts(services: CategorizedService[]): Servic
     .sort((left, right) => left.name.localeCompare(right.name, "ar"));
 }
 
-/**
- * Category browsing applies while the search is empty. A search deliberately
- * spans the entire service catalog so a selected segment never hides a match.
- */
 export function filterServicesForCatalog<T extends CategorizedService>(
   services: T[],
   selectedCategory: string,
@@ -71,12 +67,8 @@ export function ServiceCategoryFilters({
   return (
     <div
       className={clsx(
-        "flex gap-2 overflow-x-auto pb-1 scrollbar-hide",
-        // Mobile: snap scrolling for better touch experience
-        "sm:gap-2",
-        // Enable snap scrolling on mobile
-        "[&]:snap-x [&>*]:snap-start",
-        className
+        "flex snap-x gap-2 overflow-x-auto pb-1 scrollbar-hide [&>*]:snap-start",
+        className,
       )}
       aria-label={allLabel}
     >
@@ -89,11 +81,7 @@ export function ServiceCategoryFilters({
             aria-pressed={active}
             onClick={() => onSelect(segment.name)}
             className={clsx(
-              "shrink-0 rounded-full border px-3.5 py-2 text-xs font-bold transition-colors",
-              // Touch-friendly sizing
-              "min-h-[40px] touch-target",
-              // Mobile-specific: slightly smaller
-              "sm:min-h-11 sm:px-4 sm:py-2.5 sm:rounded-xl",
+              "touch-target min-h-11 shrink-0 rounded-xl border px-4 py-2.5 text-sm font-bold transition-colors",
               active
                 ? "border-primary bg-primary text-primary-foreground shadow-sm"
                 : "border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground",
@@ -101,7 +89,7 @@ export function ServiceCategoryFilters({
           >
             <span className="whitespace-nowrap">{segment.label}</span>
             <span className={clsx(
-              "ms-1.5 sm:ms-2 inline-flex min-w-5 justify-center rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px]",
+              "ms-2 inline-flex min-w-6 justify-center rounded-full px-1.5 py-0.5 text-xs",
               active ? "bg-primary-foreground/15" : "bg-muted text-muted-foreground",
             )}>
               {segment.count}
