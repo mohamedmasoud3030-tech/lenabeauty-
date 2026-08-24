@@ -9,17 +9,20 @@ export type BackendMode = "supabase" | "tauri";
 export type BranchMode = "single" | "multi";
 
 // Explicit environment model. VITE_ENVIRONMENT selects the runtime target.
-// A production-optimized web build is not proof of a Production data
-// environment: the currently embedded Lena target is the Demo/Staging project.
 export type EnvironmentName = "development" | "staging" | "production";
 
 // Browser-facing Supabase values are public by design (anon key). These are
-// Demo/Staging fallbacks for the current single-center trial deployment. A
-// future Production environment must provide explicit VITE_* values and must
-// never silently inherit this project.
+// Demo credentials for local development / trial only. They are NEVER applied
+// automatically: a production build must never fall back to demo credentials,
+// and even a non-production build uses them only when explicitly selected with
+// VITE_USE_DEMO_CREDENTIALS=true (see useDemoFallbacks below).
 const LENA_DEMO_SUPABASE_URL = "https://tuzzvqsnbtzvkffmazyf.supabase.co";
 const LENA_DEMO_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1enp2cXNuYnR6dmtmZm1henlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMzg5NzQsImV4cCI6MjEwMTgxNDk3NH0.spKglkQKiC5vQCk5HgYFb0XfTst85vZ27izZJ6OvYoE";
 const LENA_DEMO_CENTER_ID = "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d";
+
+// Env var that explicitly opts a NON-PRODUCTION build into the demo
+// credentials above. The string value must be exactly "true".
+const DEMO_OPT_IN_KEY = "VITE_USE_DEMO_CREDENTIALS";
 
 export function deriveDefaultEnvironment(isProductionBuild: boolean): EnvironmentName {
   return isProductionBuild ? "staging" : "development";
@@ -49,7 +52,8 @@ export function parseEnv(
   const isProdBuild = options?.isProductionBuild ?? (!customEnv && import.meta.env.PROD);
 
   // Environment: explicit VITE_ENVIRONMENT wins. Otherwise local/test builds
-  // are development and the current optimized trial build is Demo/Staging.
+  // are development and an optimized build defaults to staging (the trial
+  // target) — but see the fail-closed demo rules below.
   const environmentRaw = getEnv("VITE_ENVIRONMENT")?.trim().toLowerCase();
   let environment: EnvironmentName;
   if (environmentRaw) {
@@ -63,10 +67,18 @@ export function parseEnv(
     environment = deriveDefaultEnvironment(isProdBuild);
   }
 
-  // Only the explicit/current trial Staging target may use the tracked browser
-  // fallback. An explicit Production environment must always provide its own
-  // backend URL/key/center and fail closed when any value is missing.
-  const useDemoFallbacks = isProdBuild && environment === "staging";
+  // Fail-closed demo credentials (P0.2):
+  // Demo credentials are applied ONLY when ALL of the following hold:
+  //   1. the build is NOT a production build (vite dev/preview/tests), and
+  //   2. the selected environment is not `production`, and
+  //   3. the developer explicitly opted in with VITE_USE_DEMO_CREDENTIALS=true.
+  // A production build therefore never falls back to demo credentials: without
+  // explicit VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY (and
+  // VITE_CENTER_ID for single-branch) it fails closed below.
+  const explicitDemoOptIn =
+    getEnv(DEMO_OPT_IN_KEY)?.trim().toLowerCase() === "true";
+  const useDemoFallbacks =
+    explicitDemoOptIn && !isProdBuild && environment !== "production";
 
   const backendRaw = (
     getEnv("VITE_DATA_BACKEND")?.trim().toLowerCase()
@@ -124,7 +136,12 @@ export function parseEnv(
       if (!customEnv && import.meta.env.MODE === "test") {
         // Skip
       } else {
-        throw new EnvironmentConfigurationError(`INVALID_SUPABASE_CONFIGURATION: Missing or invalid ${missing.join(", ")}`);
+        const hint = isProdBuild
+          ? " A production build never falls back to demo credentials: set explicit VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (and VITE_CENTER_ID for single-branch). Demo credentials are available only in non-production builds with VITE_USE_DEMO_CREDENTIALS=true."
+          : " Set explicit VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY, or opt into demo credentials for local development with VITE_USE_DEMO_CREDENTIALS=true.";
+        throw new EnvironmentConfigurationError(
+          `INVALID_SUPABASE_CONFIGURATION: Missing or invalid ${missing.join(", ")}.${hint}`,
+        );
       }
     }
   }

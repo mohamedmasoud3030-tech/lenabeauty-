@@ -51,7 +51,8 @@ See `.env.example`. Locally these live in `.env`; in production set them in the
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (never the secret key) |
 | `VITE_CENTER_ID` | UUID of the center (seeded by the initial migration) |
 | `VITE_BRANCH_MODE` | `single` or `multi` (multi-branch lets the operator switch the active center at runtime) |
-| `VITE_ENVIRONMENT` | Optional: `development` \| `staging` \| `production` (derived from the build when unset). Staging deployments should set `staging` explicitly — production fallbacks are never used outside production builds |
+| `VITE_ENVIRONMENT` | Optional: `development` \| `staging` \| `production` (derived from the build when unset). Optimized builds default to `staging` but **fail closed** — see `VITE_USE_DEMO_CREDENTIALS` below |
+| `VITE_USE_DEMO_CREDENTIALS` | Optional: set exactly `true` to use the tracked Demo project credentials for **local development only**. It is ignored for production builds and for an explicit `production` environment — a production build never falls back to demo credentials and fails closed when `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` / `VITE_CENTER_ID` are missing. Deployments that target the Demo project must set those three variables explicitly |
 
 ## Supabase setup
 
