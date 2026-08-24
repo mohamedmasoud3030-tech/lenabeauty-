@@ -1,6 +1,6 @@
 {
   "installCommand": "npm ci",
-  "buildCommand": "VITE_DATA_BACKEND=supabase VITE_ENVIRONMENT=staging VITE_SUPABASE_URL=https://tuzzvqsnbtzvkffmazyf.supabase.co VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InR1enp2cXNuYnR6dmtmZm1henlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMzg5NzQsImV4cCI6MjEwMTgxNDk3NH0.spKglkQKiC5vQCk5HgYFb0XfTst85vZ27izZJ6OvYoE VITE_CENTER_ID=7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d VITE_BRANCH_MODE=single npm run build",
+  "buildCommand": "node scripts/vercel-demo-build.mjs",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
