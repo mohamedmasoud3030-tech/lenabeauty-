@@ -7,22 +7,14 @@ import { clsx } from "clsx";
 /**
  * ScreenState — the app-wide, reusable pattern for the three data states:
  * loading / empty / error.
- *
- * Mobile-optimized: smaller padding, touch-friendly retry button,
- * lighter visual weight for better mobile UX.
  */
 interface ScreenStateProps {
   state: "loading" | "empty" | "error";
-  /** lucide icon override (defaults: Loader2 / Inbox / AlertCircle) */
   icon?: ReactNode;
-  /** i18n key — defaults differ per state */
   title?: string;
-  /** i18n key */
   description?: string;
-  /** i18n key for the primary action button */
   actionLabel?: string;
   onAction?: () => void;
-  /** error details (raw message) shown under the description when state=error */
   errorDetail?: string;
   compact?: boolean;
   className?: string;
@@ -71,9 +63,8 @@ export function ScreenState({
       role={state === "error" ? "alert" : "status"}
       className={clsx(
         "flex flex-col items-center justify-center text-center",
-        // Mobile: tighter spacing, desktop: more breathing room
-        compact 
-          ? "py-6 px-3 gap-2 sm:py-8 sm:gap-3" 
+        compact
+          ? "py-6 px-3 gap-2 sm:py-8 sm:gap-3"
           : "py-10 px-4 gap-3 sm:py-16 sm:px-6 sm:gap-4",
         className
       )}
@@ -81,7 +72,6 @@ export function ScreenState({
       <div
         className={clsx(
           "flex items-center justify-center rounded-xl border",
-          // Mobile: smaller icons
           compact ? "h-10 w-10 sm:h-12 sm:w-12" : "h-12 w-12 sm:h-16 sm:w-16",
           state === "error"
             ? "bg-destructive/10 text-destructive border-destructive/20"
@@ -91,21 +81,21 @@ export function ScreenState({
         {resolvedIcon}
       </div>
 
-      <div className={clsx("space-y-1 sm:space-y-2 max-w-xs sm:max-w-md")}>
+      <div className="space-y-1 sm:space-y-2 max-w-xs sm:max-w-md">
         <h3 className={clsx(
           "font-bold text-foreground",
-          compact ? "text-xs sm:text-sm" : "text-sm sm:text-lg"
+          compact ? "text-sm" : "text-base sm:text-lg"
         )}>
           {resolvedTitle}
         </h3>
         <p className={clsx(
           "text-muted-foreground leading-relaxed",
-          compact ? "text-[10px] sm:text-xs" : "text-xs sm:text-sm"
+          compact ? "text-xs sm:text-sm" : "text-sm"
         )}>
           {resolvedDescription}
         </p>
         {state === "error" && errorDetail && (
-          <p className="text-[10px] sm:text-xs text-muted-foreground/60 font-mono break-words bg-muted/40 rounded-lg p-2 max-h-16 overflow-auto">
+          <p className="text-xs text-muted-foreground/70 font-mono break-words bg-muted/40 rounded-lg p-2 max-h-20 overflow-auto">
             {errorDetail}
           </p>
         )}
@@ -115,11 +105,10 @@ export function ScreenState({
         <button
           onClick={onAction}
           className={clsx(
-            "inline-flex items-center gap-2 font-bold shadow-lg shadow-primary/20",
-            "hover:brightness-110 active:scale-95 transition-all touch-target",
-            // Mobile: smaller button
-            compact 
-              ? "h-10 px-4 rounded-lg text-xs sm:h-11 sm:px-6 sm:rounded-xl sm:text-sm" 
+            "inline-flex items-center gap-2 bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20",
+            "hover:bg-primary/90 active:scale-95 transition-all touch-target",
+            compact
+              ? "h-11 px-5 rounded-xl text-sm"
               : "h-11 px-6 rounded-xl text-sm"
           )}
         >
