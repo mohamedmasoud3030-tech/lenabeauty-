@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion } from "motion/react";
-import { CreditCard, Save, ShieldCheck, Globe, Banknote } from "lucide-react";
+import { Banknote, Save } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
 import { ScreenState } from "../shared/components/ScreenState";
+import { formatOMRAmount } from "../shared/money";
 
 export default function PaymentGatewaySettingsPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
@@ -35,27 +35,26 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await useCases.settings.getPaymentGatewaySettings();
-      if (!res.ok && res.error.code !== "NOT_FOUND") throw res.error;
-      if (res.ok) {
+      const result = await useCases.settings.getPaymentGatewaySettings();
+      if (!result.ok && result.error.code !== "NOT_FOUND") throw result.error;
+      if (result.ok) {
         setForm({
-          provider: res.data.provider,
-          // No charge/session/webhook runtime is shipped. Never hydrate legacy
-          // metadata as an active or live gateway in the operator UI.
+          provider: result.data.provider,
           isEnabled: false,
           isSandbox: true,
-          publicKey: res.data.publicKey || "",
-          merchantIdentifier: res.data.merchantIdentifier || "",
-          webhookSecretHint: res.data.webhookSecretHint || "",
-          bookingDepositEnabled: res.data.bookingDepositEnabled,
-          bookingDepositType: res.data.bookingDepositType,
-          bookingDepositValue: res.data.bookingDepositValue,
-          successUrl: res.data.successUrl || "",
-          cancelUrl: res.data.cancelUrl || "",
+          publicKey: result.data.publicKey || "",
+          merchantIdentifier: result.data.merchantIdentifier || "",
+          webhookSecretHint: result.data.webhookSecretHint || "",
+          bookingDepositEnabled: result.data.bookingDepositEnabled,
+          bookingDepositType: result.data.bookingDepositType,
+          bookingDepositValue: result.data.bookingDepositValue,
+          successUrl: result.data.successUrl || "",
+          cancelUrl: result.data.cancelUrl || "",
         });
       }
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error));
+      console.error("Booking deposit settings load failed", error);
+      setLoadError(t("Failed to load payment settings"));
     } finally {
       setLoading(false);
     }
@@ -70,14 +69,16 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
     try {
       await unwrap(useCases.settings.updatePaymentGatewaySettings({
         ...form,
-        // Configuration is preparatory metadata only until a server-side
-        // charge session and verified webhook are implemented.
+        // Keep non-operational gateway activation disabled while preserving
+        // any existing metadata. The visible controls below are only for the
+        // booking-deposit rules that the appointment workflow can use today.
         isEnabled: false,
         isSandbox: true,
       }));
       showToast("success", t("Success"), t("Payment gateway settings saved successfully"));
-    } catch (err: any) {
-      showToast("error", t("Error"), err.message || t("Failed to save payment gateway settings"));
+    } catch (error) {
+      console.error("Booking deposit settings save failed", error);
+      showToast("error", t("Error"), t("Failed to save payment gateway settings"));
     } finally {
       setLoading(false);
     }
@@ -95,79 +96,107 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
     );
   }
 
+  const depositValue = form.bookingDepositType === "percentage"
+    ? `${form.bookingDepositValue}%`
+    : `${formatOMRAmount(form.bookingDepositValue)} ${t("OMR")}`;
+
   return (
     <div className="space-y-6 sm:space-y-8">
-      {!embedded && (
+      {!embedded ? (
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary"><CreditCard className="h-5 w-5 sm:h-7 sm:w-7" /></div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-14 sm:w-14 sm:rounded-2xl">
+            <Banknote className="h-5 w-5 sm:h-7 sm:w-7" />
+          </div>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{t("Payment Gateway")}</h1>
-            <p className="text-sm text-muted-foreground">{t("Configure online deposit collection for booking confirmations")}</p>
+            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t("Booking Deposit")}</h1>
+            <p className="text-sm text-muted-foreground">{t("Booking deposit configuration")}</p>
           </div>
         </div>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Provider")}</p><div className="mt-2 text-xl font-bold text-foreground uppercase">{form.provider}</div></CardContent></PremiumCard>
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Connection")}</p><div className="mt-2 text-xl font-bold text-warning">{t("Not connected")}</div></CardContent></PremiumCard>
-        <PremiumCard variant="glass"><CardContent className="py-6"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Booking Deposit")}</p><div className="mt-2 text-xl font-bold text-foreground">{form.bookingDepositEnabled ? `${form.bookingDepositValue}${form.bookingDepositType === "percentage" ? "%" : ` ${t("OMR")}`}` : t("Disabled")}</div></CardContent></PremiumCard>
-      </div>
-
-      <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <PremiumCard variant="glass">
-          <CardHeader><div className="flex items-center gap-2"><Globe className="h-5 w-5 text-primary" /><h2 className="font-bold text-foreground">{t("Gateway Configuration")}</h2></div></CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid md:grid-cols-2 gap-4 items-end">
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Provider")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.provider} onChange={(e) => update("provider", e.target.value as any)}><option value="manual">Manual</option><option value="thawani">Thawani</option><option value="paytabs">PayTabs</option><option value="stripe">Stripe</option></select></label>
-              <p className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning">
-                {t("Provider settings are stored for preparation only; no live gateway is connected")}
-              </p>
+          <CardContent className="py-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Enabled")}</p>
+            <div className={`mt-2 text-xl font-bold ${form.bookingDepositEnabled ? "text-success" : "text-muted-foreground"}`}>
+              {form.bookingDepositEnabled ? t("Enabled") : t("Disabled")}
             </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Public Key")}</span><input className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.publicKey} onChange={(e) => update("publicKey", e.target.value)} placeholder="pk_live_..." /></label>
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Merchant Identifier")}</span><input className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.merchantIdentifier} onChange={(e) => update("merchantIdentifier", e.target.value)} placeholder="merchant_123" /></label>
-            </div>
-
-            <label className="space-y-2 block"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Webhook Secret Hint")}</span><input className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.webhookSecretHint} onChange={(e) => update("webhookSecretHint", e.target.value)} placeholder={t("Store only a hint here; keep the real secret outside Git") as string} /></label>
-
-            <div className="rounded-2xl border border-border p-5 bg-card/50 space-y-4">
-              <div className="flex items-center gap-2"><Banknote className="h-5 w-5 text-primary" /><h3 className="font-bold text-foreground">{t("Booking Deposit Rules")}</h3></div>
-              <div className="grid md:grid-cols-3 gap-4">
-                <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Enabled")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={String(form.bookingDepositEnabled)} onChange={(e) => update("bookingDepositEnabled", e.target.value === "true")}><option value="true">{t("Enabled")}</option><option value="false">{t("Disabled")}</option></select></label>
-                <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Type")}</span><select className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.bookingDepositType} onChange={(e) => update("bookingDepositType", e.target.value as any)}><option value="fixed">{t("Fixed")}</option><option value="percentage">{t("Percentage")}</option></select></label>
-                <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Value")}</span><input type="number" min="0" step="0.001" className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.bookingDepositValue} onChange={(e) => update("bookingDepositValue", Number(e.target.value) || 0)} /></label>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Success URL")}</span><input className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.successUrl} onChange={(e) => update("successUrl", e.target.value)} placeholder="https://example.com/booking/success" /></label>
-              <label className="space-y-2"><span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Cancel URL")}</span><input className="w-full rounded-xl border border-border bg-card px-4 py-3 font-bold" value={form.cancelUrl} onChange={(e) => update("cancelUrl", e.target.value)} placeholder="https://example.com/booking/cancel" /></label>
-            </div>
-
-            <button onClick={save} disabled={loading} className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 disabled:opacity-50"><Save className="h-4 w-4" />{loading ? t("Saving...") : t("Save Payment Gateway Settings")}</button>
           </CardContent>
         </PremiumCard>
-
-        <div className="space-y-6">
-          <PremiumCard variant="glass">
-            <CardHeader><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-success" /><h2 className="font-bold text-foreground">{t("Security Checklist")}</h2></div></CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>{t("Never store real gateway secret keys in the repository or browser code.")}</p>
-              <p>{t("Use sandbox mode until your merchant account is fully verified.")}</p>
-              <p>{t("After saving settings, configure the real webhook secret and server-side checkout session on your deployment platform.")}</p>
-            </CardContent>
-          </PremiumCard>
-          <PremiumCard variant="glass">
-            <CardHeader><h2 className="font-bold text-foreground">{t("Current Product Scope")}</h2></CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>{t("This release persists your deposit rules and provider metadata in Supabase.")}</p>
-              <p>{t("The final live charge step still needs your external merchant credentials and webhook deployment.")}</p>
-              <p>{t("Until then, bookings can still use manual deposit/no-show workflows already implemented in appointments.")}</p>
-            </CardContent>
-          </PremiumCard>
-        </div>
+        <PremiumCard variant="glass">
+          <CardContent className="py-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Type")}</p>
+            <div className="mt-2 text-xl font-bold text-foreground">
+              {form.bookingDepositType === "fixed" ? t("Fixed") : t("Percentage")}
+            </div>
+          </CardContent>
+        </PremiumCard>
+        <PremiumCard variant="glass">
+          <CardContent className="py-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Value")}</p>
+            <div className="mt-2 text-xl font-bold text-primary">{depositValue}</div>
+          </CardContent>
+        </PremiumCard>
       </div>
+
+      <PremiumCard variant="glass">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-primary" />
+            <h2 className="font-bold text-foreground">{t("Booking Deposit Rules")}</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-3">
+            <label className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Enabled")}</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-input bg-background px-4 py-3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                value={String(form.bookingDepositEnabled)}
+                onChange={(event) => update("bookingDepositEnabled", event.target.value === "true")}
+              >
+                <option value="true">{t("Enabled")}</option>
+                <option value="false">{t("Disabled")}</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Type")}</span>
+              <select
+                className="min-h-11 w-full rounded-xl border border-input bg-background px-4 py-3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                value={form.bookingDepositType}
+                onChange={(event) => update("bookingDepositType", event.target.value as "fixed" | "percentage")}
+              >
+                <option value="fixed">{t("Fixed")}</option>
+                <option value="percentage">{t("Percentage")}</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t("Deposit Value")}</span>
+              <input
+                type="number"
+                min="0"
+                step={form.bookingDepositType === "fixed" ? "0.001" : "0.1"}
+                max={form.bookingDepositType === "percentage" ? "100" : undefined}
+                className="min-h-11 w-full rounded-xl border border-input bg-background px-4 py-3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+                value={form.bookingDepositValue}
+                onChange={(event) => update("bookingDepositValue", Number(event.target.value) || 0)}
+              />
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={save}
+            disabled={loading}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {loading ? t("Saving...") : t("Save Settings")}
+          </button>
+        </CardContent>
+      </PremiumCard>
     </div>
   );
 }

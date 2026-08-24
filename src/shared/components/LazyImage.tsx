@@ -30,7 +30,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   className = "",
   width,
   height,
-  placeholderColor = "#f3f4f6",
+  placeholderColor = "hsl(var(--muted))",
   fallbackSrc,
   objectFit = "cover",
   rounded = "md",
@@ -61,7 +61,6 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     "scale-down": "object-scale-down",
   };
 
-  // Intersection Observer - تحميل عند الظهور
   useEffect(() => {
     const el = imgRef.current;
     if (!el) return;
@@ -102,15 +101,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         backgroundColor: placeholderColor,
       }}
     >
-      {/* Skeleton shimmer */}
       {showSkeleton && !loaded && !error && (
         <div
-          className="absolute inset-0 animate-pulse bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100"
+          className="absolute inset-0 animate-pulse bg-gradient-to-r from-muted via-background/55 to-muted"
           aria-hidden="true"
         />
       )}
 
-      {/* Actual image */}
       <img
         ref={imgRef}
         src={inView ? (error && fallbackSrc ? fallbackSrc : src) : undefined}
@@ -128,9 +125,8 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         style={{ width, height }}
       />
 
-      {/* Error fallback */}
       {error && !fallbackSrc && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 text-gray-400 gap-1">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground">
           <svg
             className="w-8 h-8"
             fill="none"
@@ -151,9 +147,6 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   );
 };
 
-/**
- * SalonLogo - عرض شعار الصالون مع fallback احترافي
- */
 interface SalonLogoProps {
   logoUrl?: string | null;
   salonName?: string;
@@ -177,14 +170,12 @@ export const SalonLogo: React.FC<SalonLogoProps> = ({
   const sizePx = { sm: 32, md: 48, lg: 64, xl: 96 };
 
   if (!logoUrl) {
-    // Text fallback with gradient — safe initials via the shared helper so an
-    // empty/whitespace salon name never yields "undefined".
     const initials = getInitials(salonName, "L");
 
     return (
       <div
         className={clsx(
-          "flex items-center justify-center rounded-full font-bold text-white",
+          "flex items-center justify-center rounded-full font-bold text-primary-foreground",
           "bg-gradient-to-br from-primary to-secondary shadow-lg",
           sizeClasses[size],
           className
@@ -209,9 +200,6 @@ export const SalonLogo: React.FC<SalonLogoProps> = ({
   );
 };
 
-/**
- * ServiceImage - صورة الخدمة مع placeholder
- */
 interface ServiceImageProps {
   src?: string | null;
   name: string;
@@ -226,7 +214,6 @@ export const ServiceImage: React.FC<ServiceImageProps> = ({
   size = 48,
 }) => {
   if (!src) {
-    // Emoji/icon fallback
     const emojis: Record<string, string> = {
       hair: "✂️",
       nail: "💅",

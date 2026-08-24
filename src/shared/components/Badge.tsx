@@ -21,9 +21,9 @@ const variantClasses: Record<BadgeVariant, string> = {
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'px-2 py-1 text-[10px] font-bold uppercase tracking-widest rounded-lg',
-  md: 'px-3 py-1.5 text-xs font-bold uppercase tracking-widest rounded-lg',
-  lg: 'px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-xl',
+  sm: 'px-2 py-1 text-xs font-bold uppercase tracking-wide rounded-lg',
+  md: 'px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-lg',
+  lg: 'px-4 py-2 text-sm font-bold uppercase tracking-wide rounded-xl',
 };
 
 export function Badge({

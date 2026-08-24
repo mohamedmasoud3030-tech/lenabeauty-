@@ -9,7 +9,7 @@
 export function mapErrorToMessageKey(error: any): string {
   if (!error) return "error.unexpected";
 
-  const code = error.code || error.message; // fallback to message for simple inspection
+  const code = error.code || error.message;
 
   // Structured validation failures carry per-field i18n keys — surface the
   // first one so the user gets a specific, localized message instead of a
@@ -33,17 +33,16 @@ export function mapErrorToMessageKey(error: any): string {
     case "CONFLICT":
       return "error.conflict";
     case "INFRASTRUCTURE_ERROR":
+    case "BACKEND_METHOD_UNSUPPORTED":
+      // Keep internal rollout/adapter state out of user-facing text.
       return "error.infrastructure";
     case "INVALID_CREDENTIALS":
       return "error.invalid_credentials";
-    case "BACKEND_METHOD_UNSUPPORTED":
-      return "BACKEND_METHOD_UNSUPPORTED";
     case "UNEXPECTED_ERROR":
     default:
       if (error.message && error.message.includes("not configured")) {
         return "error.auth_not_configured";
       }
-      // Raw message is not a key; callers should fall back to it directly.
       return error.message || "error.unexpected";
   }
 }

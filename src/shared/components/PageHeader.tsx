@@ -41,7 +41,7 @@ export function PageHeader({ icon, title, subtitle, actions, className, stickyAc
             {title}
           </h1>
           {subtitle && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">{subtitle}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium truncate">{subtitle}</p>
           )}
         </div>
       </div>

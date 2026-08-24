@@ -18,6 +18,11 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
+function looksTechnical(value?: string): boolean {
+  if (!value) return false;
+  return /(Backend Required|BACKEND_METHOD_UNSUPPORTED|supabase|postgrest|PGRST\d*|\bRPC\b|schema cache|failed to fetch|networkerror|fetch failed)/i.test(value);
+}
+
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within ToastProvider");
@@ -28,9 +33,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const { t: translate } = useTranslation();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
+  function sanitizeUserFacingToast(type: ToastType, title: string, message?: string) {
+    if (type === "error" && (looksTechnical(title) || looksTechnical(message))) {
+      return {
+        title: translate("Error"),
+        message: translate("An unexpected error occurred. Please try again."),
+      };
+    }
+
+    return { title, message };
+  }
+
   function showToast(type: ToastType, title: string, message?: string) {
+    const safe = sanitizeUserFacingToast(type, title, message);
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setToasts((prev) => [...prev, { id, type, title: safe.title, message: safe.message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);

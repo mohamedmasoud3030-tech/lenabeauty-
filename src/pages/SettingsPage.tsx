@@ -1,8 +1,8 @@
-import React, { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import {
   Save, Download, Building2, Database,
-  ShieldCheck, Globe, Phone, MapPin, Hash,
-  Coins, ChevronRight, Bell, Palette, CreditCard
+  Globe, Phone, MapPin, Hash, Coins,
+  ChevronRight, Bell, Palette, CreditCard,
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
@@ -27,34 +27,34 @@ function readSettingsTab(value: string | null): SettingsTab {
   return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
 }
 
+const fieldClass = "min-h-11 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm font-medium text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
+
 export default function SettingsPage() {
   const { showToast } = useToast();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<SettingsTab>(() => readSettingsTab(searchParams.get("tab")));
+  const [settings, setSettings] = useState<CenterSettings | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [centerErrors, setCenterErrors] = useState<Record<string, string>>({});
+  const [vatText, setVatText] = useState("0");
 
   function selectTab(next: SettingsTab) {
     setTab(next);
     setSearchParams(next === "center" ? {} : { tab: next }, { replace: true });
   }
-  // center settings
-  const [s, setS] = useState<CenterSettings | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [centerErrors, setCenterErrors] = useState<Record<string, string>>({});
-  // VAT is kept as text so empty/invalid input is an error, never a silent 0.
-  const [vatText, setVatText] = useState("0");
 
   async function load() {
     setLoadError(null);
     try {
-      const settings = await unwrap(useCases.settings.get());
-      setS(settings);
-      setVatText(String(settings.taxRate ?? 0));
+      const loaded = await unwrap(useCases.settings.get());
+      setSettings(loaded);
+      setVatText(String(loaded.taxRate ?? 0));
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setLoadError(message);
-      setS(null);
+      console.error("Settings load failed", error);
+      setLoadError(t("An unexpected error occurred. Please try again."));
+      setSettings(null);
     }
   }
 
@@ -67,38 +67,38 @@ export default function SettingsPage() {
   }, [searchParams]);
 
   async function saveCenter() {
-    if (!s) return;
-    const nameR = requiredText(s.name);
-    const taxR = percentField(vatText);
+    if (!settings) return;
+
+    const nameResult = requiredText(settings.name);
+    const taxResult = percentField(vatText);
     const issues = collectIssues([
-      { field: "name", result: nameR },
-      { field: "taxRate", result: taxR },
+      { field: "name", result: nameResult },
+      { field: "taxRate", result: taxResult },
     ]);
+
     if (issues.length > 0) {
       setCenterErrors(issuesToMap(issues));
       return;
     }
+
     setCenterErrors({});
     setBusy(true);
     try {
       const updated = await unwrap(useCases.settings.update({
-        name: (nameR as { ok: true; value: string }).value,
-        address: s.address ?? "",
-        phone: s.phone ?? "",
-        cr: s.cr ?? "",
-        postalCode: s.postalCode ?? "",
-        currency: s.currency ?? "OMR",
-        taxRate: (taxR as { ok: true; value: number }).value,
+        name: (nameResult as { ok: true; value: string }).value,
+        address: settings.address ?? "",
+        phone: settings.phone ?? "",
+        cr: settings.cr ?? "",
+        postalCode: settings.postalCode ?? "",
+        currency: settings.currency ?? "OMR",
+        taxRate: (taxResult as { ok: true; value: number }).value,
       }));
-      setVatText(String((taxR as { ok: true; value: number }).value));
-      setS(updated);
-      showToast('success', t('Success'), t("Settings saved successfully"));
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err.message ?? t("Error"));
-      }
+      setVatText(String((taxResult as { ok: true; value: number }).value));
+      setSettings(updated);
+      showToast("success", t("Success"), t("Settings saved successfully"));
+    } catch (error) {
+      console.error("Settings save failed", error);
+      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -107,26 +107,23 @@ export default function SettingsPage() {
   async function handleExportData() {
     try {
       setBusy(true);
-      const res = await unwrap(useCases.settings.exportData());
-      const blob = new Blob([JSON.stringify(res, null, 2)], { type: "application/json" });
+      const data = await unwrap(useCases.settings.exportData());
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `salon_data_export_${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `salon_data_export_${new Date().toISOString().split("T")[0]}.json`;
+      anchor.click();
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
-         showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
-      } else {
-         showToast('error', t("Error"), err.message || t("Failed to export data"));
-      }
+    } catch (error) {
+      console.error("Data export failed", error);
+      showToast("error", t("Error"), t("Failed to export data"));
     } finally {
       setBusy(false);
     }
   }
 
-  if (!s) {
+  if (!settings) {
     if (loadError) {
       return (
         <ScreenState
@@ -146,200 +143,180 @@ export default function SettingsPage() {
     { id: "backup", label: t("Data Export"), icon: Database, desc: t("Export operational data safely") },
     { id: "branding", label: t("Branding"), icon: Palette, desc: t("Manage salon visual identity") },
     { id: "notifications", label: t("Notifications"), icon: Bell, desc: t("Appointment reminders and messages") },
-    { id: "payments", label: t("Payment Gateway"), icon: CreditCard, desc: t("Booking deposit configuration") },
+    { id: "payments", label: t("Booking Deposit"), icon: CreditCard, desc: t("Booking deposit configuration") },
   ];
 
   return (
     <div className="flex flex-col gap-6 pb-10">
+      <div className="flex flex-col gap-5 lg:flex-row lg:gap-8">
+        <aside className="shrink-0 lg:w-72">
+          <div className="space-y-4 lg:sticky lg:top-24 lg:space-y-6">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{t("Settings")}</h1>
+              <p className="text-sm text-muted-foreground">{t("Configure and manage your application preferences.")}</p>
+            </div>
 
-
-      <div className="flex flex-col lg:flex-row gap-5 lg:gap-8">
-        {/* Settings section navigation */}
-      <aside className="lg:w-72 shrink-0">
-        <div className="lg:sticky lg:top-24 space-y-4 lg:space-y-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{t("Settings")}</h1>
-            <p className="text-sm text-muted-foreground">{t("Configure and manage your application preferences.")}</p>
-          </div>
-
-          <nav aria-label={t("Settings")} className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:block lg:space-y-2">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => selectTab(item.id)}
-                aria-current={tab === item.id ? "page" : undefined}
-                className={clsx(
-                  "group min-h-11 min-w-[145px] flex items-center gap-2 rounded-xl p-3 text-start transition-colors lg:w-full lg:min-w-0 lg:items-start lg:gap-4 lg:rounded-2xl lg:p-4",
-                  tab === item.id
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <div className={clsx(
-                  "mt-0.5 rounded-xl p-2 transition-colors",
-                  tab === item.id ? "bg-white/20" : "bg-muted group-hover:bg-background"
-                )}>
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 text-start">
-                  <div className="text-sm font-bold">{item.label}</div>
+            <nav aria-label={t("Settings")} className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:block lg:space-y-2">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => selectTab(item.id)}
+                  aria-current={tab === item.id ? "page" : undefined}
+                  className={clsx(
+                    "group flex min-h-11 min-w-[145px] items-center gap-2 rounded-xl p-3 text-start transition-colors lg:w-full lg:min-w-0 lg:items-start lg:gap-4 lg:rounded-2xl lg:p-4",
+                    tab === item.id
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
                   <div className={clsx(
-                    "hidden lg:block text-[10px] font-medium leading-tight mt-0.5",
-                    tab === item.id ? "text-primary-foreground/70" : "text-muted-foreground"
+                    "mt-0.5 rounded-xl p-2 transition-colors",
+                    tab === item.id ? "bg-primary-foreground/15" : "bg-muted group-hover:bg-background",
                   )}>
-                    {item.desc}
+                    <item.icon className="h-5 w-5" />
                   </div>
-                </div>
-                {tab === item.id && (
-                  <motion.div layoutId="active-tab" className="mt-2">
-                    <ChevronRight className="h-4 w-4 opacity-50" />
-                  </motion.div>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </aside>
+                  <div className="flex-1 text-start">
+                    <div className="text-sm font-bold">{item.label}</div>
+                    <div className={clsx(
+                      "mt-0.5 hidden text-[10px] font-medium leading-tight lg:block",
+                      tab === item.id ? "text-primary-foreground/70" : "text-muted-foreground",
+                    )}>
+                      {item.desc}
+                    </div>
+                  </div>
+                  {tab === item.id ? (
+                    <motion.div layoutId="active-tab" className="mt-2">
+                      <ChevronRight className="h-4 w-4 opacity-50" />
+                    </motion.div>
+                  ) : null}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </aside>
 
-      {/* Content Area */}
-      <section className="flex-1 min-w-0">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="space-y-8"
-          >
-            {tab === "center" && (
-              <div className="space-y-8">
-                <div className="rounded-[2.5rem] border border-border bg-card p-6 sm:p-10 shadow-sm space-y-6 sm:space-y-10">
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+        <section className="min-w-0 flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="space-y-8"
+            >
+              {tab === "center" ? (
+                <div className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8">
+                  <div className="mb-7 flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <Building2 className="h-6 w-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">{t("Business Profile")}</h2>
+                      <h2 className="text-xl font-bold text-foreground">{t("Business Profile")}</h2>
                       <p className="text-sm text-muted-foreground">{t("This information will appear on your invoices and reports.")}</p>
                     </div>
                   </div>
 
-                  <div className="grid gap-8">
-                    <div className="grid gap-8 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <Globe className="h-3 w-3" />
-                          {t("Business Name")}
-                        </label>
+                  <div className="grid gap-5">
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <Field label={t("Business Name")} icon={<Globe className="h-3.5 w-3.5" />}>
                         <input
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                          value={s.name}
-                          onChange={(e) => { setS({ ...s, name: e.target.value }); if (centerErrors.name) setCenterErrors((p) => ({ ...p, name: "" })); }}
+                          className={fieldClass}
+                          value={settings.name}
+                          onChange={(event) => {
+                            setSettings({ ...settings, name: event.target.value });
+                            if (centerErrors.name) setCenterErrors((prev) => ({ ...prev, name: "" }));
+                          }}
                           placeholder={t("Enter business name")}
                         />
-                        {centerErrors.name && <div className="text-xs font-bold text-destructive">{t(centerErrors.name)}</div>}
-                      </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <Phone className="h-3 w-3" />
-                          {t("Phone Number")}
-                        </label>
+                        {centerErrors.name ? <p className="text-xs font-bold text-destructive">{t(centerErrors.name)}</p> : null}
+                      </Field>
+
+                      <Field label={t("Phone Number")} icon={<Phone className="h-3.5 w-3.5" />}>
                         <input
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                          value={s.phone ?? ""}
-                          onChange={(e) => setS({ ...s, phone: e.target.value })}
+                          className={fieldClass}
+                          value={settings.phone ?? ""}
+                          onChange={(event) => setSettings({ ...settings, phone: event.target.value })}
                           placeholder="+968 0000 0000"
+                          dir="ltr"
                         />
-                      </div>
+                      </Field>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        <MapPin className="h-3 w-3" />
-                        {t("Address")}
-                      </label>
+                    <Field label={t("Address")} icon={<MapPin className="h-3.5 w-3.5" />}>
                       <input
-                        className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                        value={s.address ?? ""}
-                        onChange={(e) => setS({ ...s, address: e.target.value })}
+                        className={fieldClass}
+                        value={settings.address ?? ""}
+                        onChange={(event) => setSettings({ ...settings, address: event.target.value })}
                         placeholder={t("Street, City, Country")}
                       />
-                    </div>
+                    </Field>
 
-                    <div className="grid gap-8 md:grid-cols-3">
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <Hash className="h-3 w-3" />
-                          {t("Commercial Register")}
-                        </label>
+                    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                      <Field label={t("Commercial Register")} icon={<Hash className="h-3.5 w-3.5" />}>
                         <input
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                          value={s.cr ?? ""}
-                          onChange={(e) => setS({ ...s, cr: e.target.value })}
+                          className={fieldClass}
+                          value={settings.cr ?? ""}
+                          onChange={(event) => setSettings({ ...settings, cr: event.target.value })}
                           placeholder="CR-123456"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <MapPin className="h-3 w-3" />
-                          {t("Postal Code")}
-                        </label>
+                      </Field>
+
+                      <Field label={t("Postal Code")} icon={<MapPin className="h-3.5 w-3.5" />}>
                         <input
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                          value={s.postalCode ?? ""}
-                          onChange={(e) => setS({ ...s, postalCode: e.target.value })}
+                          className={fieldClass}
+                          value={settings.postalCode ?? ""}
+                          onChange={(event) => setSettings({ ...settings, postalCode: event.target.value })}
                           placeholder="123"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <Coins className="h-3 w-3" />
-                          {t("Currency")}
-                        </label>
+                      </Field>
+
+                      <Field label={t("Currency")} icon={<Coins className="h-3.5 w-3.5" />}>
                         <input
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                          value={s.currency}
-                          onChange={(e) => setS({ ...s, currency: e.target.value })}
+                          className={fieldClass}
+                          value={settings.currency}
+                          onChange={(event) => setSettings({ ...settings, currency: event.target.value })}
                           placeholder="OMR"
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          <Coins className="h-3 w-3" />
-                          {t("VAT Rate")}
-                        </label>
+                      </Field>
+
+                      <Field label={t("VAT Rate")} icon={<Coins className="h-3.5 w-3.5" />}>
                         <input
                           type="text"
                           inputMode="decimal"
-                          className="w-full rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          className={fieldClass}
                           value={vatText}
-                          onChange={(e) => { setVatText(e.target.value); if (centerErrors.taxRate) setCenterErrors((p) => ({ ...p, taxRate: "" })); }}
+                          onChange={(event) => {
+                            setVatText(event.target.value);
+                            if (centerErrors.taxRate) setCenterErrors((prev) => ({ ...prev, taxRate: "" }));
+                          }}
                           placeholder="0"
                         />
-                        {centerErrors.taxRate && <div className="text-xs font-bold text-destructive">{t(centerErrors.taxRate)}</div>}
-                        <p className="text-xs text-muted-foreground">{t("VAT")} (%)</p>
-                      </div>
+                        {centerErrors.taxRate ? <p className="text-xs font-bold text-destructive">{t(centerErrors.taxRate)}</p> : null}
+                      </Field>
                     </div>
 
-                    <div className="rounded-[2rem] border border-border p-6 bg-muted/30">
-                      <div className="flex flex-col md:flex-row items-center gap-6">
-                        <div className="h-24 w-24 rounded-3xl bg-background border border-border flex items-center justify-center overflow-hidden shadow-inner">
-                          {(s.brandLogoBase64 || s.logoPath) ? (
-                            <img src={s.brandLogoBase64 || s.logoPath} alt={t("Business Logo")} className="h-full w-full object-contain p-2" />
+                    <div className="mt-2 rounded-2xl border border-border bg-muted/35 p-4 sm:p-5">
+                      <div className="flex flex-col items-center gap-4 sm:flex-row">
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background">
+                          {settings.brandLogoBase64 || settings.logoPath ? (
+                            <img
+                              src={settings.brandLogoBase64 || settings.logoPath}
+                              alt={t("Business Logo")}
+                              className="h-full w-full object-contain p-2"
+                            />
                           ) : (
-                            <Building2 className="h-10 w-10 text-muted-foreground/30" />
+                            <Building2 className="h-8 w-8 text-muted-foreground/40" />
                           )}
                         </div>
-                        <div className="flex-1 text-center md:text-start space-y-3">
-                          <div>
-                            <h4 className="text-sm font-bold text-foreground">{t("Business Logo")}</h4>
-                            <p className="text-xs text-muted-foreground mt-1">{t("Manage the logo and brand colors in the Branding section.")}</p>
-                          </div>
+                        <div className="flex-1 text-center sm:text-start">
+                          <h3 className="font-bold text-foreground">{t("Business Logo")}</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">{t("Manage the logo and brand colors in the Branding section.")}</p>
                           <button
                             type="button"
                             onClick={() => selectTab("branding")}
-                            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-background border border-border px-5 py-2.5 text-sm font-bold hover:bg-muted transition-colors"
+                            className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-bold text-foreground transition hover:bg-muted"
                           >
                             <Palette className="h-4 w-4 text-primary" />
                             {t("Open Branding")}
@@ -349,87 +326,78 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-6 border-t border-border flex justify-end">
+                  <div className="mt-7 flex justify-end border-t border-border pt-5">
                     <button
+                      type="button"
                       disabled={busy}
                       onClick={saveCenter}
-                      className="group relative inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-10 py-4 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/15 transition hover:bg-primary/90 disabled:opacity-50"
                     >
                       <Save className="h-4 w-4" />
-                      {t("Save Changes")}
-                      <span className="absolute -top-3 -end-3 bg-warning/10 text-warning border border-warning/20 text-[8px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest pointer-events-none">{t("Backend Required")}</span>
-                      {busy && <div className="absolute inset-0 bg-primary/50 flex items-center justify-center rounded-2xl"><div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>}
+                      {busy ? t("Saving...") : t("Save Changes")}
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
+              ) : null}
 
-            {tab === "branding" && (
-              <Suspense fallback={<PageLoader />}>
-                <BrandingSettingsSection embedded />
-              </Suspense>
-            )}
+              {tab === "branding" ? (
+                <Suspense fallback={<PageLoader />}>
+                  <BrandingSettingsSection embedded />
+                </Suspense>
+              ) : null}
 
-            {tab === "notifications" && (
-              <Suspense fallback={<PageLoader />}>
-                <NotificationsSettingsSection embedded />
-              </Suspense>
-            )}
+              {tab === "notifications" ? (
+                <Suspense fallback={<PageLoader />}>
+                  <NotificationsSettingsSection embedded />
+                </Suspense>
+              ) : null}
 
-            {tab === "payments" && (
-              <Suspense fallback={<PageLoader />}>
-                <PaymentGatewaySettingsSection embedded />
-              </Suspense>
-            )}
+              {tab === "payments" ? (
+                <Suspense fallback={<PageLoader />}>
+                  <PaymentGatewaySettingsSection embedded />
+                </Suspense>
+              ) : null}
 
-            {tab === "backup" && (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-[2rem] border border-border bg-card p-6 sm:p-8 shadow-sm space-y-6">
+              {tab === "backup" ? (
+                <div className="max-w-2xl rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8">
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 shrink-0 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <Download className="h-6 w-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">{t("Operational JSON Export")}</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <h2 className="text-xl font-bold text-foreground">{t("Operational JSON Export")}</h2>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                         {t("Downloads a partial operational dataset. It is not a database backup and cannot restore financial records.")}
                       </p>
                     </div>
                   </div>
                   <button
+                    type="button"
                     disabled={busy}
                     onClick={handleExportData}
-                    className="w-full min-h-12 inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                    className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
                   >
                     <Download className="h-4 w-4" />
                     {busy ? t("Processing...") : t("Export JSON")}
                   </button>
                 </div>
-
-                <div className="rounded-[2rem] border border-warning/30 bg-warning/5 p-6 sm:p-8 shadow-sm space-y-4">
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 shrink-0 rounded-2xl bg-warning/10 flex items-center justify-center text-warning">
-                      <ShieldCheck className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">{t("Restore is unavailable")}</h2>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t("Recovery controls are disabled until an atomic, complete restore is implemented.")}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                    {t("Use managed database backups and a tested recovery runbook for disaster recovery.")}
-                  </p>
-                </div>
-              </div>
-            )}
-
-          </motion.div>
-        </AnimatePresence>
-      </section>
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+        </section>
       </div>
     </div>
+  );
+}
+
+function Field({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
+  return (
+    <label className="space-y-2">
+      <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        {icon}
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

@@ -6,6 +6,7 @@ import { useToast } from "../shared/components/Toast";
 import { Plus, Check, X, TrendingDown, RotateCcw } from "lucide-react";
 import { Modal } from "../shared/components/Modal";
 import { EmployeeAdvance, AdvanceStatus, Employee } from "../domain/entities";
+import { formatOMRAmount } from "../shared/money";
 
 const STATUS_LABEL_KEYS: Record<AdvanceStatus, string> = {
   PENDING: "Pending",
@@ -15,11 +16,13 @@ const STATUS_LABEL_KEYS: Record<AdvanceStatus, string> = {
 };
 
 const statusBadge: Record<AdvanceStatus, string> = {
-  PENDING: "bg-yellow-100 text-yellow-700",
-  APPROVED: "bg-blue-100 text-blue-700",
-  REJECTED: "bg-red-100 text-red-700",
-  DEDUCTED: "bg-green-100 text-green-700",
+  PENDING: "border-warning/25 bg-warning/10 text-warning",
+  APPROVED: "border-primary/25 bg-primary/10 text-primary",
+  REJECTED: "border-destructive/25 bg-destructive/10 text-destructive",
+  DEDUCTED: "border-success/25 bg-success/10 text-success",
 };
+
+const fieldClass = "w-full min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
 
 export default function AdvancesPage() {
   const { t } = useTranslation();
@@ -58,7 +61,7 @@ export default function AdvancesPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { void load(); }, []);
 
   const filtered = useMemo(() => {
     return filterStatus === "all" ? advances : advances.filter((a) => a.status === filterStatus);
@@ -70,9 +73,9 @@ export default function AdvancesPage() {
     const deducted = advances.filter((a) => a.status === "DEDUCTED");
     return {
       pendingCount: pending.length,
-      pendingAmount: pending.reduce((s, a) => s + a.amount, 0),
-      approvedAmount: approved.reduce((s, a) => s + a.amount, 0),
-      deductedAmount: deducted.reduce((s, a) => s + a.amount, 0),
+      pendingAmount: pending.reduce((sum, advance) => sum + advance.amount, 0),
+      approvedAmount: approved.reduce((sum, advance) => sum + advance.amount, 0),
+      deductedAmount: deducted.reduce((sum, advance) => sum + advance.amount, 0),
     };
   }, [advances]);
 
@@ -90,7 +93,7 @@ export default function AdvancesPage() {
       showToast("error", t("Error"), t("Please select an employee"));
       return;
     }
-    if (isNaN(amt) || amt <= 0) {
+    if (!Number.isFinite(amt) || amt <= 0) {
       showToast("error", t("Error"), t("Enter a valid amount"));
       return;
     }
@@ -104,8 +107,8 @@ export default function AdvancesPage() {
       }));
       showToast("success", t("Success"), t("Advance request recorded"));
       setShowModal(false);
-      load();
-    } catch (e) {
+      void load();
+    } catch {
       showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
@@ -114,129 +117,129 @@ export default function AdvancesPage() {
     try {
       await unwrap(useCases.advances.update(id, { status }));
       showToast("success", t("Success"), status === "APPROVED" ? t("Approved successfully") : t("Rejected successfully"));
-      load();
-    } catch (e) {
+      void load();
+    } catch {
       showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
     }
   }
 
+  const summaryCards = [
+    { label: t("Pending"), value: String(summary.pendingCount), detail: `${formatOMRAmount(summary.pendingAmount)} OMR`, tone: "text-warning" },
+    { label: t("Approved"), value: formatOMRAmount(summary.approvedAmount), detail: "OMR", tone: "text-primary" },
+    { label: t("Deducted from payroll"), value: formatOMRAmount(summary.deductedAmount), detail: "OMR", tone: "text-success" },
+    { label: t("Total Requests"), value: String(advances.length), detail: "", tone: "text-foreground" },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <TrendingDown className="w-8 h-8 text-orange-600" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <TrendingDown className="h-7 w-7 text-primary" />
           {t("Employee Advances")}
         </h1>
         <button
+          type="button"
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           {t("New Advance Request")}
         </button>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-l-4 border-yellow-500">
-          <p className="text-neutral-600 text-sm">{t("Pending")}</p>
-          <p className="text-3xl font-bold text-yellow-600">{summary.pendingCount}</p>
-          <p className="text-xs text-neutral-500 mt-1">{summary.pendingAmount.toFixed(2)} OMR</p>
-        </div>
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-l-4 border-blue-500">
-          <p className="text-neutral-600 text-sm">{t("Approved")}</p>
-          <p className="text-3xl font-bold text-blue-600">{summary.approvedAmount.toFixed(2)}</p>
-          <p className="text-xs text-neutral-500 mt-1">OMR</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-l-4 border-green-500">
-          <p className="text-neutral-600 text-sm">{t("Deducted from payroll")}</p>
-          <p className="text-3xl font-bold text-green-600">{summary.deductedAmount.toFixed(2)}</p>
-          <p className="text-xs text-neutral-500 mt-1">OMR</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-l-4 border-purple-500">
-          <p className="text-neutral-600 text-sm">{t("Total Requests")}</p>
-          <p className="text-3xl font-bold text-purple-600">{advances.length}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+            <p className={`mt-2 text-2xl font-bold sm:text-3xl ${card.tone}`}>{card.value}</p>
+            {card.detail ? <p className="mt-1 text-xs text-muted-foreground">{card.detail}</p> : null}
+          </div>
+        ))}
       </div>
 
-      {/* Filter buttons */}
-      <div className="flex gap-2 flex-wrap">
-        {(["all", "PENDING", "APPROVED", "DEDUCTED", "REJECTED"] as const).map((s) => (
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-border bg-card p-2">
+        {(["all", "PENDING", "APPROVED", "DEDUCTED", "REJECTED"] as const).map((item) => (
           <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-4 py-2 rounded-lg font-bold transition ${
-              filterStatus === s ? "bg-blue-500 text-white" : "bg-gray-200 text-neutral-800 hover:bg-gray-300"
+            key={item}
+            type="button"
+            onClick={() => setFilterStatus(item)}
+            className={`min-h-10 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+              filterStatus === item
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
           >
-            {s === "all" ? t("All") : t(STATUS_LABEL_KEYS[s])}
+            {item === "all" ? t("All") : t(STATUS_LABEL_KEYS[item])}
           </button>
         ))}
       </div>
 
-      {/* List */}
-      <div className="space-y-4">
-        {filtered.map((adv) => (
-          <div key={adv.id} className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+      <div className="space-y-3">
+        {filtered.map((advance) => (
+          <div key={advance.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-center">
               <div>
-                <p className="text-sm text-neutral-600">{t("Employee")}</p>
-                <p className="font-bold text-neutral-800">{employeeName(adv.employeeId)}</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("Employee")}</p>
+                <p className="mt-1 font-bold text-foreground">{employeeName(advance.employeeId)}</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">{t("Amount")}</p>
-                <p className="font-bold text-lg text-orange-600">{adv.amount.toFixed(2)} OMR</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("Amount")}</p>
+                <p className="mt-1 text-lg font-bold text-primary">{formatOMRAmount(advance.amount)} OMR</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">{t("Date")}</p>
-                <p className="font-bold text-neutral-800">{new Date(adv.advanceDate).toLocaleDateString("ar-SA")}</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("Date")}</p>
+                <p className="mt-1 font-semibold text-foreground">{new Date(advance.advanceDate).toLocaleDateString("ar-OM")}</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">{t("Reason")}</p>
-                <p className="font-bold text-neutral-800">{adv.reason || "-"}</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("Reason")}</p>
+                <p className="mt-1 font-semibold text-foreground">{advance.reason || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">{t("Status")}</p>
-                <span className={`px-3 py-1 rounded-full text-sm font-bold inline-block ${statusBadge[adv.status]}`}>
-                  {t(STATUS_LABEL_KEYS[adv.status])}
+                <p className="text-xs font-medium text-muted-foreground">{t("Status")}</p>
+                <span className={`mt-1 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadge[advance.status]}`}>
+                  {t(STATUS_LABEL_KEYS[advance.status])}
                 </span>
               </div>
               <div className="flex justify-end gap-2">
-                {adv.status === "PENDING" && (
+                {advance.status === "PENDING" ? (
                   <>
                     <button
-                      onClick={() => setStatus(adv.id, "APPROVED")}
-                      className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                      type="button"
+                      onClick={() => setStatus(advance.id, "APPROVED")}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-success/25 bg-success/10 text-success transition hover:bg-success/15"
                       title={t("Approve")}
+                      aria-label={t("Approve")}
                     >
-                      <Check className="w-5 h-5" />
+                      <Check className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => setStatus(adv.id, "REJECTED")}
-                      className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                      type="button"
+                      onClick={() => setStatus(advance.id, "REJECTED")}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-destructive/25 bg-destructive/10 text-destructive transition hover:bg-destructive/15"
                       title={t("Reject")}
+                      aria-label={t("Reject")}
                     >
-                      <X className="w-5 h-5" />
+                      <X className="h-5 w-5" />
                     </button>
                   </>
-                )}
-                {adv.status === "DEDUCTED" && (
-                  <span className="inline-flex items-center gap-1 text-green-600 text-sm font-bold">
-                    <RotateCcw className="w-4 h-4" /> {t("Deducted in payroll")}
+                ) : null}
+                {advance.status === "DEDUCTED" ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-bold text-success">
+                    <RotateCcw className="h-4 w-4" /> {t("Deducted in payroll")}
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
         ))}
-        {filtered.length === 0 && !loading && (
-          <div className="bg-white rounded-lg shadow p-20 text-center text-neutral-400">
+
+        {filtered.length === 0 && !loading ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card px-4 py-14 text-center text-sm text-muted-foreground">
             {t("No advances with this status")}
           </div>
-        )}
+        ) : null}
       </div>
 
-      {/* Add modal */}
       <Modal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
@@ -247,14 +250,14 @@ export default function AdvancesPage() {
             <button
               type="button"
               onClick={handleAdd}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
+              className="min-h-11 flex-1 rounded-xl bg-primary px-4 py-2 font-bold text-primary-foreground transition hover:bg-primary/90"
             >
               {t("Submit Request")}
             </button>
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="flex-1 px-4 py-2 bg-gray-300 text-neutral-800 rounded-lg hover:bg-gray-400 transition font-bold"
+              className="min-h-11 flex-1 rounded-xl bg-muted px-4 py-2 font-bold text-foreground transition hover:bg-muted/80"
             >
               {t("Cancel")}
             </button>
@@ -262,46 +265,39 @@ export default function AdvancesPage() {
         }
       >
         <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Employee")}</label>
-                <select
-                  value={empId}
-                  onChange={(e) => setEmpId(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                >
-                  {employees.map((e) => (
-                    <option key={e.id} value={e.id}>{e.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Amount (OMR)")}</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder={t("Enter amount")}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Reason")}</label>
-                <input
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder={t("e.g., Personal needs")}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">{t("Date")}</label>
-                <input
-                  type="date"
-                  value={advDate}
-                  onChange={(e) => setAdvDate(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 outline-none"
-                />
-              </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Employee")}</label>
+            <select value={empId} onChange={(e) => setEmpId(e.target.value)} className={fieldClass}>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>{employee.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Amount (OMR)")}</label>
+            <input
+              type="number"
+              min="0"
+              step="0.001"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={t("Enter amount")}
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Reason")}</label>
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t("e.g., Personal needs")}
+              className={fieldClass}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-bold text-foreground">{t("Date")}</label>
+            <input type="date" value={advDate} onChange={(e) => setAdvDate(e.target.value)} className={fieldClass} />
+          </div>
         </div>
       </Modal>
     </div>
