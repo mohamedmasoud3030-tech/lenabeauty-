@@ -107,8 +107,17 @@ function statusClass(s: AppointmentStatus | string) {
     case "CONFIRMED": return "bg-info/10 text-info border-info/20";
     case AppointmentStatus.COMPLETED: return "bg-success/10 text-success border-success/20";
     case AppointmentStatus.CANCELLED: return "bg-destructive/10 text-destructive border-destructive/20";
+    case AppointmentStatus.NO_SHOW: return "bg-warning/10 text-warning border-warning/20";
     default: return "bg-muted text-muted-foreground border-border";
   }
+}
+
+function paymentStateLabel(appt: Appt, t: (key: string) => string) {
+  // The current appointment contract has no paid/unpaid field. Keep the
+  // distinction explicit and truthful instead of guessing from a deposit.
+  return (appt.depositAmount ?? 0) > 0
+    ? t("Deposit configured")
+    : t("Payment at checkout");
 }
 
 export default function AppointmentsPage() {
@@ -630,11 +639,13 @@ export default function AppointmentsPage() {
                                       {a.service?.name}
                                     </div>
                                   </div>
-                                  <div className="flex items-center justify-between text-[10px] font-bold mt-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-1 text-[9px] font-bold mt-2">
                                     <div className="flex items-center gap-2 bg-white/20 px-2 py-1 rounded-lg">
                                       <Clock className="h-3 w-3" />
                                       <span>{fmtTime(dt)}</span>
                                     </div>
+                                    <span className="rounded-lg bg-white/20 px-2 py-1">{t(a.status)}</span>
+                                    <span className="rounded-lg bg-muted/60 px-2 py-1">{paymentStateLabel(a, t)}</span>
                                   </div>
                                 </motion.div>
                               );
@@ -760,18 +771,26 @@ export default function AppointmentsPage() {
                                   <p className="font-bold text-foreground truncate">{a.customer?.name}</p>
                                   <p className="text-[10px] text-muted-foreground truncate">{a.service?.name}</p>
                                 </div>
-                                <span className={clsx("px-2 py-1 rounded-lg text-[9px] font-bold shrink-0", statusClass(a.status))}>
-                                  {t(a.status)}
-                                </span>
+                                <div className="flex flex-wrap items-center justify-end gap-1">
+                                  <span className={clsx("px-2 py-1 rounded-lg text-[9px] font-bold shrink-0", statusClass(a.status))}>
+                                    {t(a.status)}
+                                  </span>
+                                  <span className="px-2 py-1 rounded-lg bg-muted text-muted-foreground text-[9px] font-bold shrink-0">
+                                    {paymentStateLabel(a, t)}
+                                  </span>
+                                </div>
                               </div>
                               <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3 text-primary" />
                                   {fmtTime(dt)}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3 text-primary" />
+                                <span className="flex items-center gap-1 min-w-0 truncate">
+                                  <User className="h-3 w-3 text-primary shrink-0" />
                                   {a.employee?.name || "—"}
+                                </span>
+                                <span className="ms-auto shrink-0 text-[9px] font-bold text-primary">
+                                  {a.status === AppointmentStatus.SCHEDULED ? t("Next: Check in") : t("Open appointment")}
                                 </span>
                               </div>
                             </motion.button>

@@ -41,7 +41,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   // تشغيلية حقيقية: مواعيد اليوم القادمة + تنبيهات المخزون
-  const [todayAppts, setTodayAppts] = useState<{ id: string; time: string; customerName: string; serviceName?: string; status: string }[]>([]);
+  const [todayAppts, setTodayAppts] = useState<{
+    id: string;
+    time: string;
+    dateTime: string;
+    customerName: string;
+    serviceName?: string;
+    employeeName?: string;
+    status: string;
+    depositAmount?: number;
+  }[]>([]);
   const [lowStockItems, setLowStockItems] = useState<{ id: string; name: string; stock: number }[]>([]);
   const [trackedProductCount, setTrackedProductCount] = useState<number | null>(null);
 
@@ -105,15 +114,17 @@ export default function DashboardPage() {
       const customerNames = new Map((customersRes.ok ? customersRes.data : []).map((c) => [c.id, c.name]));
       const serviceNames = new Map((servicesRes.ok ? servicesRes.data : []).map((s) => [s.id, s.name]));
       const upcoming = (apptsRes.ok ? apptsRes.data : [])
-        .filter((a) => a.status === "SCHEDULED")
+        .filter((a) => a.status !== "CANCELLED")
         .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
-        .slice(0, 5)
         .map((a) => ({
           id: a.id,
           time: a.dateTime.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US", { hour: "2-digit", minute: "2-digit" }),
+          dateTime: a.dateTime.toISOString(),
           customerName: a.customerId ? (customerNames.get(a.customerId) ?? "—") : "—",
           serviceName: a.serviceId ? serviceNames.get(a.serviceId) : undefined,
+          employeeName: a.employee?.name,
           status: a.status,
+          depositAmount: a.depositAmount,
         }));
       setTodayAppts(upcoming);
     } catch {
@@ -230,6 +241,31 @@ export default function DashboardPage() {
   const isFirstRun = !hasCenterData;
   const isAdmin = me?.role === UserRole.ADMIN;
 
+  // P0.3: derive operational exceptions only from data already loaded.
+  // We never infer payment or fabricate a failed-write state on the dashboard.
+  const needsAttention = useMemo(() => {
+    const now = Date.now();
+    const lateAppointments = todayAppts
+      .filter((a) => a.status === "SCHEDULED" && new Date(a.dateTime).getTime() < now)
+      .map((a) => ({
+        id: `late-${a.id}`,
+        title: t("Appointment needs attention"),
+        detail: `${a.time} · ${a.customerName}`,
+        action: t("Open schedule"),
+        route: "/appointments",
+        tone: "warning" as const,
+      }));
+    const stockWarnings = lowStockItems.map((p) => ({
+      id: `stock-${p.id}`,
+      title: `${t("Low Stock")}: ${p.name}`,
+      detail: `${p.stock} ${t("remaining")}`,
+      action: t("Open inventory"),
+      route: "/inventory",
+      tone: "danger" as const,
+    }));
+    return [...lateAppointments, ...stockWarnings].slice(0, 6);
+  }, [todayAppts, lowStockItems, t]);
+
   function formatChartDay(dateStr: string): string {
     const d = new Date(`${dateStr}T00:00:00`);
     if (isNaN(d.getTime())) return dateStr;
@@ -273,12 +309,12 @@ export default function DashboardPage() {
             <Zap className={clsx("h-5 w-5", loading && "animate-spin")} />
           </button>
           <button 
-            onClick={() => nav(isFirstRun ? "/services" : "/pos")}
+            onClick={() => nav(isFirstRun ? "/services" : "/appointments")}
             className="group relative inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 sm:px-6 py-3 text-xs sm:text-sm font-bold text-primary-foreground shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95 overflow-hidden"
           >
             <span className="relative z-10 flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              {t(isFirstRun ? "Add your services" : "New Invoice")}
+              {t(isFirstRun ? "Add your services" : "Open today's schedule")}
             </span>
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
           </button>
@@ -370,7 +406,7 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="space-y-2">
-                {todayAppts.map((a) => (
+                {todayAppts.slice(0, 8).map((a) => (
                   <button
                     key={a.id}
                     onClick={() => nav("/appointments")}
@@ -384,6 +420,19 @@ export default function DashboardPage() {
                       {a.serviceName && (
                         <p className="text-[10px] font-bold text-muted-foreground truncate">{a.serviceName}</p>
                       )}
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className={clsx(
+                          "rounded-full border px-2 py-0.5 text-[9px] font-bold",
+                          a.status === "COMPLETED"
+                            ? "border-success/20 bg-success/10 text-success"
+                            : "border-warning/20 bg-warning/10 text-warning"
+                        )}>
+                          {t(a.status)}
+                        </span>
+                        <span className="text-[9px] font-bold text-muted-foreground">
+                          {a.status === "SCHEDULED" ? t("Next: Check in") : t("Open appointment")}
+                        </span>
+                      </div>
                     </div>
                     <ChevronRight className={clsx("h-4 w-4 text-muted-foreground shrink-0", i18n.language === "ar" && "rotate-180")} />
                   </button>
@@ -439,6 +488,57 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+      )}
+
+      {!isFirstRun && (
+        <motion.section variants={item} aria-labelledby="needs-attention-title" className="rounded-2xl sm:rounded-3xl border border-warning/20 bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center justify-between gap-4 border-b border-warning/20 bg-warning/5 px-4 sm:px-6 py-4">
+            <div>
+              <h2 id="needs-attention-title" className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" aria-hidden="true" />
+                {t("Needs Attention")}
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">{t("Resolve today's exceptions before they become delays.")}</p>
+            </div>
+            <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-bold text-warning">
+              {needsAttention.length}
+            </span>
+          </div>
+          <div className="p-4 sm:p-6">
+            {needsAttention.length === 0 ? (
+              <ScreenState
+                state="empty"
+                compact
+                icon={<CheckCircle2 className="h-6 w-6" />}
+                title={t("Nothing needs attention")}
+                description={t("Today's schedule and stock have no recorded exceptions.")}
+              />
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {needsAttention.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => nav(item.route)}
+                    className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background/40 p-3 text-start transition-colors hover:border-warning/40 hover:bg-warning/5 touch-target"
+                  >
+                    <span className={clsx(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                      item.tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                    )}>
+                      <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-foreground">{item.title}</span>
+                      <span className="block truncate text-[10px] font-bold text-muted-foreground">{item.detail}</span>
+                    </span>
+                    <span className="shrink-0 text-[10px] font-bold text-primary">{item.action}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.section>
       )}
 
       {/* Main Content Grid */}
