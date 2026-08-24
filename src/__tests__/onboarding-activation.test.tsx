@@ -16,10 +16,7 @@ describe("role-aware first-run guide", () => {
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
-    vi.spyOn(useCases.dashboard, "getSummary").mockResolvedValue({
-      ok: true,
-      data: { customers: 0, appointments: 0, sales: 0, revenue: 0 },
-    } as any);
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({ ok: true, data: [] } as any);
   });
 
   it("does not send staff to the admin-only employees page", async () => {
@@ -74,17 +71,18 @@ describe("role-aware first-run guide", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("uses historical customer spend instead of the ADMIN-only daily sales count", async () => {
+  it("uses stable operational sources instead of the newer dashboard reporting RPC", async () => {
     vi.mocked(useCases.services.list).mockResolvedValue({ ok: true, data: [{ id: "service-1" }] } as any);
     vi.mocked(useCases.employees.list).mockResolvedValue({ ok: true, data: [{ id: "employee-1" }] } as any);
     vi.mocked(useCases.customers.list).mockResolvedValue({
       ok: true,
       data: [{ id: "customer-1", totalSpent: 12.345 }],
     } as any);
-    vi.mocked(useCases.dashboard.getSummary).mockResolvedValue({
+    vi.mocked(useCases.appointments.list).mockResolvedValue({
       ok: true,
-      data: { customers: 1, appointments: 1, sales: 0, revenue: 0 },
+      data: [{ id: "appointment-1" }],
     } as any);
+    const dashboardSpy = vi.spyOn(useCases.dashboard, "getSummary");
 
     render(
       <MemoryRouter>
@@ -92,7 +90,8 @@ describe("role-aware first-run guide", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(useCases.dashboard.getSummary).toHaveBeenCalled());
+    await waitFor(() => expect(useCases.appointments.list).toHaveBeenCalled());
+    expect(dashboardSpy).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByText("Set up your center")).not.toBeInTheDocument());
   });
 
