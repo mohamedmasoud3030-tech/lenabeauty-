@@ -1,0 +1,45 @@
+name: LenaBeauty CI
+
+# Verification gate for the full repository contract on a resource-sufficient
+# runner (7 GB RAM) — local verification was blocked by OOM (exit 137).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # NOTE: intentionally sequential to keep peak memory bounded and
+      # reproducible; parallel jobs would each need a full install + node.
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Test suite (vitest)
+        run: npm run test
+
+      - name: DB contract audit gate (replay + scan + matrix)
+        run: npm run audit:gate
+
+      - name: Production build
+        run: npm run build
+
+      - name: Database types match canonical replay
+        run: npm run db:types:check
