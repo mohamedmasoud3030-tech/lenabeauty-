@@ -8,6 +8,7 @@ import { ConfirmProvider } from "./shared/components/ConfirmDialog";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
 import { NetworkStatus } from "./shared/components/NetworkStatus";
 import { PwaUpdatePrompt } from "./shared/components/PwaUpdatePrompt";
+import "./brand-polish.css";
 
 export default function App() {
   return (
