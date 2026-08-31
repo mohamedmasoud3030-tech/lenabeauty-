@@ -15,9 +15,9 @@ export function Card({ children, className = '', clickable = false, onClick, com
     <div
       onClick={onClick}
       className={clsx(
-        "rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm transition-shadow",
+        "rounded-xl sm:rounded-2xl border border-border/80 bg-card/92 shadow-sm backdrop-blur-sm transition-all",
         compact ? "p-3 sm:p-4" : "p-4 sm:p-6",
-        clickable && "cursor-pointer hover:shadow-md hover:border-primary/30 active:scale-[0.99]",
+        clickable && "cursor-pointer hover:shadow-lg hover:shadow-primary/10 hover:border-primary/20 active:scale-[0.99]",
         className
       )}
     >
