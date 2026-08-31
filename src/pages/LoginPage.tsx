@@ -29,13 +29,54 @@ const LANGUAGES: { code: AppLanguage; label: string; dir: "rtl" | "ltr" }[] = [
 ];
 
 const FEATURE_ITEMS = [
-  { label: "Appointments", icon: CalendarDays },
-  { label: "Point of Sale", icon: ShoppingBag },
-  { label: "Customers", icon: Users },
-  { label: "Stock", icon: Package },
-  { label: "Staff", icon: User },
-  { label: "Reports", icon: BarChart3 },
+  { en: "Appointments", ar: "المواعيد", icon: CalendarDays },
+  { en: "Point of Sale", ar: "نقطة البيع", icon: ShoppingBag },
+  { en: "Customers", ar: "العملاء", icon: Users },
+  { en: "Stock", ar: "المخزون", icon: Package },
+  { en: "Staff", ar: "الموظفون", icon: User },
+  { en: "Reports", ar: "التقارير", icon: BarChart3 },
 ];
+
+const LOGIN_COPY = {
+  en: {
+    system: "Beauty Center System",
+    everything: "Everything your team needs, in one beautiful place.",
+    dataSafe: "Your data is safe with us",
+    dataSafeDetail: "Secure · Private · For your center only",
+    welcome: "Welcome Back",
+    signInSubtitle: "Sign in to your center account",
+    resetTitle: "Reset password",
+    resetSubtitle: "Enter your work email and we'll send you a reset link.",
+    workspace: "This is a team workspace",
+    workspaceDetail: "Only registered team members can sign in.",
+    emailHelp: "Use the work email registered by your administrator.",
+    passwordPlaceholder: "Enter your password",
+    afterSignIn: "After signing in you can access:",
+    appointments: "Today's appointments",
+    sales: "Sales & transactions",
+    stockAlerts: "Stock alerts",
+    footer: "Made for beauty professionals, by LenaBeauty",
+  },
+  ar: {
+    system: "نظام إدارة مركز التجميل",
+    everything: "كل ما يحتاجه فريقك، في مكان واحد أنيق.",
+    dataSafe: "بيانات مركزك محمية",
+    dataSafeDetail: "آمنة · خاصة · لمركزك فقط",
+    welcome: "مرحبًا بعودتك",
+    signInSubtitle: "سجّل الدخول إلى حساب مركزك",
+    resetTitle: "إعادة تعيين كلمة المرور",
+    resetSubtitle: "أدخل بريد العمل وسنرسل لك رابط إعادة التعيين.",
+    workspace: "هذه مساحة عمل لفريق المركز",
+    workspaceDetail: "يمكن فقط لأعضاء الفريق المسجلين تسجيل الدخول.",
+    emailHelp: "استخدم بريد العمل الذي سجّله لك مدير المركز.",
+    passwordPlaceholder: "أدخل كلمة المرور",
+    afterSignIn: "بعد تسجيل الدخول يمكنك الوصول إلى:",
+    appointments: "مواعيد اليوم",
+    sales: "المبيعات والمعاملات",
+    stockAlerts: "تنبيهات المخزون",
+    footer: "صُمم لمتخصصي الجمال بواسطة LenaBeauty",
+  },
+} as const;
 
 export function resolvePostLoginPath(from: unknown): string {
   const fallback = "/dashboard";
@@ -72,6 +113,7 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
 
   const isRtl = i18n.language === "ar";
+  const copy = isRtl ? LOGIN_COPY.ar : LOGIN_COPY.en;
   const hasInitializationError = isInitialized && sessionState.status === "error";
   const displayError = hasInitializationError
     ? t("An unexpected error occurred. Please try again.")
@@ -130,8 +172,8 @@ export default function LoginPage() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-6xl">
-        <div className="mb-3 flex items-center justify-end gap-2 sm:mb-4">
-          <div className="inline-flex min-h-11 items-center overflow-hidden rounded-2xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-xl">
+        <div className="mb-3 flex items-center justify-end gap-2 sm:mb-4" dir="ltr">
+          <div className="inline-flex min-h-11 items-center overflow-hidden rounded-2xl border border-border bg-card/90 shadow-sm backdrop-blur-xl">
             <Globe className="mx-2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             {LANGUAGES.map((language) => (
               <button
@@ -154,7 +196,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/80 bg-card/80 text-foreground shadow-sm backdrop-blur-xl transition hover:bg-muted"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card/90 text-foreground shadow-sm backdrop-blur-xl transition hover:bg-muted"
             aria-label={theme === "dark" ? t("Light mode") : t("Dark mode")}
             aria-pressed={theme === "dark"}
             title={theme === "dark" ? t("Light mode") : t("Dark mode")}
@@ -175,22 +217,20 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <p className="text-3xl font-semibold tracking-tight text-foreground">LenaBeauty</p>
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.28em] text-primary/70">Beauty Center System</p>
+                  <p className="mt-1 text-xs font-semibold tracking-[0.16em] text-primary/70">{copy.system}</p>
                 </div>
               </div>
 
-              <h2 className="max-w-sm text-2xl font-bold leading-tight text-foreground">
-                {t("Everything your team needs, in one beautiful place.")}
-              </h2>
+              <h2 className="max-w-sm text-2xl font-bold leading-tight text-foreground">{copy.everything}</h2>
 
               <div className="mt-8 grid grid-cols-2 gap-4">
-                {FEATURE_ITEMS.map(({ label, icon: Icon }) => (
+                {FEATURE_ITEMS.map(({ en, ar, icon: Icon }) => (
                   <div
-                    key={label}
+                    key={en}
                     className="rounded-3xl border border-border/60 bg-white/76 p-4 shadow-sm backdrop-blur-md dark:bg-card/65"
                   >
                     <Icon className="h-7 w-7 text-primary" aria-hidden="true" />
-                    <p className="mt-3 text-sm font-semibold text-foreground">{t(label)}</p>
+                    <p className="mt-3 text-sm font-semibold text-foreground">{isRtl ? ar : en}</p>
                   </div>
                 ))}
               </div>
@@ -201,8 +241,8 @@ export default function LoginPage() {
                 <ShieldCheck className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{t("Your data is safe with us")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t("Secure · Private · For your center only")}</p>
+                <p className="font-semibold text-foreground">{copy.dataSafe}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{copy.dataSafeDetail}</p>
               </div>
             </div>
           </aside>
@@ -216,7 +256,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-semibold tracking-tight">LenaBeauty</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-primary/70">Beauty Center System</p>
+                    <p className="mt-1 text-xs tracking-[0.12em] text-primary/70">{copy.system}</p>
                   </div>
                 </div>
               </div>
@@ -224,14 +264,12 @@ export default function LoginPage() {
               <div className="mb-6">
                 <div className="mb-2 flex items-center gap-2">
                   <h1 id="login-title" className="text-3xl font-bold tracking-tight sm:text-4xl">
-                    {mode === "sign-in" ? t("Welcome Back") : t("Reset password")}
+                    {mode === "sign-in" ? copy.welcome : copy.resetTitle}
                   </h1>
                   <Sparkles className="h-6 w-6 text-primary/70" aria-hidden="true" />
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-                  {mode === "sign-in"
-                    ? t("Sign in to your center account")
-                    : t("Enter your work email and we'll send you a reset link.")}
+                  {mode === "sign-in" ? copy.signInSubtitle : copy.resetSubtitle}
                 </p>
               </div>
 
@@ -240,10 +278,8 @@ export default function LoginPage() {
                   <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-semibold text-primary">{t("This is a team workspace")}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    {t("Only registered team members can sign in.")}
-                  </p>
+                  <p className="font-semibold text-primary">{copy.workspace}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{copy.workspaceDetail}</p>
                 </div>
               </div>
 
@@ -286,9 +322,7 @@ export default function LoginPage() {
                       dir="ltr"
                     />
                   </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t("Use the work email registered by your administrator.")}
-                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{copy.emailHelp}</p>
                 </div>
 
                 {mode === "sign-in" ? (
@@ -308,7 +342,7 @@ export default function LoginPage() {
                         autoComplete="current-password"
                         required
                         type={showPassword ? "text" : "password"}
-                        placeholder={t("Enter your password")}
+                        placeholder={copy.passwordPlaceholder}
                         aria-invalid={Boolean(displayError)}
                         aria-describedby={displayError ? "login-error" : undefined}
                         className={inputClass}
@@ -374,19 +408,13 @@ export default function LoginPage() {
 
               {mode === "sign-in" ? (
                 <div className="mt-6 border-t border-border/60 pt-5">
-                  <p className="mb-4 text-center text-xs font-medium text-muted-foreground">
-                    {t("After signing in you can access:")}
-                  </p>
+                  <p className="mb-4 text-center text-xs font-medium text-muted-foreground">{copy.afterSignIn}</p>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {[CalendarDays, ShoppingBag, Package].map((Icon, index) => (
                       <div key={index} className="rounded-2xl border border-border/60 bg-card/55 p-3 text-center">
                         <Icon className="mx-auto h-5 w-5 text-primary" aria-hidden="true" />
                         <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                          {index === 0
-                            ? t("Today's appointments")
-                            : index === 1
-                              ? t("Sales & transactions")
-                              : t("Stock alerts")}
+                          {index === 0 ? copy.appointments : index === 1 ? copy.sales : copy.stockAlerts}
                         </p>
                       </div>
                     ))}
@@ -402,7 +430,7 @@ export default function LoginPage() {
         </section>
 
         <div className="px-2 py-4 text-center text-xs text-muted-foreground sm:py-5">
-          <p className="font-medium text-foreground/75">{t("Made for beauty professionals, by LenaBeauty")}</p>
+          <p className="font-medium text-foreground/75">{copy.footer}</p>
         </div>
       </div>
     </main>
