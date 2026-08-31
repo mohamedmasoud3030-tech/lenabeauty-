@@ -20,20 +20,20 @@ export function PremiumCard({
   variant = "default",
 }: PremiumCardProps) {
   const variants = {
-    default: "border border-border bg-card shadow-lg",
-    gradient: "border border-border bg-gradient-to-br from-card to-muted/5 shadow-lg",
-    glass: "border border-border/50 bg-card/50 backdrop-blur-sm shadow-xl",
+    default: "border border-border/80 bg-card/92 shadow-lg shadow-primary/5 backdrop-blur-sm",
+    gradient: "border border-primary/10 bg-gradient-to-br from-primary/8 via-card/95 to-secondary/8 shadow-lg shadow-primary/10",
+    glass: "border border-primary/10 bg-card/72 backdrop-blur-xl shadow-xl shadow-primary/8",
   };
 
   return (
     <motion.div
-      whileHover={hoverable ? { y: -4 } : {}}
-      whileTap={interactive ? { scale: 0.98 } : {}}
+      whileHover={hoverable ? { y: -3 } : {}}
+      whileTap={interactive ? { scale: 0.985 } : {}}
       onClick={onClick}
       className={clsx(
         "rounded-2xl transition-all",
         variants[variant],
-        hoverable && "hover:shadow-2xl",
+        hoverable && "hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/10",
         interactive && "cursor-pointer",
         className
       )}
@@ -50,7 +50,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className }: CardHeaderProps) {
   return (
-    <div className={clsx("border-b border-border/50 px-6 py-4 bg-gradient-to-r from-primary/5 to-transparent", className)}>
+    <div className={clsx("border-b border-border/50 px-6 py-4 bg-gradient-to-r from-primary/8 via-secondary/5 to-transparent", className)}>
       {children}
     </div>
   );
@@ -93,7 +93,7 @@ export function StatCard({ label, value, unit, trend, icon, color = "blue" }: St
     blue: "bg-info/10 text-info",
     emerald: "bg-success/10 text-success",
     amber: "bg-warning/10 text-warning",
-    rose: "bg-destructive/10 text-destructive",
+    rose: "bg-secondary/10 text-secondary",
     purple: "bg-primary/10 text-primary",
   };
 
@@ -102,7 +102,7 @@ export function StatCard({ label, value, unit, trend, icon, color = "blue" }: St
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           {icon && (
-            <div className={clsx("h-10 w-10 rounded-lg flex items-center justify-center shadow-inner", colorClasses[color])}>
+            <div className={clsx("h-10 w-10 rounded-xl flex items-center justify-center shadow-inner", colorClasses[color])}>
               {icon}
             </div>
           )}
