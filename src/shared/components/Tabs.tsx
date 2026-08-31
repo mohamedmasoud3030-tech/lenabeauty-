@@ -92,7 +92,7 @@ export function Tabs({
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
               } ${variant === 'pills' ? 'rounded-xl overflow-hidden' : 'rounded-lg'}`}
             >
-              {tab.icon && <span aria-hidden="true" className="h-5 w-5">{tab.icon}</span>}
+              {tab.icon && <span aria-hidden="true" className="relative z-10 h-5 w-5">{tab.icon}</span>}
               <span className="relative z-10">{tab.label}</span>
               {isActive && variant === 'default' && (
                 <motion.span
@@ -106,7 +106,7 @@ export function Tabs({
                 <motion.span
                   aria-hidden="true"
                   layoutId={`pill-bg-${instanceId}`}
-                  className="absolute inset-0 bg-gradient-to-r from-primary/12 to-secondary/10 border border-primary/10 rounded-xl -z-0"
+                  className="absolute inset-0 z-0 bg-gradient-to-r from-primary/12 to-secondary/10 border border-primary/10 rounded-xl"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
