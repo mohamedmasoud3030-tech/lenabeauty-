@@ -66,8 +66,8 @@ export function Tabs({
         role="tablist"
         aria-label={ariaLabel}
         aria-orientation="horizontal"
-        className={`flex gap-2 overflow-x-auto border-b border-border pb-4 ${
-          variant === 'pills' ? 'bg-muted/30 rounded-xl p-1' : ''
+        className={`flex gap-2 overflow-x-auto border-b border-border/70 pb-3 ${
+          variant === 'pills' ? 'bg-card/65 rounded-2xl border border-border/70 p-1.5 shadow-sm backdrop-blur-sm' : ''
         }`}
       >
         {tabs.map((tab, index) => {
@@ -86,19 +86,19 @@ export function Tabs({
               key={tab.value}
               onClick={() => handleTabChange(tab.value)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`relative min-h-11 shrink-0 px-4 py-3 font-bold text-sm flex items-center gap-2 transition-colors ${
+              className={`relative min-h-11 shrink-0 px-4 py-3 font-bold text-sm flex items-center gap-2 transition-all ${
                 isActive
                   ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              } ${variant === 'pills' ? 'rounded-lg' : ''}`}
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+              } ${variant === 'pills' ? 'rounded-xl overflow-hidden' : 'rounded-lg'}`}
             >
               {tab.icon && <span aria-hidden="true" className="h-5 w-5">{tab.icon}</span>}
-              <span>{tab.label}</span>
+              <span className="relative z-10">{tab.label}</span>
               {isActive && variant === 'default' && (
                 <motion.span
                   aria-hidden="true"
                   layoutId={`underline-${instanceId}`}
-                  className="absolute bottom-0 inset-x-0 h-1 bg-primary rounded-full"
+                  className="absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-secondary rounded-full"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -106,7 +106,7 @@ export function Tabs({
                 <motion.span
                   aria-hidden="true"
                   layoutId={`pill-bg-${instanceId}`}
-                  className="absolute inset-0 bg-primary/10 rounded-lg -z-10"
+                  className="absolute inset-0 bg-gradient-to-r from-primary/12 to-secondary/10 border border-primary/10 rounded-xl -z-0"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
