@@ -175,7 +175,7 @@ export function Modal({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             onClick={() => void requestClose()}
-            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[3px]"
             aria-hidden="true"
           />
 
@@ -193,7 +193,7 @@ export function Modal({
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
             tabIndex={-1}
             className={clsx(
-              "relative z-10 flex flex-col w-full bg-card text-card-foreground shadow-2xl outline-none",
+              "relative z-10 flex flex-col w-full border border-primary/10 bg-card/96 text-card-foreground shadow-2xl shadow-primary/15 backdrop-blur-2xl outline-none",
               "h-[100dvh] sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl",
               "max-h-[calc(100dvh-var(--keyboard-inset,0px))]",
               SIZE_MAX_WIDTH[size],
@@ -201,7 +201,7 @@ export function Modal({
             )}
           >
             {/* Sticky header — always visible, safe-area aware */}
-            <div className="shrink-0 flex items-start gap-3 border-b border-border px-4 sm:px-5 py-3 sm:py-4 bg-card/95 backdrop-blur-sm rounded-t-2xl pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <div className="shrink-0 flex items-start gap-3 border-b border-border/70 px-4 sm:px-5 py-3 sm:py-4 bg-gradient-to-r from-primary/7 via-card/95 to-secondary/5 backdrop-blur-xl rounded-t-2xl pt-[max(0.75rem,env(safe-area-inset-top))]">
                 <div className="min-w-0 flex-1">
                   {title && (
                     <h2
@@ -225,7 +225,7 @@ export function Modal({
                   onClick={() => void requestClose()}
                   disabled={disableClose}
                   aria-label={t("Close")}
-                  className="shrink-0 h-11 w-11 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="shrink-0 h-11 w-11 rounded-xl border border-transparent flex items-center justify-center text-muted-foreground hover:border-primary/10 hover:bg-primary/8 hover:text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -239,7 +239,7 @@ export function Modal({
 
             {/* Sticky footer — primary actions stay above keyboard + bottom nav */}
             {footer && (
-              <div className="shrink-0 border-t border-border bg-card/95 backdrop-blur-sm px-4 sm:px-5 py-3 sm:py-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] rounded-b-2xl">
+              <div className="shrink-0 border-t border-border/70 bg-card/94 backdrop-blur-xl px-4 sm:px-5 py-3 sm:py-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] rounded-b-2xl">
                 {footer}
               </div>
             )}
