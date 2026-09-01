@@ -1,0 +1,45 @@
+name: Refresh audit artifacts
+
+on:
+  push:
+    branches:
+      - ops/audit-artifacts-refresh-20260901
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Regenerate database contract artifacts
+        run: |
+          node scripts/audit/replay-schema.mjs
+          node scripts/audit/scan-frontend.mjs
+          node scripts/audit/build-matrix.mjs
+
+      - name: Commit refreshed artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/database-contract/artifacts; then
+            echo "Artifacts already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/database-contract/artifacts/*.json
+          git commit -m "chore: refresh database contract artifacts"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
