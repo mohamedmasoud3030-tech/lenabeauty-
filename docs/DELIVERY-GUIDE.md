@@ -1,6 +1,6 @@
 # دليل تسليم LenaBeauty لعميل جديد
 
-> هذا الدليل للمطور (أنت). دليل المالك منفصل في آخر هذا الملف.
+> هذا الدليل للمطور. دليل المالك منفصل في آخر الملف.
 
 ---
 
@@ -8,112 +8,125 @@
 
 ### الخطوة 1 — إنشاء Supabase Project منفصل
 
-1. افتح [supabase.com](https://supabase.com) → **New Project**
-2. اسم المشروع: `lenabeauty-[اسم-العميل]` (مثال: `lenabeauty-sara-salon`)
-3. اختر Region الأقرب للعميل (عادةً Middle East / Frankfurt)
-4. احفظ كلمة السر — لن تظهر مجدداً
-5. انتظر دقيقتين لاكتمال الإنشاء
+1. افتح Supabase → **New Project**.
+2. اسم المشروع: `lenabeauty-[اسم-العميل]`.
+3. اختر Region مناسبًا للعميل.
+4. احفظ كلمة مرور قاعدة البيانات في مدير أسرار آمن.
+5. انتظر اكتمال إنشاء المشروع.
 
 ### الخطوة 2 — تطبيق مخطط قاعدة البيانات (المسار الرسمي)
 
-في **Supabase → SQL Editor**، شغّل ملفات `supabase/migrations/` بالترتيب (كل ملف = استعلام منفصل):
+**لا تستخدم قائمة filenames منسوخة داخل وثيقة كحد للنشر.** المصدر الوحيد هو مجلد:
 
-```
-20260623000001_initial_schema.sql
-20260623000002_enable_rls_and_policies.sql
-20260628000001_enable_rls.sql
-20260628000002_admin_bootstrap.sql
-20260628000003_checkout_rpc.sql
-20260628000004_vat_support.sql
-20260628000005_tier_discount.sql
-20260628000006_public_booking.sql
-20260628000007_gift_cards.sql
-20260628000008_packages_bundles.sql
-20260628000009_no_show_protection.sql
-20260628000010_notifications_payment_gateway.sql
-20260628000011_client_portal.sql
-20260628000012_customer_experience_forecasting_accounting_advanced.sql
-20260628000013_booking_reschedule_cancel.sql
-20260628000014_client_portal_lockout.sql
-20260628000015_attendance_advances_payroll.sql
-20260628000016_validation_constraints.sql
-20260809000001_delivery_security_hardening.sql
-20260810000001_fix_invoice_items_packages.sql
-20260810000002_operational_data_integrity.sql
-20260810000003_appointment_overlap_integrity.sql
+```text
+supabase/migrations/
 ```
 
-> ⚠️ **لا تستخدم** `docs/SUPABASE_BASE_SCHEMA_BOOTSTRAP.sql` أو `docs/SUPABASE_PHASE_10B_CHECKOUT_ACTIVATION.sql` — تم أرشفتهما في `docs/archive/` وهما نسخ قديمة غير مكتملة.
+نفّذ **كل ملفات `.sql` الموجودة فعليًا بالمجلد بترتيب filename تصاعديًا**. `20260628000002_admin_bootstrap.sql` هو الاستثناء الوحيد: bootstrap يدوي يحتاج UUID مستخدم Auth حقيقي ويُنفذ بعد إنشاء المستخدم في الخطوة التالية.
 
-تحقق: يجب أن تظهر الجداول التالية في **Table Editor**:
-- `centers` ✓
-- `center_memberships` ✓
-- `center_settings` ✓
-- `customers` ✓
-- `employees` ✓
-- `services` ✓
-- `appointments` ✓
-- `products` ✓
-- `expenses` ✓
-- `invoices` ✓
-- `invoice_items` ✓
-- `gift_cards` ✓
-- `service_packages` ✓
-- `attendance_records` ✓
-- `payroll_runs` ✓
+يفضل استخدام Supabase CLI / workflow المحكوم بدل النسخ اليدوي؛ الهدف هو أن تكون migration history المحلية والبعيدة متطابقة. إذا استُخدم SQL Editor في مشروع جديد، اكتشف الملفات من المجلد وقت التنفيذ ولا تعتمد على عدد أو “آخر ملف” مكتوب هنا.
+
+> ⚠️ **لا تستخدم** SQL قديمًا من `docs/` أو `docs/archive/` كمسار نشر. الملفات هناك تاريخية/مرجعية فقط.
+
+اعتبارًا من 2026-09-01 كان الـaudit يكتشف 41 migration: 40 automated + manual bootstrap واحد. هذا **snapshot فقط** وليس رقمًا يجب تثبيته. السلسلة الحالية تشمل في نهايتها عقود Visit/Recipes:
+
+```text
+20260901100838_visit_lifecycle_recipes.sql
+20260901101133_visit_recipe_index_hardening.sql
+20260901102643_recipe_write_boundary_hardening.sql
+20260901102758_recipe_consumption_aggregation_hardening.sql
+```
+
+بعد التطبيق تحقق على الأقل من وجود المجموعات التالية:
+
+- identity/tenant: `centers`, `center_memberships`, `center_settings`
+- operations: `customers`, `employees`, `services`, `appointments`, `products`, `expenses`
+- sales: `invoices`, `invoice_items`, `payments`, `checkout_idempotency`
+- entitlements: `customer_entitlements`, `entitlement_ledger`, package/gift-card tables
+- visit/recipes: `service_recipes`, `service_recipe_items`, `inventory_consumptions`
+- workforce: `attendance_records`, `payroll_runs`
+
+ولا يكفي وجود الجداول؛ يجب أن يمر `preflight:supabase` وmigration/RPC/audit contracts.
 
 ### الخطوة 3 — إنشاء مستخدم Admin وربطه بالمركز المُهيّأ
 
-1. في **Authentication → Users → Add user**: أنشئ حساب المالك (البريد + كلمة مرور قوية)
-2. انسخ UUID المستخدم الجديد
-3. في **SQL Editor** افتح `supabase/migrations/20260628000002_admin_bootstrap.sql`، استبدل قيمة `v_admin_uid` بـ UUID المستخدم الجديد، ثم شغّله
-4. هذا الملف يربط المستخدم بالمركز المُهيّأ (seed) ويضبط دور `ADMIN` تلقائياً
+1. في **Authentication → Users → Add user** أنشئ حساب المالك ببريد حقيقي وكلمة مرور قوية.
+2. انسخ UUID المستخدم الجديد.
+3. افتح `supabase/migrations/20260628000002_admin_bootstrap.sql`، واستبدل `v_admin_uid` بالـUUID الحقيقي ثم شغّله مرة واحدة في المشروع الجديد.
+4. تحقق أن العضوية والدور الفعليين محفوظان في `center_memberships` وأن التطبيق يقرأ authorization من المصدر الخادمي.
 
-> المركز المُهيّأ (seed) في migrations هو: `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d` — يجب أن يطابق `VITE_CENTER_ID` في الخطوة التالية.
+> مركز seed الافتراضي في السلسلة هو `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d`؛ إذا استخدمت هذا bootstrap يجب أن يطابق `VITE_CENTER_ID`.
 
 ### الخطوة 4 — Vercel Deployment
 
 ```bash
-# في مجلد المشروع المحلي
 git clone https://github.com/mohamedmasoud3030-tech/lenabeauty- lenabeauty-[client]
 cd lenabeauty-[client]
 ```
 
-أو أضف Environment Variables لـ deployment جديد في Vercel:
+أضف Environment Variables إلى deployment:
 
 | Variable | القيمة |
-|----------|--------|
+|---|---|
 | `VITE_DATA_BACKEND` | `supabase` |
-| `VITE_SUPABASE_URL` | من Supabase → Settings → API |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | `publishable` key من Supabase → Settings → API |
+| `VITE_SUPABASE_URL` | Project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | publishable/anon key فقط |
 | `VITE_BRANCH_MODE` | `single` |
-| `VITE_CENTER_ID` | `7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d` (مركز seed في migrations) |
+| `VITE_CENTER_ID` | center UUID الصحيح |
+| `VITE_ENVIRONMENT` | `production` عند إطلاق Production حقيقي |
+
+لا تضع service-role أو DB password في أي `VITE_*` variable.
 
 ```bash
-# Deploy (لو أول مرة)
 npx vercel --prod
-
-# أو اربط الـ repo بـ Vercel Dashboard وشغّل deploy من هناك
 ```
 
-الرابط سيكون: `https://lenabeauty-[client].vercel.app`
+أو اربط الـrepo بـVercel Dashboard. أضف custom domain عند الحاجة.
 
-**اختياري:** أضف custom domain من Vercel → Domains.
+### الخطوة 5 — التحقق النهائي قبل التسليم
 
-### الخطوة 5 — التحقق النهائي
+شغّل على النسخة/البيئة المقصودة:
 
 ```bash
+npm run audit:gate
+npm run db:types:check
+npm run ci:migrations
+npm run ci:rpc-check
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm audit --audit-level=low
 npm run preflight:supabase
 ```
 
-يجب أن يمر بدون أخطاء. ثم:
+وعند توفر اتصال DB server-side شغّل كل rollback-safe SQL acceptance:
 
-- [ ] افتح الرابط في متصفح عادي
-- [ ] تسجيل الدخول بحساب admin
-- [ ] أضف عميل تجريبي
-- [ ] أضف خدمة
-- [ ] نفّذ فاتورة من POS
-- [ ] تحقق أن البيانات تبقى بعد إغلاق المتصفح وإعادة الفتح
+```bash
+for test_file in supabase/tests/*.sql; do
+  psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 --file "$test_file"
+done
+```
+
+#### Browser acceptance
+
+- [ ] افتح الرابط في متصفح عادي وتأكد أن الإعداد الناقص يفشل بوضوح بدل fallback صامت.
+- [ ] تسجيل الدخول بحساب Admin ورفض مستخدم بلا membership/role صحيح.
+- [ ] أضف عميلًا وخدمة ومنتجًا تجريبيًا وتأكد من persistence بعد reload.
+- [ ] أنشئ موعدًا ومرره عبر Visit stages حتى `READY_FOR_CHECKOUT`.
+- [ ] تأكد أن الموعد ينتقل إلى `/pos?appointment=<id>` ولا يوجد زر منفصل يعلّمه `COMPLETED` خارج checkout.
+- [ ] تأكد أن POS يحمل customer/employee/service الحقيقي ويرسل `appointmentId`.
+- [ ] نفّذ checkout وتحقق من invoice/payment وربط appointment وإغلاق الزيارة.
+- [ ] أنشئ Service Recipe وتحقق أن الكتابة تتم عبر الـRPC، وأن direct client table writes غير مسموحة.
+- [ ] تحقق من recipe consumption والمخزون؛ وجود نفس الخدمة في أكثر من invoice line يجب أن يستهلك مجموع الكمية مرة واحدة، وإعادة المحاولة لا تخصم مرتين.
+- [ ] تحقق من Beauty Passport وWallet/entitlements وRetention/Action Center ببيانات حقيقية، ولا تعتبر empty state دليلًا على نجاح end-to-end.
+- [ ] تحقق من gift cards/packages/entitlement ledger.
+- [ ] تحقق من Attendance/Advances/Payroll حسب صلاحيات الدور.
+- [ ] تحقق من invoice print preview وDashboard/Reports.
+- [ ] تحقق من RTL على desktop + mobile.
+- [ ] اختبر network failure / bad credentials / rejected write، ولا يجب أن يظهر نجاح وهمي.
+
+> **مهم:** Settings يقدم operational JSON export فقط. لا تعتبر Restore/Auto-Backup متطلب قبول؛ واجهة restore الجزئية/غير الذرية غير متاحة عمدًا.
 
 ---
 
@@ -125,74 +138,42 @@ npm run preflight:supabase
 
 # دليل استخدام LenaBeauty على جوالك وكمبيوترك
 
-مرحباً! هذا الدليل يشرح كيف تضيف تطبيق إدارة صالونك على جوالك وكمبيوترك بسهولة، تماماً مثل أي تطبيق.
-
----
+مرحباً! هذا الدليل يشرح كيف تضيف تطبيق إدارة صالونك على جوالك وكمبيوترك بسهولة.
 
 ## على جوال iPhone (iOS)
 
-**الخطوات:**
+1. افتح **Safari**.
+2. افتح رابط الصالون.
+3. سجّل الدخول.
+4. اضغط **المشاركة** ⬆️.
+5. اختر **إضافة إلى الشاشة الرئيسية**.
+6. اضغط **إضافة**.
 
-1. افتح **Safari** (متصفح Apple — ليس Chrome أو غيره)
-2. اكتب رابطك في شريط العنوان:  
-   `https://[رابط-صالونك].vercel.app`
-3. سجّل دخولك بالإيميل وكلمة المرور اللي أعطاك إياهم المطور
-4. اضغط على أيقونة **المشاركة** ⬆️ (الصندوق مع السهم للأعلى) في أسفل الشاشة
-5. اسحب للأسفل في القائمة → اضغط **"إضافة إلى الشاشة الرئيسية"**
-6. اضغط **إضافة**
-
-✅ الآن ستجد أيقونة LenaBeauty على شاشتك الرئيسية — افتحها مثل أي تطبيق.
-
----
+سيظهر LenaBeauty كأيقونة على الشاشة الرئيسية.
 
 ## على جوال Android
 
-**الخطوات:**
-
-1. افتح **Chrome** على جوالك
-2. اكتب رابطك:  
-   `https://[رابط-صالونك].vercel.app`
-3. سجّل دخولك
-4. ستظهر رسالة تلقائية أسفل الشاشة: **"إضافة إلى الشاشة الرئيسية"** — اضغط عليها
-5. إذا لم تظهر: اضغط على النقاط الثلاثة ⋮ في الأعلى → **"إضافة إلى الشاشة الرئيسية"**
-
-✅ التطبيق الآن في قائمة تطبيقاتك.
-
----
+1. افتح **Chrome**.
+2. افتح رابط الصالون وسجّل الدخول.
+3. استخدم رسالة **إضافة إلى الشاشة الرئيسية** إن ظهرت، أو قائمة Chrome → **إضافة إلى الشاشة الرئيسية / تثبيت التطبيق**.
 
 ## على الكمبيوتر (Windows / Mac)
 
-**الطريقة الأولى — من المتصفح مباشرة (موصى بها):**
-
-1. افتح **Chrome** أو **Edge**
-2. اكتب رابطك في شريط العنوان
-3. سجّل دخولك
-4. اضغط على أيقونة التثبيت في شريط العنوان (📥 أو ⊕) على اليمين
-5. اضغط **"تثبيت"**
-
-سيُضاف التطبيق لقائمة البرامج ويمكن فتحه من الـ Desktop مثل أي برنامج.
-
-**الطريقة الثانية — بدون تثبيت:**
-
-اجعل الرابط في **المفضلة** (Bookmarks) وافتحه من هناك عند الحاجة.
-
----
+من Chrome أو Edge افتح الرابط، سجّل الدخول، ثم استخدم زر تثبيت التطبيق في شريط العنوان إن كان متاحًا. ويمكن استخدام الموقع مباشرة بدون تثبيت.
 
 ## نصائح مهمة
 
-**البيانات آمنة في السحابة:**  
-كل ما تدخله (عملاء، مواعيد، فواتير) محفوظ على الإنترنت. لو فقدت جوالك، سجّل دخول من أي جهاز آخر وستجد كل بياناتك.
+**البيانات السحابية:**  
+البيانات التشغيلية تُحفظ في Supabase؛ الوصول إليها يعتمد على الإنترنت وصلاحية الحساب.
 
-**النسخة الاحتياطية:**  
-من **الإعدادات → البيانات والنسخ الاحتياطية** يمكنك تحميل نسخة من بياناتك على جهازك أسبوعياً (موصى به).
+**تصدير البيانات:**  
+من الإعدادات يمكن تنزيل **تصدير JSON تشغيلي جزئي** للاحتفاظ بنسخة مرجعية. لا يُوصف هذا بأنه backup كامل لقاعدة البيانات، ولا توجد Restore تلقائية داخل التطبيق حاليًا.
 
-**التحديثات تلقائية:**  
-لا تحتاج تحديث التطبيق يدوياً. أي تحسينات جديدة تصل إليك فور فتح التطبيق.
+**التحديثات:**  
+نسخة الـPWA قد تعرض تنبيه تحديث عند وجود إصدار جديد بدل إعادة تحميل جلسة مفتوحة قسرًا.
 
 **المستخدمون:**  
-لو أردت إضافة موظف/موظفة لاستخدام التطبيق، تواصل مع المطور لإنشاء حساب لهم.
-
----
+إضافة حسابات Auth جديدة عملية إدارية/خادمية؛ سجل الموظف داخل التطبيق ليس بديلًا عن حساب Auth.
 
 ## بيانات دخولك
 
@@ -200,11 +181,8 @@ npm run preflight:supabase
 |--|--|
 | **الرابط** | `https://[رابط-صالونك].vercel.app` |
 | **الإيميل** | `[إيميل المالك]` |
-| **كلمة المرور** | `[كلمة المرور المؤقتة]` |
+| **كلمة المرور المؤقتة** | `[كلمة المرور المؤقتة]` |
 
-> 🔒 غيّر كلمة المرور من الإعدادات بعد أول دخول.
+غيّر كلمة المرور بعد أول دخول وفق سياسة الحساب المعتمدة.
 
----
-
-**للدعم والمساعدة:** تواصل مع [اسمك ورقم هاتفك]
-
+**للدعم والمساعدة:** تواصل مع جهة الدعم المتفق عليها.
