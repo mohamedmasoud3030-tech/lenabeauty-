@@ -1102,7 +1102,7 @@ export default function AppointmentsPage() {
                 )}
 
                 {(() => {
-                  const appt = editApptId ? appts.find((a) => a.id === editApptId) : undefined;
+                  const appt = appts.find((a) => a.id === editApptId);
                   if (!appt || appt.status !== AppointmentStatus.SCHEDULED) return null;
                   const stage = effectiveVisitStage(appt) as VisitStage;
                   const nextStages = allowedVisitStages(appt);

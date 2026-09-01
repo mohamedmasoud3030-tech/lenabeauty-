@@ -1,8 +1,7 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
-import { Result, BookingInput } from "../../domain/ports/repositories";
+import { Result, BookingInput, RecipeItemInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance, VisitStage } from "../../domain/entities";
 import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
-import { RecipeItemInput } from "../../domain/ports/repositories";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;

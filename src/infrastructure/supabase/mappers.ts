@@ -283,16 +283,21 @@ export function mapInvoiceItem(row: unknown): InvoiceItem {
   };
 }
 
+function resolveStaffName(row: Record<string, unknown>): string | undefined {
+  const relation = Array.isArray(row.employees) ? row.employees[0] : row.employees;
+  if (relation && typeof relation === "object") {
+    const name = (relation as Record<string, unknown>).name;
+    if (typeof name === "string") return name;
+  }
+  return undefined;
+}
+
 export function mapInvoice(row: unknown): Invoice {
   assertRowObject(row, "mapInvoice");
   if (typeof row.id !== "string" || typeof row.customer_id !== "string" || row.total_amount === undefined || typeof row.payment_method !== "string") {
       throw createMappingError("mapInvoice", "Missing or invalid required fields (id, customer_id, total_amount, payment_method)");
   }
-  const employeeRelation = Array.isArray(row.employees) ? row.employees[0] : row.employees;
-  const staffName = employeeRelation && typeof employeeRelation === "object" &&
-    typeof (employeeRelation as Record<string, unknown>).name === "string"
-      ? (employeeRelation as Record<string, unknown>).name as string
-      : undefined;
+  const staffName = resolveStaffName(row);
   // Additive financial columns are zero for pre-phase-3 rows. Detect that
   // shape so historical receipts preserve their original aggregate discount
   // and paid amount while all new invoices use the detailed breakdown.

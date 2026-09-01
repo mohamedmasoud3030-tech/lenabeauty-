@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useCases } from "../app/composition/useCases";
-import { useToast } from "../shared/components/Toast";
 import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
@@ -66,6 +65,18 @@ function stageLabel(stage: UnifiedVisitStage, t: (k: string) => string): string 
   return t(visitStageI18nKey(stage));
 }
 
+function sectionToneBorder(tone?: "default" | "warning" | "danger"): string {
+  if (tone === "warning") return "border-warning/25";
+  if (tone === "danger") return "border-destructive/25";
+  return "border-border";
+}
+
+function rebookingStatusClass(status: RetentionStatus): string {
+  if (status === "WINBACK") return "border-destructive/20 bg-destructive/10 text-destructive";
+  if (status === "DORMANT") return "border-warning/20 bg-warning/10 text-warning";
+  return "border-primary/20 bg-primary/10 text-primary";
+}
+
 function SectionShell(props: {
   icon: React.ReactNode;
   title: string;
@@ -77,9 +88,7 @@ function SectionShell(props: {
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const border =
-    props.tone === "warning" ? "border-warning/25" :
-    props.tone === "danger" ? "border-destructive/25" : "border-border";
+  const border = sectionToneBorder(props.tone);
   return (
     <section className={clsx("overflow-hidden rounded-2xl border bg-card shadow-sm", border)}>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -107,7 +116,6 @@ function SectionShell(props: {
 
 export default function ActionCenterPage() {
   const { t, i18n } = useTranslation();
-  const { showToast } = useToast();
   const nav = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -221,10 +229,16 @@ export default function ActionCenterPage() {
       );
       const bookedServiceIds = [...new Set(upcoming.map((a) => a.serviceId).filter(Boolean))] as string[];
       const recipeByServiceId = new Map<string, Pick<ServiceRecipe, "items">>();
-      for (const sid of bookedServiceIds.slice(0, 50)) {
-        const r = await useCases.recipes.getForService(sid);
+      // Cap the fan-out at 50 distinct services and fetch them concurrently so
+      // the action center does not incur a sequential N+1 round-trip per service.
+      const recipeServiceIds = bookedServiceIds.slice(0, 50);
+      const recipeResults = await Promise.all(
+        recipeServiceIds.map((sid) => useCases.recipes.getForService(sid)),
+      );
+      recipeServiceIds.forEach((sid, index) => {
+        const r = recipeResults[index];
         if (r.ok && r.data) recipeByServiceId.set(sid, r.data);
-      }
+      });
       const demandRows = forecastBookingDemand({
         appointments: upcoming.map((a) => ({ status: a.status, serviceId: a.serviceId, serviceName: a.service?.name, service: a.service })),
         recipeByServiceId,
@@ -350,9 +364,7 @@ export default function ActionCenterPage() {
                       </span>
                       <span className={clsx(
                         "shrink-0 rounded-lg border px-2 py-1 text-[10px] font-bold",
-                        row.status === "WINBACK" ? "border-destructive/20 bg-destructive/10 text-destructive"
-                          : row.status === "DORMANT" ? "border-warning/20 bg-warning/10 text-warning"
-                          : "border-primary/20 bg-primary/10 text-primary",
+                        rebookingStatusClass(row.status),
                       )}>
                         {t(`retention.status.${row.status}`)}
                       </span>

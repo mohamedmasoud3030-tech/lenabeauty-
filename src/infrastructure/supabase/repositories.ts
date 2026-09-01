@@ -838,7 +838,7 @@ class SupabaseServiceRecipeAdapter implements ServiceRecipeRepository {
         estimatedCost: it.estimatedCost ?? 0,
       }));
 
-      const { data, error } = await getSupabaseClient().rpc("save_service_recipe_v1", {
+      const { error } = await getSupabaseClient().rpc("save_service_recipe_v1", {
         p_center_id: centerRes.data,
         p_service_id: serviceId,
         p_items: payloadItems as unknown as Json,

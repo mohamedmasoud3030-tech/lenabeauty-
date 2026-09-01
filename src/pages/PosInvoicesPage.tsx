@@ -9,7 +9,7 @@ import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
-  Zap, Clock, TrendingUp, CalendarClock
+  CalendarClock
 } from "lucide-react";
 // UserPlus used for inline new-customer creation at the POS checkout panel
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";

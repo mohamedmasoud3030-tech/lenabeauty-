@@ -30,6 +30,12 @@ import {
   ServiceCategoryFilters,
 } from "../shared/catalog/ServiceCategoryFilters";
 
+let lineKeyCounter = 0;
+function makeLineKey(idx: number): string {
+  lineKeyCounter += 1;
+  return `line-${lineKeyCounter}-${idx}`;
+}
+
 export default function ServicesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -67,15 +73,11 @@ export default function ServicesPage() {
   const [recipeErrors, setRecipeErrors] = useState<Record<string, string>>({});
   const [consumptions, setConsumptions] = useState<InventoryConsumption[]>([]);
 
-  function makeLineKey(idx: number) {
-    return `line-${Date.now()}-${idx}`;
-  }
-
   function newBlankLine(): DraftRecipeLine {
     return { key: makeLineKey(0), productId: "", quantity: "1", unit: "", estimatedCost: "" };
   }
 
-  const recipeDirty = draftLines.length > 0 && draftLines.some((l) => l.productId.trim().length > 0);
+  const recipeDirty = draftLines.some((l) => l.productId.trim().length > 0);
 
   async function openRecipe(s: Service) {
     setRecipeFor(s);
@@ -833,7 +835,7 @@ export default function ServicesPage() {
                 {t("recipe.addLine")}
               </button>
 
-              {recipe && recipe.items && recipe.items.length > 0 && (
+              {(recipe?.items?.length ?? 0) > 0 && (
                 <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center justify-between gap-2">
                   <span className="text-[10px] font-bold text-muted-foreground">{t("recipe.estimatedMaterial")}</span>
                   <span className="text-xs font-bold text-foreground">{formatOMRAmount(recipeMaterialCost ?? 0)} {t("OMR")}</span>
