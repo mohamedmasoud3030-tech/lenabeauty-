@@ -148,8 +148,16 @@ describe("audit: deterministic migration replay (PGlite)", () => {
       INSERT INTO public.customers (id, center_id, name)
       VALUES ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Recipe Customer');
 
-      INSERT INTO public.services (id, center_id, name, price, duration_minutes, is_active)
-      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Recipe Service', 5.000, 30, true);
+      INSERT INTO public.service_categories (id, center_id, name)
+      VALUES ('35000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Recipe Test Category');
+
+      INSERT INTO public.services (id, center_id, category_id, name, price, duration_minutes, is_active)
+      VALUES (
+        '40000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '35000000-0000-0000-0000-000000000001',
+        'Recipe Service', 5.000, 30, true
+      );
 
       INSERT INTO public.products (id, center_id, name, price, cost, stock_quantity, track_inventory, is_active)
       VALUES ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Consumable', 2.000, 1.000, 10, true, true);
