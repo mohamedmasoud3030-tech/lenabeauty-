@@ -12,12 +12,12 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-muted/50 text-foreground border border-border/50',
+  default: 'bg-muted/50 text-foreground border border-border/60',
   primary: 'bg-primary/10 text-primary border border-primary/20',
   success: 'bg-success/10 text-success border border-success/20',
   warning: 'bg-warning/10 text-warning border border-warning/20',
   destructive: 'bg-destructive/10 text-destructive border border-destructive/20',
-  secondary: 'bg-info/10 text-info border border-info/20',
+  secondary: 'bg-secondary/10 text-secondary border border-secondary/20',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {

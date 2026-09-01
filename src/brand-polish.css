@@ -1,0 +1,98 @@
+/*
+ * LenaBeauty app-wide visual polish layer.
+ *
+ * Purpose:
+ * - keep violet + rose as the only decorative brand palette;
+ * - keep success / warning / info / destructive colors semantic;
+ * - softly unify legacy surfaces without rewriting business pages;
+ * - bridge the last historical Tailwind palette classes to semantic tokens.
+ *
+ * This file intentionally contains no business-state logic.
+ */
+
+:root {
+  --lena-brand-shadow: 0 18px 50px hsl(var(--primary) / 0.08);
+  --lena-brand-shadow-strong: 0 24px 70px hsl(var(--primary) / 0.12);
+  --lena-brand-wash:
+    radial-gradient(circle at 8% 0%, hsl(var(--secondary) / 0.08), transparent 28rem),
+    radial-gradient(circle at 92% 100%, hsl(var(--primary) / 0.09), transparent 30rem);
+}
+
+.dark {
+  --lena-brand-shadow: 0 18px 50px rgb(0 0 0 / 0.22);
+  --lena-brand-shadow-strong: 0 24px 70px rgb(0 0 0 / 0.32);
+  --lena-brand-wash:
+    radial-gradient(circle at 8% 0%, hsl(var(--secondary) / 0.07), transparent 28rem),
+    radial-gradient(circle at 92% 100%, hsl(var(--primary) / 0.08), transparent 30rem);
+}
+
+body {
+  background-image: var(--lena-brand-wash);
+  background-attachment: fixed;
+}
+
+/* Shared surface polish. Existing semantic colors remain authoritative. */
+.ui-card {
+  box-shadow: var(--lena-brand-shadow);
+  backdrop-filter: blur(10px);
+}
+
+/*
+ * Transitional compatibility bridge.
+ * These are the only remaining historical one-off palette utilities found in
+ * authenticated UI source. Mapping them here prevents amber/rose islands while
+ * the markup stays stable and keeps warning red/yellow semantics separate.
+ */
+.text-rose-500,
+.text-rose-600 {
+  color: hsl(var(--destructive)) !important;
+}
+
+.hover\:bg-rose-500\/10:hover {
+  background-color: hsl(var(--destructive) / 0.1) !important;
+}
+
+.bg-amber-500\/10 {
+  background-color: hsl(var(--secondary) / 0.1) !important;
+}
+
+.text-amber-600 {
+  color: hsl(var(--secondary)) !important;
+}
+
+.border-amber-500\/20 {
+  border-color: hsl(var(--secondary) / 0.2) !important;
+}
+
+.hover\:bg-amber-500\/10:hover {
+  background-color: hsl(var(--secondary) / 0.1) !important;
+}
+
+.hover\:border-amber-500\/20:hover {
+  border-color: hsl(var(--secondary) / 0.22) !important;
+}
+
+.bg-amber-500 {
+  background-color: hsl(var(--primary)) !important;
+  background-image: linear-gradient(115deg, hsl(var(--primary)), hsl(var(--secondary))) !important;
+}
+
+.shadow-amber-500\/30 {
+  --tw-shadow-color: hsl(var(--primary) / 0.2) !important;
+}
+
+/* Calm premium focus/hover behavior across card-like operational surfaces. */
+#main-content :where(.rounded-2xl, .rounded-3xl)[class*="border-border"][class*="bg-card"] {
+  transition-property: border-color, box-shadow, background-color, transform;
+  transition-duration: 180ms;
+}
+
+#main-content :where(.rounded-2xl, .rounded-3xl)[class*="border-border"][class*="bg-card"]:hover {
+  border-color: hsl(var(--primary) / 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main-content :where(.rounded-2xl, .rounded-3xl)[class*="border-border"][class*="bg-card"] {
+    transition-duration: 0.01ms;
+  }
+}

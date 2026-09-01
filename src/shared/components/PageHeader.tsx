@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 
 /**
@@ -20,7 +19,6 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ icon, title, subtitle, actions, className, stickyActions = false }: PageHeaderProps) {
-  const { t } = useTranslation();
   return (
     <div
       className={clsx(
@@ -30,7 +28,7 @@ export function PageHeader({ icon, title, subtitle, actions, className, stickyAc
       )}
     >
       <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-shrink-0">
-        <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 rounded-xl lg:rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-secondary/10 border border-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/10 shrink-0">
           {icon}
         </div>
         <div className="space-y-0.5 sm:space-y-1 min-w-0">
