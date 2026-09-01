@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 // @ts-ignore — plain-JS audit tooling shipped without type declarations
-import { splitStatements, translateMigration, discoverMigrations, compatPreamble } from "../../scripts/audit/lib/sql.mjs";
+import { splitStatements, translateMigration, discoverMigrations, automatedMigrations, compatPreamble } from "../../scripts/audit/lib/sql.mjs";
 // @ts-ignore — plain-JS audit tooling shipped without type declarations
 import { parseSelect, topLevelObjectKeys } from "../../scripts/audit/lib/parse.mjs";
+
+const MANUAL_BOOTSTRAP = "20260628000002_admin_bootstrap.sql";
 
 describe("audit: SQL statement splitter", () => {
   it("splits on top-level semicolons and ignores them inside dollar-quoted bodies", () => {
@@ -36,12 +38,15 @@ describe("audit: SQL statement splitter", () => {
 });
 
 describe("audit: migration discovery", () => {
-  it("discovers 38 canonical migrations and excludes only the manual bootstrap", () => {
+  it("discovers the full canonical chain and excludes exactly the manual bootstrap", () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(38);
-    const automated = all.filter((m) => m.file !== "20260628000002_admin_bootstrap.sql");
-    expect(automated).toHaveLength(37);
-    expect(all.some((m) => m.file === "20260628000002_admin_bootstrap.sql")).toBe(true);
+    const automated = automatedMigrations(all);
+    const automatedFiles = new Set(automated.map((migration) => migration.file));
+    const excluded = all.filter((migration) => !automatedFiles.has(migration.file));
+
+    expect(all.length).toBeGreaterThan(0);
+    expect(excluded.map((migration) => migration.file)).toEqual([MANUAL_BOOTSTRAP]);
+    expect(automated).toHaveLength(all.length - 1);
   });
 });
 
