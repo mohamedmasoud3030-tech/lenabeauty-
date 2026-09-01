@@ -8937,7 +8937,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION app_private.consume_invoice_recipes_v1(p_center_id uuid, p_invoice_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_line     RECORD;\n  v_item     RECORD;\n  v_recipe   UUID;\n  v_total    NUMERIC(12,3);\n  v_consumed INTEGER := 0;\nBEGIN\n  FOR v_line IN\n    SELECT ii.service_id, ii.quantity AS service_qty\n    FROM public.invoice_items ii\n    WHERE ii.invoice_id = p_invoice_id AND ii.service_id IS NOT NULL\n  LOOP\n    SELECT sr.id INTO v_recipe\n    FROM public.service_recipes sr\n    WHERE sr.service_id = v_line.service_id\n      AND sr.center_id = p_center_id\n      AND sr.is_active = true\n    ORDER BY sr.updated_at DESC\n    LIMIT 1;\n\n    CONTINUE WHEN v_recipe IS NULL;\n\n    FOR v_item IN\n      SELECT sri.product_id, sri.quantity AS qty, sri.unit, sri.estimated_cost\n      FROM public.service_recipe_items sri\n      WHERE sri.recipe_id = v_recipe\n    LOOP\n      v_total := round(v_item.qty * v_line.service_qty, 3);\n\n      INSERT INTO public.inventory_consumptions\n        (center_id, invoice_id, service_id, product_id, quantity, unit, unit_cost)\n      VALUES\n        (p_center_id, p_invoice_id, v_line.service_id, v_item.product_id,\n         v_total, v_item.unit, COALESCE(v_item.estimated_cost, 0))\n      ON CONFLICT (invoice_id, service_id, product_id) DO NOTHING;\n\n      IF FOUND THEN\n        -- Whole-unit, tracked consumables decrement stock with the canonical\n        -- negative-stock protection.\n        IF v_total = floor(v_total) THEN\n          UPDATE public.products p\n          SET stock_quantity = p.stock_quantity - v_total::integer\n          WHERE p.id = v_item.product_id\n            AND p.center_id = p_center_id\n            AND p.track_inventory = true\n            AND p.stock_quantity >= v_total::integer;\n          IF NOT FOUND THEN\n            PERFORM 1 FROM public.products p\n            WHERE p.id = v_item.product_id\n              AND p.center_id = p_center_id\n              AND p.track_inventory = false;\n            IF NOT FOUND THEN\n              RAISE EXCEPTION 'insufficient_consumable_stock' USING ERRCODE = '23514';\n            END IF;\n          END IF;\n        END IF;\n        v_consumed := v_consumed + 1;\n      END IF;\n    END LOOP;\n  END LOOP;\n\n  RETURN jsonb_build_object('consumed_lines', v_consumed);\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION app_private.consume_invoice_recipes_v1(p_center_id uuid, p_invoice_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_line     RECORD;\n  v_item     RECORD;\n  v_recipe   UUID;\n  v_total    NUMERIC(12,3);\n  v_consumed INTEGER := 0;\nBEGIN\n  FOR v_line IN\n    SELECT ii.service_id, SUM(ii.quantity)::NUMERIC AS service_qty\n    FROM public.invoice_items ii\n    WHERE ii.invoice_id = p_invoice_id AND ii.service_id IS NOT NULL\n    GROUP BY ii.service_id\n  LOOP\n    SELECT sr.id INTO v_recipe\n    FROM public.service_recipes sr\n    WHERE sr.service_id = v_line.service_id\n      AND sr.center_id = p_center_id\n      AND sr.is_active = true\n    ORDER BY sr.updated_at DESC\n    LIMIT 1;\n\n    CONTINUE WHEN v_recipe IS NULL;\n\n    FOR v_item IN\n      SELECT sri.product_id, sri.quantity AS qty, sri.unit, sri.estimated_cost\n      FROM public.service_recipe_items sri\n      WHERE sri.recipe_id = v_recipe\n    LOOP\n      v_total := round(v_item.qty * v_line.service_qty, 3);\n\n      INSERT INTO public.inventory_consumptions\n        (center_id, invoice_id, service_id, product_id, quantity, unit, unit_cost)\n      VALUES\n        (p_center_id, p_invoice_id, v_line.service_id, v_item.product_id,\n         v_total, v_item.unit, COALESCE(v_item.estimated_cost, 0))\n      ON CONFLICT (invoice_id, service_id, product_id) DO NOTHING;\n\n      IF FOUND THEN\n        IF v_total = floor(v_total) THEN\n          UPDATE public.products p\n          SET stock_quantity = p.stock_quantity - v_total::integer\n          WHERE p.id = v_item.product_id\n            AND p.center_id = p_center_id\n            AND p.track_inventory = true\n            AND p.stock_quantity >= v_total::integer;\n          IF NOT FOUND THEN\n            PERFORM 1 FROM public.products p\n            WHERE p.id = v_item.product_id\n              AND p.center_id = p_center_id\n              AND p.track_inventory = false;\n            IF NOT FOUND THEN\n              RAISE EXCEPTION 'insufficient_consumable_stock' USING ERRCODE = '23514';\n            END IF;\n          END IF;\n        END IF;\n        v_consumed := v_consumed + 1;\n      END IF;\n    END LOOP;\n  END LOOP;\n\n  RETURN jsonb_build_object('consumed_lines', v_consumed);\nEND;\n$function$\n"
     },
     {
       "schema": "app_private",
@@ -10928,26 +10928,26 @@
     {
       "schema": "public",
       "table": "service_recipe_items",
-      "name": "service_recipe_items_tenant",
+      "name": "service_recipe_items_member_select",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "ALL",
+      "cmd": "SELECT",
       "qual": "(center_id = ANY (app_private.user_center_ids()))",
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+      "with_check": null
     },
     {
       "schema": "public",
       "table": "service_recipes",
-      "name": "service_recipes_tenant",
+      "name": "service_recipes_member_select",
       "permissive": "PERMISSIVE",
       "roles": [
-        "public"
+        "authenticated"
       ],
-      "cmd": "ALL",
+      "cmd": "SELECT",
       "qual": "(center_id = ANY (app_private.user_center_ids()))",
-      "with_check": "(center_id = ANY (app_private.user_center_ids()))"
+      "with_check": null
     },
     {
       "schema": "public",
@@ -19493,6 +19493,13 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_recipe_items",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
       "grantee": "postgres",
       "privilege": "DELETE"
     },
@@ -19656,6 +19663,13 @@
       "object": "service_recipe_items_product_unique",
       "grantee": "postgres",
       "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
     },
     {
       "kind": "relation",

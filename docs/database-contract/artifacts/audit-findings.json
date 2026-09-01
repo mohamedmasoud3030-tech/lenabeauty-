@@ -12,7 +12,7 @@
       "views": 0,
       "functions": 62,
       "policies": 49,
-      "grants": 1381
+      "grants": 1383
     },
     "frontend": {
       "tables": 29,
@@ -20,15 +20,43 @@
       "storage": 1
     },
     "findings_by_severity": {
-      "high": 0,
-      "medium": 0,
+      "high": 1,
+      "medium": 1,
       "low": 0,
       "info": 4
     }
   },
   "findings": [
     {
+      "id": "DB-002",
+      "severity": "high",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Re-application rolls back SECURITY DEFINER search_path hardening (fingerprint drift)",
+      "category": "replay-fingerprint-drift",
+      "evidence": "Fingerprints differ (after_first=79d42e63347f3d71586b4944d5e5782e454c02847a612f39dfcce2321d264ec4 vs after_repeat=285825c4f58864435a818d332e83dac2be8410c66fc1a38e12135f8f98c9d354); changed sections: policies. 0 SECURITY DEFINER functions revert to unpinned/loose search_path.",
+      "affected": {
+        "functions": []
+      },
+      "remediation": "Make the non-idempotent migrations idempotent (DROP POLICY IF EXISTS) so their `SET search_path` hardening survives re-application; then re-verify the fingerprint is stable."
+    },
+    {
       "id": "DB-001",
+      "severity": "medium",
+      "status": "confirmed",
+      "needs": "future-migration",
+      "title": "Non-idempotent migration: 20260901102643_recipe_write_boundary_hardening.sql",
+      "category": "migration-idempotency",
+      "evidence": "policy \"service_recipes_member_select\" for table \"service_recipes\" already exists",
+      "affected": {
+        "migration": "20260901102643_recipe_write_boundary_hardening.sql",
+        "policy": "service_recipes_member_select",
+        "table": "service_recipes"
+      },
+      "remediation": "Prepend `DROP POLICY IF EXISTS <name> ON <table>;` before the CREATE POLICY so the migration can be re-applied cleanly."
+    },
+    {
+      "id": "DB-003",
       "severity": "info",
       "status": "confirmed",
       "needs": "no-code-change",
@@ -51,7 +79,7 @@
       "remediation": "No change. Re-audit grants, rate limiting, and abuse controls before enabling the public routes."
     },
     {
-      "id": "DB-002",
+      "id": "DB-004",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",
@@ -67,7 +95,7 @@
       "remediation": "Manually confirm this construct against the canonical schema."
     },
     {
-      "id": "DB-003",
+      "id": "DB-005",
       "severity": "info",
       "status": "confirmed",
       "needs": "no-code-change",
@@ -80,7 +108,7 @@
       "remediation": "No code change; the constraint exists in the canonical migration and applies in Supabase."
     },
     {
-      "id": "DB-004",
+      "id": "DB-006",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",

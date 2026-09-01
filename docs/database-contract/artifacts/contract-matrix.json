@@ -2063,18 +2063,22 @@
       "rls_forced": false,
       "policies": [
         {
-          "name": "service_recipes_tenant",
-          "command": "ALL",
+          "name": "service_recipes_member_select",
+          "command": "SELECT",
           "roles": [
-            "public"
+            "authenticated"
           ],
           "using": "(center_id = ANY (app_private.user_center_ids()))",
-          "with_check": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": null,
           "membership_only": false
         }
       ],
-      "missing_operations": [],
-      "has_for_all": true
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
     },
     {
       "table": "services",
