@@ -33,6 +33,7 @@ INSERT INTO public.customers(id,center_id,name,phone,portal_access_enabled,porta
 DO $$
 DECLARE
   r text;
+  v_unused_notification_rpc regprocedure;
   booking_rpcs text[] := ARRAY[
     'public.public_list_services_v1(uuid)',
     'public.public_list_staff_v1(uuid)',
@@ -46,7 +47,7 @@ DECLARE
     'public.public_reschedule_booking_v1(uuid, uuid, text, text, timestamptz, uuid, text)'
   ];
   staff_rpcs text[] := ARRAY[
-    'public.process_checkout_idempotent_v1(uuid, uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb)',
+    'public.process_checkout_idempotent_v1(uuid, uuid, uuid, uuid, text, numeric, boolean, jsonb, text, jsonb, uuid)',
     'public.refund_entitlement_v1(uuid, numeric, text, uuid)',
     'public.void_entitlement_v1(uuid, text, uuid)',
     'public.expire_entitlement_v1(uuid, text, uuid)',
@@ -58,7 +59,6 @@ DECLARE
     'public.rotate_customer_portal_token_v1(uuid, uuid)',
     'public.create_customer_review_v1(uuid, uuid, uuid, smallint, text, boolean)',
     'public.create_service_file_v1(uuid, uuid, uuid, uuid, text, text, text[], text[], text[])',
-    'public.add_customer_notification_event_v1(uuid, uuid, uuid, text, text, text, text, text, timestamptz)',
     'public.create_accounting_journal_entry_v1(uuid, date, text, text, uuid, text, text, text, numeric, text)',
     'public.create_ai_booking_lead_v1(uuid, text, text, uuid, timestamptz, text, text)'
   ];
@@ -76,6 +76,20 @@ BEGIN
       RAISE EXCEPTION 'anon must not execute %',r;
     END IF;
   END LOOP;
+
+  -- Defined for future delivery integration but intentionally absent from the
+  -- shipped client call surface: both client roles must remain unable to run it.
+  v_unused_notification_rpc := to_regprocedure(
+    'public.add_customer_notification_event_v1(uuid, uuid, uuid, text, text, text, text, text, timestamptz)'
+  );
+  IF v_unused_notification_rpc IS NULL THEN
+    RAISE EXCEPTION 'notification event RPC definition is missing';
+  END IF;
+  IF has_function_privilege('authenticated',v_unused_notification_rpc,'EXECUTE')
+     OR has_function_privilege('anon',v_unused_notification_rpc,'EXECUTE') THEN
+    RAISE EXCEPTION 'unused notification event RPC must remain deny-by-default';
+  END IF;
+
   IF has_table_privilege('anon','public.customers','SELECT')
      OR has_table_privilege('anon','public.customers','INSERT')
      OR has_table_privilege('anon','public.invoices','SELECT') THEN
@@ -112,7 +126,7 @@ BEGIN
       '70000000-0000-4000-8000-000000000001'::uuid,
       '20000000-0000-4000-8000-000000000002'::uuid,
       '40000000-0000-4000-8000-000000000002'::uuid,
-      NULL::uuid,'cash'::text,0::numeric,false,'[]'::jsonb,NULL::text);
+      NULL::uuid,'cash'::text,0::numeric,false,'[]'::jsonb,NULL::text,NULL::jsonb,NULL::uuid);
     RAISE EXCEPTION 'cross-center checkout must be rejected';
   EXCEPTION WHEN insufficient_privilege THEN NULL; END;
 
@@ -167,7 +181,7 @@ END
 $$;
 RESET ROLE;
 
--- Storage policies: INSERT uses with_check, SELECT/UPDATE use qual.
+-- Storage policies: SELECT remains member-readable; writes are ADMIN-only.
 DO $$
 DECLARE e text;
 BEGIN
@@ -176,12 +190,12 @@ BEGIN
   IF e IS NULL OR e NOT LIKE '%app_private.is_center_member%' THEN RAISE EXCEPTION 'center_assets_member_select invalid'; END IF;
 
   SELECT with_check::text INTO e FROM pg_policies
-  WHERE schemaname='storage' AND tablename='objects' AND policyname='center_assets_member_insert' AND cmd='INSERT';
-  IF e IS NULL OR e NOT LIKE '%app_private.is_center_member%' THEN RAISE EXCEPTION 'center_assets_member_insert invalid'; END IF;
+  WHERE schemaname='storage' AND tablename='objects' AND policyname='center_assets_admin_insert' AND cmd='INSERT';
+  IF e IS NULL OR e NOT LIKE '%app_private.has_center_role%' THEN RAISE EXCEPTION 'center_assets_admin_insert invalid'; END IF;
 
   SELECT qual::text INTO e FROM pg_policies
-  WHERE schemaname='storage' AND tablename='objects' AND policyname='center_assets_member_update' AND cmd='UPDATE';
-  IF e IS NULL OR e NOT LIKE '%app_private.is_center_member%' THEN RAISE EXCEPTION 'center_assets_member_update invalid'; END IF;
+  WHERE schemaname='storage' AND tablename='objects' AND policyname='center_assets_admin_update' AND cmd='UPDATE';
+  IF e IS NULL OR e NOT LIKE '%app_private.has_center_role%' THEN RAISE EXCEPTION 'center_assets_admin_update invalid'; END IF;
 END
 $$;
 
