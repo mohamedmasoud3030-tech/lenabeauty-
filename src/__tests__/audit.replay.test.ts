@@ -5,6 +5,7 @@ import { discoverMigrations, automatedMigrations, compatPreamble, translateMigra
 import { PGlite } from "@electric-sql/pglite";
 
 const KNOWN_NON_IDEMPOTENT: { file: string; policy: string }[] = [];
+const MANUAL_BOOTSTRAP = "20260628000002_admin_bootstrap.sql";
 
 function hasExplicitTransaction(sql: string): boolean {
   return /^\s*BEGIN\s*;/m.test(sql) && /^\s*COMMIT\s*;/m.test(sql);
@@ -26,7 +27,7 @@ async function replayInto(db: PGlite) {
       failures.push(`${m.file}: ${String(e?.message ?? e).split("\n")[0]}`);
     }
   }
-  // idempotency pass
+  // Idempotency pass: every automated migration must be safe to replay.
   for (const m of automatedMigrations(discoverMigrations())) {
     const { sql } = translateMigration(m.content);
     const wrapped = !hasExplicitTransaction(sql);
@@ -54,15 +55,19 @@ async function functionSignatureSet(db: PGlite): Promise<string[]> {
 
 /**
  * Integration test: the canonical migrations must replay deterministically
- * against PGlite (bare PostgreSQL), with exactly one documented manual
- * bootstrap excluded, and only the two *known* idempotency gaps may surface.
+ * against PGlite (bare PostgreSQL). Exactly one documented manual bootstrap is
+ * excluded; the contract deliberately does not hard-code the migration count,
+ * so adding a canonical migration cannot be hidden behind a stale test number.
  */
 describe("audit: deterministic migration replay (PGlite)", () => {
-  it("replays 37 automated migrations; excludes 1 manual bootstrap with no idempotency gaps", async () => {
+  it("replays every automated migration; excludes exactly one manual bootstrap with no idempotency gaps", async () => {
     const all = discoverMigrations();
-    expect(all).toHaveLength(38);
     const automated = automatedMigrations(all);
-    expect(automated).toHaveLength(37);
+    const automatedFiles = new Set(automated.map((migration) => migration.file));
+    const excluded = all.filter((migration) => !automatedFiles.has(migration.file));
+
+    expect(excluded.map((migration) => migration.file)).toEqual([MANUAL_BOOTSTRAP]);
+    expect(automated).toHaveLength(all.length - 1);
 
     const db = new PGlite();
     const { failures, nonIdem } = await replayInto(db);
@@ -109,6 +114,94 @@ describe("audit: deterministic migration replay (PGlite)", () => {
       VALUES
         ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '2026-08-19', -1);
     `)).rejects.toThrow();
+
+    // Recipe writes are RPC-only for signed-in clients. This protects the
+    // validation boundary from being bypassed by direct table mutations.
+    const recipePrivileges = await db.query(`
+      SELECT
+        has_table_privilege('authenticated', 'public.service_recipes', 'SELECT') AS recipes_select,
+        has_table_privilege('authenticated', 'public.service_recipes', 'INSERT') AS recipes_insert,
+        has_table_privilege('authenticated', 'public.service_recipes', 'UPDATE') AS recipes_update,
+        has_table_privilege('authenticated', 'public.service_recipe_items', 'SELECT') AS items_select,
+        has_table_privilege('authenticated', 'public.service_recipe_items', 'INSERT') AS items_insert,
+        has_table_privilege('authenticated', 'public.service_recipe_items', 'UPDATE') AS items_update,
+        has_function_privilege(
+          'authenticated',
+          'app_private.consume_invoice_recipes_v1(uuid,uuid)',
+          'EXECUTE'
+        ) AS consumer_execute
+    `);
+    expect(recipePrivileges.rows[0]).toMatchObject({
+      recipes_select: true,
+      recipes_insert: false,
+      recipes_update: false,
+      items_select: true,
+      items_insert: false,
+      items_update: false,
+      consumer_execute: false,
+    });
+
+    // Behavioral regression: duplicate invoice lines for one service must be
+    // aggregated before recipe consumption. Otherwise the idempotency key
+    // (invoice, service, product) would silently under-consume the second line.
+    await db.exec(`
+      INSERT INTO public.customers (id, center_id, name)
+      VALUES ('30000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Recipe Customer');
+
+      INSERT INTO public.services (id, center_id, name, price, duration_minutes, is_active)
+      VALUES ('40000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Recipe Service', 5.000, 30, true);
+
+      INSERT INTO public.products (id, center_id, name, price, cost, stock_quantity, track_inventory, is_active)
+      VALUES ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Consumable', 2.000, 1.000, 10, true, true);
+
+      INSERT INTO public.invoices (id, center_id, customer_id, total_amount, payment_method, status)
+      VALUES ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 15.000, 'cash', 'PAID');
+
+      INSERT INTO public.invoice_items (invoice_id, service_id, price, quantity, item_type, item_name)
+      VALUES
+        ('60000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 5.000, 1, 'service', 'Recipe Service'),
+        ('60000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 5.000, 2, 'service', 'Recipe Service');
+
+      INSERT INTO public.service_recipes (id, center_id, service_id, is_active)
+      VALUES ('70000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', true);
+
+      INSERT INTO public.service_recipe_items (center_id, recipe_id, product_id, quantity, unit, estimated_cost)
+      VALUES ('10000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001', 1.000, 'unit', 1.000);
+
+      SELECT app_private.consume_invoice_recipes_v1(
+        '10000000-0000-0000-0000-000000000001',
+        '60000000-0000-0000-0000-000000000001'
+      );
+    `);
+
+    const consumption = await db.query(`
+      SELECT quantity::numeric AS quantity
+      FROM public.inventory_consumptions
+      WHERE invoice_id = '60000000-0000-0000-0000-000000000001'
+        AND service_id = '40000000-0000-0000-0000-000000000001'
+        AND product_id = '50000000-0000-0000-0000-000000000001'
+    `);
+    expect(consumption.rows).toHaveLength(1);
+    expect(Number((consumption.rows[0] as { quantity: number | string }).quantity)).toBe(3);
+
+    const stockAfterFirst = await db.query(`
+      SELECT stock_quantity FROM public.products
+      WHERE id = '50000000-0000-0000-0000-000000000001'
+    `);
+    expect((stockAfterFirst.rows[0] as { stock_quantity: number }).stock_quantity).toBe(7);
+
+    // A retry is idempotent: no second consumption row and no second decrement.
+    await db.exec(`
+      SELECT app_private.consume_invoice_recipes_v1(
+        '10000000-0000-0000-0000-000000000001',
+        '60000000-0000-0000-0000-000000000001'
+      );
+    `);
+    const stockAfterRetry = await db.query(`
+      SELECT stock_quantity FROM public.products
+      WHERE id = '50000000-0000-0000-0000-000000000001'
+    `);
+    expect((stockAfterRetry.rows[0] as { stock_quantity: number }).stock_quantity).toBe(7);
 
     await db.close();
   }, 60_000);
