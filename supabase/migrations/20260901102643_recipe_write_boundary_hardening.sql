@@ -14,11 +14,13 @@ GRANT SELECT ON TABLE public.service_recipes TO authenticated;
 GRANT SELECT ON TABLE public.service_recipe_items TO authenticated;
 
 DROP POLICY IF EXISTS service_recipes_tenant ON public.service_recipes;
+DROP POLICY IF EXISTS service_recipes_member_select ON public.service_recipes;
 CREATE POLICY service_recipes_member_select ON public.service_recipes
   FOR SELECT TO authenticated
   USING (center_id = ANY (app_private.user_center_ids()));
 
 DROP POLICY IF EXISTS service_recipe_items_tenant ON public.service_recipe_items;
+DROP POLICY IF EXISTS service_recipe_items_member_select ON public.service_recipe_items;
 CREATE POLICY service_recipe_items_member_select ON public.service_recipe_items
   FOR SELECT TO authenticated
   USING (center_id = ANY (app_private.user_center_ids()));
