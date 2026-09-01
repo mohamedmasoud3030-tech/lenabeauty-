@@ -1,0 +1,6 @@
+{
+  "channel": "demo-production",
+  "backend": "demo-supabase",
+  "data": "sample-only",
+  "purpose": "public product demonstration"
+}
