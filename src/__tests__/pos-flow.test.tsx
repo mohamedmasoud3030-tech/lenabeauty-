@@ -296,4 +296,88 @@ describe("POS operational flow", () => {
     expect(payload.appointmentId).toBe("a1");
     expect(payload.items).toEqual([{ type: "service", serviceId: "s1", qty: 1, price: 5 }]);
   });
+
+  it("surfaces the LENA Wallet and lets a package session redeem against a matching cart service", async () => {
+    await i18n.changeLanguage("ar");
+    vi.spyOn(useCases.customers, "list").mockResolvedValue({
+      ok: true,
+      data: [{ id: "c1", name: "أمل", phone: "90000000", totalSpent: 0, loyaltyPoints: 0 }],
+    } as any);
+    vi.spyOn(useCases.entitlements, "listForCustomer").mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: "ent-pkg",
+          centerId: "center",
+          customerId: "c1",
+          kind: "PACKAGE",
+          originalValue: 5,
+          remainingValue: 5,
+          status: "ACTIVE",
+          legacyFlag: false,
+          instrumentName: "باقة كاملة",
+          units: [{ id: "u1", serviceId: "s1", totalUnits: 3, usedUnits: 1, serviceName: "قص شعر" }],
+        },
+        {
+          id: "ent-gc",
+          centerId: "center",
+          customerId: "c1",
+          kind: "GIFT_CARD",
+          originalValue: 10,
+          remainingValue: 8,
+          status: "ACTIVE",
+          legacyFlag: false,
+          giftCardCode: "GC-1234",
+        },
+      ],
+    } as any);
+    const checkoutSpy = vi.spyOn(useCases.invoices, "checkout").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: {
+          id: "inv-wallet",
+          serialNumber: "INV-WALLET",
+          date: new Date("2026-08-10T10:00:00"),
+          totalAmount: 5,
+          discount: 0,
+          tax: 0,
+          paymentMethod: "cash",
+          customerId: "c1",
+        },
+        total: 0,
+        earned: 0,
+      },
+    } as any);
+    vi.spyOn(useCases.invoices, "getForPrint").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: { id: "inv-wallet", serialNumber: "INV-WALLET", date: new Date("2026-08-10T10:00:00"), totalAmount: 5, discount: 0, tax: 0, paymentMethod: "cash", customerId: "c1" },
+        items: [{ id: "it1", type: "service", name: "قص شعر", price: 5, qty: 1 }],
+        customer: { id: "c1", name: "أمل" },
+        settings: { name: "لينا بيوتي", currency: "OMR" },
+      },
+    } as any);
+
+    renderPos();
+
+    // Add the booked service and pick the customer (wallet loads from real entitlements).
+    fireEvent.click(await screen.findByText("قص شعر"));
+    const custInput = screen.getByPlaceholderText(i18n.t("Search customer..."));
+    fireEvent.change(custInput, { target: { value: "أمل" } });
+    fireEvent.click(await screen.findByText("أمل"));
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
+
+    // Wallet panel lists the gift card and the matching package session.
+    expect(await screen.findByText(i18n.t("wallet.title"))).toBeInTheDocument();
+    expect(screen.getByText("GC-1234")).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("wallet.packageSession"))).toBeInTheDocument();
+
+    // Apply the package session, then checkout links the redemption in the payload.
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("wallet.use") }));
+    fireEvent.click(screen.getByText(i18n.t("Record completed sale")));
+
+    await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));
+    const payload = checkoutSpy.mock.calls[0][0];
+    expect(payload.entitlementRedemptions).toEqual([{ entitlementId: "ent-pkg", type: "units", serviceId: "s1", units: 1 }]);
+  });
 });

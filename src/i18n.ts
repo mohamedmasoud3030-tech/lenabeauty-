@@ -1287,10 +1287,13 @@ const resources = {
       "retention.winback": "عميلة سابقة غائبة منذ فترة — تستحق المتابعة.",
 
       // LENA Wallet (Slice C — domain keys)
+      "wallet.title": "محفظة لينا",
       "wallet.giftCard": "بطاقة هدية",
       "wallet.packageSession": "جلسات الباقة",
       "wallet.rewards": "نقاط المكافآت",
       "wallet.deposit": "عربون الزيارة",
+      "wallet.use": "استخدام",
+      "wallet.used": "مُستخدمة",
 
       // Beauty Passport (Slice B — composed customer memory)
       "passport.title": "جواز الجمال",
@@ -2631,10 +2634,13 @@ const resources = {
       "retention.winback": "A former customer has been away — worth a follow-up.",
 
       // LENA Wallet (Slice C — domain keys)
+      "wallet.title": "LENA Wallet",
       "wallet.giftCard": "Gift card",
       "wallet.packageSession": "Package sessions",
       "wallet.rewards": "Reward points",
       "wallet.deposit": "Visit deposit",
+      "wallet.use": "Use",
+      "wallet.used": "Applied",
 
       // Beauty Passport (Slice B — composed customer memory)
       "passport.title": "Beauty Passport",

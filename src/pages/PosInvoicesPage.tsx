@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
@@ -20,6 +20,7 @@ import { Customer, Employee, Product, Service, CustomerEntitlement, Appointment,
 import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData, EntitlementRedemptionInput } from "../application/dto";
 import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../domain/commerce";
+import { buildCustomerWallet, walletAvailableForCheckout } from "../domain/wallet";
 import { effectiveVisitStage } from "../domain/visit";
 import { visitStageI18nKey } from "../shared/visitStage";
 import { formatSalonDateTime } from "../shared/dateTime";
@@ -163,7 +164,7 @@ export default function PosInvoicesPage() {
             if (cancelled) return;
             setSelectedCustomer(cust);
             const ent = await useCases.entitlements.listForCustomer(cust.id);
-            if (ent.ok) setEntitlements(ent.data.filter((e) => e.kind === "PACKAGE"));
+            if (ent.ok) setEntitlements(ent.data);
           } catch {
             // Best-effort: the operator can still search the customer manually.
           }
@@ -339,7 +340,9 @@ export default function PosInvoicesPage() {
     setEntitlementRedemptions([]);
     try {
       const res = await useCases.entitlements.listForCustomer(customer.id);
-      if (res.ok) setEntitlements(res.data.filter((e) => e.kind === "PACKAGE"));
+      // Keep every instrument kind: the LENA Wallet projection separates gift
+      // cards from package sessions; the server stays the accounting authority.
+      if (res.ok) setEntitlements(res.data);
     } catch {
       setEntitlements([]);
     }
@@ -394,6 +397,35 @@ export default function PosInvoicesPage() {
     if (card.code !== giftCardCode.trim().toUpperCase() || !card.isActive) return false;
     return !card.expiresAt || new Date(card.expiresAt).getTime() >= Date.now();
   });
+
+  // LENA Wallet projection: gift cards, package sessions, rewards and the visit
+  // deposit stay distinct instruments; the server remains the accounting
+  // authority. This only makes each instrument visible/applicable at checkout.
+  const customerWallet = useMemo(() => buildCustomerWallet({
+    entitlements,
+    loyaltyPoints: selectedCustomer?.loyaltyPoints ?? 0,
+    depositAmount: visitAppointment?.depositAmount ?? 0,
+  }), [entitlements, selectedCustomer, visitAppointment]);
+
+  const cartServiceIds = useMemo(
+    () => cart.filter((it) => it.type === "service").map((it) => it.id),
+    [cart],
+  );
+
+  const applicablePackageSessions = useMemo(
+    () => walletAvailableForCheckout(customerWallet, cartServiceIds).filter((b) => b.kind === "PACKAGE"),
+    [customerWallet, cartServiceIds],
+  );
+
+  /** Apply one package session to the matching cart service (units redemption). */
+  function applyPackageSession(entitlementId: string, serviceId: string) {
+    if (entitlementRedemptions.some((r) => r.entitlementId === entitlementId && r.serviceId === serviceId)) return;
+    setEntitlementRedemptions((prev) => [...prev, { entitlementId, type: "units", serviceId, units: 1 }]);
+  }
+
+  function removePackageSession(entitlementId: string, serviceId: string) {
+    setEntitlementRedemptions((prev) => prev.filter((r) => !(r.entitlementId === entitlementId && r.serviceId === serviceId)));
+  }
   // The shared pure calculator mirrors the authoritative RPC at OMR's
   // three-decimal precision. The RPC still re-resolves every catalog price.
   const entitlementRedemptionPreview = appliedRedemptionEstimate();
@@ -997,6 +1029,80 @@ export default function PosInvoicesPage() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* LENA Wallet — visible when the selected customer holds value */}
+                {selectedCustomer && customerWallet.hasValue && (
+                  <div className="rounded-lg border border-border bg-muted/20 p-2.5 space-y-2">
+                    <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                      <Wallet className="h-3 w-3" /> {t("wallet.title")}
+                    </p>
+
+                    {customerWallet.giftCards.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                          <span>{t("wallet.giftCard")}</span>
+                          <span>{formatOMRAmount(customerWallet.giftCardBalance)} {t("OMR")}</span>
+                        </div>
+                        {customerWallet.giftCards.map((gc) => (
+                          <button
+                            key={gc.entitlementId}
+                            type="button"
+                            onClick={() => gc.code && setGiftCardCode(gc.code)}
+                            disabled={!gc.code}
+                            className="w-full flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-[10px] font-bold text-foreground hover:border-primary/40 transition-all disabled:opacity-50 touch-target"
+                          >
+                            <span className="truncate" dir="ltr">{gc.code}</span>
+                            <span className="shrink-0 text-muted-foreground">{formatOMRAmount(gc.remainingValue)} {t("OMR")}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {applicablePackageSessions.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-muted-foreground">{t("wallet.packageSession")}</p>
+                        {applicablePackageSessions.map((benefit) => {
+                          const session = benefit.packageSession!;
+                          const applied = entitlementRedemptions.some((r) =>
+                            r.entitlementId === session.entitlementId && r.serviceId === session.serviceId);
+                          return (
+                            <div key={`${session.entitlementId}-${session.serviceId}`} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-bold text-foreground truncate">{session.packageName}{session.serviceName ? ` · ${session.serviceName}` : ""}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground">{session.remainingUnits} {t("passport.sessionsLeft")}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => applied
+                                  ? removePackageSession(session.entitlementId, session.serviceId)
+                                  : applyPackageSession(session.entitlementId, session.serviceId)}
+                                disabled={!applied && session.remainingUnits <= 0}
+                                className={clsx(
+                                  "shrink-0 h-8 px-2.5 rounded-md text-[10px] font-bold transition-all touch-target",
+                                  applied ? "bg-success/15 text-success border border-success/20" : "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+                                )}
+                              >
+                                {applied ? t("wallet.used") : t("wallet.use")}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {customerWallet.rewardsPoints > 0 && !useLoyaltyPoints && (
+                      <p className="text-[10px] font-bold text-muted-foreground">
+                        {t("wallet.rewards")}: {customerWallet.rewardsPoints} {t("Points")}
+                      </p>
+                    )}
+
+                    {customerWallet.depositAmount > 0 && (
+                      <p className="text-[10px] font-bold text-muted-foreground">
+                        {t("wallet.deposit")}: {formatOMRAmount(customerWallet.depositAmount)} {t("OMR")}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Employee Select - compact */}
                 <div className="grid grid-cols-2 gap-2">
