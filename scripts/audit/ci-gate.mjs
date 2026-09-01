@@ -17,6 +17,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ARTIFACTS = resolve(ROOT, "docs/database-contract/artifacts");
@@ -86,7 +87,13 @@ for (const f of findings) {
 const after = snapshotArtifacts();
 let stale = false;
 for (const [name, content] of before) {
-  if (after.get(name) !== content) stale = true;
+  const fresh = after.get(name);
+  if (fresh !== content) {
+    stale = true;
+    // Temporary reconciliation aid: print the generated artifact in a compact,
+    // lossless form so the canonical generated files can be committed exactly.
+    console.error(`AUDIT_ARTIFACT_GZIP_BASE64 ${name} ${gzipSync(fresh).toString("base64")}`);
+  }
 }
 if (stale) violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
 
