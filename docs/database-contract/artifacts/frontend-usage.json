@@ -1,5 +1,5 @@
 {
-  "files": 244,
+  "files": 245,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -47,7 +47,39 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": []
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
         },
         {
           "hasStar": true,

@@ -540,7 +540,12 @@ class SupabaseCustomerAdapter implements CustomerRepository {
     try {
       const client = getSupabaseClient();
       const [apptsRes, invsRes] = await Promise.all([
-        client.from('appointments').select('*').eq('customer_id', id).eq('center_id', centerRes.data).order('date_time', { ascending: false }),
+        client.from('appointments').select(`
+          *,
+          customers (id, name, phone),
+          employees (id, name),
+          services (id, name, category_id, price, duration_minutes)
+        `).eq('customer_id', id).eq('center_id', centerRes.data).order('date_time', { ascending: false }),
         client.from('invoices').select('*').eq('customer_id', id).eq('center_id', centerRes.data).eq('status', 'PAID').order('date', { ascending: false })
       ]);
 

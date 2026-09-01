@@ -113,6 +113,37 @@
         {
           "relation": "customers",
           "columns": [
+            "id",
+            "name",
+            "phone"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "id",
+            "name",
+            "category_id",
+            "price",
+            "duration_minutes"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
             "name"
           ],
           "resolvable": true,
