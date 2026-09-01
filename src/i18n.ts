@@ -144,6 +144,7 @@ const resources = {
       "View Reports": "عرض التقارير",
       "Book Appointment": "حجز موعد",
       "Point of Sale": "نقطة البيع",
+      "Action Center": "مركز الإجراءات",
       "Search Services & Products": "ابحث في الخدمات والمنتجات...",
       "All": "الكل",
       "Cart": "السلة",
@@ -1302,6 +1303,23 @@ const resources = {
       "retention.walletSessions": "{{count}} جلسة متبقية",
       "retention.walletGiftCard": "بطاقة هدية بقيمة {{amount}}",
 
+      // Action Center (Slice F — what needs attention now)
+      "actionCenter.subtitle": "ما يحتاج إلى اهتمام الآن — مستمد من بيانات حقيقية فقط",
+      "actionCenter.rebooking": "عميلات مستحقات لإعادة الحجز",
+      "actionCenter.arrivals": "وصول اليوم",
+      "actionCenter.readyForCheckout": "زيارات جاهزة للدفع",
+      "actionCenter.exceptions": "حالات مفتوحة من أيام سابقة",
+      "actionCenter.demand": "مستهلكات معرّضة للنقص من الحجوزات",
+      "actionCenter.expiry": "انتهاء وشيك للمحفظة/الباقات",
+      "actionCenter.allClear": "لا شيء يحتاج إلى اهتمام الآن",
+      "actionCenter.allClearDetail": "لا توجد إجراءات معلّقة بناءً على البيانات الحالية.",
+      "actionCenter.daysAgo": "منذ {{count}} يوم",
+      "actionCenter.daysToExpiry": "ينتهي خلال {{count}} يوم",
+      "actionCenter.needed": "المطلوب",
+      "actionCenter.inStock": "المتوفر",
+      "actionCenter.checkout": "الدفع",
+      "Failed to load action center": "تعذّر تحميل مركز الإجراءات",
+
       // LENA Wallet (Slice C — domain keys)
       "wallet.title": "محفظة لينا",
       "wallet.giftCard": "بطاقة هدية",
@@ -1473,6 +1491,7 @@ const resources = {
 
       // POS
       "Point of Sale": "Point of Sale",
+      "Action Center": "Action Center",
       "Search Services & Products": "Search Services & Products...",
       "All": "All",
       "Cart": "Cart",
@@ -2686,6 +2705,23 @@ const resources = {
       "retention.walletBenefit": "Legitimate wallet benefit",
       "retention.walletSessions": "{{count}} sessions remaining",
       "retention.walletGiftCard": "Gift card balance {{amount}}",
+
+      // Action Center (Slice F — what needs attention now)
+      "actionCenter.subtitle": "What needs attention now — derived from real data only",
+      "actionCenter.rebooking": "Customers due for rebooking",
+      "actionCenter.arrivals": "Today's arrivals",
+      "actionCenter.readyForCheckout": "Visits ready for checkout",
+      "actionCenter.exceptions": "Open states from previous days",
+      "actionCenter.demand": "Consumables at risk from bookings",
+      "actionCenter.expiry": "Wallet / package expiry approaching",
+      "actionCenter.allClear": "Nothing needs attention right now",
+      "actionCenter.allClearDetail": "No pending actions based on current data.",
+      "actionCenter.daysAgo": "{{count}} days ago",
+      "actionCenter.daysToExpiry": "Expires in {{count}} days",
+      "actionCenter.needed": "Needed",
+      "actionCenter.inStock": "In stock",
+      "actionCenter.checkout": "Checkout",
+      "Failed to load action center": "Failed to load the action center",
 
       // LENA Wallet (Slice C — domain keys)
       "wallet.title": "LENA Wallet",

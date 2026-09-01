@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Sparkles,
   Bot,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 
@@ -88,6 +89,7 @@ export const NAV_GROUPS: { id: NavGroupId; titleKey: string }[] = [
 export const NAV_DESTINATIONS: NavDestination[] = [
   // Today — touched every hour.
   { path: "/dashboard", labelKey: "Dashboard", icon: LayoutDashboard, group: "today", searchIcon: "📊" },
+  { path: "/action-center", labelKey: "Action Center", icon: Activity, group: "today", searchIcon: "🎯" },
   { path: "/appointments", labelKey: "Appointments", icon: CalendarDays, group: "today", searchIcon: "📅" },
   { path: "/pos", labelKey: "Point of Sale", icon: Receipt, group: "today", searchIcon: "🛒" },
 
