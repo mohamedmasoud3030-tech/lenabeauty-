@@ -3,7 +3,8 @@ import {
   AppointmentStatus, VisitStage, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
   CustomerEntitlement, EntitlementLedgerEntry, PackageEntitlementUnit,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
-  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
+  AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem,
+  ServiceRecipe, ServiceRecipeItem, InventoryConsumption
 } from "../../domain/entities";
 import { UserRole, SessionState, AuthenticatedSession } from "../../domain/entities/Session";
 import { createMappingError } from "./errors";
@@ -755,6 +756,59 @@ export function mapPayrollRun(row: unknown): PayrollRun {
     notes: typeof row.notes === "string" ? row.notes : undefined,
     createdAt: parseDate(row.created_at, "created_at", "mapPayrollRun"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapPayrollRun"),
+  };
+}
+
+export function mapServiceRecipeItem(row: unknown): ServiceRecipeItem {
+  assertRowObject(row, "mapServiceRecipeItem");
+  if (typeof row.id !== "string" || typeof row.recipe_id !== "string" || typeof row.product_id !== "string" || row.quantity === undefined) {
+    throw createMappingError("mapServiceRecipeItem", "Missing or invalid required fields (id, recipe_id, product_id, quantity)");
+  }
+  return {
+    id: row.id,
+    centerId: typeof row.center_id === "string" ? row.center_id : "",
+    recipeId: row.recipe_id,
+    productId: row.product_id,
+    quantity: Number(row.quantity),
+    unit: typeof row.unit === "string" ? row.unit : undefined,
+    estimatedCost: row.estimated_cost !== undefined && row.estimated_cost !== null ? Number(row.estimated_cost) : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapServiceRecipeItem"),
+  };
+}
+
+export function mapServiceRecipe(row: unknown): ServiceRecipe {
+  assertRowObject(row, "mapServiceRecipe");
+  if (typeof row.id !== "string" || typeof row.center_id !== "string" || typeof row.service_id !== "string") {
+    throw createMappingError("mapServiceRecipe", "Missing or invalid required fields (id, center_id, service_id)");
+  }
+  const itemsRelation = Array.isArray(row.service_recipe_items) ? row.service_recipe_items : undefined;
+  return {
+    id: row.id,
+    centerId: row.center_id,
+    serviceId: row.service_id,
+    isActive: typeof row.is_active === "boolean" ? row.is_active : true,
+    items: itemsRelation ? itemsRelation.map(mapServiceRecipeItem) : undefined,
+    createdAt: parseDate(row.created_at, "created_at", "mapServiceRecipe"),
+    updatedAt: parseDate(row.updated_at, "updated_at", "mapServiceRecipe"),
+  };
+}
+
+export function mapInventoryConsumption(row: unknown): InventoryConsumption {
+  assertRowObject(row, "mapInventoryConsumption");
+  if (typeof row.id !== "string" || typeof row.invoice_id !== "string" || typeof row.product_id !== "string" || row.quantity === undefined) {
+    throw createMappingError("mapInventoryConsumption", "Missing or invalid required fields (id, invoice_id, product_id, quantity)");
+  }
+  return {
+    id: row.id,
+    centerId: typeof row.center_id === "string" ? row.center_id : "",
+    invoiceId: row.invoice_id,
+    appointmentId: typeof row.appointment_id === "string" ? row.appointment_id : undefined,
+    serviceId: typeof row.service_id === "string" ? row.service_id : "",
+    productId: row.product_id,
+    quantity: Number(row.quantity),
+    unit: typeof row.unit === "string" ? row.unit : undefined,
+    unitCost: Number(row.unit_cost) || 0,
+    consumedAt: parseDate(row.consumed_at, "consumed_at", "mapInventoryConsumption"),
   };
 }
 

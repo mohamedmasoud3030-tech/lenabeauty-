@@ -15,8 +15,8 @@
       "grants": 1325
     },
     "frontend": {
-      "tables": 27,
-      "rpc": 32,
+      "tables": 29,
+      "rpc": 33,
       "storage": 1
     },
     "findings_by_severity": {

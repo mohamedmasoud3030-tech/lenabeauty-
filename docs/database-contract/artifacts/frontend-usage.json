@@ -1,5 +1,5 @@
 {
-  "files": 245,
+  "files": 246,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -776,6 +776,24 @@
       ]
     },
     {
+      "table": "inventory_consumptions",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        }
+      ],
+      "filters": [
+        "center_id",
+        "consumed_at"
+      ],
+      "single": []
+    },
+    {
       "table": "invoice_items",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1221,6 +1239,35 @@
       "single": []
     },
     {
+      "table": "service_recipes",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "service_recipe_items",
+              "join": "default",
+              "columns": [
+                "*"
+              ],
+              "embeds": []
+            }
+          ]
+        }
+      ],
+      "filters": [
+        "center_id",
+        "service_id"
+      ],
+      "single": [
+        "maybeSingle"
+      ]
+    },
+    {
       "table": "services",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1618,6 +1665,17 @@
       "args": [
         "p_center_id",
         "p_customer_id"
+      ]
+    },
+    {
+      "name": "save_service_recipe_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_items",
+        "p_service_id"
       ]
     },
     {

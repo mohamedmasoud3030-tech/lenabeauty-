@@ -3,7 +3,8 @@ import {
   Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
   CustomerEntitlement, EntitlementLedgerEntry,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead,
-  AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem, VisitStage
+  AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem, VisitStage,
+  ServiceRecipe, InventoryConsumption
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -51,6 +52,25 @@ export interface ServiceRepository {
   create(data: Partial<Service>): Promise<Result<Service, DomainError>>;
   update(id: string, data: Partial<Service>): Promise<Result<Service, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
+}
+
+/** A consumable line a recipe declares (the UI edits these, the RPC validates). */
+export interface RecipeItemInput {
+  productId: string;
+  /** Consumed quantity (units/ml/…); must be > 0. */
+  quantity: number;
+  unit?: string;
+  /** Optional per-line estimated cost (3-decimal OMR, >= 0). */
+  estimatedCost?: number;
+}
+
+export interface ServiceRecipeRepository {
+  /** The recipe for one service (null when none exists yet). */
+  getForService(serviceId: string): Promise<Result<ServiceRecipe | null, DomainError>>;
+  /** Atomically replace a service's recipe items (server-validated). */
+  saveForService(serviceId: string, items: RecipeItemInput[]): Promise<Result<ServiceRecipe, DomainError>>;
+  /** Recent immutable consumption records (server-written at checkout). */
+  listConsumptions(input?: { limit?: number }): Promise<Result<InventoryConsumption[], DomainError>>;
 }
 
 export interface AppointmentRepository {

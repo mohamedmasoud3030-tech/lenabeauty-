@@ -2,6 +2,7 @@ import { createRepositoryBundle } from "../../infrastructure/createRepositoryBun
 import { Result, BookingInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance, VisitStage } from "../../domain/entities";
 import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
+import { RecipeItemInput } from "../../domain/ports/repositories";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
 type RepositoryBundle = ReturnType<typeof createRepositoryBundle>;
@@ -49,6 +50,11 @@ export const useCases = {
     create: async (data: Partial<Service>) => getRepositoryBundle().serviceAdapter.create(data),
     update: async (id: string, data: Partial<Service>) => getRepositoryBundle().serviceAdapter.update(id, data),
     delete: async (id: string) => getRepositoryBundle().serviceAdapter.delete(id),
+  },
+  recipes: {
+    getForService: (serviceId: string) => getRepositoryBundle().serviceRecipeAdapter.getForService(serviceId),
+    saveForService: (serviceId: string, items: RecipeItemInput[]) => getRepositoryBundle().serviceRecipeAdapter.saveForService(serviceId, items),
+    listConsumptions: (input?: { limit?: number }) => getRepositoryBundle().serviceRecipeAdapter.listConsumptions(input),
   },
   customers: {
     list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),

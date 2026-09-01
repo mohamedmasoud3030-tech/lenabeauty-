@@ -5,12 +5,14 @@ import {
   BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository,
   EntitlementRepository,
   CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository,
-  AttendanceRepository, AdvanceRepository, PayrollRepository
+  AttendanceRepository, AdvanceRepository, PayrollRepository,
+  ServiceRecipeRepository, RecipeItemInput
 } from "../../domain/ports/repositories";
 import { 
   Customer, Employee, Service, Appointment, AppointmentStatus, VisitStage, Product, Expense, Invoice,
   CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem,
-  CustomerEntitlement, EntitlementLedgerEntry
+  CustomerEntitlement, EntitlementLedgerEntry,
+  ServiceRecipe, InventoryConsumption
 } from "../../domain/entities";
 import { SessionState } from "../../domain/entities/Session";
 import { 
@@ -23,7 +25,8 @@ import {
   mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage,
   mapCustomerEntitlement, mapEntitlementLedgerEntry,
   mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead,
-  mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem
+  mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem,
+  mapServiceRecipe, mapInventoryConsumption
 } from "./mappers";
 import { tenantContext, requireConfiguredCenterId } from "../tenantContext";
 import { passwordResetRedirectUrl } from "../../shared/auth/passwordResetRedirect";
@@ -799,6 +802,73 @@ class SupabaseServiceAdapter implements ServiceRepository {
       return { ok: true, data: undefined };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Service.delete", (e as Error).message) };
+    }
+  }
+}
+
+class SupabaseServiceRecipeAdapter implements ServiceRecipeRepository {
+  async getForService(serviceId: string): Promise<Result<ServiceRecipe | null, DomainError>> {
+    const centerRes = getCenterIdFor("ServiceRecipe.getForService");
+    if (!centerRes.ok) return centerRes as any;
+    if (!serviceId) return { ok: false, error: createQueryError("ServiceRecipe.getForService", "Service id is required") };
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from("service_recipes")
+        .select("*, service_recipe_items(*)")
+        .eq("service_id", serviceId)
+        .eq("center_id", centerRes.data)
+        .maybeSingle();
+
+      if (error) return { ok: false, error: createQueryError("ServiceRecipe.getForService", error.message) };
+      return { ok: true, data: data ? mapServiceRecipe(data) : null };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("ServiceRecipe.getForService", (e as Error).message) };
+    }
+  }
+
+  async saveForService(serviceId: string, items: RecipeItemInput[]): Promise<Result<ServiceRecipe, DomainError>> {
+    const centerRes = getCenterIdFor("ServiceRecipe.saveForService");
+    if (!centerRes.ok) return centerRes as any;
+    if (!serviceId) return { ok: false, error: createQueryError("ServiceRecipe.saveForService", "Service id is required") };
+    try {
+      const payloadItems = (items ?? []).map((it) => ({
+        productId: it.productId,
+        quantity: it.quantity,
+        unit: it.unit ?? null,
+        estimatedCost: it.estimatedCost ?? 0,
+      }));
+
+      const { data, error } = await getSupabaseClient().rpc("save_service_recipe_v1", {
+        p_center_id: centerRes.data,
+        p_service_id: serviceId,
+        p_items: payloadItems as unknown as Json,
+      });
+
+      if (error) return { ok: false, error: createQueryError("ServiceRecipe.saveForService", error.message) };
+
+      // Re-read the saved recipe so the UI reflects the authoritative rows.
+      return this.getForService(serviceId) as Promise<Result<ServiceRecipe, DomainError>>;
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("ServiceRecipe.saveForService", (e as Error).message) };
+    }
+  }
+
+  async listConsumptions(input?: { limit?: number }): Promise<Result<InventoryConsumption[], DomainError>> {
+    const centerRes = getCenterIdFor("ServiceRecipe.listConsumptions");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const limit = Math.min(50, Math.max(1, input?.limit ?? 10));
+      const { data, error } = await getSupabaseClient()
+        .from("inventory_consumptions")
+        .select("*")
+        .eq("center_id", centerRes.data)
+        .order("consumed_at", { ascending: false })
+        .limit(limit);
+
+      if (error) return { ok: false, error: createQueryError("ServiceRecipe.listConsumptions", error.message) };
+      return { ok: true, data: (data ?? []).map(mapInventoryConsumption) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("ServiceRecipe.listConsumptions", (e as Error).message) };
     }
   }
 }
@@ -3472,5 +3542,6 @@ export {
   SupabaseBookingAdapter,
   SupabaseAttendanceAdapter,
   SupabaseAdvanceAdapter,
-  SupabasePayrollAdapter
+  SupabasePayrollAdapter,
+  SupabaseServiceRecipeAdapter
 };
