@@ -23,7 +23,13 @@ import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { InvoicePrintData } from "../application/dto";
 import { Modal } from "../shared/components/Modal";
 import { composeBeautyPassport } from "../domain/passport";
-import { retentionVisitsFromHistory, getNextBestCustomerAction } from "../domain/retention";
+import {
+  retentionVisitsFromHistory,
+  getNextBestCustomerAction,
+  getRetentionStatus,
+  getCustomerVisitPattern,
+  RetentionStatus,
+} from "../domain/retention";
 import { buildCustomerWallet } from "../domain/wallet";
 import { formatSalonDate } from "../shared/dateTime";
 import { visitStageI18nKey } from "../shared/visitStage";
@@ -58,6 +64,19 @@ function passportStageClass(stage: string): string {
     case "READY_FOR_CHECKOUT": return "bg-info/10 text-info border-info/20";
     case "ARRIVED": return "bg-primary/10 text-primary border-primary/20";
     case "CONFIRMED": return "bg-info/10 text-info border-info/20";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
+}
+
+/** Semantic badge classes for the deterministic retention status. */
+function retentionStatusClass(status: RetentionStatus): string {
+  switch (status) {
+    case "ACTIVE": return "bg-success/10 text-success border-success/20";
+    case "NEW":
+    case "INSUFFICIENT_HISTORY": return "bg-info/10 text-info border-info/20";
+    case "DUE_FOR_REBOOK": return "bg-primary/10 text-primary border-primary/20";
+    case "DORMANT": return "bg-warning/10 text-warning border-warning/20";
+    case "WINBACK": return "bg-destructive/10 text-destructive border-destructive/20";
     default: return "bg-muted text-muted-foreground border-border";
   }
 }
@@ -166,12 +185,32 @@ export default function CustomersPage() {
     });
     const retentionVisits = retentionVisitsFromHistory(history);
     const retentionAction = getNextBestCustomerAction(retentionVisits, new Date());
+    const retentionStatus = getRetentionStatus(retentionVisits, new Date());
+    const visitPattern = getCustomerVisitPattern(retentionVisits);
     const wallet = buildCustomerWallet({
       entitlements,
       loyaltyPoints: profileCustomer?.loyaltyPoints ?? 0,
       depositAmount: nextAppointment?.depositAmount ?? 0,
     });
-    return { passport, nextAppointment, retentionAction, wallet };
+    // A legitimate wallet benefit (remaining sessions / gift-card value) is an
+    // operational rebooking reason derived from real instruments — never a guess.
+    const walletBenefit =
+      wallet.packages.length > 0 || wallet.giftCardBalance > 0
+        ? {
+            sessionCount: wallet.packages.reduce((sum, p) => sum + p.remainingUnits, 0),
+            giftCardBalance: wallet.giftCardBalance,
+          }
+        : null;
+    return {
+      passport,
+      nextAppointment,
+      retentionAction,
+      retentionStatus,
+      visitPattern,
+      wallet,
+      walletBenefit,
+      hasFutureBooking: !!nextAppointment,
+    };
   }, [history, serviceFiles, entitlements, profileCustomer]);
 
   async function openHistory(customer: Customer) {
@@ -636,19 +675,68 @@ export default function CustomersPage() {
                     <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                       <Sparkles className="h-3.5 w-3.5" /> {t("passport.retention")}
                     </h4>
-                    <div className="mt-3">
-                      <p className="text-sm font-bold text-foreground">{t(passportView.retentionAction.titleKey)}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t(passportView.retentionAction.detailKey)}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {passportView.retentionAction.daysSinceLastVisit !== null && (
-                          <span className="text-[10px] font-bold text-muted-foreground">{t("passport.daysSinceLastVisit", { count: passportView.retentionAction.daysSinceLastVisit })}</span>
-                        )}
-                        {passportView.retentionAction.rebookingWindow && (
-                          <span className="text-[10px] font-bold text-muted-foreground">
-                            {t("passport.rebookingWindow", { min: passportView.retentionAction.rebookingWindow.minDays, max: passportView.retentionAction.rebookingWindow.maxDays })}
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-lg border px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${retentionStatusClass(passportView.retentionStatus.status)}`}>
+                          {t(`retention.status.${passportView.retentionStatus.status}`)}
+                        </span>
+                        {passportView.hasFutureBooking && (
+                          <span className="rounded-lg border border-success/20 bg-success/10 px-2 py-1 text-[9px] font-bold text-success">
+                            {t("retention.hasFutureBooking")}
                           </span>
                         )}
                       </div>
+
+                      <p className="text-sm font-bold text-foreground">{t(passportView.retentionAction.titleKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t(passportView.retentionAction.detailKey)}</p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.lastVisit")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.passport.summary.lastVisitISO
+                              ? formatSalonDate(passportView.passport.summary.lastVisitISO, i18n.language)
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.daysSince")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.retentionStatus.daysSinceLastVisit !== null
+                              ? passportView.retentionStatus.daysSinceLastVisit
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.normalInterval")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.visitPattern.averageDaysBetweenVisits !== null
+                              ? t("retention.daysValue", { count: passportView.visitPattern.averageDaysBetweenVisits })
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.rebookingWindow")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.retentionStatus.rebookingWindow
+                              ? t("retention.daysRange", { min: passportView.retentionStatus.rebookingWindow.minDays, max: passportView.retentionStatus.rebookingWindow.maxDays })
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {passportView.walletBenefit && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2">
+                          <p className="text-[10px] font-bold text-primary">{t("retention.walletBenefit")}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {passportView.walletBenefit.sessionCount > 0 &&
+                              t("retention.walletSessions", { count: passportView.walletBenefit.sessionCount })}
+                            {passportView.walletBenefit.sessionCount > 0 && passportView.walletBenefit.giftCardBalance > 0 && " · "}
+                            {passportView.walletBenefit.giftCardBalance > 0 &&
+                              t("retention.walletGiftCard", { amount: formatOMRAmount(passportView.walletBenefit.giftCardBalance) })}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </section>
                 </div>
