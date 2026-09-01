@@ -70,6 +70,14 @@ describe("thermal invoice print layout", () => {
     expect(document.querySelector("#invoice-print-container")).toHaveAttribute("dir", "rtl");
   });
 
+  it("keeps the center identity and adds a separate Lena product signature at the bottom", () => {
+    render(<InvoicePrintLayout data={receipt} />);
+    const signature = screen.getByLabelText("Lena Beauty");
+    expect(signature).toHaveTextContent("LENA · BEAUTY");
+    expect(signature.querySelector('img[src="/lena-mark.svg"]')).not.toBeNull();
+    expect(screen.getAllByText("لينا بيوتي").length).toBeGreaterThan(0);
+  });
+
   it("prints the current receipt without opening a popup", () => {
     render(<InvoicePrintLayout data={receipt} />);
     fireEvent.click(screen.getByRole("button", { name: /طباعة الفاتورة/ }));

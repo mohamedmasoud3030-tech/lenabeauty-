@@ -16,10 +16,10 @@ import i18n from "../i18n";
 /**
  * First-impression acceptance suite.
  *
- * Encodes the measurable criteria in FIRST_IMPRESSION_REVIEW.md §7: a
- * first-time user must be able to explain what the product is, who it is for,
- * where the single primary action is, and what happens next — and must never
- * be shown fabricated proof, an invented metric, or a hidden environment.
+ * The login is intentionally product-facing rather than implementation-facing:
+ * it must communicate Lena Beauty, the shipped operating areas, one clear sign
+ * in action, and preserve RTL/mobile accessibility without exposing developer
+ * or account-provisioning copy in the visual surface.
  */
 
 function bootAuthMocks() {
@@ -65,31 +65,32 @@ afterAll(async () => {
   await i18n.changeLanguage("ar");
 });
 
-/* ── A. Can a first-time user explain the product? ───────────────────────── */
+/* ── A. Can a first-time user identify the product? ──────────────────────── */
 
-describe("A — the pre-auth screen explains what the product is", () => {
+describe("A — the pre-auth screen presents Lena Beauty as a finished product", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     bootAuthMocks();
     await i18n.changeLanguage("ar");
   });
 
-  it("A1 — names the product category and the unit of business", async () => {
-    renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("The daily operations system for one beauty center.")),
-      ).toBeInTheDocument(),
-    );
+  it("A1 — carries the canonical Lena product mark and name", async () => {
+    const { container } = renderLogin();
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
+    expect(container.querySelector('img[src="/lena-mark.svg"]')).not.toBeNull();
+    expect(container.textContent).toContain("LENA");
+    expect(container.textContent).toContain("BEAUTY");
   });
 
-  it("A2 — names the concrete capabilities that actually ship", async () => {
+  it("A2 — names the real operating areas without technical qualification copy", async () => {
     renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("Appointments, point of sale, customers, stock and staff — in one place.")),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
+    const visible = document.body.textContent ?? "";
+    for (const label of ["المواعيد", "نقطة البيع", "العملاء", "المخزون", "الموظفون", "التقارير"]) {
+      expect(visible).toContain(label);
+    }
+    expect(visible).not.toContain(i18n.t("For the center's team. This is not a customer booking site."));
+    expect(visible).not.toContain(i18n.t("Accounts are created by your center administrator. There is no public sign-up."));
   });
 
   it("A3 — promises no deny-by-default capability before sign-in", () => {
@@ -98,24 +99,40 @@ describe("A — the pre-auth screen explains what the product is", () => {
       expect(login, `login must not advertise "${forbidden}"`).not.toContain(forbidden);
     }
   });
+
+  it("A4 — visibly connects Lena Beauty to LENA Digital House without turning it into support", async () => {
+    renderLogin();
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
+
+    expect(screen.getByText("أحد منتجات LENA DIGITAL HOUSE")).toBeInTheDocument();
+    const parentLink = screen.getByRole("link", { name: /LENA Digital House/i });
+    expect(parentLink).toHaveAttribute("target", "_blank");
+    expect(parentLink.getAttribute("href")).toContain("from=lenabeauty");
+    expect(parentLink.getAttribute("href")).not.toContain("/support");
+  });
 });
 
-/* ── B. Can they identify who it is for? ─────────────────────────────────── */
+/* ── B. Does it keep presentation clean? ─────────────────────────────────── */
 
-describe("B — the pre-auth screen identifies its audience", () => {
+describe("B — the pre-auth surface contains no developer-facing explanation", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     bootAuthMocks();
-    await i18n.changeLanguage("ar");
+    await i18n.changeLanguage("en");
   });
 
-  it("B1/B2 — states it is for the center's team and not a customer booking site", async () => {
+  it("B1 — omits team-workspace, public-signup and database explanations", async () => {
     renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("For the center's team. This is not a customer booking site.")),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
+    const visible = document.body.textContent ?? "";
+    for (const unwanted of [
+      "This is not a customer booking site",
+      "There is no public sign-up",
+      "visible only to its team",
+      "registered by your administrator",
+    ]) {
+      expect(visible).not.toContain(unwanted);
+    }
   });
 });
 
@@ -140,67 +157,24 @@ describe("C — exactly one primary action, using the right credential", () => {
     expect(field).toHaveAttribute("type", "email");
     expect(field).toHaveAttribute("autocomplete", "email");
     expect(field).toHaveAttribute("inputmode", "email");
+    expect(field).toHaveAttribute("placeholder", "name@yourcenter.com");
 
-    // The adapter authenticates with an email; the UI must not ask for a username.
     const adapter = readFileSync(resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"), "utf8");
     expect(adapter).toContain("signInWithPassword({");
     expect(adapter).toContain("email: username");
   });
 
-  it("C2b — the field explains the exact credential format expected", async () => {
-    renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("Use the work email your administrator registered for you.")),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it("C3 — no competing pre-auth call to action", async () => {
+  it("C3 — the only initial pre-auth link is the secondary parent-brand endorsement", async () => {
     renderLogin();
     await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
-    // Language and theme controls are preferences, not CTAs; no navigation
-    // button may compete with signing in.
-    expect(screen.queryByRole("link")).toBeNull();
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent("LENA Digital House");
+    expect(links[0]).toHaveAttribute("target", "_blank");
   });
 });
 
-/* ── D. Do they understand what happens next? ────────────────────────────── */
-
-describe("D — the user knows what happens next", () => {
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-    bootAuthMocks();
-    await i18n.changeLanguage("ar");
-  });
-
-  it("D1 — states where signing in lands the user", async () => {
-    renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("After signing in you land on today's work: appointments, sales and stock alerts.")),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it("D2 — a user without an account is told how accounts are issued", async () => {
-    renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("Accounts are created by your center administrator. There is no public sign-up.")),
-      ).toBeInTheDocument(),
-    );
-  });
-
-  it("D2b — privacy is reassured at the moment credentials are requested", async () => {
-    renderLogin();
-    await waitFor(() =>
-      expect(
-        screen.getByText(i18n.t("Your data stays in your center's database and is visible only to its team.")),
-      ).toBeInTheDocument(),
-    );
-  });
-});
+/* ── D. First-run guidance after authentication ──────────────────────────── */
 
 describe("D — first-run guidance on an empty center", () => {
   beforeEach(async () => {
@@ -229,7 +203,6 @@ describe("D — first-run guidance on an empty center", () => {
 
     const steps = await screen.findAllByRole("listitem");
     expect(steps).toHaveLength(5);
-    // Dependency order is the product truth: nothing sells before services.
     expect(steps[0]).toHaveTextContent(i18n.t("Add your services"));
     expect(steps[4]).toHaveTextContent(i18n.t("Record your first sale"));
   });
@@ -316,8 +289,6 @@ describe("E — nothing fabricated is presented as evidence", () => {
   it("E5 — index.html declares a description and uses brand tokens only", () => {
     const html = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
     expect(html).toMatch(/<meta\s+name="description"/);
-    // The former navy splash, off-brand gold theme-color and emoji placeholder
-    // all made the product look like an unfinished template.
     expect(html).not.toContain("#1e293b");
     expect(html).not.toContain("#0f172a");
     expect(html).not.toContain("#caa348");
@@ -336,6 +307,16 @@ describe("F — new surfaces are RTL-safe and touch-safe", () => {
     "src/pages/LoginPage.tsx",
   ];
 
+  it("F1 — every interactive control in the setup guide meets the 44px minimum", () => {
+    const guide = readFileSync(resolve(process.cwd(), "src/shared/components/GettingStartedCard.tsx"), "utf8");
+    const buttons = [...guide.matchAll(/<button\b/g)];
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const match of buttons) {
+      const declaration = guide.slice(match.index!, match.index! + 600);
+      expect(declaration, "button below 44px").toMatch(/\b(?:min-h-11|h-11|touch-target)\b/);
+    }
+  });
+
   it("F2 — uses logical direction properties only", () => {
     const physical = /\b(?:ml|mr|pl|pr)-\d|\btext-(?:left|right)\b|\b(?:left|right)-\d/;
     for (const file of [...newSurfaces, "src/ui/layout/Layout.tsx"]) {
@@ -344,28 +325,19 @@ describe("F — new surfaces are RTL-safe and touch-safe", () => {
     }
   });
 
-  it("F1 — every interactive control in the setup guide meets the 44px minimum", () => {
-    const guide = readFileSync(resolve(process.cwd(), "src/shared/components/GettingStartedCard.tsx"), "utf8");
-    const buttons = [...guide.matchAll(/<button\b/g)];
-    expect(buttons.length).toBeGreaterThan(0);
-    for (const match of buttons) {
-      // An arrow function inside a prop makes a non-greedy "up to >" match
-      // unreliable, so inspect the declaration window after the tag opens.
-      const declaration = guide.slice(match.index!, match.index! + 600);
-      expect(declaration, "button below 44px").toMatch(/\b(?:min-h-11|h-11|touch-target)\b/);
-    }
+  it("F3 — the phone login keeps menu, language and theme as 44px icon controls", () => {
+    const login = readFileSync(resolve(process.cwd(), "src/pages/LoginPage.tsx"), "utf8");
+    expect(login).toContain("Mobile-only: three compact controls — LENA menu, language and theme");
+    expect(login).toContain("onClick={toggleLanguage}");
+    expect(login).toContain("onClick={toggleTheme}");
+    expect(login).toContain('"inline-flex h-11 w-11 shrink-0');
+    expect(login).toContain("<Menu");
+    expect(login).toContain("<Globe");
   });
 
-  it("F3 — every new key resolves in both Arabic and English", async () => {
+  it("F4 — every retained translation contract resolves in Arabic and English", async () => {
     const keys = [
-      "The daily operations system for one beauty center.",
-      "Appointments, point of sale, customers, stock and staff — in one place.",
-      "For the center's team. This is not a customer booking site.",
-      "After signing in you land on today's work: appointments, sales and stock alerts.",
-      "Accounts are created by your center administrator. There is no public sign-up.",
-      "Your data stays in your center's database and is visible only to its team.",
       "Work email",
-      "Use the work email your administrator registered for you.",
       "Trial environment",
       "Development environment",
       "Trial environment — data here is for testing",
@@ -401,7 +373,6 @@ describe("F — new surfaces are RTL-safe and touch-safe", () => {
       }
     }
 
-    // Arabic must be a real translation, not the English key echoed back.
     await i18n.changeLanguage("ar");
     for (const key of keys) {
       expect(i18n.t(key), `AR resolves to the raw key: ${key}`).not.toBe(key);

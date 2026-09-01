@@ -49,13 +49,14 @@ describe("Login page smoke", () => {
     );
 
     // The credential is an email: SupabaseAuthAdapter.login() calls
-    // signInWithPassword({ email: username }), so the field must ask for the
-    // format the server actually accepts.
-    await waitFor(() => expect(screen.getByPlaceholderText(i18n.t("Work email"))).toBeInTheDocument());
-    expect(screen.getByPlaceholderText(i18n.t("Password"))).toBeInTheDocument();
+    // signInWithPassword({ email: username }), so the accessible label must ask
+    // for the format the server actually accepts. The visual placeholder is a
+    // realistic example address and is intentionally language-neutral.
+    await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
+    expect(screen.getByLabelText(i18n.t("Password"))).toBeInTheDocument();
     expect(screen.getByText(i18n.t("Sign In"))).toBeInTheDocument();
     // The form must be usable (not disabled) even after a failed bootstrap.
-    expect(screen.getByPlaceholderText(i18n.t("Work email"))).not.toBeDisabled();
+    expect(screen.getByLabelText(i18n.t("Work email"))).not.toBeDisabled();
     expect(screen.getByLabelText(i18n.t("Work email"))).toHaveAttribute("autocomplete", "email");
     expect(screen.getByLabelText(i18n.t("Work email"))).toHaveAttribute("type", "email");
     expect(screen.getByLabelText(i18n.t("Password"))).toHaveAttribute("autocomplete", "current-password");

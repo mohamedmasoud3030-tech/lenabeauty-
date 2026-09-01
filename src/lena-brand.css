@@ -1,0 +1,45 @@
+/* Lena product-brand signature.
+ * Keeps the new rose-gold / lilac emblem consistent in printable output while
+ * remaining separate from each center's configurable receipt logo.
+ */
+
+#invoice-print-container {
+  position: relative;
+}
+
+#invoice-print-container .lena-receipt-signature {
+  display: flex;
+  width: 72%;
+  margin: 12px auto 0;
+  padding-top: 7px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-top: 1px solid rgb(169 122 72 / 0.25);
+  color: rgb(109 76 121 / 0.68);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-align: center;
+}
+
+#invoice-print-container .lena-receipt-signature img {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+@media print {
+  #invoice-print-container .lena-receipt-signature {
+    border-top-color: rgb(0 0 0 / 0.2);
+    color: rgb(0 0 0 / 0.58);
+    opacity: 0.78;
+  }
+
+  #invoice-print-container .lena-receipt-signature img {
+    filter: grayscale(1);
+  }
+}

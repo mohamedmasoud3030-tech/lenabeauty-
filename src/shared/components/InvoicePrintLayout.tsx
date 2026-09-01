@@ -224,7 +224,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Center-specific footer */}
         <div className="text-center text-[8px] space-y-1 mt-2">
           <p className="uppercase tracking-wider font-bold">
             {t("Thank you for your visit")}
@@ -234,6 +234,12 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
             {t("Invoice ID")}: {invoice.id.slice(0, 12)}
           </p>
           <p className="text-[7px] opacity-50">{footerText}</p>
+        </div>
+
+        {/* Product signature — deliberately separate from the center's own logo. */}
+        <div className="lena-receipt-signature" aria-label="Lena Beauty">
+          <img src="/lena-mark.svg" alt="" aria-hidden="true" />
+          <span>LENA · BEAUTY</span>
         </div>
 
         {/* Print Styles */}
