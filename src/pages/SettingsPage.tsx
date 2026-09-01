@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
-import { unwrap } from "../shared/hooks/useApplication";
+import { formatError, unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { requiredText, percentField, collectIssues, issuesToMap } from "../domain/validation";
 import { motion, AnimatePresence } from "motion/react";
@@ -53,7 +53,7 @@ export default function SettingsPage() {
       setVatText(String(loaded.taxRate ?? 0));
     } catch (error) {
       console.error("Settings load failed", error);
-      setLoadError(t("An unexpected error occurred. Please try again."));
+      setLoadError(formatError(error));
       setSettings(null);
     }
   }
@@ -98,7 +98,7 @@ export default function SettingsPage() {
       showToast("success", t("Success"), t("Settings saved successfully"));
     } catch (error) {
       console.error("Settings save failed", error);
-      showToast("error", t("Error"), t("An unexpected error occurred. Please try again."));
+      showToast("error", t("Error"), formatError(error));
     } finally {
       setBusy(false);
     }
@@ -143,7 +143,7 @@ export default function SettingsPage() {
     { id: "backup", label: t("Data Export"), icon: Database, desc: t("Export operational data safely") },
     { id: "branding", label: t("Branding"), icon: Palette, desc: t("Manage salon visual identity") },
     { id: "notifications", label: t("Notifications"), icon: Bell, desc: t("Appointment reminders and messages") },
-    { id: "payments", label: t("Booking Deposit"), icon: CreditCard, desc: t("Booking deposit configuration") },
+    { id: "payments", label: t("Payment Gateway"), icon: CreditCard, desc: t("Configure online deposit collection for booking confirmations") },
   ];
 
   return (
@@ -369,6 +369,7 @@ export default function SettingsPage() {
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                         {t("Downloads a partial operational dataset. It is not a database backup and cannot restore financial records.")}
                       </p>
+                      <p className="mt-3 text-xs font-bold text-destructive">{t("Restore is unavailable")}</p>
                     </div>
                   </div>
                   <button
