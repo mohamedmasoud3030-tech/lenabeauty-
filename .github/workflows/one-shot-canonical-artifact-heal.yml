@@ -1,4 +1,4 @@
-name: One-shot canonical artifact self-heal
+name: One-shot canonical gate diagnostic
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  heal:
+  diagnose:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -24,28 +24,30 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Run canonical audit gate and regenerate artifacts
+      - name: Capture canonical audit gate output
         shell: bash
         run: |
           set +e
-          npm run audit:gate
+          npm run audit:gate > /tmp/canonical-gate.log 2>&1
           gate_status=$?
           set -e
-          echo "canonical_gate_status=${gate_status}" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          git status --short docs/database-contract/artifacts >> "$GITHUB_STEP_SUMMARY" || true
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "canonical_gate_status=${gate_status}"
+            echo
+            echo "--- artifact status ---"
+            git status --short docs/database-contract/artifacts || true
+            echo
+            echo "--- canonical gate output ---"
+            tail -n 300 /tmp/canonical-gate.log
+          } > canonical-gate-diagnostic.txt
+          cat canonical-gate-diagnostic.txt
 
-      - name: Commit canonical generated artifact deltas
+      - name: Commit temporary diagnostic
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/database-contract/artifacts; then
-            echo "No generated artifact delta remains."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/database-contract/artifacts/*.json
-          git commit -m "chore: align audit artifacts with canonical gate"
+          git add canonical-gate-diagnostic.txt
+          git commit -m "ops: capture canonical gate diagnostic"
           git push origin "HEAD:${GITHUB_REF_NAME}"
