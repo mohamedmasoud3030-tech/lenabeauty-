@@ -151,6 +151,9 @@ export type Database = {
           "rescheduled_at": string | null
           "booking_source": string
           "duration_minutes_snapshot": number | null
+          "visit_stage": Database["public"]["Enums"]["visit_stage"] | null
+          "started_at": string | null
+          "completed_at": string | null
         }
         Insert: {
           "id"?: string
@@ -174,6 +177,9 @@ export type Database = {
           "rescheduled_at"?: string | null
           "booking_source"?: string
           "duration_minutes_snapshot"?: number | null
+          "visit_stage"?: Database["public"]["Enums"]["visit_stage"] | null
+          "started_at"?: string | null
+          "completed_at"?: string | null
         }
         Update: {
           "id"?: string
@@ -197,6 +203,9 @@ export type Database = {
           "rescheduled_at"?: string | null
           "booking_source"?: string
           "duration_minutes_snapshot"?: number | null
+          "visit_stage"?: Database["public"]["Enums"]["visit_stage"] | null
+          "started_at"?: string | null
+          "completed_at"?: string | null
         }
         Relationships: [
           {
@@ -1127,6 +1136,81 @@ export type Database = {
           }
         ]
       }
+      "inventory_consumptions": {
+        Row: {
+          "id": string
+          "center_id": string
+          "invoice_id": string
+          "appointment_id": string | null
+          "service_id": string | null
+          "product_id": string | null
+          "quantity": number
+          "unit": string | null
+          "unit_cost": number
+          "consumed_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "invoice_id": string
+          "appointment_id"?: string | null
+          "service_id"?: string | null
+          "product_id"?: string | null
+          "quantity": number
+          "unit"?: string | null
+          "unit_cost"?: number
+          "consumed_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "invoice_id"?: string
+          "appointment_id"?: string | null
+          "service_id"?: string | null
+          "product_id"?: string | null
+          "quantity"?: number
+          "unit"?: string | null
+          "unit_cost"?: number
+          "consumed_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_consumptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_consumptions_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_consumptions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_consumptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_consumptions_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "invoice_items": {
         Row: {
           "id": string
@@ -1229,6 +1313,7 @@ export type Database = {
           "amount_paid": number
           "status": string
           "entitlement_redemption": number
+          "appointment_id": string | null
         }
         Insert: {
           "id"?: string
@@ -1253,6 +1338,7 @@ export type Database = {
           "amount_paid"?: number
           "status"?: string
           "entitlement_redemption"?: number
+          "appointment_id"?: string | null
         }
         Update: {
           "id"?: string
@@ -1277,8 +1363,16 @@ export type Database = {
           "amount_paid"?: number
           "status"?: string
           "entitlement_redemption"?: number
+          "appointment_id"?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_center_id_fkey"
             columns: ["center_id"]
@@ -1927,6 +2021,103 @@ export type Database = {
           }
         ]
       }
+      "service_recipe_items": {
+        Row: {
+          "id": string
+          "center_id": string
+          "recipe_id": string
+          "product_id": string
+          "quantity": number
+          "unit": string | null
+          "estimated_cost": number
+          "created_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "recipe_id": string
+          "product_id": string
+          "quantity": number
+          "unit"?: string | null
+          "estimated_cost"?: number
+          "created_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "recipe_id"?: string
+          "product_id"?: string
+          "quantity"?: number
+          "unit"?: string | null
+          "estimated_cost"?: number
+          "created_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_recipe_items_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_recipe_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "service_recipes"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      "service_recipes": {
+        Row: {
+          "id": string
+          "center_id": string
+          "service_id": string
+          "is_active": boolean
+          "created_at": string
+          "updated_at": string
+        }
+        Insert: {
+          "id"?: string
+          "center_id": string
+          "service_id": string
+          "is_active"?: boolean
+          "created_at"?: string
+          "updated_at"?: string
+        }
+        Update: {
+          "id"?: string
+          "center_id"?: string
+          "service_id"?: string
+          "is_active"?: boolean
+          "created_at"?: string
+          "updated_at"?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_recipes_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_recipes_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "services": {
         Row: {
           "id": string
@@ -2080,7 +2271,7 @@ export type Database = {
         Returns: Json
       },
       "process_checkout_idempotent_v1": {
-        Args: { "p_request_id": string | null; "p_center_id": string | null; "p_customer_id": string | null; "p_employee_id": string | null; "p_payment_method": string | null; "p_discount_amount": number | null; "p_use_loyalty_points": boolean | null; "p_items": Json | null; "p_gift_card_code": string | null; "p_entitlement_redemptions": Json | null }
+        Args: { "p_request_id": string | null; "p_center_id": string | null; "p_customer_id": string | null; "p_employee_id": string | null; "p_payment_method": string | null; "p_discount_amount": number | null; "p_use_loyalty_points": boolean | null; "p_items": Json | null; "p_gift_card_code": string | null; "p_entitlement_redemptions": Json | null; "p_appointment_id": string | null }
         Returns: Json
       },
       "process_checkout_v1": {
@@ -2139,6 +2330,14 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null }
         Returns: Json
       },
+      "save_service_recipe_v1": {
+        Args: { "p_center_id": string | null; "p_service_id": string | null; "p_items": Json | null }
+        Returns: Json
+      },
+      "transition_visit_v1": {
+        Args: { "p_center_id": string | null; "p_appointment_id": string | null; "p_stage": string | null }
+        Returns: Json
+      },
       "upsert_notification_settings_admin_impl_v1": {
         Args: { "p_center_id": string | null; "p_whatsapp_enabled": boolean | null; "p_sms_enabled": boolean | null; "p_reminder_enabled": boolean | null; "p_reminder_hours_before": number | null; "p_whatsapp_sender_name": string | null; "p_sms_sender_name": string | null; "p_whatsapp_template_booking": string | null; "p_whatsapp_template_reminder": string | null; "p_sms_template_reminder": string | null }
         Returns: Json
@@ -2166,6 +2365,7 @@ export type Database = {
     }
     Enums: {
       "appointment_status": "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW"
+      "visit_stage": "BOOKED" | "CONFIRMED" | "ARRIVED" | "IN_SERVICE" | "READY_FOR_CHECKOUT"
     }
     CompositeTypes: Record<string, never>
   }

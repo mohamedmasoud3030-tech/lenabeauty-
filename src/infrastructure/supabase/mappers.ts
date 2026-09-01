@@ -1,6 +1,6 @@
 import { 
   Customer, Employee, Service, Appointment, Product, Expense, Invoice, InvoiceItem, CenterSettings,
-  AppointmentStatus, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
+  AppointmentStatus, VisitStage, GiftCard, GiftCardTransaction, ServicePackage, ServicePackageItem,
   CustomerEntitlement, EntitlementLedgerEntry, PackageEntitlementUnit,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, ServiceFileImage, CustomerNotificationEvent, AccountingJournalEntry, AiBookingLead,
   AttendanceRecord, AttendanceStatus, AttendanceMethod, EmployeeAdvance, AdvanceStatus, PayrollRun, PayrollLineItem
@@ -129,6 +129,21 @@ export function mapProduct(row: unknown): Product {
     };
 }
 
+const VISIT_STAGE_VALUES: ReadonlySet<string> = new Set([
+  VisitStage.BOOKED,
+  VisitStage.CONFIRMED,
+  VisitStage.ARRIVED,
+  VisitStage.IN_SERVICE,
+  VisitStage.READY_FOR_CHECKOUT,
+]);
+
+/** Map the additive visit_stage column; unknown/null values are left unset. */
+function mapVisitStage(raw: unknown): VisitStage | undefined {
+  if (typeof raw !== "string") return undefined;
+  const value = raw.toUpperCase();
+  return VISIT_STAGE_VALUES.has(value) ? (value as VisitStage) : undefined;
+}
+
 export function mapAppointment(row: unknown): Appointment {
     assertRowObject(row, "mapAppointment");
     if (typeof row.id !== "string" || typeof row.customer_id !== "string" || typeof row.date_time !== "string") {
@@ -197,6 +212,9 @@ export function mapAppointment(row: unknown): Appointment {
         noShowFeeCharged: Number(row.no_show_fee_charged) || 0,
         noShowMarkedAt: parseOptionalDate(row.no_show_marked_at, "no_show_marked_at", "mapAppointment"),
         noShowNote: typeof row.no_show_note === "string" ? row.no_show_note : undefined,
+        visitStage: mapVisitStage(row.visit_stage),
+        startedAt: parseOptionalDate(row.started_at, "started_at", "mapAppointment"),
+        completedAt: parseOptionalDate(row.completed_at, "completed_at", "mapAppointment"),
         createdAt: parseDate(row.created_at, "created_at", "mapAppointment"),
         updatedAt: parseDate(row.updated_at, "updated_at", "mapAppointment")
     };
@@ -298,6 +316,7 @@ export function mapInvoice(row: unknown): Invoice {
     paymentMethod: row.payment_method,
     customerId: row.customer_id,
     employeeId: typeof row.employee_id === "string" ? row.employee_id : undefined,
+    appointmentId: typeof row.appointment_id === "string" ? row.appointment_id : undefined,
     staffName,
     createdAt: parseDate(row.created_at, "created_at", "mapInvoice"),
     updatedAt: parseDate(row.updated_at, "updated_at", "mapInvoice")

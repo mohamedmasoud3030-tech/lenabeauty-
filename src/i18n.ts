@@ -1245,6 +1245,39 @@ const resources = {
       "left": "متبقٍ",
       "session": "جلسة",
       "sessions": "جلسات",
+
+      // Visit lifecycle (Slice A — Visit Foundation)
+      "visit.stage.BOOKED": "محجوز",
+      "visit.stage.CONFIRMED": "مؤكد",
+      "visit.stage.ARRIVED": "وصلت",
+      "visit.stage.IN_SERVICE": "في الخدمة",
+      "visit.stage.READY_FOR_CHECKOUT": "جاهزة للدفع",
+      "visit.action.arrived": "تسجيل الوصول",
+      "visit.action.start": "بدء الخدمة",
+      "visit.action.finish": "إنهاء الخدمة",
+      "visit.action.checkout": "إتمام الدفع",
+      "visit.action.rebook": "حجز موعد جديد",
+      "visit.section": "مرحلة الزيارة",
+      "visit.advance": "تحديث مرحلة الزيارة",
+      "Visit stage updated": "تم تحديث مرحلة الزيارة",
+
+      // Retention Engine (Slice E — domain keys, surfaced in the passport)
+      "retention.action.none": "لا توجد توصية",
+      "retention.noHistory": "لا يوجد سجل زيارات كافٍ بعد.",
+      "retention.action.bookNext": "احجزي الزيارة التالية",
+      "retention.firstVisit": "هذه أول زيارة — ادعي العميلة لزيارتها التالية.",
+      "retention.onCadence": "العميلة ضمن موعدها المعتاد.",
+      "retention.action.rebook": "أعيدي الحجز",
+      "retention.dueRebookWindow": "العميلة ضمن نافذة إعادة الحجز المعتادة.",
+      "retention.dueRebook": "حان وقت إعادة الحجز.",
+      "retention.action.contact": "تواصلي مع العميلة",
+      "retention.winback": "عميلة سابقة غائبة منذ فترة — تستحق المتابعة.",
+
+      // LENA Wallet (Slice C — domain keys)
+      "wallet.giftCard": "بطاقة هدية",
+      "wallet.packageSession": "جلسات الباقة",
+      "wallet.rewards": "نقاط المكافآت",
+      "wallet.deposit": "عربون الزيارة",
     }
   },
 
@@ -2515,6 +2548,39 @@ const resources = {
       "left": "left",
       "session": "session",
       "sessions": "sessions",
+
+      // Visit lifecycle (Slice A — Visit Foundation)
+      "visit.stage.BOOKED": "Booked",
+      "visit.stage.CONFIRMED": "Confirmed",
+      "visit.stage.ARRIVED": "Arrived",
+      "visit.stage.IN_SERVICE": "In service",
+      "visit.stage.READY_FOR_CHECKOUT": "Ready for checkout",
+      "visit.action.arrived": "Check in",
+      "visit.action.start": "Start service",
+      "visit.action.finish": "Finish service",
+      "visit.action.checkout": "Checkout",
+      "visit.action.rebook": "Book next visit",
+      "visit.section": "Visit stage",
+      "visit.advance": "Update visit stage",
+      "Visit stage updated": "Visit stage updated",
+
+      // Retention Engine (Slice E — domain keys, surfaced in the passport)
+      "retention.action.none": "No recommendation",
+      "retention.noHistory": "Not enough visit history yet.",
+      "retention.action.bookNext": "Book the next visit",
+      "retention.firstVisit": "This is a first visit — invite the next one.",
+      "retention.onCadence": "Customer is on their usual cadence.",
+      "retention.action.rebook": "Rebook",
+      "retention.dueRebookWindow": "Customer is within their usual rebooking window.",
+      "retention.dueRebook": "It is time to rebook.",
+      "retention.action.contact": "Contact the customer",
+      "retention.winback": "A former customer has been away — worth a follow-up.",
+
+      // LENA Wallet (Slice C — domain keys)
+      "wallet.giftCard": "Gift card",
+      "wallet.packageSession": "Package sessions",
+      "wallet.rewards": "Reward points",
+      "wallet.deposit": "Visit deposit",
     }
   }
 };

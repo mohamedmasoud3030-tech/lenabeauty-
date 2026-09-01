@@ -1,5 +1,5 @@
 {
-  "files": 233,
+  "files": 243,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -95,6 +95,43 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
         },
         {
           "hasStar": true,
@@ -1376,6 +1413,7 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "args": [
+        "p_appointment_id",
         "p_center_id",
         "p_customer_id",
         "p_discount_amount",
@@ -1511,6 +1549,17 @@
       "args": [
         "p_center_id",
         "p_customer_id"
+      ]
+    },
+    {
+      "name": "transition_visit_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_stage"
       ]
     },
     {

@@ -26,13 +26,38 @@ type Customer = { id: string; name: string; phone: string | null };
 type Service = { id: string; name: string; category: string; durationMins: number; price: number };
 type Employee = { id: string; name: string };
 
-import { AppointmentStatus, Appointment } from "../domain/entities";
+import { AppointmentStatus, Appointment, VisitStage } from "../domain/entities";
+import { effectiveVisitStage, allowedVisitStages } from "../domain/visit";
 
 type Appt = Appointment & {
   customer: Customer;
   employee: Employee;
   service: Service;
 };
+
+/** Stage display name for a scheduled visit (terminal states use their status). */
+function visitStageLabel(stage: VisitStage, t: (k: string) => string): string {
+  switch (stage) {
+    case VisitStage.BOOKED: return t("visit.stage.BOOKED");
+    case VisitStage.CONFIRMED: return t("visit.stage.CONFIRMED");
+    case VisitStage.ARRIVED: return t("visit.stage.ARRIVED");
+    case VisitStage.IN_SERVICE: return t("visit.stage.IN_SERVICE");
+    case VisitStage.READY_FOR_CHECKOUT: return t("visit.stage.READY_FOR_CHECKOUT");
+    default: return stage;
+  }
+}
+
+/** i18n label for the primary advance action from a stage. */
+function visitActionLabel(stage: VisitStage, t: (k: string) => string): string {
+  switch (stage) {
+    case VisitStage.BOOKED:
+    case VisitStage.CONFIRMED: return t("visit.action.arrived");
+    case VisitStage.ARRIVED: return t("visit.action.start");
+    case VisitStage.IN_SERVICE: return t("visit.action.finish");
+    case VisitStage.READY_FOR_CHECKOUT: return t("visit.action.checkout");
+    default: return t("visit.advance");
+  }
+}
 
 const SLOT_MINS = 30;
 
@@ -259,6 +284,29 @@ export default function AppointmentsPage() {
          showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
       } else {
          showToast('error', t("Error"), err?.message || String(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Advance a scheduled visit to its next operational stage (server-enforced). */
+  async function advanceVisit(appt: Appt, nextStage: VisitStage) {
+    if (appt.status !== AppointmentStatus.SCHEDULED) {
+      showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+      return;
+    }
+    setBusy(true);
+    try {
+      await unwrap(useCases.appointments.transitionVisit(appt.id, nextStage));
+      showToast('success', t("Success"), t("Visit stage updated"));
+      await load();
+      setOpen(false);
+    } catch (err: any) {
+      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      } else {
+        showToast('error', t("Error"), err?.message || String(err));
       }
     } finally {
       setBusy(false);
@@ -1053,6 +1101,34 @@ export default function AppointmentsPage() {
                     </div>
                   </div>
                 )}
+
+                {(() => {
+                  const appt = editApptId ? appts.find((a) => a.id === editApptId) : undefined;
+                  if (!appt || appt.status !== AppointmentStatus.SCHEDULED) return null;
+                  const stage = effectiveVisitStage(appt) as VisitStage;
+                  const nextStages = allowedVisitStages(appt);
+                  const nextStage = nextStages[0];
+                  return (
+                    <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("visit.section")}</p>
+                          <p className="text-sm font-bold text-foreground">{visitStageLabel(stage, t)}</p>
+                        </div>
+                        {nextStage && (
+                          <button
+                            type="button"
+                            onClick={() => void advanceVisit(appt, nextStage)}
+                            disabled={busy}
+                            className="h-12 px-5 rounded-2xl bg-primary text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50 active:scale-95"
+                          >
+                            {visitActionLabel(stage, t)}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex flex-col gap-4">
                   {editApptId && status === AppointmentStatus.SCHEDULED && (

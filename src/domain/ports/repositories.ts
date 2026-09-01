@@ -3,7 +3,7 @@ import {
   Appointment, Product, Invoice, Expense, ActivityLog, CenterSettings, GiftCard, GiftCardTransaction, ServicePackage,
   CustomerEntitlement, EntitlementLedgerEntry,
   NotificationSettingsEntity, PaymentGatewaySettings, CustomerReview, ServiceFile, AccountingJournalEntry, AiBookingLead,
-  AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem
+  AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem, VisitStage
 } from "../entities";
 import { User, SessionState } from "../entities/Session";
 
@@ -58,6 +58,8 @@ export interface AppointmentRepository {
   create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   update(id: string, data: Partial<Appointment>): Promise<Result<Appointment, DomainError>>;
   markNoShow(id: string, input?: { chargeNoShowFee?: boolean; note?: string }): Promise<Result<{ appointment: Appointment; chargedAmount: number }, DomainError>>;
+  /** Advance a scheduled visit through its operational stages (server-enforced). */
+  transitionVisit(id: string, stage: VisitStage): Promise<Result<Appointment, DomainError>>;
   delete(id: string): Promise<Result<void, DomainError>>;
 }
 

@@ -8,7 +8,7 @@ import {
   AttendanceRepository, AdvanceRepository, PayrollRepository
 } from "../../domain/ports/repositories";
 import { 
-  Customer, Employee, Service, Appointment, AppointmentStatus, Product, Expense, Invoice,
+  Customer, Employee, Service, Appointment, AppointmentStatus, VisitStage, Product, Expense, Invoice,
   CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem,
   CustomerEntitlement, EntitlementLedgerEntry
 } from "../../domain/entities";
@@ -968,6 +968,47 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
       return { ok: false, error: createQueryError("Appointment.delete", (e as Error).message) };
     }
   }
+
+  async transitionVisit(id: string, stage: VisitStage): Promise<Result<Appointment, DomainError>> {
+    const centerRes = getCenterIdFor("Appointment.transitionVisit");
+    if (!centerRes.ok) return centerRes as any;
+
+    if (typeof id !== "string" || !id) {
+      return { ok: false, error: createQueryError("Appointment.transitionVisit", "Appointment id is required") };
+    }
+
+    try {
+      const { data, error } = await getSupabaseClient().rpc('transition_visit_v1', {
+        p_center_id: centerRes.data,
+        p_appointment_id: id,
+        p_stage: stage,
+      });
+      if (error) {
+        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
+          return { ok: false, error: createUnsupportedWriteError("Appointment.transitionVisit") };
+        }
+        return { ok: false, error: createQueryError("Appointment.transitionVisit", error.message) };
+      }
+      const rpcRow = (data || {}) as { appointment_id?: unknown };
+      if (!rpcRow.appointment_id) {
+        return { ok: false, error: createQueryError("Appointment.transitionVisit", "Invalid response from visit transition RPC") };
+      }
+
+      // Re-read the authoritative row so the caller receives the updated stage
+      // and timestamps (the RPC mutates server-side, not the local copy).
+      const { data: row, error: readErr } = await getSupabaseClient()
+        .from('appointments')
+        .select(`*, customers (id, name, phone), employees (id, name), services (id, name, category_id, price, duration_minutes)`)
+        .eq('id', id)
+        .eq('center_id', centerRes.data)
+        .maybeSingle();
+      if (readErr) return { ok: false, error: createQueryError("Appointment.transitionVisit", readErr.message) };
+      if (!row) return { ok: false, error: createQueryError("Appointment.transitionVisit", "No data returned after transition") };
+      return { ok: true, data: mapAppointment(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Appointment.transitionVisit", (e as Error).message) };
+    }
+  }
 }
 
 class SupabaseProductAdapter implements ProductRepository {
@@ -1244,7 +1285,8 @@ class SupabaseInvoiceAdapter implements InvoiceRepository {
         p_use_loyalty_points: payload.useLoyaltyPoints || false,
         p_items: toJson(payload.items),
         p_gift_card_code: payload.giftCardCode || null,
-        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? toJson(payload.entitlementRedemptions) : null
+        p_entitlement_redemptions: payload.entitlementRedemptions?.length ? toJson(payload.entitlementRedemptions) : null,
+        p_appointment_id: payload.appointmentId || null
       });
       
       if (error) {
@@ -2179,6 +2221,7 @@ class SupabaseGiftCardAdapter implements GiftCardRepository {
         }]),
         p_gift_card_code: null,
         p_entitlement_redemptions: null,
+        p_appointment_id: null,
       });
       if (error) {
         if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
