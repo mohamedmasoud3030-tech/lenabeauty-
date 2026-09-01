@@ -1,6 +1,11 @@
 # LENA Beauty — One Salon Operating System: Vertical-Slice Plan
 
-Status: **Slice A foundation implemented** (this session); B–F planned below.
+Status: **Slices A–F implemented** — the Visit→POS→Checkout loop, Beauty
+Passport, LENA Wallet, Service Recipes, Retention Engine and Action Center are
+all shipped on `arena/01a05ac0-lenabeauty`. This document records the slice
+plan and what each slice actually shipped (which sometimes differs from the
+original plan: where an existing repository read was sufficient, no new RPC was
+added).
 
 This repository is being reshaped from six module-centric admin pages into one
 salon operating system that follows the canonical journey:
@@ -73,104 +78,88 @@ The operational visit lifecycle layered on top of scheduling.
 stage-driven primary action (`Check in → Start service → Finish service`),
 powered by the server RPC.
 
-**Remaining for Slice A** (next increment, not merged):
-- `PosInvoicesPage` accepts `?appointment=<id>`, pre-fills the cart from the
-  visit, and passes `appointmentId` into `checkout` (checkout→payment→closure).
-- Terminal "Complete Appointment" button retirement once the POS handoff lands
-  (guarded by the `appointments-ux` test update).
+**Closed in this branch** (Visit→POS→Checkout loop, A1–A5):
+- `PosInvoicesPage` accepts `?appointment=<id>`, loads the authoritative visit,
+  pre-fills customer/employee/service, passes `appointmentId` into `checkout`,
+  and shows a compact visit-context banner; direct `/pos` walk-in is unchanged.
+- `AppointmentsPage` hands off to `/pos?appointment=<id>` at
+  `READY_FOR_CHECKOUT` via the router and no longer offers a direct "Complete
+  Appointment" action for active visits (cancel/no-show remain).
 
 ---
 
-## Slice B — Beauty Passport
+## Slice B — Beauty Passport ✅ (shipped)
 
 Permanent, composed salon memory of a customer — no new customer database.
 
-- **Domain**: `passport.ts` already ships `composeBeautyPassport`,
-  `composeVisitTimeline`, `composePassportSummary` (appointments + paid invoices
-  + service files → timeline + operational summary). Unit-tested.
-- **Migration**: additive (no schema change required) — a `customer_passport_v1`
-  RPC that returns the composed history in one server round-trip (appointments,
-  paid invoices, service files, next appointment, lifetime spend) scoped by
-  `app_private.is_center_member`.
-- **Ports**: extend `CustomerRepository` (or a new `PassportRepository`) with
-  `getPassport(customerId)`; adapter calls the RPC; DTO added in
-  `src/application/dto/index.ts`.
-- **Pages**: `CustomersPage` becomes the passport host (customer profile →
-  timeline, service history, media, wallet summary, retention status).
-  `CustomerExperiencePage` (deferred) contributes reviews/service files once
-  un-deferred or folded into the passport.
+- **Domain**: `passport.ts` (`composeBeautyPassport`, `composeVisitTimeline`,
+  `composePassportSummary`), unit-tested.
+- **Data**: reused existing reads — `customers.getHistory` (enriched select over
+  appointments/invoices), `customers.getById`, `entitlements.listForCustomer`,
+  `customerExperience.listServiceFiles`. No new RPC was needed.
+- **Pages**: `CustomersPage` profile modal became the passport: header →
+  relationship snapshot → next booking → retention → wallet → visit/service
+  timeline with progressive disclosure.
 
 ---
 
-## Slice C — LENA Wallet
+## Slice C — LENA Wallet ✅ (shipped)
 
 Unified projection over existing value instruments; **never a merged balance**.
 
-- **Domain**: `wallet.ts` already ships `buildCustomerWallet`,
-  `walletAvailableForCheckout`, `hasDuplicateRedemption`,
-  `packageUnitsForService` (gift cards, package sessions, rewards, deposit kept
-  distinct). Unit-tested.
-- **Migration**: no new financial tables; wallet is a projection. Add a
-  `customer_wallet_v1` RPC returning the customer's usable entitlements +
-  points + deposit (server-authoritative remaining values/units).
-- **Ports**: `EntitlementRepository.listForCustomer` already exists; add
-  `CustomerRepository.getWallet` (or reuse listForCustomer + loyalty fields).
-- **Pages**: `PosInvoicesPage` shows available wallet benefits per cart service
-  (`walletAvailableForCheckout`); `GiftCardsPage`/`PackagesPage` become the
-  wallet issuance/ledger surface rather than separate modules.
+- **Domain**: `wallet.ts` (`buildCustomerWallet`, `walletAvailableForCheckout`,
+  `hasDuplicateRedemption`, `packageUnitsForService`), unit-tested.
+- **Pages**: `PosInvoicesPage` checkout panel surfaces the wallet (gift cards,
+  package sessions, rewards, deposit) and lets an operator apply a package
+  session to a matching cart service via a unit redemption
+  (`{ entitlementId, type: "units", serviceId, units: 1 }`). Server stays the
+  accounting authority; entitlements are no longer filtered to `PACKAGE`.
 
 ---
 
-## Slice D — Service Recipes
+## Slice D — Service Recipes ✅ (shipped)
 
 From product inventory to what a *service* consumes while delivered.
 
-- **Domain**: `recipe.ts` already ships `planRecipeConsumption`,
-  `estimateServiceContribution`, `visitMayHaveConsumed`,
-  `forecastBookingDemand`. Unit-tested.
-- **Migration**: done in Slice A (`service_recipes`, `service_recipe_items`,
-  `inventory_consumptions`, `save_service_recipe_v1`,
-  `consume_invoice_recipes_v1`).
-- **Ports**: new `RecipeRepository` (`list`, `getForService`, `save`); adapter
-  reads the new tables + calls `save_service_recipe_v1`; DTO for the recipe
-  payload.
-- **Pages**: `InventoryPage` becomes Service Consumption — recipe editor per
-  service (product, quantity, unit, estimated cost) + consumption ledger +
-  "what do the next N days' bookings consume" (`forecastBookingDemand`).
+- **Domain**: `recipe.ts` (`planRecipeConsumption`, `estimateServiceContribution`,
+  `visitMayHaveConsumed`, `forecastBookingDemand`), unit-tested.
+- **Ports/adapter**: new `ServiceRecipeRepository` (`getForService`,
+  `saveForService`, `listConsumptions`); Supabase adapter reads
+  `service_recipes`/`service_recipe_items`/`inventory_consumptions` and calls
+  `save_service_recipe_v1` (real products only, quantity/unit validation,
+  whole-unit stock decrement + fractional costing documented server-side).
+- **Pages**: `ServicesPage` gained a per-service recipe editor (product,
+  quantity, unit, estimated cost, live stock, recent consumption ledger).
 
 ---
 
-## Slice E — Retention Engine
+## Slice E — Retention Engine ✅ (shipped)
 
 Deterministic rebooking signals from real visit history; no probabilities.
 
-- **Domain**: `retention.ts` already ships `getRetentionStatus`,
-  `getSuggestedRebookingWindow`, `getNextBestCustomerAction`,
-  `getCustomerVisitPattern`. Unit-tested. Tier model (`loyalty.ts`) stays
-  recognition/status — no financial regression.
-- **Migration**: `customer_retention_v1` RPC returning the retention status +
-  rebooking window for a customer (optionally per service), computed server-side
-  from `appointments` + paid `invoices`.
-- **Ports**: extend `CustomerRepository` (or `RetentionRepository`).
-- **Pages**: passport header chip + `CustomersPage` "Next best action"
-  (`REBOOK`/`CONTACT`/`BOOK_NEXT`/`NONE`), never a fabricated recommendation.
+- **Domain**: `retention.ts` (`getRetentionStatus`, `getSuggestedRebookingWindow`,
+  `getNextBestCustomerAction`, `getCustomerVisitPattern`), unit-tested. Tier
+  model (`loyalty.ts`) stays recognition/status — no financial regression.
+- **Pages**: passport retention panel now shows the status badge, last visit,
+  days since, usual cadence, rebooking window, future-booking presence, the
+  next-best action (rebook/contact/book-next) and any legitimate wallet benefit.
 
 ---
 
-## Slice F — Embedded Intelligence
+## Slice F — Action Center ✅ (shipped)
 
-Forecasting/Automation/CE absorbed into the operating system instead of being
-separate Growth modules.
+Deterministic "what needs attention now?" view; not analytics.
 
-- **Domain**: `recipe.ts.forecastBookingDemand` (deterministic inventory demand
-  from booked services) + `retention.ts` signals feed an "Action Center".
-- **Migration**: additive — expose existing forecast/insight data through
-  `is_center_member`-gated RPCs (no new raw analytics tables until a need is
-  proven).
-- **Pages**: the Dashboard "Needs Attention" seed (late appointments + low
-  stock, already implemented) becomes the Action Center. Deferred
-  `ForecastingPage`/`AdvancedAutomationPage` contribute their real data sources
-  or are removed from the registry (`src/app/navigation.ts` `deferred` flags).
+- **Pages**: new `ActionCenterPage` at `/action-center` (registered in
+  `src/app/navigation.ts` and `src/routes.tsx`, reachable on mobile via the
+  More menu). Sections derive strictly from real data: customers due/overdue
+  for rebooking (`retention.ts`), today's arrivals, visits ready for checkout,
+  open visit states from previous days (exceptions), consumables at risk from
+  recipes+bookings (`forecastBookingDemand`), and wallet/entitlement expiry
+  within 30 days. Empty state is honest ("nothing needs attention").
+
+- **No new RPCs were added in B–F**: each slice composed over existing
+  repository reads, per the "reuse before parallel architecture" rule.
 
 ---
 
@@ -191,11 +180,12 @@ npm run ci:migrations
 **Known pre-existing baseline failures** (present on `main` before this work;
 not introduced here, tracked separately):
 
-- `npm test`: 25/780 tests across 7 files —
-  `first-impression`, `first-impression-readout`, `i18n.no-language-leak`,
-  `pages-smoke`, `payment-gateway-scope`, `settings-consolidation`,
-  `vat-settings` (login-page content drift, untranslated `NotificationSystem`
-  strings, settings error-recovery assertions).
+- `npm test`: 25 failing tests across 7 files (795 passing at the end of this
+  branch) — `first-impression`, `first-impression-readout`,
+  `i18n.no-language-leak`, `pages-smoke`, `payment-gateway-scope`,
+  `settings-consolidation`, `vat-settings` (login-page content drift,
+  untranslated `NotificationSystem` strings, settings error-recovery
+  assertions).
 - `npm run lint`: `src/shared/components/NotificationSystem.tsx:93` — button
   touch target below 44px.
 
