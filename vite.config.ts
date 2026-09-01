@@ -30,9 +30,9 @@ export default defineConfig(({mode}) => {
           ],
         },
         manifest: {
-          name: 'LenaBeauty - إدارة الصالون',
-          short_name: 'LenaBeauty',
-          description: 'نظام إدارة الصالونات الاحترافي - LenaBeauty',
+          name: 'Lena Beauty - إدارة مركز التجميل',
+          short_name: 'Lena Beauty',
+          description: 'نظام إدارة مركز التجميل - Lena Beauty',
           theme_color: '#8B5CF6',
           background_color: '#FCFAFF',
           display: 'standalone',
@@ -42,18 +42,14 @@ export default defineConfig(({mode}) => {
           start_url: '/#/dashboard',
           scope: '/',
           categories: ['business', 'productivity'],
+          // One canonical vector mark prevents favicon / install-icon / shortcut
+          // drift when the product identity changes again.
           icons: [
             {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any maskable'
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any maskable'
+              src: '/lena-mark.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any'
             }
           ],
           shortcuts: [
@@ -62,14 +58,14 @@ export default defineConfig(({mode}) => {
               short_name: 'POS',
               description: 'فتح نقطة البيع مباشرة',
               url: '/#/pos',
-              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+              icons: [{ src: '/lena-mark.svg', sizes: 'any', type: 'image/svg+xml' }]
             },
             {
               name: 'لوحة التحكم',
               short_name: 'Dashboard',
               description: 'عرض الإحصائيات',
               url: '/#/dashboard',
-              icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+              icons: [{ src: '/lena-mark.svg', sizes: 'any', type: 'image/svg+xml' }]
             }
           ]
         }

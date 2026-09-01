@@ -12,17 +12,9 @@ import * as env from "../config/env";
 import i18n from "../i18n";
 
 /**
- * Comprehension readout.
- *
- * The tests in `first-impression.test.tsx` assert individual criteria. This
- * file answers the harder question the review actually poses: after reading
- * ONLY what is rendered, can a first-time user answer the four questions —
- * what is it, who is it for, what do I do, what happens next — at both a small
- * phone width and a desktop width, in Arabic and in English?
- *
- * It renders the real component tree and asserts against the visible text
- * content, so a copy regression that removes meaning (rather than a specific
- * string) still fails here.
+ * Rendered login readout at phone and desktop widths, in both languages.
+ * The pre-auth experience intentionally prioritizes brand, clear sign-in and
+ * real operating areas over developer/account-provisioning explanations.
  */
 
 function setViewport(width: number) {
@@ -67,7 +59,7 @@ afterAll(async () => {
 describe.each([
   { name: "small phone (360px)", width: 360 },
   { name: "desktop (1280px)", width: 1280 },
-])("first-time comprehension — $name", ({ width }) => {
+])("first-time login readout — $name", ({ width }) => {
   describe.each(["ar", "en"])("in %s", (lang) => {
     beforeEach(async () => {
       vi.restoreAllMocks();
@@ -76,36 +68,39 @@ describe.each([
       await i18n.changeLanguage(lang);
     });
 
-    it("answers: what is this product, and who is it for", async () => {
+    it("shows Lena Beauty, the real operating areas and no developer-facing qualification copy", async () => {
       renderLogin();
       const main = await screen.findByRole("main");
       await waitFor(() => expect(within(main).getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
 
       const visible = main.textContent ?? "";
+      expect(visible).toContain("LENA");
+      expect(visible).toContain("BEAUTY");
 
-      // What it is + the unit of business it serves.
-      expect(visible).toContain(i18n.t("The daily operations system for one beauty center."));
-      // Concrete capabilities, not a vague category.
-      expect(visible).toContain(i18n.t("Appointments, point of sale, customers, stock and staff — in one place."));
-      // Who it serves, and who it does not.
-      expect(visible).toContain(i18n.t("For the center's team. This is not a customer booking site."));
+      const labels = lang === "ar"
+        ? ["المواعيد", "نقطة البيع", "العملاء", "المخزون", "الموظفون", "التقارير"]
+        : ["Appointments", "Point of Sale", "Customers", "Stock", "Staff", "Reports"];
+      for (const label of labels) expect(visible).toContain(label);
+
+      for (const unwanted of [
+        i18n.t("For the center's team. This is not a customer booking site."),
+        i18n.t("Accounts are created by your center administrator. There is no public sign-up."),
+        i18n.t("Your data stays in your center's database and is visible only to its team."),
+      ]) {
+        expect(visible).not.toContain(unwanted);
+      }
     });
 
-    it("answers: what do I do now, and what happens after", async () => {
+    it("keeps sign-in as the single primary action", async () => {
       renderLogin();
       const main = await screen.findByRole("main");
       await waitFor(() => expect(within(main).getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
 
-      // Exactly one primary action.
       const submits = within(main).getAllByRole("button").filter(
         (b) => (b as HTMLButtonElement).type === "submit",
       );
       expect(submits).toHaveLength(1);
       expect(submits[0]).toHaveTextContent(i18n.t("Sign In"));
-
-      const visible = main.textContent ?? "";
-      expect(visible).toContain(i18n.t("After signing in you land on today's work: appointments, sales and stock alerts."));
-      expect(visible).toContain(i18n.t("Accounts are created by your center administrator. There is no public sign-up."));
     });
 
     it("never promises a capability the product denies by default", async () => {
@@ -154,13 +149,10 @@ describe.each([
       expect.stringContaining(i18n.t("Record your first sale")),
     ]);
 
-    // The first step must explain WHY it is first — this is the dependency a
-    // first-time user cannot otherwise discover.
     expect(steps[0].textContent).toContain(
       i18n.t("Nothing can be booked or sold until your service menu exists."),
     );
 
-    // Honest progress, not a decorative bar.
     const progress = within(guide).getByRole("progressbar");
     expect(progress).toHaveAttribute("aria-valuenow", "0");
     expect(progress).toHaveAttribute("aria-valuemax", "5");
@@ -180,7 +172,6 @@ describe.each([
       expect(within(guide).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1"),
     );
 
-    // Appointments and sales are not inferred from the catalog existing.
     const steps = within(guide).getAllByRole("listitem");
     expect(steps[4].textContent).toContain(i18n.t("Take payment and print the receipt from the point of sale."));
   });
