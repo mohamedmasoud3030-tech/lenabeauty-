@@ -1,0 +1,10 @@
+canonical_gate_status=0
+
+--- artifact status ---
+
+--- canonical gate output ---
+
+> salon-management-pwa@1.0.0 audit:gate
+> node scripts/audit/ci-gate.mjs
+
+CONTRACT AUDIT GATE: PASS
