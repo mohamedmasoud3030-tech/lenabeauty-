@@ -40,18 +40,10 @@ const FEATURE_ITEMS = [
 const LOGIN_COPY = {
   en: {
     system: "Beauty Center System",
-    everything: "Everything your team needs, in one beautiful place.",
-    dataSafe: "Your data is safe with us",
-    dataSafeDetail: "Secure · Private · For your center only",
     welcome: "Welcome Back",
     signInSubtitle: "Sign in to your center account",
     resetTitle: "Reset password",
     resetSubtitle: "Enter your work email and we'll send you a reset link.",
-    workspace: "This is a team workspace",
-    workspaceDetail: "Only registered team members can sign in.",
-    emailHelp: "Use the work email registered by your administrator.",
-    passwordPlaceholder: "Enter your password",
-    afterSignIn: "After signing in you can access:",
     appointments: "Today's appointments",
     sales: "Sales & transactions",
     stockAlerts: "Stock alerts",
@@ -59,18 +51,10 @@ const LOGIN_COPY = {
   },
   ar: {
     system: "نظام إدارة مركز التجميل",
-    everything: "كل ما يحتاجه فريقك، في مكان واحد أنيق.",
-    dataSafe: "بيانات مركزك محمية",
-    dataSafeDetail: "آمنة · خاصة · لمركزك فقط",
     welcome: "مرحبًا بعودتك",
     signInSubtitle: "سجّل الدخول إلى حساب مركزك",
     resetTitle: "إعادة تعيين كلمة المرور",
     resetSubtitle: "أدخل بريد العمل وسنرسل لك رابط إعادة التعيين.",
-    workspace: "هذه مساحة عمل لفريق المركز",
-    workspaceDetail: "يمكن فقط لأعضاء الفريق المسجلين تسجيل الدخول.",
-    emailHelp: "استخدم بريد العمل الذي سجّله لك مدير المركز.",
-    passwordPlaceholder: "أدخل كلمة المرور",
-    afterSignIn: "بعد تسجيل الدخول يمكنك الوصول إلى:",
     appointments: "مواعيد اليوم",
     sales: "المبيعات والمعاملات",
     stockAlerts: "تنبيهات المخزون",
@@ -221,7 +205,10 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <h2 className="max-w-sm text-2xl font-bold leading-tight text-foreground">{copy.everything}</h2>
+              <h2 className="max-w-sm text-2xl font-bold leading-tight text-foreground">{t("The daily operations system for one beauty center.")}</h2>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                {t("Appointments, point of sale, customers, stock and staff — in one place.")}
+              </p>
 
               <div className="mt-8 grid grid-cols-2 gap-4">
                 {FEATURE_ITEMS.map(({ en, ar, icon: Icon }) => (
@@ -241,8 +228,7 @@ export default function LoginPage() {
                 <ShieldCheck className="h-6 w-6" aria-hidden="true" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{copy.dataSafe}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{copy.dataSafeDetail}</p>
+                <p className="font-semibold text-foreground">{t("Your data stays in your center's database and is visible only to its team.")}</p>
               </div>
             </div>
           </aside>
@@ -278,8 +264,7 @@ export default function LoginPage() {
                   <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="font-semibold text-primary">{copy.workspace}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{copy.workspaceDetail}</p>
+                  <p className="font-semibold text-primary">{t("For the center's team. This is not a customer booking site.")}</p>
                 </div>
               </div>
 
@@ -312,7 +297,7 @@ export default function LoginPage() {
                       inputMode="email"
                       autoComplete="email"
                       required
-                      placeholder="name@yourcenter.com"
+                      placeholder={t("Work email")}
                       aria-invalid={Boolean(displayError)}
                       aria-describedby={displayError ? "login-error" : undefined}
                       className={inputClass}
@@ -322,7 +307,7 @@ export default function LoginPage() {
                       dir="ltr"
                     />
                   </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground">{copy.emailHelp}</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{t("Use the work email your administrator registered for you.")}</p>
                 </div>
 
                 {mode === "sign-in" ? (
@@ -342,7 +327,7 @@ export default function LoginPage() {
                         autoComplete="current-password"
                         required
                         type={showPassword ? "text" : "password"}
-                        placeholder={copy.passwordPlaceholder}
+                        placeholder={t("Password")}
                         aria-invalid={Boolean(displayError)}
                         aria-describedby={displayError ? "login-error" : undefined}
                         className={inputClass}
@@ -408,7 +393,7 @@ export default function LoginPage() {
 
               {mode === "sign-in" ? (
                 <div className="mt-6 border-t border-border/60 pt-5">
-                  <p className="mb-4 text-center text-xs font-medium text-muted-foreground">{copy.afterSignIn}</p>
+                  <p className="mb-4 text-center text-xs font-medium text-muted-foreground">{t("After signing in you land on today's work: appointments, sales and stock alerts.")}</p>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     {[CalendarDays, ShoppingBag, Package].map((Icon, index) => (
                       <div key={index} className="rounded-2xl border border-border/60 bg-card/55 p-3 text-center">

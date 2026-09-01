@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, MessageCircle, Settings2, Save, Clock3, CheckCircle2 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
-import { unwrap } from "../shared/hooks/useApplication";
+import { formatError, unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
 import { QuickNotificationSender } from "../shared/components/NotificationSystem";
@@ -48,6 +48,7 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
         whatsappService.getNotificationStats(),
       ]);
       if (!settingsRes.ok && settingsRes.error.code !== "NOT_FOUND") throw settingsRes.error;
+      setStats(statsRes);
       if (settingsRes.ok) {
         setForm({
           whatsappEnabled: settingsRes.data.whatsappEnabled,
@@ -62,11 +63,10 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
           smsTemplateReminder: settingsRes.data.smsTemplateReminder || fallbackTemplates.smsReminder,
         });
       }
-      setStats(statsRes);
       setWhatsAppConnected(whatsappService.isConfigured());
     } catch (error) {
       console.error("Notification settings load failed", error);
-      setLoadError(t("Failed to load notification settings"));
+      setLoadError(formatError(error));
     } finally {
       setLoading(false);
     }

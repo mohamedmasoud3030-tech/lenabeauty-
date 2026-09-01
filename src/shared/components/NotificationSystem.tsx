@@ -85,7 +85,7 @@ function NotificationDisplay({ notification, onClose }: NotificationDisplayProps
           <h3 className="text-sm font-bold">{notification.title}</h3>
           <p className="mt-1 text-xs opacity-90">{notification.message}</p>
           {notification.action ? (
-            <button type="button" onClick={notification.action.onClick} className="mt-2 text-xs font-bold hover:underline">
+            <button type="button" onClick={notification.action.onClick} className="mt-2 min-h-11 text-xs font-bold hover:underline">
               {notification.action.label}
             </button>
           ) : null}
@@ -94,7 +94,7 @@ function NotificationDisplay({ notification, onClose }: NotificationDisplayProps
           type="button"
           onClick={onClose}
           aria-label={t("Close")}
-          className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition hover:bg-foreground/5"
+          className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg transition hover:bg-foreground/5"
         >
           <X className="h-4 w-4" />
         </button>

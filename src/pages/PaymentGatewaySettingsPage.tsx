@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Banknote, Save } from "lucide-react";
+import { Banknote, Save, ShieldCheck } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
-import { unwrap } from "../shared/hooks/useApplication";
+import { formatError, unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { PremiumCard, CardContent, CardHeader } from "../shared/components/PremiumCard";
 import { ScreenState } from "../shared/components/ScreenState";
@@ -54,7 +54,7 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
       }
     } catch (error) {
       console.error("Booking deposit settings load failed", error);
-      setLoadError(t("Failed to load payment settings"));
+      setLoadError(formatError(error));
     } finally {
       setLoading(false);
     }
@@ -102,17 +102,33 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {!embedded ? (
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-14 sm:w-14 sm:rounded-2xl">
-            <Banknote className="h-5 w-5 sm:h-7 sm:w-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t("Booking Deposit")}</h1>
-            <p className="text-sm text-muted-foreground">{t("Booking deposit configuration")}</p>
-          </div>
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-14 sm:w-14 sm:rounded-2xl">
+          <Banknote className="h-5 w-5 sm:h-7 sm:w-7" />
         </div>
-      ) : null}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t("Gateway Configuration")}</h1>
+          <p className="text-sm text-muted-foreground">{t("Booking deposit configuration")}</p>
+        </div>
+      </div>
+
+      <PremiumCard variant="glass">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h2 className="font-bold text-foreground">{t("Connection")}</h2>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" aria-hidden="true" />
+            <span className="font-bold text-foreground">{t("Not connected")}</span>
+          </div>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("Provider settings are stored for preparation only; no live gateway is connected")}
+          </p>
+        </CardContent>
+      </PremiumCard>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <PremiumCard variant="glass">
@@ -193,7 +209,7 @@ export default function PaymentGatewaySettingsPage({ embedded = false }: { embed
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {loading ? t("Saving...") : t("Save Settings")}
+            {loading ? t("Saving...") : t("Save Payment Gateway Settings")}
           </button>
         </CardContent>
       </PremiumCard>

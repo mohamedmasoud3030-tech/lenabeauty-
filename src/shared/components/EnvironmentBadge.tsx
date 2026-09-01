@@ -13,7 +13,7 @@ export function EnvironmentBadge(_props: { className?: string; compact?: boolean
   if (config.environment === "production") return null;
 
   return (
-    <span className="sr-only" aria-hidden="true">
+    <span className="sr-only" role="status">
       {t("Trial environment — data here is for testing")}
     </span>
   );
