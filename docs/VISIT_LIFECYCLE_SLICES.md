@@ -2,10 +2,11 @@
 
 Status: **Slices A–F implemented** — the Visit→POS→Checkout loop, Beauty
 Passport, LENA Wallet, Service Recipes, Retention Engine and Action Center are
-all shipped on `arena/01a05ac0-lenabeauty`. This document records the slice
-plan and what each slice actually shipped (which sometimes differs from the
-original plan: where an existing repository read was sufficient, no new RPC was
-added).
+all shipped on `arena/01a05ac0-lenabeauty`. The canonical LENA Beauty Demo
+schema has also received the visit/recipe migration and the feature-scoped
+index hardening recorded below. This document records the slice plan and what
+each slice actually shipped (which sometimes differs from the original plan:
+where an existing repository read was sufficient, no new RPC was added).
 
 This repository is being reshaped from six module-centric admin pages into one
 salon operating system that follows the canonical journey:
@@ -47,7 +48,7 @@ terminal lifecycle; visit stages refine the *scheduled* segment only.
 
 ---
 
-## Slice A — Visit Foundation ✅ (foundation merged this session)
+## Slice A — Visit Foundation ✅
 
 The operational visit lifecycle layered on top of scheduling.
 
@@ -58,17 +59,27 @@ The operational visit lifecycle layered on top of scheduling.
   `canTransitionVisit`, `primaryVisitAction`, `buildVisitContext`.
 - `commerce.ts` (unchanged): checkout math remains the single pricing authority.
 
-**Migration** (`supabase/migrations/20260901000001_visit_lifecycle_recipes.sql`):
-- `visit_stage` enum + `appointments.visit_stage/started_at/completed_at`;
-  `invoices.appointment_id`.
-- `service_recipes`, `service_recipe_items`, `inventory_consumptions` (+ RLS).
-- `transition_visit_v1` (server-enforced stage transitions).
-- `save_service_recipe_v1` (atomic recipe upsert).
-- `app_private.consume_invoice_recipes_v1` (idempotent consumption, keyed by
-  `(invoice_id, service_id, product_id)`).
-- `process_checkout_idempotent_v1` gains `p_appointment_id`: when set, checkout
-  stamps `invoices.appointment_id`, closes the visit (`SCHEDULED → COMPLETED`),
-  and consumes recipes — atomically, idempotently, once.
+**Canonical migrations**:
+- `supabase/migrations/20260901100838_visit_lifecycle_recipes.sql`
+  - `visit_stage` enum + `appointments.visit_stage/started_at/completed_at`;
+    `invoices.appointment_id`.
+  - `service_recipes`, `service_recipe_items`, `inventory_consumptions` (+ RLS).
+  - `transition_visit_v1` (server-enforced stage transitions).
+  - `save_service_recipe_v1` (atomic recipe upsert with duplicate-product rejection).
+  - `app_private.consume_invoice_recipes_v1` (idempotent consumption, keyed by
+    `(invoice_id, service_id, product_id)`).
+  - `process_checkout_idempotent_v1` gains `p_appointment_id`: when set, checkout
+    stamps `invoices.appointment_id`, closes the visit (`SCHEDULED → COMPLETED`),
+    and consumes recipes — atomically, idempotently, once.
+- `supabase/migrations/20260901101133_visit_recipe_index_hardening.sql`
+  - Adds the six feature-scoped foreign-key access-path indexes for service
+    recipes, recipe items and inventory consumptions identified by the hosted
+    performance advisor.
+
+The migration versions above intentionally match the canonical LENA Beauty Demo
+migration history. The database-contract replay discovers 39 migrations (38
+automated + the explicitly excluded manual bootstrap), replays idempotently and
+produces an identical schema fingerprint after repeat application.
 
 **Ports/adapters/useCases**: `AppointmentRepository.transitionVisit`,
 `CheckoutPayload.appointmentId`, `useCases.appointments.transitionVisit`,
@@ -88,7 +99,7 @@ powered by the server RPC.
 
 ---
 
-## Slice B — Beauty Passport ✅ (shipped)
+## Slice B — Beauty Passport ✅
 
 Permanent, composed salon memory of a customer — no new customer database.
 
@@ -103,7 +114,7 @@ Permanent, composed salon memory of a customer — no new customer database.
 
 ---
 
-## Slice C — LENA Wallet ✅ (shipped)
+## Slice C — LENA Wallet ✅
 
 Unified projection over existing value instruments; **never a merged balance**.
 
@@ -117,7 +128,7 @@ Unified projection over existing value instruments; **never a merged balance**.
 
 ---
 
-## Slice D — Service Recipes ✅ (shipped)
+## Slice D — Service Recipes ✅
 
 From product inventory to what a *service* consumes while delivered.
 
@@ -133,7 +144,7 @@ From product inventory to what a *service* consumes while delivered.
 
 ---
 
-## Slice E — Retention Engine ✅ (shipped)
+## Slice E — Retention Engine ✅
 
 Deterministic rebooking signals from real visit history; no probabilities.
 
@@ -146,7 +157,7 @@ Deterministic rebooking signals from real visit history; no probabilities.
 
 ---
 
-## Slice F — Action Center ✅ (shipped)
+## Slice F — Action Center ✅
 
 Deterministic "what needs attention now?" view; not analytics.
 
@@ -163,7 +174,9 @@ Deterministic "what needs attention now?" view; not analytics.
 
 ---
 
-## Quality gates (run before any PR)
+## Quality gates
+
+The canonical closure sequence is:
 
 ```
 npm test
@@ -175,19 +188,16 @@ npm run audit:gate      # replay + frontend scan + matrix + stale-artifact check
 npm run db:types:check
 npm run ci:rpc-check
 npm run ci:migrations
+npm audit --audit-level=low
 ```
 
-**Known pre-existing baseline failures** (present on `main` before this work;
-not introduced here, tracked separately):
+The old 25-test / single-lint baseline was **not** accepted as debt inside this
+slice. It was proven on the former `main`, repaired independently in PR #53,
+and merged to `main` at `df15847459914d15ee4dc14a62118b77be65356e` before
+PR #52 was rebased. No tests, lint rules or canonical gates were weakened.
 
-- `npm test`: 25 failing tests across 7 files (795 passing at the end of this
-  branch) — `first-impression`, `first-impression-readout`,
-  `i18n.no-language-leak`, `pages-smoke`, `payment-gateway-scope`,
-  `settings-consolidation`, `vat-settings` (login-page content drift,
-  untranslated `NotificationSystem` strings, settings error-recovery
-  assertions).
-- `npm run lint`: `src/shared/components/NotificationSystem.tsx:93` — button
-  touch target below 44px.
-
-These are independent of the six transformations and should be triaged as a
-dedicated hygiene PR rather than folded into a slice.
+The database-contract artifacts are regenerated from the final canonical
+migration chain. The hosted LENA Beauty Demo (`tuzzvqsnbtzvkffmazyf`) has the
+matching visit/recipe and index-hardening migration versions applied; RLS,
+SECURITY DEFINER search paths, grants/revokes, function signatures, constraints
+and the new indexes were inspected on the hosted schema.
