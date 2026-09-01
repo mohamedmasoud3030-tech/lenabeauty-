@@ -162,8 +162,16 @@ describe("audit: deterministic migration replay (PGlite)", () => {
       INSERT INTO public.products (id, center_id, name, price, cost, stock_quantity, track_inventory, is_active)
       VALUES ('50000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'Consumable', 2.000, 1.000, 10, true, true);
 
-      INSERT INTO public.invoices (id, center_id, customer_id, total_amount, payment_method, status)
-      VALUES ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', 15.000, 'cash', 'PAID');
+      INSERT INTO public.invoices (
+        id, center_id, customer_id, subtotal_amount, total_amount, amount_paid,
+        payment_method, status
+      )
+      VALUES (
+        '60000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000001',
+        '30000000-0000-0000-0000-000000000001',
+        15.000, 15.000, 15.000, 'cash', 'PAID'
+      );
 
       INSERT INTO public.invoice_items (invoice_id, service_id, price, quantity, item_type, item_name)
       VALUES
