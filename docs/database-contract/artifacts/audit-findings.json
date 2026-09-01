@@ -7,12 +7,12 @@
       "enum_labels": 9,
       "constraints": 409,
       "foreign_keys": 89,
-      "indexes": 111,
+      "indexes": 117,
       "triggers": 23,
       "views": 0,
       "functions": 62,
       "policies": 49,
-      "grants": 1333
+      "grants": 1381
     },
     "frontend": {
       "tables": 29,

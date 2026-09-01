@@ -8214,11 +8214,38 @@
     {
       "schema": "public",
       "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_center ON public.inventory_consumptions USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
       "name": "idx_inventory_consumptions_invoice",
       "unique": false,
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_inventory_consumptions_invoice ON public.inventory_consumptions USING btree (invoice_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_product",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_product ON public.inventory_consumptions USING btree (product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_service",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_service ON public.inventory_consumptions USING btree (service_id)"
     },
     {
       "schema": "public",
@@ -8628,6 +8655,24 @@
     {
       "schema": "public",
       "table": "service_recipe_items",
+      "name": "idx_service_recipe_items_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipe_items_center ON public.service_recipe_items USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "idx_service_recipe_items_product",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipe_items_product ON public.service_recipe_items USING btree (product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
       "name": "idx_service_recipe_items_recipe",
       "unique": false,
       "primary": false,
@@ -8660,6 +8705,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_service_recipes_center ON public.service_recipes USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "idx_service_recipes_service",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipes_service ON public.service_recipes USING btree (service_id)"
     },
     {
       "schema": "public",
@@ -15196,6 +15250,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_inventory_consumptions_invoice",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -15246,6 +15356,118 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -16540,6 +16762,118 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_service_recipe_items_recipe",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -16646,6 +16980,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
