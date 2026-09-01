@@ -1,10 +1,17 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import AppointmentsPage from "../pages/AppointmentsPage";
 import { ToastProvider } from "../shared/components/Toast";
 import { ConfirmProvider } from "../shared/components/ConfirmDialog";
 import i18n from "../i18n";
+
+/** Probes the in-memory router so tests can assert visit → POS navigation. */
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="current-location">{location.pathname + location.search}</span>;
+}
 
 /**
  * Behavioral tests for the operational Appointments flow (UI only):
@@ -31,13 +38,16 @@ describe("Appointments operational UX", () => {
     await i18n.changeLanguage("ar");
   });
 
-  function renderPage() {
+  function renderPage(initialEntries: string[] = ["/appointments"]) {
     return render(
-      <ToastProvider>
-        <ConfirmProvider>
-          <AppointmentsPage />
-        </ConfirmProvider>
-      </ToastProvider>,
+      <MemoryRouter initialEntries={initialEntries}>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AppointmentsPage />
+          </ConfirmProvider>
+        </ToastProvider>
+        <LocationProbe />
+      </MemoryRouter>,
     );
   }
 
@@ -101,7 +111,7 @@ describe("Appointments operational UX", () => {
     await waitFor(() => expect(screen.getAllByText("سارة").length).toBeGreaterThan(0));
   });
 
-  it("completes a scheduled appointment from the edit dialog", async () => {
+  it("retires the disconnected Complete Appointment action; visits complete through POS checkout", async () => {
     await i18n.changeLanguage("ar");
     vi.spyOn(useCases.appointments, "list").mockResolvedValue({
       ok: true,
@@ -129,13 +139,52 @@ describe("Appointments operational UX", () => {
     const cards = await screen.findAllByText("قص شعر");
     fireEvent.click(cards[0]);
 
-    // Explicit Arabic quick actions exist
-    expect(screen.getByText(i18n.t("Complete Appointment"))).toBeInTheDocument();
+    // There is no disconnected completion button — a serviced visit becomes
+    // COMPLETED through checkout/payment. Cancel (terminal) remains available.
+    expect(screen.queryByText(i18n.t("Complete Appointment"))).not.toBeInTheDocument();
     expect(screen.getByText(i18n.t("Cancel Appointment"))).toBeInTheDocument();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByText(i18n.t("Complete Appointment")));
+  it("hands a READY_FOR_CHECKOUT visit over to POS instead of another stage transition", async () => {
+    await i18n.changeLanguage("ar");
+    vi.spyOn(useCases.appointments, "list").mockResolvedValue({
+      ok: true,
+      data: [
+        {
+          id: "a3",
+          customerId: "c1",
+          employeeId: "e1",
+          serviceId: "s1",
+          dateTime: new Date(),
+          status: "SCHEDULED",
+          visitStage: "READY_FOR_CHECKOUT",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          customer: { id: "c1", name: "أمل", phone: "90000000" },
+          service: { id: "s1", name: "قص شعر", durationMinutes: 30, price: 5 },
+          employee: { id: "e1", name: "سارة" },
+        },
+      ],
+    } as any);
+    const transitionSpy = vi.spyOn(useCases.appointments, "transitionVisit").mockResolvedValue({ ok: true, data: {} } as any);
 
-    await waitFor(() => expect(updateSpy).toHaveBeenCalledWith("a1", { status: "COMPLETED" }));
+    renderPage();
+
+    const cards = await screen.findAllByText("قص شعر");
+    fireEvent.click(cards[0]);
+
+    // The primary visit action navigates to POS with the appointment id…
+    fireEvent.click(screen.getByText(i18n.t("visit.action.checkout")));
+
+    await waitFor(() => {
+      const location = screen.getByTestId("current-location").textContent || "";
+      expect(location).toContain("/pos");
+      expect(location).toContain("appointment=a3");
+    });
+
+    // …and never attempts another local stage transition.
+    expect(transitionSpy).not.toHaveBeenCalled();
   });
 
   it("cancels a scheduled appointment from the edit dialog", async () => {

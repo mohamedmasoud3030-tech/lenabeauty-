@@ -32,6 +32,7 @@ export const useCases = {
   },
   appointments: {
     list: (range?: { fromISO: string, toISO: string }) => getRepositoryBundle().appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
+    getById: async (id: string) => getRepositoryBundle().appointmentAdapter.getById(id),
     create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
     markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
@@ -51,6 +52,7 @@ export const useCases = {
   },
   customers: {
     list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),
+    getById: async (id: string) => getRepositoryBundle().customerAdapter.getById(id),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
     rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),

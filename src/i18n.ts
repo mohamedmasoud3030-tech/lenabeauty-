@@ -1259,7 +1259,19 @@ const resources = {
       "visit.action.rebook": "حجز موعد جديد",
       "visit.section": "مرحلة الزيارة",
       "visit.advance": "تحديث مرحلة الزيارة",
+      "visit.checkoutHint": "تُكمَل هذه الزيارة عبر الدفع في نقطة البيع؛ لا تكتمل من صفحة المواعيد.",
       "Visit stage updated": "تم تحديث مرحلة الزيارة",
+
+      // POS visit context (Slice A — visit → POS handoff)
+      "pos.visitContext.title": "سياق الزيارة",
+      "pos.visitContext.customer": "العميلة",
+      "pos.visitContext.service": "الخدمة",
+      "pos.visitContext.employee": "الأخصائية",
+      "pos.visitContext.time": "وقت الموعد",
+      "pos.visitContext.stage": "مرحلة الزيارة",
+      "pos.visitContext.unavailable": "تعذّر تحميل سياق الزيارة؛ يمكنك المتابعة كبيع مباشر.",
+      "pos.visitContext.detach": "متابعة كبيع مباشر",
+      "pos.visitContext.deposit": "العربون",
 
       // Retention Engine (Slice E — domain keys, surfaced in the passport)
       "retention.action.none": "لا توجد توصية",
@@ -2562,7 +2574,19 @@ const resources = {
       "visit.action.rebook": "Book next visit",
       "visit.section": "Visit stage",
       "visit.advance": "Update visit stage",
+      "visit.checkoutHint": "This visit is completed through POS checkout and payment.",
       "Visit stage updated": "Visit stage updated",
+
+      // POS visit context (Slice A — visit → POS handoff)
+      "pos.visitContext.title": "Visit context",
+      "pos.visitContext.customer": "Customer",
+      "pos.visitContext.service": "Service",
+      "pos.visitContext.employee": "Specialist",
+      "pos.visitContext.time": "Appointment time",
+      "pos.visitContext.stage": "Visit stage",
+      "pos.visitContext.unavailable": "Visit context could not be loaded; you can continue as a walk-in sale.",
+      "pos.visitContext.detach": "Continue as walk-in",
+      "pos.visitContext.deposit": "Deposit",
 
       // Retention Engine (Slice E — domain keys, surfaced in the passport)
       "retention.action.none": "No recommendation",

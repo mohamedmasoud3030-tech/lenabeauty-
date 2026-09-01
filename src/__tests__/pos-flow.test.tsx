@@ -1,9 +1,20 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
 import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import PosInvoicesPage from "../pages/PosInvoicesPage";
 import { ToastProvider } from "../shared/components/Toast";
 import i18n from "../i18n";
+
+function renderPos(initialEntries: string[] = ["/pos"]) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <ToastProvider>
+        <PosInvoicesPage />
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
 
 /**
  * Behavioral QA test for the POS operational flow (UI only):
@@ -40,11 +51,7 @@ describe("POS operational flow", () => {
     await i18n.changeLanguage("ar");
     vi.mocked(useCases.services.list).mockResolvedValueOnce({ ok: false, error: new Error("catalog offline") } as any);
 
-    render(
-      <ToastProvider>
-        <PosInvoicesPage />
-      </ToastProvider>,
-    );
+    renderPos();
 
     expect(await screen.findByText(i18n.t("Failed to load point of sale"))).toBeInTheDocument();
     expect(screen.getByText("catalog offline")).toBeInTheDocument();
@@ -59,11 +66,7 @@ describe("POS operational flow", () => {
       .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
       .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
 
-    render(
-      <ToastProvider>
-        <PosInvoicesPage />
-      </ToastProvider>,
-    );
+    renderPos();
     await screen.findByText("قص شعر");
     const input = screen.getByPlaceholderText(i18n.t("Search customer..."));
     fireEvent.change(input, { target: { value: "Am" } });
@@ -106,11 +109,7 @@ describe("POS operational flow", () => {
       data: [{ id: "c1", name: "أمل", phone: "90000000" }],
     } as any);
 
-    render(
-      <ToastProvider>
-        <PosInvoicesPage />
-      </ToastProvider>,
-    );
+    renderPos();
 
     fireEvent.click(await screen.findByText("قص شعر"));
     const customerInput = screen.getByPlaceholderText(i18n.t("Search customer..."));
@@ -179,11 +178,7 @@ describe("POS operational flow", () => {
       data: [{ id: "c1", name: "أمل", phone: "90000000" }],
     } as any);
 
-    render(
-      <ToastProvider>
-        <PosInvoicesPage />
-      </ToastProvider>,
-    );
+    renderPos();
 
     // 1) Catalog loads and the manual-tender boundary is explicit.
     expect(await screen.findByText("قص شعر")).toBeInTheDocument();
@@ -228,5 +223,77 @@ describe("POS operational flow", () => {
     expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0);
     expect(screen.getAllByText("شامبو").length).toBeGreaterThan(0);
     expect(screen.getAllByText("باقة كاملة").length).toBeGreaterThan(0);
+  });
+
+  it("prepares the sale from a visit opened via /pos?appointment=<id> and links checkout to it", async () => {
+    await i18n.changeLanguage("ar");
+    vi.spyOn(useCases.appointments, "getById").mockResolvedValue({
+      ok: true,
+      data: {
+        id: "a1",
+        customerId: "c1",
+        employeeId: "e1",
+        serviceId: "s1",
+        dateTime: new Date("2026-08-10T11:00:00"),
+        status: "SCHEDULED",
+        visitStage: "READY_FOR_CHECKOUT",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        customer: { id: "c1", name: "أمل", phone: "90000000" },
+        service: { id: "s1", name: "قص شعر", durationMinutes: 30, price: 5 },
+        employee: { id: "e1", name: "سارة" },
+      },
+    } as any);
+    vi.spyOn(useCases.customers, "getById").mockResolvedValue({
+      ok: true,
+      data: { id: "c1", name: "أمل", phone: "90000000", totalSpent: 100, loyaltyPoints: 50, createdAt: new Date(), updatedAt: new Date() },
+    } as any);
+    vi.spyOn(useCases.entitlements, "listForCustomer").mockResolvedValue({ ok: true, data: [] } as any);
+    const checkoutSpy = vi.spyOn(useCases.invoices, "checkout").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: {
+          id: "inv-visit",
+          serialNumber: "INV-VISIT",
+          date: new Date("2026-08-10T11:30:00"),
+          totalAmount: 5,
+          discount: 0,
+          tax: 0,
+          paymentMethod: "cash",
+          customerId: "c1",
+        },
+        total: 5,
+        earned: 5,
+      },
+    } as any);
+    vi.spyOn(useCases.invoices, "getForPrint").mockResolvedValue({
+      ok: true,
+      data: {
+        invoice: { id: "inv-visit", serialNumber: "INV-VISIT", date: new Date("2026-08-10T11:30:00"), totalAmount: 5, discount: 0, tax: 0, paymentMethod: "cash", customerId: "c1" },
+        items: [{ id: "it1", type: "service", name: "قص شعر", price: 5, qty: 1 }],
+        customer: { id: "c1", name: "أمل" },
+        settings: { name: "لينا بيوتي", currency: "OMR" },
+      },
+    } as any);
+
+    renderPos(["/pos?appointment=a1"]);
+
+    // Visit context surface: customer, service, employee and stage are visible.
+    expect(await screen.findByText(i18n.t("pos.visitContext.title"))).toBeInTheDocument();
+    expect(screen.getAllByText("أمل").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("سارة").length).toBeGreaterThan(0);
+    expect(screen.getByText(i18n.t("visit.stage.READY_FOR_CHECKOUT"))).toBeInTheDocument();
+
+    // The booked service is prefilled into the cart from the catalog.
+    await waitFor(() => expect(screen.getAllByText("قص شعر").length).toBeGreaterThan(0));
+
+    // Checkout links the visit through the server-authoritative payload.
+    fireEvent.click(screen.getByText(i18n.t("Record completed sale")));
+    await waitFor(() => expect(checkoutSpy).toHaveBeenCalledTimes(1));
+    const payload = checkoutSpy.mock.calls[0][0];
+    expect(payload.customerId).toBe("c1");
+    expect(payload.employeeId).toBe("e1");
+    expect(payload.appointmentId).toBe("a1");
+    expect(payload.items).toEqual([{ type: "service", serviceId: "s1", qty: 1, price: 5 }]);
   });
 });

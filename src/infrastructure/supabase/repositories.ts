@@ -824,6 +824,35 @@ class SupabaseAppointmentAdapter implements AppointmentRepository {
     }
   }
 
+  async getById(id: string): Promise<Result<Appointment, DomainError>> {
+    const centerRes = getCenterIdFor("Appointment.getById");
+    if (!centerRes.ok) return centerRes as any;
+
+    if (typeof id !== "string" || !id) {
+      return { ok: false, error: createQueryError("Appointment.getById", "Appointment id is required") };
+    }
+
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('appointments')
+        .select(`
+          *,
+          customers (id, name, phone),
+          employees (id, name),
+          services (id, name, category_id, price, duration_minutes)
+        `)
+        .eq('id', id)
+        .eq('center_id', centerRes.data)
+        .maybeSingle();
+
+      if (error) return { ok: false, error: createQueryError("Appointment.getById", error.message) };
+      if (!data) return { ok: false, error: { name: "DomainError", message: "Not found", code: "NOT_FOUND" } };
+      return { ok: true, data: mapAppointment(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Appointment.getById", (e as Error).message) };
+    }
+  }
+
   async create(data: Partial<Appointment>): Promise<Result<Appointment, DomainError>> {
     const centerRes = getCenterIdFor("Appointment.create");
     if (!centerRes.ok) return centerRes as any;
