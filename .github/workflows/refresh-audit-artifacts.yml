@@ -43,3 +43,5 @@ jobs:
           git add docs/database-contract/artifacts/*.json
           git commit -m "chore: refresh database contract artifacts"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+
+# one-shot production readiness refresh
