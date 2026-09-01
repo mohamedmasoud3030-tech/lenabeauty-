@@ -402,8 +402,8 @@
     },
     {
       "file": "20260901102643_recipe_write_boundary_hardening.sql",
-      "status": "non-idempotent",
-      "error": "policy \"service_recipes_member_select\" for table \"service_recipes\" already exists"
+      "status": "idempotent",
+      "error": null
     },
     {
       "file": "20260901102758_recipe_consumption_aggregation_hardening.sql",
@@ -430,12 +430,10 @@
   ],
   "fingerprints": {
     "after_first_replay": "79d42e63347f3d71586b4944d5e5782e454c02847a612f39dfcce2321d264ec4",
-    "after_repeat": "285825c4f58864435a818d332e83dac2be8410c66fc1a38e12135f8f98c9d354",
-    "identical": false,
+    "after_repeat": "79d42e63347f3d71586b4944d5e5782e454c02847a612f39dfcce2321d264ec4",
+    "identical": true,
     "diff": {
-      "changed_sections": [
-        "policies"
-      ],
+      "changed_sections": [],
       "functions": []
     }
   }
