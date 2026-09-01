@@ -1,7 +1,9 @@
 # ARCHITECTURE — LenaBeauty
 
-**تاريخ التحقق:** 2026-08-17
-هذه الوثيقة تصف الكود التنفيذي الحالي، ولا تصف خطة مستقبلية على أنها منجزة.
+**تاريخ التحقق الأصلي:** 2026-08-17  
+**آخر تحديث تشغيلي:** 2026-09-01
+
+هذه الوثيقة تصف الكود التنفيذي الحالي، ولا تصف خطة مستقبلية على أنها منجزة. عند تعارض رقم ثابت قديم مع generated database-contract artifacts أو الكود/الـworkflow الحالي، تكون الـartifacts والكود التنفيذي هما المصدر الحاكم.
 
 ## 1. شكل المستودع
 
@@ -23,10 +25,10 @@ src-tauri/                   Rust/Tauri shell
 supabase/
   migrations/                canonical DDL/security/business rules
   seeds/                     gated Demo/Staging data only
-  tests/                     SQL acceptance scripts
+  tests/                     rollback-safe SQL acceptance scripts
   rollbacks/                 selected rollback runbooks
 scripts/                     migration/RPC/type/audit/preflight tools
-.github/workflows/           one Demo migration workflow
+.github/workflows/           one canonical Demo migration workflow
 public/                      PWA icons/brand mark
 vercel.json                  Web deployment/headers/SPA rewrite
 ```
@@ -69,6 +71,8 @@ Supabase Adapter (src/infrastructure/supabase/repositories.ts)
 
 - `useCases` ينشئ repository bundle lazily.
 - `createRepositoryBundle()` يدعم Supabase فقط في التشغيل الفعلي.
+- `ServiceRecipeRepository` موصول فعليًا إلى `SupabaseServiceRecipeAdapter` ثم `useCases.recipes`؛ ليس adapter غير مستخدم أو mock path.
+- Appointment lifecycle موصول عبر `AppointmentRepository.getById/transitionVisit`، وPOS checkout يمرر `appointmentId` إلى الـcheckout authority.
 - Domain layer يحمل interfaces وvalidation primitives، لكنه ليس فصلًا نظيفًا كاملًا؛ بعض DTOs تستورد domain entities وبعض adapters ما زالت تستخدم `any` في الأسطح المعقدة.
 - لا caching/query library؛ كل صفحة تدير loading/data/error عبر React state.
 - لا server application layer مستقل بين المتصفح وSupabase.
@@ -108,7 +112,7 @@ Repository adapters تعيد validation على حدود البيانات في CR
 - default/fallback: Arabic.
 - direction يوضع على `<html>` عند startup ويتغير مع اللغة.
 - خطا Inter/Cairo من Google Fonts مع system fallback.
-- workforce pages (`Attendance`, `Advances`, `Payroll`, `Staff Analytics`) نقلت visible copy إلى i18n وأصبحت discoverable للإدارة. ما زالت بعض legacy styles تستخدم ألوانًا صلبة؛ visual browser review غير متاح.
+- workforce pages (`Attendance`, `Advances`, `Payroll`, `Staff Analytics`) نقلت visible copy إلى i18n وأصبحت discoverable للإدارة. ما زالت بعض legacy styles تستخدم ألوانًا صلبة.
 
 ### Accessibility
 
@@ -122,7 +126,7 @@ Repository adapters تعيد validation على حدود البيانات في CR
 - Toast/network live regions.
 - `prefers-reduced-motion`.
 
-هذا لا يثبت WCAG compliance لكل صفحة؛ لا توجد browser/screen-reader E2E suite.
+هذا لا يثبت WCAG compliance لكل صفحة؛ لا توجد browser/screen-reader E2E suite كاملة.
 
 ## 5. Backend وخدمات الخادم
 
@@ -132,7 +136,7 @@ Supabase هو backend الوحيد للـWeb:
 
 - Auth email/password/session refresh.
 - Postgres/PostgREST.
-- private `center-assets` Storage bucket للشعار؛ canonical contract يقيد writes إلى ADMIN/center path وJPEG/PNG/WebP بحد 2 MiB (hosted application pending).
+- private `center-assets` Storage bucket للشعار؛ canonical contract يقيد writes إلى ADMIN/center path وJPEG/PNG/WebP بحد 2 MiB.
 - PostgreSQL RPCs للعمليات ذات الثقة الأعلى.
 
 ### ما لا يوجد
@@ -150,24 +154,27 @@ Supabase هو backend الوحيد للـWeb:
 
 ### Canonical chain
 
-- `supabase/migrations/` يحتوي **36 migration** بترتيب filename.
-- **35** منها automated replay.
+- `supabase/migrations/` يُكتشف ديناميكيًا بترتيب filename؛ لا يُسمح لعقد اختبار أو runbook أن يثبت عددًا قديمًا كشرط نشر.
+- snapshot الـaudit الحالي في 2026-09-01: **41 migration**، منها **40 automated replay** + manual bootstrap واحد فقط.
 - `20260628000002_admin_bootstrap.sql` operator/manual migration لأنه يحتاج Auth user UUID حقيقيًا.
-- PGlite replay الحالي: 0 replay failures، 0 idempotency failures، fingerprint متطابق بعد الإعادة.
+- PGlite replay الحالي: 0 replay failures، 0 idempotency failures، fingerprint متطابق بعد الإعادة، و0 high / 0 medium database-contract findings.
+- `audit.replay.test.ts` و`audit.scanner.test.ts` يتحققان من استثناء manual bootstrap الوحيد ديناميكيًا بدل hard-coded migration counts.
 
-### Schema inventory من replay
+### Schema inventory من generated replay
 
-- 34 public tables.
-- 364 columns.
-- 382 constraints.
-- 78 foreign keys.
-- 100 indexes.
+حسب `docs/database-contract/artifacts/audit-findings.json` الحالي:
+
+- 37 public tables.
+- 392 columns.
+- 409 constraints.
+- 89 foreign keys.
+- 117 indexes.
 - 23 triggers.
-- 59 functions عبر public/app_private، وتشمل ADMIN wrappers وDashboard/Payroll transaction RPCs.
-- 46 RLS policies بعد تجميع سياسات admin المتكررة.
-- 34/34 tables لها RLS enabled في canonical replay.
+- 62 functions عبر public/app_private.
+- 49 RLS policies.
 - لا views.
 - `appointment_status`: `SCHEDULED | COMPLETED | CANCELLED | NO_SHOW`.
+- `visit_stage`: `BOOKED | CONFIRMED | ARRIVED | IN_SERVICE | READY_FOR_CHECKOUT`.
 
 ### مجموعات الجداول
 
@@ -176,6 +183,9 @@ Supabase هو backend الوحيد للـWeb:
 
 **Operations**
 - `customers`, `employees`, `service_categories`, `services`, `products`, `appointments`, `expenses`.
+
+**Visit/service consumption**
+- `service_recipes`, `service_recipe_items`, `inventory_consumptions`.
 
 **Sales/financial**
 - `invoices`, `invoice_items`, `payments`, `checkout_idempotency`.
@@ -197,23 +207,27 @@ Supabase هو backend الوحيد للـWeb:
 - RLS يستعمل `user_center_ids()` أو `is_center_member()`.
 - production hardening أضاف center-scoped FKs لبعض العلاقات الحساسة.
 - checkout يتحقق من center membership ويستمد catalog/financial values من DB.
+- recipe reads مقيدة بعضوية المركز، بينما الكتابة المباشرة على `service_recipes` و`service_recipe_items` مسحوبة من authenticated client؛ `save_service_recipe_v1` هو write authority.
 
 ### Role boundary
 
 - payroll/attendance/advances وadmin Settings/Accounting/Customer Experience/AI/entitlement lifecycle تطبق `has_center_role(..., ['ADMIN'])` في canonical DB.
 - sensitive public RPCs أصبحت ADMIN wrappers؛ implementations القديمة owner-only بلا client grants.
 - employee writes وcompensation reads أصبحت عبر governed RPCs؛ operational roles تحصل على identity fields فقط.
-- Dashboard financial capability وP&L/revenue تأتي من server-governed RPCs. hosted application لهذه migrations ما زال غير متحقق.
+- Dashboard financial capability وP&L/revenue تأتي من server-governed RPCs.
 - action-level policy لـcustomer/service/product CRUD ما زالت تحتاج owner confirmation؛ `can()` غير مستعمل في runtime UI.
 
-### Financial rules
+### Financial and Visit rules
 
 مصدر الحقيقة هو PostgreSQL، لا UI:
 
-- `process_checkout_idempotent_v1` هو client entry point.
+- `process_checkout_idempotent_v1` هو client checkout entry point، والـsignature الحالي يتضمن `p_appointment_id`.
 - `process_checkout_v1` internal وغير ممنوح للعميل.
+- `app_private.consume_invoice_recipes_v1` internal وغير قابل للتنفيذ من PUBLIC/anon/authenticated.
+- active visit لا يتحول إلى `COMPLETED` بزر محلي منفصل؛ `READY_FOR_CHECKOUT` ينتقل إلى POS، والـcheckout يربط invoice بالappointment ويغلق الزيارة server-side.
+- recipe consumption يجمع `invoice_items` المتكررة لنفس `service_id` قبل الاستهلاك؛ retry idempotent ولا يخصم المخزون مرتين.
 - OMR بثلاث خانات عشرية وPostgreSQL numeric.
-- stock decrement، invoice/payment/line، customer aggregates، entitlement entries في transaction واحدة.
+- stock decrement، invoice/payment/line، customer aggregates، entitlement entries وvisit completion تتم داخل السلطة الخادمية المحددة.
 - paid financial rows client-readable لكن direct writes مسحوبة.
 - entitlements ledger append-only ويقود balance trigger.
 - appointment duration snapshot + exclusion constraint يمنع overlap المتزامن.
@@ -225,6 +239,7 @@ Supabase هو backend الوحيد للـWeb:
 - catalog demo موجود خارج migrations في `supabase/seeds/`.
 - seed يتوقف إذا لم تكن الجلسة مصنفة Demo/Staging ولم يعط center ID.
 - لا customer/invoice/payment demo seeds داخل canonical migrations.
+- في فحص Demo بتاريخ 2026-09-01 كان المركز الرئيسي يحتوي خدمات/عملاء/فواتير، لكن 0 products و0 appointments و0 entitlements؛ لذلك لا تُعتبر الجداول الفارغة إثبات E2E للـVisit/Recipe/Wallet.
 
 ### Deletion behavior
 
@@ -250,9 +265,9 @@ Supabase هو backend الوحيد للـWeb:
 ### Account lifecycle
 
 - إنشاء أول admin يتم يدويًا في Supabase ثم admin bootstrap migration.
-- لا signup/reset/invite/deactivate Auth account UI.
+- لا signup/reset/invite/deactivate Auth account UI كاملة.
 - لا توجد Auth account-management UI حاليًا. تم إزالة legacy Settings tab التي كانت توصل “User Management” خطأً بجدول `employees`; provisioning ما زال operator/server responsibility.
-- hosted password policies غير مثبتة محليًا. Workflow يحاول تفعيل password-change reauthentication فقط إذا توفرت deployment credentials.
+- Workflow يحاول تفعيل password-change reauthentication فقط إذا توفرت deployment credentials؛ leaked-password protection يبقى متطلبًا قبل Production paid launch إذا لم يكن متاحًا على الخطة الحالية.
 
 ## 8. Integrations
 
@@ -316,7 +331,7 @@ Integration أساسي وضروري. Browser publishable key public بطبيعت
 
 ### Router contract
 
-Manifest وshortcuts تستعمل الآن `/#/dashboard` و`/#/pos` بما يطابق `HashRouter`، ويوجد static regression لهذا العقد.
+Manifest وshortcuts تستعمل `/#/dashboard` و`/#/pos` بما يطابق `HashRouter`، ويوجد static regression لهذا العقد.
 
 ## 10. Tauri desktop
 
@@ -350,16 +365,27 @@ Manifest وshortcuts تستعمل الآن `/#/dashboard` و`/#/pos` بما يط
 
 ### GitHub Actions
 
-Workflow واحد: `Apply Demo Supabase migrations`.
+Workflow canonical واحد: `Apply Demo Supabase migrations`.
 
-Static job يشغل audit/type/migration/RPC/tests/build/npm audit/diff checks. Live job:
+Static job يشغل:
 
-- لا يعمل إلا إذا وجدت مجموعة كاملة من GitHub secrets.
-- يتأكد من explicit Demo project ref.
-- يطبق migrations ويفحص history/preflight.
-- لا يشغل SQL files تحت `supabase/tests/` مباشرة.
+- `audit:gate`
+- DB type/migration/RPC checks
+- full Vitest suite
+- typecheck
+- lint
+- build
+- `npm audit --audit-level=low`
+- `git diff --check`
 
-آخر run مقروء كان static-success، لكن live migration job **skipped** بسبب غياب واحد أو أكثر من credential inputs. لذلك نجاح workflow لا يثبت hosted schema update.
+Live job:
+
+- لا يعمل إلا إذا وجدت مجموعة كاملة من GitHub secrets وتم تشغيل workflow يدويًا (`workflow_dispatch`).
+- يتأكد من explicit canonical Demo project ref.
+- يطبق migrations ويفحص local/remote history و`preflight:supabase`.
+- يشغّل **كل** `supabase/tests/*.sql` عبر `psql` كrollback-safe SQL acceptance. العبارة القديمة بأنه لا يشغّلها كانت عقدًا قديمًا وتم تصحيحها.
+
+في مراجعة 2026-09-01 كانت GitHub live secrets غير مكتملة، لذلك الـcredentialed live job يُتخطى بأمان ولا يجوز الادعاء أنه مرّ. في المقابل، مشروع Lena Beauty Demo `tuzzvqsnbtzvkffmazyf` أصبح متصلًا مباشرة في جلسة المراجعة؛ migrations الأربعة الخاصة بالـVisit/Recipes طُبقت عليه، وتم فحص grants/RLS/function definitions/indexes/migration history مباشرة. هذا يثبت schema deployment/security inspection، لكنه لا يستبدل browser E2E ببيانات Demo غير فارغة.
 
 ### Monitoring/logging
 
@@ -372,7 +398,7 @@ Static job يشغل audit/type/migration/RPC/tests/build/npm audit/diff checks. 
 
 - selected migrations المتأخرة لها rollback runbooks.
 - لا rollback automation.
-- Settings export يغطي subset فقط من 34 tables ويظهر الآن باسم operational JSON export، لا backup.
+- Settings export يغطي subset فقط من 37 tables ويظهر باسم operational JSON export، لا backup.
 - legacy restore adapter ما زال جزئيًا وغير atomic، لذلك أزيل Restore من UI ولم يعد Auto-Backup معروضًا.
 - disaster recovery يعتمد على managed database backups/runbook غير متحقق hosted.
 - hosted Supabase backup/PITR policy مجهولة من هذا repository.

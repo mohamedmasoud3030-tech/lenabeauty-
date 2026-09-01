@@ -51,6 +51,99 @@
         {
           "relation": "customers",
           "columns": [
+            "id",
+            "name",
+            "phone"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "id",
+            "name",
+            "category_id",
+            "price",
+            "duration_minutes"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
+            "id",
+            "name",
+            "phone"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "id",
+            "name",
+            "category_id",
+            "price",
+            "duration_minutes"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
+            "id",
+            "name",
+            "phone"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "employees",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "services",
+          "columns": [
+            "id",
+            "name",
+            "category_id",
+            "price",
+            "duration_minutes"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
+          "relation": "customers",
+          "columns": [
             "name"
           ],
           "resolvable": true,
@@ -266,6 +359,12 @@
       "embed_results": []
     },
     {
+      "table": "inventory_consumptions",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": []
+    },
+    {
       "table": "invoice_items",
       "exists": true,
       "missing_columns": [],
@@ -416,6 +515,21 @@
       "embed_results": [
         {
           "relation": "service_package_items",
+          "columns": [
+            "*"
+          ],
+          "resolvable": true,
+          "direction": "to-many"
+        }
+      ]
+    },
+    {
+      "table": "service_recipes",
+      "exists": true,
+      "missing_columns": [],
+      "embed_results": [
+        {
+          "relation": "service_recipe_items",
           "columns": [
             "*"
           ],
@@ -876,6 +990,7 @@
       "name": "process_checkout_idempotent_v1",
       "exists": true,
       "frontend_args": [
+        "p_appointment_id",
         "p_center_id",
         "p_customer_id",
         "p_discount_amount",
@@ -890,7 +1005,7 @@
       "overloads": [
         {
           "schema": "public",
-          "signature": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+          "signature": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb, p_appointment_id uuid",
           "security_definer": true,
           "search_path": [
             "search_path=pg_catalog, public, app_private"
@@ -1152,6 +1267,56 @@
         {
           "schema": "public",
           "signature": "p_center_id uuid, p_customer_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "save_service_recipe_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id",
+        "p_items",
+        "p_service_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_service_id uuid, p_items jsonb",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "transition_visit_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_stage"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_appointment_id uuid, p_stage text",
           "security_definer": true,
           "search_path": [
             "search_path=pg_catalog, public, app_private"
@@ -1619,6 +1784,29 @@
       "has_for_all": false
     },
     {
+      "table": "inventory_consumptions",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "inventory_consumptions_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "app_private.is_center_member(center_id)",
+          "with_check": null,
+          "membership_only": true
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
+      "has_for_all": false
+    },
+    {
       "table": "invoice_items",
       "rls_enabled": true,
       "rls_forced": false,
@@ -1867,6 +2055,29 @@
         }
       ],
       "missing_operations": [],
+      "has_for_all": false
+    },
+    {
+      "table": "service_recipes",
+      "rls_enabled": true,
+      "rls_forced": false,
+      "policies": [
+        {
+          "name": "service_recipes_member_select",
+          "command": "SELECT",
+          "roles": [
+            "authenticated"
+          ],
+          "using": "(center_id = ANY (app_private.user_center_ids()))",
+          "with_check": null,
+          "membership_only": false
+        }
+      ],
+      "missing_operations": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ],
       "has_for_all": false
     },
     {

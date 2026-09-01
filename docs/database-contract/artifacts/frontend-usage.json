@@ -1,5 +1,5 @@
 {
-  "files": 233,
+  "files": 249,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -47,7 +47,76 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": []
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
         },
         {
           "hasStar": true,
@@ -95,6 +164,43 @@
           "hasStar": true,
           "columns": [],
           "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
         },
         {
           "hasStar": true,
@@ -670,6 +776,24 @@
       ]
     },
     {
+      "table": "inventory_consumptions",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        }
+      ],
+      "filters": [
+        "center_id",
+        "consumed_at"
+      ],
+      "single": []
+    },
+    {
       "table": "invoice_items",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1115,6 +1239,35 @@
       "single": []
     },
     {
+      "table": "service_recipes",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "selects": [
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": [
+            {
+              "relation": "service_recipe_items",
+              "join": "default",
+              "columns": [
+                "*"
+              ],
+              "embeds": []
+            }
+          ]
+        }
+      ],
+      "filters": [
+        "center_id",
+        "service_id"
+      ],
+      "single": [
+        "maybeSingle"
+      ]
+    },
+    {
       "table": "services",
       "files": [
         "src/infrastructure/supabase/repositories.ts"
@@ -1376,6 +1529,7 @@
         "src/infrastructure/supabase/repositories.ts"
       ],
       "args": [
+        "p_appointment_id",
         "p_center_id",
         "p_customer_id",
         "p_discount_amount",
@@ -1511,6 +1665,28 @@
       "args": [
         "p_center_id",
         "p_customer_id"
+      ]
+    },
+    {
+      "name": "save_service_recipe_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_items",
+        "p_service_id"
+      ]
+    },
+    {
+      "name": "transition_visit_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_stage"
       ]
     },
     {

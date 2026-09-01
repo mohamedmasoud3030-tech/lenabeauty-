@@ -13,6 +13,9 @@ const requiredEnv = [
   "VITE_BRANCH_MODE",
 ];
 
+// Tables that are expected to be reachable through the ordinary Data API
+// preflight. Some newer server-owned tables intentionally deny anon access and
+// are checked remotely only when a service-role key is available.
 const requiredTables = [
   "centers",
   "profiles",
@@ -28,10 +31,15 @@ const requiredTables = [
   "entitlement_ledger",
 ];
 
-// Discovered from disk, never hand-listed. A hardcoded array silently rots:
-// this list had stopped at 20260817000003 while the repository already carried
-// 20260817000004 and 20260817000005, so the newest migrations were skipped by
-// the preflight without any warning.
+const restrictedRecipeTables = [
+  "service_recipes",
+  "service_recipe_items",
+  "inventory_consumptions",
+];
+
+const canonicalRequiredTables = [...requiredTables, ...restrictedRecipeTables];
+
+// Discovered from disk, never hand-listed. A hardcoded array silently rots.
 const canonicalMigrations = readdirSync(migrationsDir)
   .filter((file) => file.endsWith(".sql"))
   .sort((a, b) => a.localeCompare(b));
@@ -143,12 +151,10 @@ if (existsSync(legacyRlsPath)) {
 }
 
 const initialSchema = readFileSync(resolve(migrationsDir, canonicalMigrations[0]), "utf8");
-// Core tables are defined in the initial schema; later phases add their own
-// tables, so the presence check runs against the full canonical chain.
 const fullMigrationChain = canonicalMigrations
   .map((name) => readFileSync(resolve(migrationsDir, name), "utf8"))
   .join("\n");
-for (const table of requiredTables) {
+for (const table of canonicalRequiredTables) {
   const qualified = `CREATE TABLE IF NOT EXISTS public.${table}`;
   const unqualified = `CREATE TABLE IF NOT EXISTS ${table}`;
   if (!initialSchema.includes(unqualified) &&
@@ -170,11 +176,56 @@ else pass("internal atomic checkout RPC exists");
 if (!checkout.includes("CREATE TABLE IF NOT EXISTS public.payments")) fail("canonical payments ledger is missing");
 else pass("canonical payments ledger exists");
 
-const idempotentCheckout = readFileSync(resolve(migrationsDir, "20260816000002_checkout_idempotency.sql"), "utf8");
-if (!idempotentCheckout.includes("CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1")) fail("client idempotent checkout RPC is missing");
-else pass("client idempotent checkout RPC exists");
-if (!idempotentCheckout.includes("REVOKE ALL ON FUNCTION public.process_checkout_v1")) fail("internal checkout RPC remains client-executable");
+// This migration establishes the idempotent boundary, but it is no longer the
+// final checkout signature. The September visit migration below is required to
+// prove the current client contract and prevents this older check from masking
+// a missing appointment-aware checkout.
+const idempotentCheckoutBase = readFileSync(resolve(migrationsDir, "20260816000002_checkout_idempotency.sql"), "utf8");
+if (!idempotentCheckoutBase.includes("CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1")) fail("base client idempotent checkout RPC is missing");
+else pass("base client idempotent checkout RPC exists");
+if (!idempotentCheckoutBase.includes("REVOKE ALL ON FUNCTION public.process_checkout_v1")) fail("internal checkout RPC remains client-executable");
 else pass("internal checkout RPC is behind the idempotent client boundary");
+
+const visitLifecycle = readFileSync(resolve(migrationsDir, "20260901100838_visit_lifecycle_recipes.sql"), "utf8");
+if (!visitLifecycle.includes("p_appointment_id UUID DEFAULT NULL")) fail("current checkout RPC is missing p_appointment_id");
+else pass("current checkout RPC is appointment-aware");
+if (!visitLifecycle.includes("CREATE TABLE IF NOT EXISTS public.service_recipes")) fail("service_recipes table is missing");
+else pass("service_recipes table exists");
+if (!visitLifecycle.includes("CREATE TABLE IF NOT EXISTS public.service_recipe_items")) fail("service_recipe_items table is missing");
+else pass("service_recipe_items table exists");
+if (!visitLifecycle.includes("CREATE TABLE IF NOT EXISTS public.inventory_consumptions")) fail("inventory_consumptions table is missing");
+else pass("inventory_consumptions table exists");
+if (!visitLifecycle.includes("CREATE OR REPLACE FUNCTION public.transition_visit_v1")) fail("visit transition RPC is missing");
+else pass("visit transition RPC exists");
+if (!visitLifecycle.includes("CREATE OR REPLACE FUNCTION public.save_service_recipe_v1")) fail("service recipe RPC is missing");
+else pass("service recipe RPC exists");
+
+const recipeBoundary = readFileSync(resolve(migrationsDir, "20260901102643_recipe_write_boundary_hardening.sql"), "utf8");
+if (!recipeBoundary.includes("REVOKE ALL ON TABLE public.service_recipes FROM anon")) fail("anonymous recipe table access is not revoked");
+else pass("anonymous recipe table access is revoked");
+if (!recipeBoundary.includes("REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER") ||
+    !recipeBoundary.includes("ON TABLE public.service_recipes FROM authenticated") ||
+    !recipeBoundary.includes("ON TABLE public.service_recipe_items FROM authenticated")) {
+  fail("authenticated direct recipe writes are not revoked");
+} else {
+  pass("recipe writes are RPC-only for authenticated clients");
+}
+if (!recipeBoundary.includes("FOR SELECT TO authenticated")) fail("authenticated recipe read policy is missing");
+else pass("authenticated recipe reads remain available");
+
+const recipeAggregation = readFileSync(resolve(migrationsDir, "20260901102758_recipe_consumption_aggregation_hardening.sql"), "utf8");
+if (!recipeAggregation.includes("SUM(ii.quantity)::NUMERIC AS service_qty") ||
+    !recipeAggregation.includes("GROUP BY ii.service_id")) {
+  fail("recipe consumption does not aggregate duplicate service lines");
+} else {
+  pass("recipe consumption aggregates duplicate service lines");
+}
+if (!recipeAggregation.includes("REVOKE ALL ON FUNCTION app_private.consume_invoice_recipes_v1(UUID, UUID)") ||
+    !recipeAggregation.includes("FROM PUBLIC, anon, authenticated")) {
+  fail("internal recipe consumer is client-executable");
+} else {
+  pass("internal recipe consumer is not client-executable");
+}
 
 const entitlements = readFileSync(resolve(migrationsDir, "20260811004000_financial_entitlements.sql"), "utf8");
 if (!entitlements.includes("CREATE TABLE IF NOT EXISTS public.customer_entitlements")) fail("entitlement tables are missing");
@@ -187,16 +238,19 @@ if (!entitlements.includes("GRANT EXECUTE ON FUNCTION public.refund_entitlement_
 else pass("governed entitlement RPCs exist");
 
 async function verifyRemoteSchema() {
-  // The browser-safe publishable key is enough to confirm that each table is
-  // present in PostgREST's schema cache. A service key is intentionally not
-  // required for this release gate and must never be put in a VITE_ variable.
-  const apiKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim() || env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+  // The browser-safe publishable key is enough for tables intentionally exposed
+  // through the Data API. Server-owned recipe tables are checked only when a
+  // service-role key is available, because anon access to those tables is
+  // intentionally revoked by the canonical security boundary.
+  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const apiKey = serviceRoleKey || env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!apiKey || !env.VITE_SUPABASE_URL) {
     fail("remote schema verification requires a Supabase URL and publishable key");
     return;
   }
 
-  const tableChecks = requiredTables.map(async (table) => {
+  const remoteTables = serviceRoleKey ? canonicalRequiredTables : requiredTables;
+  const tableChecks = remoteTables.map(async (table) => {
     const url = new URL(`/rest/v1/${table}`, env.VITE_SUPABASE_URL);
     url.searchParams.set("select", "id");
     url.searchParams.set("limit", "1");
@@ -217,7 +271,11 @@ async function verifyRemoteSchema() {
 
   await Promise.all(tableChecks);
 
-  if (env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+  if (!serviceRoleKey) {
+    console.log("INFO server-owned recipe table reachability requires a service-role key and was intentionally not probed with anon credentials.");
+  }
+
+  if (serviceRoleKey) {
     const centerUrl = new URL("/rest/v1/centers", env.VITE_SUPABASE_URL);
     centerUrl.searchParams.set("id", `eq.${env.VITE_CENTER_ID}`);
     centerUrl.searchParams.set("select", "id");
@@ -236,7 +294,7 @@ async function verifyRemoteSchema() {
       fail(`configured center verification failed: network ${code}`);
     }
   } else {
-    console.log("INFO center seed verification requires a server-only key; table availability was checked with the publishable key.");
+    console.log("INFO center seed verification requires a server-only key; ordinary table availability was checked with the publishable key.");
   }
 }
 

@@ -21,7 +21,8 @@ import {
   AdvancedRepository,
   AttendanceRepository,
   AdvanceRepository,
-  PayrollRepository
+  PayrollRepository,
+  ServiceRecipeRepository
 } from "../domain/ports/repositories";
 import {
   SupabaseAuthAdapter,
@@ -45,7 +46,8 @@ import {
   SupabaseAdvancedAdapter,
   SupabaseAttendanceAdapter,
   SupabaseAdvanceAdapter,
-  SupabasePayrollAdapter
+  SupabasePayrollAdapter,
+  SupabaseServiceRecipeAdapter
 } from "./supabase";
 
 export interface RepositoryBundle {
@@ -71,6 +73,7 @@ export interface RepositoryBundle {
   attendanceAdapter: AttendanceRepository;
   advanceAdapter: AdvanceRepository;
   payrollAdapter: PayrollRepository;
+  serviceRecipeAdapter: ServiceRecipeRepository;
 }
 
 export class InfrastructureError extends Error {
@@ -104,7 +107,8 @@ export function createRepositoryBundle(): RepositoryBundle {
       advancedAdapter: new SupabaseAdvancedAdapter(),
       attendanceAdapter: new SupabaseAttendanceAdapter(),
       advanceAdapter: new SupabaseAdvanceAdapter(),
-      payrollAdapter: new SupabasePayrollAdapter()
+      payrollAdapter: new SupabasePayrollAdapter(),
+      serviceRecipeAdapter: new SupabaseServiceRecipeAdapter()
     };
   }
 

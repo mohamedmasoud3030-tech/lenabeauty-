@@ -5,15 +5,15 @@ import {
   Receipt, FileText, Save, CheckCircle2, UserPlus,
   MoreVertical, Sparkles,
   TrendingUp, Pencil,
-  Download, Star, Users, Crown
+  Download, Star, Users, Crown,
+  Wallet, Clock, ChevronDown, ChevronUp, Scissors, Image as ImageIcon
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { getDisplayName, getInitials } from "../shared/displayName";
-import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
-import { Customer, Appointment, Invoice } from "../domain/entities";
+import { Customer, Appointment, Invoice, AppointmentStatus, ServiceFile, CustomerEntitlement } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
@@ -22,6 +22,18 @@ import { formatOMRAmount } from "../shared/money";
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { InvoicePrintData } from "../application/dto";
 import { Modal } from "../shared/components/Modal";
+import { composeBeautyPassport } from "../domain/passport";
+import {
+  retentionVisitsFromHistory,
+  getNextBestCustomerAction,
+  getRetentionStatus,
+  getCustomerVisitPattern,
+  RetentionStatus,
+} from "../domain/retention";
+import { buildCustomerWallet } from "../domain/wallet";
+import { formatSalonDate } from "../shared/dateTime";
+import { visitStageI18nKey } from "../shared/visitStage";
+import { effectiveVisitStage } from "../domain/visit";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -34,6 +46,39 @@ interface InvoiceHistoryItem extends Invoice {
 interface CustomerHistoryType {
   appointments: Appointment[];
   invoices: InvoiceHistoryItem[];
+}
+
+/** i18n label for a unified lifecycle stage (terminal states use their status). */
+function passportStageLabel(stage: string, t: (k: string) => string): string {
+  if (stage === "COMPLETED" || stage === "CANCELLED" || stage === "NO_SHOW") return t(stage);
+  return t(visitStageI18nKey(stage as any));
+}
+
+/** Semantic badge classes for a unified lifecycle stage. */
+function passportStageClass(stage: string): string {
+  switch (stage) {
+    case "COMPLETED": return "bg-success/10 text-success border-success/20";
+    case "CANCELLED": return "bg-destructive/10 text-destructive border-destructive/20";
+    case "NO_SHOW": return "bg-warning/10 text-warning border-warning/20";
+    case "IN_SERVICE":
+    case "READY_FOR_CHECKOUT": return "bg-info/10 text-info border-info/20";
+    case "ARRIVED": return "bg-primary/10 text-primary border-primary/20";
+    case "CONFIRMED": return "bg-info/10 text-info border-info/20";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
+}
+
+/** Semantic badge classes for the deterministic retention status. */
+function retentionStatusClass(status: RetentionStatus): string {
+  switch (status) {
+    case "ACTIVE": return "bg-success/10 text-success border-success/20";
+    case "NEW":
+    case "INSUFFICIENT_HISTORY": return "bg-info/10 text-info border-info/20";
+    case "DUE_FOR_REBOOK": return "bg-primary/10 text-primary border-primary/20";
+    case "DORMANT": return "bg-warning/10 text-warning border-warning/20";
+    case "WINBACK": return "bg-destructive/10 text-destructive border-destructive/20";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
 }
 
 // Loyalty tier is derived from lifetime spend via the shared domain model
@@ -66,6 +111,10 @@ export default function CustomersPage() {
   const [q, setQ] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [history, setHistory] = useState<CustomerHistoryType | null>(null);
+  const [profileCustomer, setProfileCustomer] = useState<Customer | null>(null);
+  const [serviceFiles, setServiceFiles] = useState<ServiceFile[]>([]);
+  const [entitlements, setEntitlements] = useState<CustomerEntitlement[]>([]);
+  const [showAllVisits, setShowAllVisits] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -119,13 +168,70 @@ export default function CustomersPage() {
     };
   }, [rows]);
 
+  // Beauty Passport composition — pure domain modules over real history.
+  const passportView = useMemo(() => {
+    if (!history) return null;
+    const now = Date.now();
+    const upcoming = history.appointments
+      .filter((a) => a.status === AppointmentStatus.SCHEDULED && new Date(a.dateTime).getTime() >= now)
+      .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+    const nextAppointment = upcoming[0];
+    const passport = composeBeautyPassport({
+      appointments: history.appointments,
+      invoices: history.invoices,
+      serviceFiles,
+      nextAppointment,
+      lifetimeSpend: profileCustomer?.totalSpent,
+    });
+    const retentionVisits = retentionVisitsFromHistory(history);
+    const retentionAction = getNextBestCustomerAction(retentionVisits, new Date());
+    const retentionStatus = getRetentionStatus(retentionVisits, new Date());
+    const visitPattern = getCustomerVisitPattern(retentionVisits);
+    const wallet = buildCustomerWallet({
+      entitlements,
+      loyaltyPoints: profileCustomer?.loyaltyPoints ?? 0,
+      depositAmount: nextAppointment?.depositAmount ?? 0,
+    });
+    // A legitimate wallet benefit (remaining sessions / gift-card value) is an
+    // operational rebooking reason derived from real instruments — never a guess.
+    const walletBenefit =
+      wallet.packages.length > 0 || wallet.giftCardBalance > 0
+        ? {
+            sessionCount: wallet.packages.reduce((sum, p) => sum + p.remainingUnits, 0),
+            giftCardBalance: wallet.giftCardBalance,
+          }
+        : null;
+    return {
+      passport,
+      nextAppointment,
+      retentionAction,
+      retentionStatus,
+      visitPattern,
+      wallet,
+      walletBenefit,
+      hasFutureBooking: !!nextAppointment,
+    };
+  }, [history, serviceFiles, entitlements, profileCustomer]);
+
   async function openHistory(customer: Customer) {
     setOpenId(customer.id);
     setHistory(null);
+    setProfileCustomer(customer);
+    setServiceFiles([]);
+    setEntitlements([]);
+    setShowAllVisits(false);
     setNotes(customer.notes || "");
     try {
-      const res = await unwrap(useCases.customers.getHistory(customer.id));
-      setHistory(res as CustomerHistoryType);
+      const [hist, cust, ent, files] = await Promise.all([
+        unwrap(useCases.customers.getHistory(customer.id)),
+        unwrap(useCases.customers.getById(customer.id)),
+        useCases.entitlements.listForCustomer(customer.id).then((r) => (r.ok ? r.data : [])).catch(() => []),
+        useCases.customerExperience.listServiceFiles(customer.id).then((r) => (r.ok ? r.data : [])).catch(() => []),
+      ]);
+      setHistory(hist as CustomerHistoryType);
+      setProfileCustomer(cust);
+      setEntitlements(ent);
+      setServiceFiles(files);
     } catch (e: any) {
       showToast('error', t("Error"), e?.message || "Failed to load history");
     }
@@ -463,158 +569,329 @@ export default function CustomersPage() {
         title={
           <span className="flex items-center gap-3">
             <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-              <History className="h-5 w-5" />
+              <Sparkles className="h-5 w-5" />
             </span>
-            <span>{t("Customer Profile")}</span>
+            <span>{t("passport.title")}</span>
           </span>
         }
-        description={t("History & Preferences")}
+        description={profileCustomer ? getDisplayName(profileCustomer, t("Unnamed")) : t("passport.subtitle")}
         disableClose={savingNotes}
         overlayClassName="print:hidden"
         className="sm:max-w-6xl sm:rounded-[3rem]"
       >
         <div className="sm:p-5">
-                {!history ? (
-                  <ScreenState state="loading" title={t("Fetching Data...")} compact />
+          {!history || !passportView ? (
+            <ScreenState state="loading" title={t("Fetching Data...")} compact />
+          ) : (
+            <div className="space-y-6">
+              {/* 1) Identity & contact header */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 rounded-[1.5rem] border border-border bg-muted/30 p-4 sm:p-5">
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg shrink-0 uppercase">
+                  {getInitials(profileCustomer, "·")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-bold truncate">{getDisplayName(profileCustomer, t("Unnamed"))}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    {profileCustomer?.phone && (
+                      <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /><span dir="ltr">{profileCustomer.phone}</span></span>
+                    )}
+                    <span>{t("Client ID")}: {profileCustomer?.id.slice(-6).toUpperCase()}</span>
+                    {profileCustomer?.createdAt && (
+                      <span>{t("passport.clientSince")} {formatSalonDate(profileCustomer.createdAt, i18n.language)}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {(() => {
+                    const tier = getTierBySpend(profileCustomer?.totalSpent ?? 0);
+                    return (
+                      <span className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold border ${tier.bg} ${tier.color} ${tier.border}`}>
+                        <span>{tier.icon}</span>
+                        <span>{t(tier.labelKey)}</span>
+                      </span>
+                    );
+                  })()}
+                  <span className="inline-flex items-center gap-1 rounded-2xl px-4 py-2 text-xs font-bold border border-warning/20 bg-warning/10 text-warning">
+                    <Sparkles className="h-3.5 w-3.5" /> {profileCustomer?.loyaltyPoints ?? 0} {t("pts")}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-2xl px-4 py-2 text-xs font-bold border border-success/20 bg-success/10 text-success">
+                    <TrendingUp className="h-3.5 w-3.5" /> {formatOMRAmount(profileCustomer?.totalSpent ?? 0)} {t("OMR")}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2) Relationship snapshot */}
+              <section className="space-y-2">
+                <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> {t("passport.snapshot")}
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2">
+                  {[
+                    { label: t("passport.lastVisit"), value: passportView.passport.summary.lastVisitISO ? formatSalonDate(passportView.passport.summary.lastVisitISO, i18n.language) : "—" },
+                    { label: t("passport.nextAppointment"), value: passportView.passport.summary.nextAppointmentISO ? formatSalonDate(passportView.passport.summary.nextAppointmentISO, i18n.language) : "—" },
+                    { label: t("passport.totalVisits"), value: String(passportView.passport.summary.totalVisits) },
+                    { label: t("passport.lifetimeSpend"), value: `${formatOMRAmount(passportView.passport.summary.lifetimeSpend)} ${t("OMR")}` },
+                    { label: t("passport.averageVisitValue"), value: passportView.passport.summary.averageVisitValue !== undefined ? formatOMRAmount(passportView.passport.summary.averageVisitValue) : "—" },
+                    { label: t("passport.preferredEmployee"), value: passportView.passport.summary.preferredEmployeeName ?? "—" },
+                    { label: t("passport.mostUsedService"), value: passportView.passport.summary.mostUsedServiceName ?? "—" },
+                  ].map((chip) => (
+                    <div key={chip.label} className="rounded-xl border border-border bg-card p-3">
+                      <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{chip.label}</div>
+                      <div className="text-sm font-bold text-foreground truncate mt-0.5">{chip.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* 3) Next booking + retention + wallet summary */}
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="lg:col-span-2 space-y-4">
+                  <section className="rounded-[1.5rem] border border-border bg-card p-4">
+                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" /> {t("passport.nextBooking")}
+                    </h4>
+                    {passportView.nextAppointment ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <span className="font-bold text-foreground">{formatSalonDate(passportView.nextAppointment.dateTime, i18n.language)}</span>
+                        {passportView.nextAppointment.service?.name && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground"><Scissors className="h-3.5 w-3.5" />{passportView.nextAppointment.service.name}</span>
+                        )}
+                        {passportView.nextAppointment.employee?.name && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground"><User className="h-3.5 w-3.5" />{passportView.nextAppointment.employee.name}</span>
+                        )}
+                        <span className={`rounded-lg px-2 py-1 text-[9px] font-bold border ${passportStageClass(effectiveVisitStage(passportView.nextAppointment))}`}>
+                          {passportStageLabel(effectiveVisitStage(passportView.nextAppointment), t)}
+                        </span>
+                        {(passportView.nextAppointment.depositAmount ?? 0) > 0 && (
+                          <span className="text-xs font-bold text-muted-foreground">{t("wallet.deposit")}: {formatOMRAmount(passportView.nextAppointment.depositAmount ?? 0)} {t("OMR")}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm font-bold text-muted-foreground">{t("passport.noNextBooking")}</p>
+                    )}
+                  </section>
+
+                  <section className="rounded-[1.5rem] border border-border bg-card p-4">
+                    <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5" /> {t("passport.retention")}
+                    </h4>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`rounded-lg border px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${retentionStatusClass(passportView.retentionStatus.status)}`}>
+                          {t(`retention.status.${passportView.retentionStatus.status}`)}
+                        </span>
+                        {passportView.hasFutureBooking && (
+                          <span className="rounded-lg border border-success/20 bg-success/10 px-2 py-1 text-[9px] font-bold text-success">
+                            {t("retention.hasFutureBooking")}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm font-bold text-foreground">{t(passportView.retentionAction.titleKey)}</p>
+                      <p className="text-xs text-muted-foreground">{t(passportView.retentionAction.detailKey)}</p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.lastVisit")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.passport.summary.lastVisitISO
+                              ? formatSalonDate(passportView.passport.summary.lastVisitISO, i18n.language)
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.daysSince")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.retentionStatus.daysSinceLastVisit !== null
+                              ? passportView.retentionStatus.daysSinceLastVisit
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.normalInterval")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.visitPattern.averageDaysBetweenVisits !== null
+                              ? t("retention.daysValue", { count: passportView.visitPattern.averageDaysBetweenVisits })
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-2">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{t("retention.rebookingWindow")}</p>
+                          <p className="text-xs font-bold text-foreground mt-0.5">
+                            {passportView.retentionStatus.rebookingWindow
+                              ? t("retention.daysRange", { min: passportView.retentionStatus.rebookingWindow.minDays, max: passportView.retentionStatus.rebookingWindow.maxDays })
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {passportView.walletBenefit && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-2">
+                          <p className="text-[10px] font-bold text-primary">{t("retention.walletBenefit")}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {passportView.walletBenefit.sessionCount > 0 &&
+                              t("retention.walletSessions", { count: passportView.walletBenefit.sessionCount })}
+                            {passportView.walletBenefit.sessionCount > 0 && passportView.walletBenefit.giftCardBalance > 0 && " · "}
+                            {passportView.walletBenefit.giftCardBalance > 0 &&
+                              t("retention.walletGiftCard", { amount: formatOMRAmount(passportView.walletBenefit.giftCardBalance) })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                </div>
+
+                <section className="rounded-[1.5rem] border border-border bg-card p-4">
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <Wallet className="h-3.5 w-3.5" /> {t("passport.wallet")}
+                  </h4>
+                  <div className="mt-3 space-y-2">
+                    {!passportView.wallet.hasValue ? (
+                      <p className="text-xs font-bold text-muted-foreground">{t("passport.walletEmpty")}</p>
+                    ) : (
+                      <>
+                        {passportView.wallet.giftCardBalance > 0 && (
+                          <div className="flex items-center justify-between gap-2 text-xs font-bold">
+                            <span className="text-muted-foreground">{t("wallet.giftCard")}</span>
+                            <span className="text-foreground">{formatOMRAmount(passportView.wallet.giftCardBalance)} {t("OMR")}</span>
+                          </div>
+                        )}
+                        {passportView.wallet.rewardsPoints > 0 && (
+                          <div className="flex items-center justify-between gap-2 text-xs font-bold">
+                            <span className="text-muted-foreground">{t("wallet.rewards")}</span>
+                            <span className="text-foreground">{passportView.wallet.rewardsPoints} {t("pts")}</span>
+                          </div>
+                        )}
+                        {passportView.wallet.depositAmount > 0 && (
+                          <div className="flex items-center justify-between gap-2 text-xs font-bold">
+                            <span className="text-muted-foreground">{t("wallet.deposit")}</span>
+                            <span className="text-foreground">{formatOMRAmount(passportView.wallet.depositAmount)} {t("OMR")}</span>
+                          </div>
+                        )}
+                        {passportView.wallet.packages.map((p) => (
+                          <div key={`${p.entitlementId}-${p.serviceId}`} className="flex items-center justify-between gap-2 text-xs font-bold">
+                            <span className="text-muted-foreground truncate">{p.packageName}{p.serviceName ? ` · ${p.serviceName}` : ""}</span>
+                            <span className="text-foreground shrink-0">{p.remainingUnits} {t("passport.sessionsLeft")}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              {/* 4) Visit timeline */}
+              <section className="space-y-2">
+                <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <History className="h-3.5 w-3.5" /> {t("passport.timeline")}
+                </h4>
+                {passportView.passport.timeline.length === 0 ? (
+                  <p className="text-sm font-bold text-muted-foreground">{t("passport.noTimeline")}</p>
                 ) : (
-                  <div className="grid gap-12 lg:grid-cols-3">
-                    {/* Notes Section */}
-                    <div className="lg:col-span-1 space-y-8">
-                      <div className="flex items-center gap-4 text-sm font-bold text-foreground uppercase tracking-[0.2em]">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                          <FileText className="h-5 w-5" />
+                  <div className="space-y-2">
+                    {(showAllVisits ? passportView.passport.timeline : passportView.passport.timeline.slice(0, 6)).map((visit) => (
+                      <div key={visit.id} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3">
+                        <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <Receipt className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        {t("Notes & Preferences")}
-                      </div>
-                      <div className="rounded-[2.5rem] border border-border bg-muted/30 p-8 space-y-6 shadow-inner">
-                        <textarea
-                          className="w-full h-64 rounded-[1.5rem] border border-border bg-card p-6 text-sm font-medium text-foreground focus:ring-4 focus:ring-primary/10 outline-none resize-none transition-all shadow-sm"
-                          placeholder={t("Medical History / Preferences / Allergies")}
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                        />
-                        <button
-                          onClick={handleSaveNotes}
-                          disabled={savingNotes}
-                          className="group relative flex w-full h-14 items-center justify-center gap-3 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 overflow-hidden"
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                          <Save className="h-5 w-5 relative z-10" />
-                          <span className="relative z-10">{savingNotes ? t("Saving...") : t("Save Changes")}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Appointments Section */}
-                    <div className="lg:col-span-1 space-y-8">
-                      <div className="flex items-center gap-4 text-sm font-bold text-foreground uppercase tracking-[0.2em]">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                          <Calendar className="h-5 w-5" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-bold text-foreground">{formatSalonDate(visit.dateTimeISO, i18n.language)}</span>
+                            <span className={`rounded-lg px-2 py-0.5 text-[9px] font-bold border ${passportStageClass(visit.stage)}`}>{passportStageLabel(visit.stage, t)}</span>
+                            {visit.amount !== undefined && (
+                              <span className="text-xs font-bold text-success">{formatOMRAmount(visit.amount)} {t("OMR")}</span>
+                            )}
+                          </div>
+                          {(visit.serviceName || visit.employeeName) && (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-[10px] font-bold text-muted-foreground">
+                              {visit.serviceName && <span className="inline-flex items-center gap-1"><Scissors className="h-3 w-3" />{visit.serviceName}</span>}
+                              {visit.employeeName && <span className="inline-flex items-center gap-1"><User className="h-3 w-3" />{visit.employeeName}</span>}
+                            </div>
+                          )}
+                          {visit.images && visit.images.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {visit.images.map((img) => (
+                                <img key={img} src={img} alt="" className="h-10 w-10 rounded-lg object-cover border border-border" />
+                              ))}
+                            </div>
+                          )}
+                          {visit.notes && <p className="mt-1 text-[10px] text-muted-foreground">{visit.notes}</p>}
                         </div>
-                        {t("Appointments")}
-                      </div>
-                      <div className="space-y-5">
-                        {history.appointments?.length ? (
-                          history.appointments.map((a: any, idx: number) => (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
-                              key={a.id} 
-                              className="group rounded-[1.5rem] border border-border bg-muted/50 p-6 transition-all hover:bg-card hover:shadow-xl hover:-translate-y-1"
-                            >
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2 bg-background px-3 py-1.5 rounded-xl border border-border shadow-sm">
-                                  <Calendar className="h-3.5 w-3.5 text-primary" />
-                                  <span className="text-[10px] font-bold text-foreground uppercase tracking-wider">
-                                    {new Date(a.dateTime).toLocaleDateString(i18n.language, { dateStyle: 'medium' })}
-                                  </span>
-                                </div>
-                                <span className={clsx(
-                                  "rounded-xl px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest shadow-sm",
-                                  a.status === 'COMPLETED' ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                                )}>
-                                  {t(a.status)}
-                                </span>
-                              </div>
-                              <div className="text-base font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{a.service?.name}</div>
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                <User className="h-3 w-3" />
-                                {a.employee?.name}
-                              </div>
-                            </motion.div>
-                          ))
-                        ) : (
-                          <ScreenState
-                            state="empty"
-                            compact
-                            icon={<Calendar className="h-6 w-6" />}
-                            title={t("No Appointments")}
-                            description={t("No appointments recorded yet")}
-                          />
+                        {visit.invoiceId && (
+                          <button
+                            onClick={() => handleReprint(visit.invoiceId!)}
+                            className="shrink-0 h-8 px-2.5 rounded-lg bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary hover:text-primary-foreground transition-all"
+                          >
+                            {t("Print")}
+                          </button>
                         )}
                       </div>
-                    </div>
-
-                    {/* Invoices Section */}
-                    <div className="lg:col-span-1 space-y-8">
-                      <div className="flex items-center gap-4 text-sm font-bold text-foreground uppercase tracking-[0.2em]">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                          <Receipt className="h-5 w-5" />
-                        </div>
-                        {t("Invoices")}
-                      </div>
-                      <div className="space-y-5">
-                        {history.invoices?.length ? (
-                          history.invoices.map((inv, idx) => (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0, transition: { delay: idx * 0.05 } }}
-                              key={inv.id} 
-                              className="group rounded-[1.5rem] border border-border bg-muted/50 p-6 transition-all hover:bg-card hover:shadow-xl hover:-translate-y-1"
-                            >
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2 bg-background px-3 py-1.5 rounded-xl border border-border shadow-sm">
-                                  <Receipt className="h-3.5 w-3.5 text-primary" />
-                                  <span className="text-[10px] font-bold text-foreground uppercase tracking-wider">
-                                    {new Date(inv.date).toLocaleDateString(i18n.language, { dateStyle: 'medium' })}
-                                  </span>
-                                </div>
-                                <div className="flex items-baseline gap-1">
-                                  <span className="text-lg font-bold text-primary">{formatOMRAmount(inv.totalAmount)}</span>
-                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between gap-4 mt-2">
-                                <div className="flex flex-wrap gap-2">
-                                  {(inv.items || []).map((it) => (
-                                    <span key={it.id} className="rounded-xl bg-background border border-border px-3 py-1.5 text-[9px] font-bold text-muted-foreground uppercase tracking-widest group-hover:border-primary/30 transition-colors shadow-sm">
-                                      {it.service?.name || it.product?.name}
-                                    </span>
-                                  ))}
-                                </div>
-                                <button
-                                  onClick={() => handleReprint(inv.id)}
-                                  className="shrink-0 h-8 px-3 rounded-lg bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all flex items-center gap-2 relative"
-                                >
-                                  <Receipt className="h-3 w-3" />
-                                  {t("Print")}
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))
-                        ) : (
-                          <ScreenState
-                            state="empty"
-                            compact
-                            icon={<Receipt className="h-6 w-6" />}
-                            title={t("No Invoices")}
-                            description={t("No invoices recorded yet")}
-                          />
-                        )}
-                      </div>
-                    </div>
+                    ))}
+                    {passportView.passport.timeline.length > 6 && (
+                      <button
+                        onClick={() => setShowAllVisits((v) => !v)}
+                        className="w-full h-10 rounded-xl border border-border bg-muted/30 text-xs font-bold text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 touch-target"
+                      >
+                        {showAllVisits ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {showAllVisits ? t("passport.showLess") : t("passport.showAll")}
+                      </button>
+                    )}
                   </div>
                 )}
+              </section>
+
+              {/* 5) Notes & service files */}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <section className="rounded-[1.5rem] border border-border bg-muted/30 p-4 space-y-3">
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" /> {t("passport.notes")}
+                  </h4>
+                  <textarea
+                    className="w-full h-40 rounded-xl border border-border bg-card p-4 text-sm font-medium text-foreground focus:ring-4 focus:ring-primary/10 outline-none resize-none transition-all"
+                    placeholder={t("Medical History / Preferences / Allergies")}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                  />
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={savingNotes}
+                    className="w-full h-12 rounded-xl bg-primary font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{savingNotes ? t("Saving...") : t("Save Changes")}</span>
+                  </button>
+                </section>
+
+                <section className="rounded-[1.5rem] border border-border bg-card p-4 space-y-3">
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <ImageIcon className="h-3.5 w-3.5" /> {t("passport.serviceFiles")}
+                  </h4>
+                  {serviceFiles.length === 0 ? (
+                    <p className="text-xs font-bold text-muted-foreground">{t("passport.noServiceFiles")}</p>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-auto">
+                      {serviceFiles.map((file) => (
+                        <div key={file.id} className="rounded-lg border border-border bg-muted/30 p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-foreground truncate">{file.title}</span>
+                            <span className="text-[9px] font-bold text-muted-foreground shrink-0">{formatSalonDate(file.createdAt, i18n.language)}</span>
+                          </div>
+                          {file.note && <p className="mt-1 text-[10px] text-muted-foreground">{file.note}</p>}
+                          {file.images && file.images.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {file.images.map((img) => (
+                                <img key={img.id} src={img.imageUrl} alt={file.title} className="h-10 w-10 rounded-lg object-cover border border-border" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 

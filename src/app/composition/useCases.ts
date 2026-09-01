@@ -1,6 +1,6 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
-import { Result, BookingInput } from "../../domain/ports/repositories";
-import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance } from "../../domain/entities";
+import { Result, BookingInput, RecipeItemInput } from "../../domain/ports/repositories";
+import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance, VisitStage } from "../../domain/entities";
 import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
 
@@ -32,9 +32,11 @@ export const useCases = {
   },
   appointments: {
     list: (range?: { fromISO: string, toISO: string }) => getRepositoryBundle().appointmentAdapter.list(range || { fromISO:"", toISO:"" }),
+    getById: async (id: string) => getRepositoryBundle().appointmentAdapter.getById(id),
     create: async (data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.create(data),
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
     markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
+    transitionVisit: async (id: string, stage: VisitStage) => getRepositoryBundle().appointmentAdapter.transitionVisit(id, stage),
     delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
     sendReminder: async (_id: string): Promise<Result<void, any>> => {
       const error = new Error("NOTIFICATION_PROVIDER_NOT_CONFIGURED") as Error & { code: string };
@@ -48,8 +50,14 @@ export const useCases = {
     update: async (id: string, data: Partial<Service>) => getRepositoryBundle().serviceAdapter.update(id, data),
     delete: async (id: string) => getRepositoryBundle().serviceAdapter.delete(id),
   },
+  recipes: {
+    getForService: (serviceId: string) => getRepositoryBundle().serviceRecipeAdapter.getForService(serviceId),
+    saveForService: (serviceId: string, items: RecipeItemInput[]) => getRepositoryBundle().serviceRecipeAdapter.saveForService(serviceId, items),
+    listConsumptions: (input?: { limit?: number }) => getRepositoryBundle().serviceRecipeAdapter.listConsumptions(input),
+  },
   customers: {
     list: (q?: string) => getRepositoryBundle().customerAdapter.list(q),
+    getById: async (id: string) => getRepositoryBundle().customerAdapter.getById(id),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
     rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),

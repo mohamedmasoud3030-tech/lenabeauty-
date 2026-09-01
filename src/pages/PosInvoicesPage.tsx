@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -8,17 +9,21 @@ import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
   ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
-  Zap, Clock, TrendingUp
+  CalendarClock
 } from "lucide-react";
 // UserPlus used for inline new-customer creation at the POS checkout panel
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
-import { Customer, Employee, Product, Service, CustomerEntitlement } from "../domain/entities";
+import { Customer, Employee, Product, Service, CustomerEntitlement, Appointment, AppointmentStatus, VisitStage } from "../domain/entities";
 import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData, EntitlementRedemptionInput } from "../application/dto";
 import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../domain/commerce";
+import { buildCustomerWallet, walletAvailableForCheckout } from "../domain/wallet";
+import { effectiveVisitStage } from "../domain/visit";
+import { visitStageI18nKey } from "../shared/visitStage";
+import { formatSalonDateTime } from "../shared/dateTime";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
@@ -98,6 +103,16 @@ export default function PosInvoicesPage() {
   const itemSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRequestRef = useRef(0);
 
+  // Visit → POS handoff. When the page is opened as /pos?appointment=<id>, the
+  // sale is prepared from that visit; a plain /pos stays the walk-in flow.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const appointmentParam = searchParams.get("appointment");
+  const [visitAppointment, setVisitAppointment] = useState<Appointment | null>(null);
+  const [visitContextError, setVisitContextError] = useState<string | null>(null);
+  // Guard refs keep prefill idempotent while catalog/customer loads resolve.
+  const visitHydrationRef = useRef<string>("");
+  const servicePrefillRef = useRef<string>("");
+
   useEffect(() => {
     loadData();
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -121,7 +136,78 @@ export default function PosInvoicesPage() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cart, selectedCustomer, selectedEmployee]);
+  }, [cart, selectedCustomer, selectedEmployee, visitAppointment]);
+
+  // Authoritative visit context: load the appointment by id and prefill the
+  // customer / employee from real repository data. A terminal appointment (or
+  // a failed read) leaves the walk-in flow untouched.
+  useEffect(() => {
+    if (!appointmentParam || visitHydrationRef.current === appointmentParam) return;
+    visitHydrationRef.current = appointmentParam;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await unwrap(useCases.appointments.getById(appointmentParam));
+        if (cancelled) return;
+        if (res.status !== AppointmentStatus.SCHEDULED) {
+          // Already completed/cancelled/no-show: nothing to prepare.
+          setVisitAppointment(null);
+          setVisitContextError(null);
+          return;
+        }
+        setVisitAppointment(res);
+        if (res.employeeId) setSelectedEmployee(res.employeeId);
+        if (res.customerId) {
+          try {
+            const cust = await unwrap(useCases.customers.getById(res.customerId));
+            if (cancelled) return;
+            setSelectedCustomer(cust);
+            const ent = await useCases.entitlements.listForCustomer(cust.id);
+            if (ent.ok) setEntitlements(ent.data);
+          } catch {
+            // Best-effort: the operator can still search the customer manually.
+          }
+        }
+      } catch (e) {
+        if (!cancelled) setVisitContextError(formatError(e));
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [appointmentParam]);
+
+  // Prefill the booked service from the already-loaded catalog so the price
+  // always comes from the authoritative pricing contract (server re-resolves
+  // it again at checkout). Never fabricates a line when the service is not in
+  // the active catalog.
+  useEffect(() => {
+    if (!visitAppointment?.serviceId || servicePrefillRef.current === visitAppointment.id) return;
+    if (services.length === 0) return;
+    servicePrefillRef.current = visitAppointment.id;
+    const svc = services.find((s) => s.id === visitAppointment.serviceId);
+    if (!svc) return;
+    setCart((prev) => prev.some((it) => it.type === "service" && it.id === svc.id)
+      ? prev
+      : [...prev, {
+          id: svc.id,
+          name: svc.name,
+          price: svc.price,
+          type: "service" as const,
+          cartId: globalThis.crypto.randomUUID(),
+          qty: 1,
+          pricingMode: svc.pricingMode,
+        }]);
+  }, [visitAppointment, services]);
+
+  /** Leave the visit context and continue as a plain walk-in sale. */
+  function detachVisit() {
+    setVisitAppointment(null);
+    setVisitContextError(null);
+    visitHydrationRef.current = "";
+    servicePrefillRef.current = "";
+    if (appointmentParam) setSearchParams({}, { replace: true });
+  }
 
   async function loadData() {
     setLoading(true);
@@ -254,7 +340,9 @@ export default function PosInvoicesPage() {
     setEntitlementRedemptions([]);
     try {
       const res = await useCases.entitlements.listForCustomer(customer.id);
-      if (res.ok) setEntitlements(res.data.filter((e) => e.kind === "PACKAGE"));
+      // Keep every instrument kind: the LENA Wallet projection separates gift
+      // cards from package sessions; the server stays the accounting authority.
+      if (res.ok) setEntitlements(res.data);
     } catch {
       setEntitlements([]);
     }
@@ -309,6 +397,35 @@ export default function PosInvoicesPage() {
     if (card.code !== giftCardCode.trim().toUpperCase() || !card.isActive) return false;
     return !card.expiresAt || new Date(card.expiresAt).getTime() >= Date.now();
   });
+
+  // LENA Wallet projection: gift cards, package sessions, rewards and the visit
+  // deposit stay distinct instruments; the server remains the accounting
+  // authority. This only makes each instrument visible/applicable at checkout.
+  const customerWallet = useMemo(() => buildCustomerWallet({
+    entitlements,
+    loyaltyPoints: selectedCustomer?.loyaltyPoints ?? 0,
+    depositAmount: visitAppointment?.depositAmount ?? 0,
+  }), [entitlements, selectedCustomer, visitAppointment]);
+
+  const cartServiceIds = useMemo(
+    () => cart.filter((it) => it.type === "service").map((it) => it.id),
+    [cart],
+  );
+
+  const applicablePackageSessions = useMemo(
+    () => walletAvailableForCheckout(customerWallet, cartServiceIds).filter((b) => b.kind === "PACKAGE"),
+    [customerWallet, cartServiceIds],
+  );
+
+  /** Apply one package session to the matching cart service (units redemption). */
+  function applyPackageSession(entitlementId: string, serviceId: string) {
+    if (entitlementRedemptions.some((r) => r.entitlementId === entitlementId && r.serviceId === serviceId)) return;
+    setEntitlementRedemptions((prev) => [...prev, { entitlementId, type: "units", serviceId, units: 1 }]);
+  }
+
+  function removePackageSession(entitlementId: string, serviceId: string) {
+    setEntitlementRedemptions((prev) => prev.filter((r) => !(r.entitlementId === entitlementId && r.serviceId === serviceId)));
+  }
   // The shared pure calculator mirrors the authoritative RPC at OMR's
   // three-decimal precision. The RPC still re-resolves every catalog price.
   const entitlementRedemptionPreview = appliedRedemptionEstimate();
@@ -363,6 +480,9 @@ export default function PosInvoicesPage() {
         useLoyaltyPoints,
         giftCardCode: giftCardCode.trim() ? giftCardCode.trim().toUpperCase() : undefined,
         entitlementRedemptions: entitlementRedemptions.length > 0 ? entitlementRedemptions : undefined,
+        // Visit-originating checkout: the server-authoritative RPC links the
+        // invoice to the appointment and completes the visit atomically.
+        appointmentId: visitAppointment?.id,
         items: cart.map(it => {
           if (it.type === "service") {
             return {
@@ -415,6 +535,9 @@ export default function PosInvoicesPage() {
       // point. Clear the order before refreshing so a transient catalog read
       // can never be misreported as a failed sale.
       clearCart();
+      // The visit is now completed server-side; drop its context so POS returns
+      // to the clean walk-in state.
+      if (visitAppointment) detachVisit();
       showToast('success', t("Success"), t("Sale and payment method recorded successfully"));
       try {
         await loadData();
@@ -453,6 +576,60 @@ export default function PosInvoicesPage() {
 
       {/* Receipt preview — shared overlay above all chrome, sticky Print/Close */}
       <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
+
+      {/* Visit context — shown only when POS was opened from an appointment */}
+      {visitContextError && (
+        <div className="rounded-2xl border border-warning/30 bg-warning/5 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+            <p className="text-xs font-bold text-muted-foreground">{t("pos.visitContext.unavailable")}</p>
+          </div>
+          <button
+            onClick={detachVisit}
+            className="h-9 px-3 rounded-lg bg-card border border-border text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all shrink-0 touch-target"
+          >
+            {t("pos.visitContext.detach")}
+          </button>
+        </div>
+      )}
+
+      {visitAppointment && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <CalendarClock className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{t("pos.visitContext.title")}</p>
+                <p className="text-xs font-bold text-foreground truncate">{formatSalonDateTime(visitAppointment.dateTime, i18n.language)}</p>
+              </div>
+            </div>
+            <button
+              onClick={detachVisit}
+              className="h-9 px-3 rounded-lg bg-card border border-border text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all shrink-0 touch-target"
+            >
+              {t("pos.visitContext.detach")}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { label: t("pos.visitContext.customer"), value: visitAppointment.customer?.name },
+              { label: t("pos.visitContext.service"), value: visitAppointment.service?.name },
+              { label: t("pos.visitContext.employee"), value: visitAppointment.employee?.name },
+              { label: t("pos.visitContext.stage"), value: t(visitStageI18nKey(effectiveVisitStage(visitAppointment) as VisitStage)) },
+              ...((visitAppointment.depositAmount ?? 0) > 0
+                ? [{ label: t("pos.visitContext.deposit"), value: `${formatOMRAmount(visitAppointment.depositAmount ?? 0)} ${t("OMR")}` }]
+                : []),
+            ].map((chip) => (
+              <span key={chip.label} className="flex items-center gap-1 rounded-lg bg-card border border-border px-2 py-1 text-[10px] font-bold">
+                <span className="text-muted-foreground uppercase tracking-wider">{chip.label}</span>
+                <span className="text-foreground">{chip.value || "—"}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Mobile: Quick Catalog/Cart Toggle + Sticky categories */}
       {isMobile && (
@@ -852,6 +1029,80 @@ export default function PosInvoicesPage() {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* LENA Wallet — visible when the selected customer holds value */}
+                {selectedCustomer && customerWallet.hasValue && (
+                  <div className="rounded-lg border border-border bg-muted/20 p-2.5 space-y-2">
+                    <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                      <Wallet className="h-3 w-3" /> {t("wallet.title")}
+                    </p>
+
+                    {customerWallet.giftCards.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                          <span>{t("wallet.giftCard")}</span>
+                          <span>{formatOMRAmount(customerWallet.giftCardBalance)} {t("OMR")}</span>
+                        </div>
+                        {customerWallet.giftCards.map((gc) => (
+                          <button
+                            key={gc.entitlementId}
+                            type="button"
+                            onClick={() => gc.code && setGiftCardCode(gc.code)}
+                            disabled={!gc.code}
+                            className="w-full flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-[10px] font-bold text-foreground hover:border-primary/40 transition-all disabled:opacity-50 touch-target"
+                          >
+                            <span className="truncate" dir="ltr">{gc.code}</span>
+                            <span className="shrink-0 text-muted-foreground">{formatOMRAmount(gc.remainingValue)} {t("OMR")}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {applicablePackageSessions.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-muted-foreground">{t("wallet.packageSession")}</p>
+                        {applicablePackageSessions.map((benefit) => {
+                          const session = benefit.packageSession!;
+                          const applied = entitlementRedemptions.some((r) =>
+                            r.entitlementId === session.entitlementId && r.serviceId === session.serviceId);
+                          return (
+                            <div key={`${session.entitlementId}-${session.serviceId}`} className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] font-bold text-foreground truncate">{session.packageName}{session.serviceName ? ` · ${session.serviceName}` : ""}</p>
+                                <p className="text-[9px] font-bold text-muted-foreground">{session.remainingUnits} {t("passport.sessionsLeft")}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => applied
+                                  ? removePackageSession(session.entitlementId, session.serviceId)
+                                  : applyPackageSession(session.entitlementId, session.serviceId)}
+                                disabled={!applied && session.remainingUnits <= 0}
+                                className={clsx(
+                                  "shrink-0 h-8 px-2.5 rounded-md text-[10px] font-bold transition-all touch-target",
+                                  applied ? "bg-success/15 text-success border border-success/20" : "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+                                )}
+                              >
+                                {applied ? t("wallet.used") : t("wallet.use")}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {customerWallet.rewardsPoints > 0 && !useLoyaltyPoints && (
+                      <p className="text-[10px] font-bold text-muted-foreground">
+                        {t("wallet.rewards")}: {customerWallet.rewardsPoints} {t("Points")}
+                      </p>
+                    )}
+
+                    {customerWallet.depositAmount > 0 && (
+                      <p className="text-[10px] font-bold text-muted-foreground">
+                        {t("wallet.deposit")}: {formatOMRAmount(customerWallet.depositAmount)} {t("OMR")}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Employee Select - compact */}
                 <div className="grid grid-cols-2 gap-2">

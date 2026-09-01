@@ -17,22 +17,35 @@ import {
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import i18n from "i18next";
 import { ScreenState } from "../shared/components/ScreenState";
 import { PageHeader } from "../shared/components/PageHeader";
 import { Modal } from "../shared/components/Modal";
+import { visitStageI18nKey, visitActionI18nKey } from "../shared/visitStage";
 
 type Customer = { id: string; name: string; phone: string | null };
 type Service = { id: string; name: string; category: string; durationMins: number; price: number };
 type Employee = { id: string; name: string };
 
-import { AppointmentStatus, Appointment } from "../domain/entities";
+import { AppointmentStatus, Appointment, VisitStage } from "../domain/entities";
+import { effectiveVisitStage, allowedVisitStages } from "../domain/visit";
 
 type Appt = Appointment & {
   customer: Customer;
   employee: Employee;
   service: Service;
 };
+
+/** Stage display name for a scheduled visit (terminal states use their status). */
+function visitStageLabel(stage: VisitStage, t: (k: string) => string): string {
+  return t(visitStageI18nKey(stage));
+}
+
+/** i18n label for the primary advance action from a stage. */
+function visitActionLabel(stage: VisitStage, t: (k: string) => string): string {
+  return t(visitActionI18nKey(stage));
+}
 
 const SLOT_MINS = 30;
 
@@ -123,6 +136,7 @@ function paymentStateLabel(appt: Appt, t: (key: string) => string) {
 export default function AppointmentsPage() {
   const { showToast } = useToast();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const isRtl = i18n.language === "ar";
   // Portrait phones: day first. Week view on a 320–360px screen is unreadable.
   const [mode, setMode] = useState<"day" | "week">(() =>
@@ -263,6 +277,39 @@ export default function AppointmentsPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Advance a scheduled visit to its next operational stage (server-enforced). */
+  async function advanceVisit(appt: Appt, nextStage: VisitStage) {
+    if (appt.status !== AppointmentStatus.SCHEDULED) {
+      showToast('error', t("Error"), t("Terminal appointments cannot be changed"));
+      return;
+    }
+    setBusy(true);
+    try {
+      await unwrap(useCases.appointments.transitionVisit(appt.id, nextStage));
+      showToast('success', t("Success"), t("Visit stage updated"));
+      await load();
+      setOpen(false);
+    } catch (err: any) {
+      if (err.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast('error', t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      } else {
+        showToast('error', t("Error"), err?.message || String(err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * Visit → POS handoff. A visit that reached READY_FOR_CHECKOUT is completed
+   * through checkout/payment (the server-authoritative path), never by another
+   * local stage transition. Navigate to POS with the appointment id so the
+   * sale is prepared from the actual visit.
+   */
+  function openPosForVisit(appt: Appt) {
+    navigate(`/pos?appointment=${encodeURIComponent(appt.id)}`);
   }
 
   const slots = useMemo(() => {
@@ -1054,6 +1101,51 @@ export default function AppointmentsPage() {
                   </div>
                 )}
 
+                {(() => {
+                  const appt = appts.find((a) => a.id === editApptId);
+                  if (!appt || appt.status !== AppointmentStatus.SCHEDULED) return null;
+                  const stage = effectiveVisitStage(appt) as VisitStage;
+                  const nextStages = allowedVisitStages(appt);
+                  const nextStage = nextStages[0];
+                  const isReadyForCheckout = stage === VisitStage.READY_FOR_CHECKOUT;
+                  return (
+                    <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("visit.section")}</p>
+                          <p className="text-sm font-bold text-foreground">{visitStageLabel(stage, t)}</p>
+                        </div>
+                        {isReadyForCheckout ? (
+                          <button
+                            type="button"
+                            onClick={() => openPosForVisit(appt)}
+                            disabled={busy}
+                            className="h-12 px-5 rounded-2xl bg-primary text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50 active:scale-95"
+                          >
+                            {t("visit.action.checkout")}
+                          </button>
+                        ) : (
+                          nextStage && (
+                            <button
+                              type="button"
+                              onClick={() => void advanceVisit(appt, nextStage)}
+                              disabled={busy}
+                              className="h-12 px-5 rounded-2xl bg-primary text-white font-bold shadow-lg hover:opacity-90 transition-all disabled:opacity-50 active:scale-95"
+                            >
+                              {visitActionLabel(stage, t)}
+                            </button>
+                          )
+                        )}
+                      </div>
+                      {isReadyForCheckout && (
+                        <p className="text-xs text-muted-foreground">
+                          {t("visit.checkoutHint")}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 <div className="flex flex-col gap-4">
                   {editApptId && status === AppointmentStatus.SCHEDULED && (
                     <div className="rounded-[1.5rem] border border-warning/20 bg-warning/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1103,24 +1195,14 @@ export default function AppointmentsPage() {
                   )}
 
                   {editApptId && status === AppointmentStatus.SCHEDULED && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.COMPLETED); }}
-                        disabled={busy}
-                        className="h-12 rounded-2xl bg-success/10 text-success border border-success/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-success hover:text-white transition-all active:scale-95"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        {t("Complete Appointment")}
-                      </button>
-                      <button
-                        onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.CANCELLED); }}
-                        disabled={busy}
-                        className="h-12 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-destructive hover:text-white transition-all active:scale-95"
-                      >
-                        <XCircle className="h-4 w-4" />
-                        {t("Cancel Appointment")}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => { const appt = appts.find(a => a.id === editApptId); if (appt) void setApptStatus(appt, AppointmentStatus.CANCELLED); }}
+                      disabled={busy}
+                      className="h-12 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-destructive hover:text-white transition-all active:scale-95"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      {t("Cancel Appointment")}
+                    </button>
                   )}
 
                 </div>

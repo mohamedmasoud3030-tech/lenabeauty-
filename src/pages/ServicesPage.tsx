@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Plus, Pencil, RefreshCw, Scissors, Search,
   Save, CheckCircle2, Clock, Tag, DollarSign,
-  Sparkles, XCircle, LayoutGrid,
+  Sparkles, XCircle, LayoutGrid, Beaker, Boxes, Trash2,
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -15,9 +15,11 @@ import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "motion/react";
 
-import { Service } from "../domain/entities";
+import { Service, ServiceRecipe, InventoryConsumption, Product } from "../domain/entities";
+import { RecipeItemInput } from "../domain/ports/repositories";
+import { planRecipeConsumption } from "../domain/recipe";
 import {
-  requiredText, positiveNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
+  requiredText, positiveNumber, nonNegativeNumber, positiveInteger, collectIssues, issuesToMap, FieldResult
 } from "../domain/validation";
 import { PageHeader } from "../shared/components/PageHeader";
 import { ListState } from "../shared/components/ListState";
@@ -27,6 +29,12 @@ import {
   filterServicesForCatalog,
   ServiceCategoryFilters,
 } from "../shared/catalog/ServiceCategoryFilters";
+
+let lineKeyCounter = 0;
+function makeLineKey(idx: number): string {
+  lineKeyCounter += 1;
+  return `line-${lineKeyCounter}-${idx}`;
+}
 
 export default function ServicesPage() {
   const { showToast } = useToast();
@@ -51,6 +59,148 @@ export default function ServicesPage() {
   const formDirty = name.trim().length > 0 || category.trim().length > 0 || price.trim().length > 0;
 
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Service Recipes (Slice D) — server-backed consumables per service.
+  type DraftRecipeLine = { key: string; productId: string; quantity: string; unit: string; estimatedCost: string };
+  const [recipeFor, setRecipeFor] = useState<Service | null>(null);
+  const [recipeOpen, setRecipeOpen] = useState(false);
+  const [recipe, setRecipe] = useState<ServiceRecipe | null>(null);
+  const [recipeLoading, setRecipeLoading] = useState(false);
+  const [recipeSaving, setRecipeSaving] = useState(false);
+  const [recipeError, setRecipeError] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [draftLines, setDraftLines] = useState<DraftRecipeLine[]>([]);
+  const [recipeErrors, setRecipeErrors] = useState<Record<string, string>>({});
+  const [consumptions, setConsumptions] = useState<InventoryConsumption[]>([]);
+
+  function newBlankLine(): DraftRecipeLine {
+    return { key: makeLineKey(0), productId: "", quantity: "1", unit: "", estimatedCost: "" };
+  }
+
+  const recipeDirty = draftLines.some((l) => l.productId.trim().length > 0);
+
+  async function openRecipe(s: Service) {
+    setRecipeFor(s);
+    setRecipeOpen(true);
+    setRecipeLoading(true);
+    setRecipeError(null);
+    setRecipe(null);
+    setProducts([]);
+    setConsumptions([]);
+    setRecipeErrors({});
+    setDraftLines([]);
+    try {
+      const [recipeRes, productsRes, consumptionsRes] = await Promise.all([
+        useCases.recipes.getForService(s.id),
+        useCases.products.list(),
+        useCases.recipes.listConsumptions({ limit: 12 }),
+      ]);
+      if (!recipeRes.ok) throw recipeRes.error;
+      if (!productsRes.ok) throw productsRes.error;
+      if (!consumptionsRes.ok) throw consumptionsRes.error;
+      const r = recipeRes.data;
+      setRecipe(r);
+      const p = productsRes.data;
+      setProducts(p);
+      const c = consumptionsRes.data.filter((con) => con.serviceId === s.id);
+      setConsumptions(c);
+      const existing = r?.items ?? [];
+      setDraftLines(
+        existing.length > 0
+          ? existing.map((it, idx) => ({
+              key: makeLineKey(idx),
+              productId: it.productId,
+              quantity: String(it.quantity),
+              unit: it.unit ?? "",
+              estimatedCost: it.estimatedCost !== undefined ? String(it.estimatedCost) : "",
+            }))
+          : [newBlankLine()],
+      );
+    } catch (e: any) {
+      setRecipeError(mapErrorToMessage(e, t));
+    } finally {
+      setRecipeLoading(false);
+    }
+  }
+
+  function closeRecipe() {
+    setRecipeOpen(false);
+    setRecipeFor(null);
+    setRecipe(null);
+    setDraftLines([]);
+    setRecipeErrors({});
+    setConsumptions([]);
+  }
+
+  async function saveRecipe() {
+    if (!recipeFor) return;
+    const items: RecipeItemInput[] = [];
+    const errs: Record<string, string> = {};
+
+    draftLines.forEach((line, idx) => {
+      const productR = requiredText(line.productId);
+      const qtyR = positiveNumber(Number(line.quantity));
+      const costBlank = line.estimatedCost.trim() === "";
+      const costR = costBlank ? null : nonNegativeNumber(Number(line.estimatedCost));
+
+      if (!productR.ok) errs[`p-${idx}`] = t("recipe.errProduct");
+      if (!qtyR.ok) errs[`q-${idx}`] = t("recipe.errQuantity");
+      if (costR && !costR.ok) errs[`c-${idx}`] = t("recipe.errCost");
+
+      if (productR.ok && qtyR.ok && (!costR || costR.ok)) {
+        items.push({
+          productId: (productR as FieldResult<string> & { ok: true }).value,
+          quantity: (qtyR as FieldResult<number> & { ok: true }).value,
+          unit: line.unit.trim() || undefined,
+          estimatedCost: costBlank ? 0 : Number(line.estimatedCost),
+        });
+      }
+    });
+
+    if (Object.keys(errs).length > 0) {
+      setRecipeErrors(errs);
+      return;
+    }
+    if (items.length === 0) {
+      setRecipeErrors({ empty: t("recipe.errEmpty") });
+      return;
+    }
+
+    setRecipeSaving(true);
+    try {
+      await unwrap(useCases.recipes.saveForService(recipeFor.id, items));
+      const refreshed = await useCases.recipes.getForService(recipeFor.id);
+      if (!refreshed.ok) throw refreshed.error;
+      const r = refreshed.data;
+      setRecipe(r);
+      setDraftLines(
+        (r?.items ?? []).map((it, idx) => ({
+          key: makeLineKey(idx),
+          productId: it.productId,
+          quantity: String(it.quantity),
+          unit: it.unit ?? "",
+          estimatedCost: it.estimatedCost !== undefined ? String(it.estimatedCost) : "",
+        })),
+      );
+      setRecipeErrors({});
+      showToast("success", t("Success"), t("recipe.saved"));
+    } catch (err: any) {
+      if (err?.code === "BACKEND_METHOD_UNSUPPORTED") {
+        showToast("error", t("Backend Required"), t("BACKEND_METHOD_UNSUPPORTED"));
+      } else {
+        showToast("error", t("Error"), mapErrorToMessage(err, t));
+      }
+    } finally {
+      setRecipeSaving(false);
+    }
+  }
+
+  const recipeMaterialCost = (() => {
+    if (!recipe) return null;
+    const costById = new Map(products.map((p) => [p.id, p]));
+    const plan = planRecipeConsumption(recipe, 1, costById as Map<string, Pick<Product, "id" | "cost">>);
+    return plan.estimatedMaterialCost;
+  })();
 
   async function reload() {
     setLoading(true);
@@ -287,6 +437,14 @@ export default function ServicesPage() {
                     <td>
                       <div className="flex items-center gap-1.5">
                         <button
+                          onClick={() => void openRecipe(s)}
+                          className="h-11 w-11 rounded-lg border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                          aria-label={t("recipe.title")}
+                          title={t("recipe.title")}
+                        >
+                          <Beaker className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => onToggleActive(s)}
                           className={clsx(
                             "h-9 w-9 rounded-lg border flex items-center justify-center transition-all",
@@ -366,6 +524,14 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="flex items-center gap-1 pt-0.5">
+                  <button
+                    onClick={() => void openRecipe(s)}
+                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
+                    title={t("recipe.title")}
+                    aria-label={t("recipe.title")}
+                  >
+                    <Beaker className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => void onToggleActive(s)}
                     className={clsx(
@@ -510,6 +676,190 @@ export default function ServicesPage() {
               {errors.duration && <div className="text-xs font-bold text-destructive">{t(errors.duration)}</div>}
             </div>
           </div>
+        </div>
+      </Modal>
+
+      {/* Service Recipe (consumables) — server-backed, real products only */}
+      <Modal
+        isOpen={recipeOpen}
+        onClose={closeRecipe}
+        title={t("recipe.title")}
+        description={recipeFor ? `${recipeFor.name} · ${t("recipe.subtitle")}` : t("recipe.subtitle")}
+        size="lg"
+        confirmCloseMessage={recipeDirty ? t("Discard unsaved changes?") : undefined}
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={closeRecipe}
+              className="h-11 px-4 rounded-lg border border-border bg-card font-bold text-foreground hover:bg-muted transition-all"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={saveRecipe}
+              disabled={recipeSaving || recipeLoading}
+              className="h-11 px-4 rounded-lg bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <Save className="h-4 w-4" />
+              {t("Save Changes")}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {recipeLoading ? (
+            <div className="py-10 flex items-center justify-center text-sm font-bold text-muted-foreground">
+              {t("Loading services...")}
+            </div>
+          ) : recipeError ? (
+            <div className="py-8 text-center space-y-2">
+              <p className="text-sm font-bold text-destructive">{recipeError}</p>
+              <button onClick={() => recipeFor && void openRecipe(recipeFor)} className="text-xs font-bold text-primary underline">
+                {t("Retry")}
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs font-bold text-muted-foreground leading-relaxed">
+                {t("recipe.hint")}
+              </p>
+
+              {draftLines.map((line, idx) => {
+                const product = products.find((p) => p.id === line.productId);
+                return (
+                  <div key={line.key} data-recipe-line className="rounded-xl border border-border bg-muted/20 p-3 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+                        <Beaker className="h-3.5 w-3.5 text-primary" />
+                        {t("recipe.lineTitle", { n: idx + 1 })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDraftLines((prev) => prev.filter((l) => l.key !== line.key))}
+                        className="h-8 w-8 rounded-md border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 transition-colors"
+                        aria-label={t("recipe.removeLine")}
+                        title={t("recipe.removeLine")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">{t("recipe.product")}</label>
+                        <select
+                          aria-label={t("recipe.product")}
+                          className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          value={line.productId}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDraftLines((prev) => prev.map((l, i) => (i === idx ? { ...l, productId: v } : l)));
+                            if (recipeErrors[`p-${idx}`]) setRecipeErrors((prev) => { const n = { ...prev }; delete n[`p-${idx}`]; return n; });
+                          }}
+                        >
+                          <option value="">{t("recipe.selectProduct")}</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                        {recipeErrors[`p-${idx}`] && <div className="text-[10px] font-bold text-destructive">{recipeErrors[`p-${idx}`]}</div>}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">{t("recipe.quantity")}</label>
+                        <input
+                          aria-label={t("recipe.quantity")}
+                          className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          inputMode="decimal"
+                          value={line.quantity}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDraftLines((prev) => prev.map((l, i) => (i === idx ? { ...l, quantity: v } : l)));
+                            if (recipeErrors[`q-${idx}`]) setRecipeErrors((prev) => { const n = { ...prev }; delete n[`q-${idx}`]; return n; });
+                          }}
+                        />
+                        {recipeErrors[`q-${idx}`] && <div className="text-[10px] font-bold text-destructive">{recipeErrors[`q-${idx}`]}</div>}
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">{t("recipe.unit")}</label>
+                        <input
+                          aria-label={t("recipe.unit")}
+                          className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          value={line.unit}
+                          onChange={(e) => setDraftLines((prev) => prev.map((l, i) => (i === idx ? { ...l, unit: e.target.value } : l)))}
+                          placeholder={t("recipe.unitPlaceholder")}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-muted-foreground">{t("recipe.estimatedCost")}</label>
+                        <input
+                          aria-label={t("recipe.estimatedCost")}
+                          className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-xs font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                          inputMode="decimal"
+                          value={line.estimatedCost}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setDraftLines((prev) => prev.map((l, i) => (i === idx ? { ...l, estimatedCost: v } : l)));
+                            if (recipeErrors[`c-${idx}`]) setRecipeErrors((prev) => { const n = { ...prev }; delete n[`c-${idx}`]; return n; });
+                          }}
+                        />
+                        {recipeErrors[`c-${idx}`] && <div className="text-[10px] font-bold text-destructive">{recipeErrors[`c-${idx}`]}</div>}
+                      </div>
+
+                      {product && (
+                        <div className="col-span-2 flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground">
+                          <Boxes className="h-3 w-3" />
+                          {t("Stock")}: <span className="text-foreground">{product.stockQuantity}</span>
+                          {product.trackInventory === false && (
+                            <span className="text-warning">· {t("recipe.untracked")}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {recipeErrors.empty && <div className="text-xs font-bold text-destructive">{recipeErrors.empty}</div>}
+
+              <button
+                type="button"
+                onClick={() => setDraftLines((prev) => [...prev, newBlankLine()])}
+                className="w-full h-11 rounded-lg border border-dashed border-border bg-card flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground hover:border-primary/40 hover:text-primary transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                {t("recipe.addLine")}
+              </button>
+
+              {(recipe?.items?.length ?? 0) > 0 && (
+                <div className="rounded-lg border border-border bg-muted/20 p-2.5 flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-muted-foreground">{t("recipe.estimatedMaterial")}</span>
+                  <span className="text-xs font-bold text-foreground">{formatOMRAmount(recipeMaterialCost ?? 0)} {t("OMR")}</span>
+                </div>
+              )}
+
+              {consumptions.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">{t("recipe.recentConsumption")}</p>
+                  <div className="rounded-lg border border-border bg-muted/20 divide-y divide-border/60">
+                    {consumptions.slice(0, 5).map((con) => {
+                      const product = products.find((p) => p.id === con.productId);
+                      return (
+                        <div key={con.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[10px] font-bold">
+                          <span className="text-muted-foreground truncate">{product?.name ?? con.productId.slice(0, 8)}</span>
+                          <span className="text-foreground shrink-0">{con.quantity} {con.unit ?? ""}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </Modal>
     </div>

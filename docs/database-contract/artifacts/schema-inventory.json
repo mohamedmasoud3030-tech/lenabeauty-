@@ -74,6 +74,10 @@
     },
     {
       "schema": "public",
+      "name": "inventory_consumptions"
+    },
+    {
+      "schema": "public",
       "name": "invoice_items"
     },
     {
@@ -131,6 +135,14 @@
     {
       "schema": "public",
       "name": "service_packages"
+    },
+    {
+      "schema": "public",
+      "name": "service_recipe_items"
+    },
+    {
+      "schema": "public",
+      "name": "service_recipes"
     },
     {
       "schema": "public",
@@ -597,6 +609,36 @@
       "nullable": "YES",
       "default": null,
       "position": 21
+    },
+    {
+      "schema": "public",
+      "table": "appointments",
+      "name": "visit_stage",
+      "type": "USER-DEFINED",
+      "udt": "visit_stage",
+      "nullable": "YES",
+      "default": null,
+      "position": 22
+    },
+    {
+      "schema": "public",
+      "table": "appointments",
+      "name": "started_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "YES",
+      "default": null,
+      "position": 23
+    },
+    {
+      "schema": "public",
+      "table": "appointments",
+      "name": "completed_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "YES",
+      "default": null,
+      "position": 24
     },
     {
       "schema": "public",
@@ -2250,6 +2292,106 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "invoice_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "appointment_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "service_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "product_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 6
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "quantity",
+      "type": "numeric",
+      "udt": "numeric",
+      "nullable": "NO",
+      "default": null,
+      "position": 7
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "unit",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 8
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "unit_cost",
+      "type": "numeric",
+      "udt": "numeric",
+      "nullable": "NO",
+      "default": "0",
+      "position": 9
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "consumed_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 10
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "name": "id",
       "type": "uuid",
@@ -2577,6 +2719,16 @@
       "nullable": "NO",
       "default": "0",
       "position": 22
+    },
+    {
+      "schema": "public",
+      "table": "invoices",
+      "name": "appointment_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 23
     },
     {
       "schema": "public",
@@ -3670,6 +3822,146 @@
     },
     {
       "schema": "public",
+      "table": "service_recipe_items",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "recipe_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "product_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "quantity",
+      "type": "numeric",
+      "udt": "numeric",
+      "nullable": "NO",
+      "default": null,
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "unit",
+      "type": "text",
+      "udt": "text",
+      "nullable": "YES",
+      "default": null,
+      "position": 6
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "estimated_cost",
+      "type": "numeric",
+      "udt": "numeric",
+      "nullable": "NO",
+      "default": "0",
+      "position": 7
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 8
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": "gen_random_uuid()",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "is_active",
+      "type": "boolean",
+      "udt": "bool",
+      "nullable": "NO",
+      "default": "true",
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 5
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 6
+    },
+    {
+      "schema": "public",
       "table": "services",
       "name": "id",
       "type": "uuid",
@@ -3803,6 +4095,36 @@
       "name": "appointment_status",
       "label": "NO_SHOW",
       "position": 4
+    },
+    {
+      "schema": "public",
+      "name": "visit_stage",
+      "label": "BOOKED",
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "name": "visit_stage",
+      "label": "CONFIRMED",
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "name": "visit_stage",
+      "label": "ARRIVED",
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "name": "visit_stage",
+      "label": "IN_SERVICE",
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "name": "visit_stage",
+      "label": "READY_FOR_CHECKOUT",
+      "position": 5
     }
   ],
   "constraints": [
@@ -5208,6 +5530,62 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_consumed_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL consumed_at"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_invoice_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL invoice_id"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_once",
+      "type": "u",
+      "definition": "UNIQUE (invoice_id, service_id, product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_quantity_not_null",
+      "type": "n",
+      "definition": "NOT NULL quantity"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_unit_cost_not_null",
+      "type": "n",
+      "definition": "NOT NULL unit_cost"
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "name": "invoice_items_created_at_not_null",
       "type": "n",
@@ -6377,6 +6755,139 @@
     },
     {
       "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_estimated_cost_check",
+      "type": "c",
+      "definition": "CHECK ((estimated_cost >= (0)::numeric))"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_estimated_cost_not_null",
+      "type": "n",
+      "definition": "NOT NULL estimated_cost"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_product_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL product_id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_product_unique",
+      "type": "u",
+      "definition": "UNIQUE (recipe_id, product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_quantity_check",
+      "type": "c",
+      "definition": "CHECK ((quantity > (0)::numeric))"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_quantity_not_null",
+      "type": "n",
+      "definition": "NOT NULL quantity"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_recipe_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL recipe_id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_created_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL created_at"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_is_active_not_null",
+      "type": "n",
+      "definition": "NOT NULL is_active"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_service_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL service_id"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_service_unique",
+      "type": "u",
+      "definition": "UNIQUE (center_id, service_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
       "table": "services",
       "name": "services_category_required",
       "type": "c",
@@ -6836,6 +7347,46 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_appointment_id_fkey",
+      "definition": "FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL",
+      "ref_schema": "public",
+      "ref_table": "appointments"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE RESTRICT",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_invoice_id_fkey",
+      "definition": "FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT",
+      "ref_schema": "public",
+      "ref_table": "invoices"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL",
+      "ref_schema": "public",
+      "ref_table": "products"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_service_id_fkey",
+      "definition": "FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL",
+      "ref_schema": "public",
+      "ref_table": "services"
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "name": "invoice_items_gift_card_id_fkey",
       "definition": "FOREIGN KEY (gift_card_id) REFERENCES gift_cards(id) ON DELETE SET NULL",
@@ -6873,6 +7424,14 @@
       "definition": "FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL",
       "ref_schema": "public",
       "ref_table": "services"
+    },
+    {
+      "schema": "public",
+      "table": "invoices",
+      "name": "invoices_appointment_id_fkey",
+      "definition": "FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL",
+      "ref_schema": "public",
+      "ref_table": "appointments"
     },
     {
       "schema": "public",
@@ -7089,6 +7648,46 @@
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
       "ref_schema": "public",
       "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_product_id_fkey",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT",
+      "ref_schema": "public",
+      "ref_table": "products"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_recipe_id_fkey",
+      "definition": "FOREIGN KEY (recipe_id) REFERENCES service_recipes(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "service_recipes"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_service_id_fkey",
+      "definition": "FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "services"
     },
     {
       "schema": "public",
@@ -7605,6 +8204,69 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_appointment",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_appointment ON public.inventory_consumptions USING btree (appointment_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_center ON public.inventory_consumptions USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_invoice",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_invoice ON public.inventory_consumptions USING btree (invoice_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_product",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_product ON public.inventory_consumptions USING btree (product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "idx_inventory_consumptions_service",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_inventory_consumptions_service ON public.inventory_consumptions USING btree (service_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_once",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX inventory_consumptions_once ON public.inventory_consumptions USING btree (invoice_id, service_id, product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX inventory_consumptions_pkey ON public.inventory_consumptions USING btree (id)"
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "name": "idx_invoice_items_gift_card",
       "unique": false,
@@ -7638,6 +8300,15 @@
       "primary": true,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX invoice_items_pkey ON public.invoice_items USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "invoices",
+      "name": "idx_invoices_appointment",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_invoices_appointment ON public.invoices USING btree (appointment_id)"
     },
     {
       "schema": "public",
@@ -7983,6 +8654,87 @@
     },
     {
       "schema": "public",
+      "table": "service_recipe_items",
+      "name": "idx_service_recipe_items_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipe_items_center ON public.service_recipe_items USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "idx_service_recipe_items_product",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipe_items_product ON public.service_recipe_items USING btree (product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "idx_service_recipe_items_recipe",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipe_items_recipe ON public.service_recipe_items USING btree (recipe_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX service_recipe_items_pkey ON public.service_recipe_items USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_product_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX service_recipe_items_product_unique ON public.service_recipe_items USING btree (recipe_id, product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "idx_service_recipes_center",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipes_center ON public.service_recipes USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "idx_service_recipes_service",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_service_recipes_service ON public.service_recipes USING btree (service_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX service_recipes_pkey ON public.service_recipes USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_service_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX service_recipes_service_unique ON public.service_recipes USING btree (center_id, service_id)"
+    },
+    {
+      "schema": "public",
       "table": "services",
       "name": "idx_services_center",
       "unique": false,
@@ -8174,6 +8926,19 @@
   ],
   "views": [],
   "functions": [
+    {
+      "schema": "app_private",
+      "name": "consume_invoice_recipes_v1",
+      "identity_args": "p_center_id uuid, p_invoice_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION app_private.consume_invoice_recipes_v1(p_center_id uuid, p_invoice_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_line     RECORD;\n  v_item     RECORD;\n  v_recipe   UUID;\n  v_total    NUMERIC(12,3);\n  v_consumed INTEGER := 0;\nBEGIN\n  FOR v_line IN\n    SELECT ii.service_id, SUM(ii.quantity)::NUMERIC AS service_qty\n    FROM public.invoice_items ii\n    WHERE ii.invoice_id = p_invoice_id AND ii.service_id IS NOT NULL\n    GROUP BY ii.service_id\n  LOOP\n    SELECT sr.id INTO v_recipe\n    FROM public.service_recipes sr\n    WHERE sr.service_id = v_line.service_id\n      AND sr.center_id = p_center_id\n      AND sr.is_active = true\n    ORDER BY sr.updated_at DESC\n    LIMIT 1;\n\n    CONTINUE WHEN v_recipe IS NULL;\n\n    FOR v_item IN\n      SELECT sri.product_id, sri.quantity AS qty, sri.unit, sri.estimated_cost\n      FROM public.service_recipe_items sri\n      WHERE sri.recipe_id = v_recipe\n    LOOP\n      v_total := round(v_item.qty * v_line.service_qty, 3);\n\n      INSERT INTO public.inventory_consumptions\n        (center_id, invoice_id, service_id, product_id, quantity, unit, unit_cost)\n      VALUES\n        (p_center_id, p_invoice_id, v_line.service_id, v_item.product_id,\n         v_total, v_item.unit, COALESCE(v_item.estimated_cost, 0))\n      ON CONFLICT (invoice_id, service_id, product_id) DO NOTHING;\n\n      IF FOUND THEN\n        IF v_total = floor(v_total) THEN\n          UPDATE public.products p\n          SET stock_quantity = p.stock_quantity - v_total::integer\n          WHERE p.id = v_item.product_id\n            AND p.center_id = p_center_id\n            AND p.track_inventory = true\n            AND p.stock_quantity >= v_total::integer;\n          IF NOT FOUND THEN\n            PERFORM 1 FROM public.products p\n            WHERE p.id = v_item.product_id\n              AND p.center_id = p_center_id\n              AND p.track_inventory = false;\n            IF NOT FOUND THEN\n              RAISE EXCEPTION 'insufficient_consumable_stock' USING ERRCODE = '23514';\n            END IF;\n          END IF;\n        END IF;\n        v_consumed := v_consumed + 1;\n      END IF;\n    END LOOP;\n  END LOOP;\n\n  RETURN jsonb_build_object('consumed_lines', v_consumed);\nEND;\n$function$\n"
+    },
     {
       "schema": "app_private",
       "name": "enforce_advance_payroll_center_v1",
@@ -8645,7 +9410,7 @@
     {
       "schema": "public",
       "name": "process_checkout_idempotent_v1",
-      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb, p_appointment_id uuid",
       "result": "jsonb",
       "security_definer": true,
       "volatility": "v",
@@ -8653,7 +9418,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1(p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text DEFAULT NULL::text, p_entitlement_redemptions jsonb DEFAULT NULL::jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_result JSONB;\n  v_invoice_id UUID;\nBEGIN\n  IF p_request_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_request_id_required' USING ERRCODE = '22023';\n  END IF;\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  -- The unique key serializes concurrent requests carrying the same operation\n  -- identity. PostgreSQL waits for an in-flight conflicting INSERT before the\n  -- following SELECT, so the loser observes the winner's committed result.\n  INSERT INTO public.checkout_idempotency(center_id, request_id)\n  VALUES (p_center_id, p_request_id)\n  ON CONFLICT (center_id, request_id) DO NOTHING;\n\n  SELECT record.result\n  INTO v_result\n  FROM public.checkout_idempotency AS record\n  WHERE record.center_id = p_center_id AND record.request_id = p_request_id\n  FOR UPDATE;\n\n  IF v_result IS NOT NULL THEN\n    RETURN v_result;\n  END IF;\n\n  v_result := public.process_checkout_v1(\n    p_center_id,\n    p_customer_id,\n    p_employee_id,\n    p_payment_method,\n    p_discount_amount,\n    p_use_loyalty_points,\n    p_items,\n    p_gift_card_code,\n    p_entitlement_redemptions\n  );\n\n  v_invoice_id := (v_result->'invoice'->>'id')::UUID;\n  IF v_invoice_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_result_missing_invoice' USING ERRCODE = 'P0001';\n  END IF;\n\n  UPDATE public.checkout_idempotency\n  SET result = v_result, invoice_id = v_invoice_id, completed_at = now()\n  WHERE center_id = p_center_id AND request_id = p_request_id;\n\n  RETURN v_result;\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.process_checkout_idempotent_v1(p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text DEFAULT NULL::text, p_entitlement_redemptions jsonb DEFAULT NULL::jsonb, p_appointment_id uuid DEFAULT NULL::uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_result JSONB;\n  v_invoice_id UUID;\n  v_appt public.appointments%ROWTYPE;\nBEGIN\n  IF p_request_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_request_id_required' USING ERRCODE = '22023';\n  END IF;\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  INSERT INTO public.checkout_idempotency(center_id, request_id)\n  VALUES (p_center_id, p_request_id)\n  ON CONFLICT (center_id, request_id) DO NOTHING;\n\n  SELECT record.result\n  INTO v_result\n  FROM public.checkout_idempotency AS record\n  WHERE record.center_id = p_center_id AND record.request_id = p_request_id\n  FOR UPDATE;\n\n  IF v_result IS NOT NULL THEN\n    RETURN v_result;\n  END IF;\n\n  v_result := public.process_checkout_v1(\n    p_center_id,\n    p_customer_id,\n    p_employee_id,\n    p_payment_method,\n    p_discount_amount,\n    p_use_loyalty_points,\n    p_items,\n    p_gift_card_code,\n    p_entitlement_redemptions\n  );\n\n  v_invoice_id := (v_result->'invoice'->>'id')::UUID;\n  IF v_invoice_id IS NULL THEN\n    RAISE EXCEPTION 'checkout_result_missing_invoice' USING ERRCODE = 'P0001';\n  END IF;\n\n  -- Booking reference + visit closure: paid ⇒ completed, recipes consumed.\n  IF p_appointment_id IS NOT NULL THEN\n    SELECT * INTO v_appt\n    FROM public.appointments a\n    WHERE a.id = p_appointment_id AND a.center_id = p_center_id\n    FOR UPDATE;\n    IF NOT FOUND THEN\n      RAISE EXCEPTION 'appointment_not_found' USING ERRCODE = '23503';\n    END IF;\n    IF v_appt.status <> 'SCHEDULED' THEN\n      RAISE EXCEPTION 'appointment_not_scheduled' USING ERRCODE = '23514';\n    END IF;\n    IF v_appt.customer_id <> p_customer_id THEN\n      RAISE EXCEPTION 'appointment_customer_mismatch' USING ERRCODE = '23503';\n    END IF;\n\n    UPDATE public.invoices\n    SET appointment_id = p_appointment_id\n    WHERE id = v_invoice_id;\n\n    UPDATE public.appointments\n    SET status = 'COMPLETED',\n        visit_stage = NULL,\n        completed_at = now(),\n        updated_at = now()\n    WHERE id = p_appointment_id;\n\n    PERFORM app_private.consume_invoice_recipes_v1(p_center_id, v_invoice_id);\n\n    v_result := v_result || jsonb_build_object('appointment_id', p_appointment_id);\n  END IF;\n\n  UPDATE public.checkout_idempotency\n  SET result = v_result, invoice_id = v_invoice_id, completed_at = now()\n  WHERE center_id = p_center_id AND request_id = p_request_id;\n\n  RETURN v_result;\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8839,6 +9604,19 @@
     },
     {
       "schema": "public",
+      "name": "save_service_recipe_v1",
+      "identity_args": "p_center_id uuid, p_service_id uuid, p_items jsonb",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.save_service_recipe_v1(p_center_id uuid, p_service_id uuid, p_items jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_recipe_id UUID;\n  v_item      JSONB;\n  v_product   UUID;\n  v_qty       NUMERIC(12,3);\n  v_unit      TEXT;\n  v_cost      NUMERIC(12,3);\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.services s\n  WHERE s.id = p_service_id AND s.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'service_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  SELECT id INTO v_recipe_id\n  FROM public.service_recipes sr\n  WHERE sr.service_id = p_service_id AND sr.center_id = p_center_id\n  FOR UPDATE;\n\n  IF v_recipe_id IS NULL THEN\n    INSERT INTO public.service_recipes (center_id, service_id, is_active)\n    VALUES (p_center_id, p_service_id, true)\n    RETURNING id INTO v_recipe_id;\n  ELSE\n    DELETE FROM public.service_recipe_items sri WHERE sri.recipe_id = v_recipe_id;\n    UPDATE public.service_recipes SET is_active = true, updated_at = now()\n    WHERE id = v_recipe_id;\n  END IF;\n\n  IF p_items IS NOT NULL AND jsonb_typeof(p_items) = 'array' THEN\n    IF EXISTS (\n      SELECT 1\n      FROM jsonb_array_elements(p_items) AS it\n      WHERE NULLIF(it->>'productId', '') IS NOT NULL\n      GROUP BY it->>'productId'\n      HAVING COUNT(*) > 1\n    ) THEN\n      RAISE EXCEPTION 'duplicate_recipe_product' USING ERRCODE = '22023';\n    END IF;\n\n    FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)\n    LOOP\n      v_product := NULLIF(v_item->>'productId', '')::UUID;\n      v_qty     := NULLIF(v_item->>'quantity', '')::NUMERIC;\n      v_unit    := NULLIF(v_item->>'unit', '');\n      v_cost    := COALESCE(NULLIF(v_item->>'estimatedCost', '')::NUMERIC, 0);\n\n      IF v_product IS NULL OR v_qty IS NULL OR v_qty <= 0 THEN\n        RAISE EXCEPTION 'invalid_recipe_item' USING ERRCODE = '22023';\n      END IF;\n\n      PERFORM 1 FROM public.products p\n      WHERE p.id = v_product AND p.center_id = p_center_id;\n      IF NOT FOUND THEN\n        RAISE EXCEPTION 'recipe_product_not_available' USING ERRCODE = '23503';\n      END IF;\n\n      INSERT INTO public.service_recipe_items\n        (center_id, recipe_id, product_id, quantity, unit, estimated_cost)\n      VALUES\n        (p_center_id, v_recipe_id, v_product, round(v_qty, 3), v_unit, round(v_cost, 3));\n    END LOOP;\n  END IF;\n\n  RETURN jsonb_build_object('recipe_id', v_recipe_id, 'service_id', p_service_id);\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "touch_updated_at_generic",
       "identity_args": "",
       "result": "trigger",
@@ -8849,6 +9627,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.touch_updated_at_generic()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "transition_visit_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_stage text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.transition_visit_v1(p_center_id uuid, p_appointment_id uuid, p_stage text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_appointment public.appointments%ROWTYPE;\n  v_current     TEXT;\n  v_valid       BOOLEAN := false;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n  IF p_stage NOT IN ('BOOKED', 'CONFIRMED', 'ARRIVED', 'IN_SERVICE', 'READY_FOR_CHECKOUT') THEN\n    RAISE EXCEPTION 'invalid_visit_stage' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT * INTO v_appointment\n  FROM public.appointments a\n  WHERE a.id = p_appointment_id AND a.center_id = p_center_id\n  FOR UPDATE;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'appointment_not_found' USING ERRCODE = '23503';\n  END IF;\n\n  IF v_appointment.status <> 'SCHEDULED' THEN\n    RAISE EXCEPTION 'appointment_not_scheduled' USING ERRCODE = '23514';\n  END IF;\n\n  v_current := COALESCE(v_appointment.visit_stage::text, 'BOOKED');\n\n  IF v_current = 'BOOKED' THEN\n    v_valid := p_stage IN ('CONFIRMED', 'ARRIVED');\n  ELSIF v_current = 'CONFIRMED' THEN\n    v_valid := p_stage = 'ARRIVED';\n  ELSIF v_current = 'ARRIVED' THEN\n    v_valid := p_stage = 'IN_SERVICE';\n  ELSIF v_current = 'IN_SERVICE' THEN\n    v_valid := p_stage = 'READY_FOR_CHECKOUT';\n  ELSIF v_current = 'READY_FOR_CHECKOUT' THEN\n    v_valid := p_stage = 'IN_SERVICE';\n  END IF;\n\n  IF NOT v_valid THEN\n    RAISE EXCEPTION 'invalid_visit_transition' USING ERRCODE = '23514';\n  END IF;\n\n  UPDATE public.appointments a\n  SET visit_stage = p_stage::public.visit_stage,\n      started_at  = CASE WHEN p_stage = 'IN_SERVICE'\n                         THEN COALESCE(a.started_at, now()) ELSE a.started_at END,\n      updated_at  = now()\n  WHERE a.id = p_appointment_id;\n\n  RETURN jsonb_build_object(\n    'appointment_id', p_appointment_id,\n    'stage', p_stage\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -8943,6 +9734,13 @@
     }
   ],
   "function_acl": [
+    {
+      "schema": "app_private",
+      "name": "consume_invoice_recipes_v1",
+      "identity_args": "p_center_id uuid, p_invoice_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
     {
       "schema": "app_private",
       "name": "enforce_advance_payroll_center_v1",
@@ -9345,14 +10143,14 @@
     {
       "schema": "public",
       "name": "process_checkout_idempotent_v1",
-      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb, p_appointment_id uuid",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
       "schema": "public",
       "name": "process_checkout_idempotent_v1",
-      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb",
+      "identity_args": "p_request_id uuid, p_center_id uuid, p_customer_id uuid, p_employee_id uuid, p_payment_method text, p_discount_amount numeric, p_use_loyalty_points boolean, p_items jsonb, p_gift_card_code text, p_entitlement_redemptions jsonb, p_appointment_id uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9470,8 +10268,36 @@
     },
     {
       "schema": "public",
+      "name": "save_service_recipe_v1",
+      "identity_args": "p_center_id uuid, p_service_id uuid, p_items jsonb",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "save_service_recipe_v1",
+      "identity_args": "p_center_id uuid, p_service_id uuid, p_items jsonb",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "touch_updated_at_generic",
       "identity_args": "",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "transition_visit_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_stage text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "transition_visit_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_stage text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -9813,6 +10639,18 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "name": "inventory_consumptions_member_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "app_private.is_center_member(center_id)",
+      "with_check": null
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "name": "invoice_items_member_select",
       "permissive": "PERMISSIVE",
@@ -10086,6 +10924,30 @@
       "cmd": "UPDATE",
       "qual": "app_private.is_center_member(center_id)",
       "with_check": "app_private.is_center_member(center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_member_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "(center_id = ANY (app_private.user_center_ids()))",
+      "with_check": null
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
+      "name": "service_recipes_member_select",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "(center_id = ANY (app_private.user_center_ids()))",
+      "with_check": null
     },
     {
       "schema": "public",
@@ -14332,6 +15194,286 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_appointment",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_invoice",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_product",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_inventory_consumptions_service",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_invoice_items_gift_card",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -14494,6 +15636,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_invoice_items_package",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_invoices_appointment",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -15564,6 +16762,286 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_product",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipe_items_recipe",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_service_recipes_service",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_services_center",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -15670,6 +17148,181 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_services_center_catalog_code",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_once",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "inventory_consumptions_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -17839,6 +19492,356 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "authenticated",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipes_service_unique",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "services",
       "grantee": "authenticated",
       "privilege": "INSERT"
@@ -17968,6 +19971,13 @@
       "object": "services_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
+      "object": "consume_invoice_recipes_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
     },
     {
       "kind": "routine",
@@ -18497,7 +20507,35 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "save_service_recipe_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "save_service_recipe_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "touch_updated_at_generic",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "transition_visit_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "transition_visit_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -18718,6 +20756,12 @@
     },
     {
       "schema": "public",
+      "table": "inventory_consumptions",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
       "table": "invoice_items",
       "rls_enabled": true,
       "rls_forced": false
@@ -18803,6 +20847,18 @@
     {
       "schema": "public",
       "table": "service_packages",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "service_recipes",
       "rls_enabled": true,
       "rls_forced": false
     },

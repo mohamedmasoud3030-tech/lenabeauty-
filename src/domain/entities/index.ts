@@ -64,6 +64,26 @@ export enum AppointmentStatus {
   NO_SHOW = "NO_SHOW"
 }
 
+/**
+ * The operational visit lifecycle that refines a SCHEDULED appointment.
+ *
+ * Appointments remain the scheduling source (status stays the terminal-state
+ * contract). `VisitStage` records where the customer *actually is* during the
+ * visit — booked, confirmed, arrived, in service, or ready for checkout.
+ * Terminal appointment states (COMPLETED / CANCELLED / NO_SHOW) have no stage;
+ * the unified lifecycle derives them from `AppointmentStatus`.
+ *
+ * This ordering is server-enforced by `transition_visit_v1` so a client can
+ * never skip a stage.
+ */
+export enum VisitStage {
+  BOOKED = "BOOKED",
+  CONFIRMED = "CONFIRMED",
+  ARRIVED = "ARRIVED",
+  IN_SERVICE = "IN_SERVICE",
+  READY_FOR_CHECKOUT = "READY_FOR_CHECKOUT"
+}
+
 export interface Appointment {
   id: string;
   customerId: string;
@@ -90,6 +110,12 @@ export interface Appointment {
   noShowFeeCharged?: number;
   noShowMarkedAt?: Date;
   noShowNote?: string;
+  /** Operational visit stage (nullable: terminal appointments have none). */
+  visitStage?: VisitStage;
+  /** When the visit physically started (service began), when recorded. */
+  startedAt?: Date;
+  /** When the visit reached a paid/completed terminal state. */
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -200,6 +226,52 @@ export interface ServicePackage {
   updatedAt: Date;
 }
 
+/**
+ * A service's expected consumables (the "recipe" of stock a service consumes).
+ * One recipe per service; a service may have no recipe (nothing consumed).
+ */
+export interface ServiceRecipeItem {
+  id: string;
+  centerId: string;
+  recipeId: string;
+  productId: string;
+  /** Consumed quantity (units/ml/… as declared by the recipe). */
+  quantity: number;
+  /** Measurement unit (e.g. "unit", "ml", "pair") where the center tracks it. */
+  unit?: string;
+  /** Optional per-line estimated cost (3-decimal OMR). */
+  estimatedCost?: number;
+  createdAt: Date;
+}
+
+export interface ServiceRecipe {
+  id: string;
+  centerId: string;
+  serviceId: string;
+  isActive: boolean;
+  items?: ServiceRecipeItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Immutable record of stock consumed by a completed service. Written only by
+ * the checkout transaction; keyed by (invoice, service, product) so retries
+ * and edits can never double-consume.
+ */
+export interface InventoryConsumption {
+  id: string;
+  centerId: string;
+  invoiceId: string;
+  appointmentId?: string;
+  serviceId: string;
+  productId: string;
+  quantity: number;
+  unit?: string;
+  unitCost: number;
+  consumedAt: Date;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -253,6 +325,8 @@ export interface Invoice {
   paymentMethod: string;
   customerId: string;
   employeeId?: string;
+  /** Booking reference preserved at checkout (never silently lost). */
+  appointmentId?: string;
   staffName?: string;
   createdAt: Date;
   updatedAt: Date;

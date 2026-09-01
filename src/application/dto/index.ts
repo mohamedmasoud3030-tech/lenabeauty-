@@ -56,6 +56,8 @@ export interface CheckoutPayload {
   customerId: string;
   /** Required by the operational checkout contract for traceability. */
   employeeId: string;
+  /** Booking reference: when set, checkout closes the visit (paid ⇒ completed). */
+  appointmentId?: string;
   discountAmount?: number;
   useLoyaltyPoints?: boolean;
   giftCardCode?: string;
