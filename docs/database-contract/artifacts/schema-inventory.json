@@ -6805,6 +6805,13 @@
     {
       "schema": "public",
       "table": "service_recipe_items",
+      "name": "service_recipe_items_product_unique",
+      "type": "u",
+      "definition": "UNIQUE (recipe_id, product_id)"
+    },
+    {
+      "schema": "public",
+      "table": "service_recipe_items",
       "name": "service_recipe_items_quantity_check",
       "type": "c",
       "definition": "CHECK ((quantity > (0)::numeric))"
@@ -8638,6 +8645,15 @@
     },
     {
       "schema": "public",
+      "table": "service_recipe_items",
+      "name": "service_recipe_items_product_unique",
+      "unique": true,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX service_recipe_items_product_unique ON public.service_recipe_items USING btree (recipe_id, product_id)"
+    },
+    {
+      "schema": "public",
       "table": "service_recipes",
       "name": "idx_service_recipes_center",
       "unique": false,
@@ -9543,7 +9559,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.save_service_recipe_v1(p_center_id uuid, p_service_id uuid, p_items jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_recipe_id UUID;\n  v_item      JSONB;\n  v_product   UUID;\n  v_qty       NUMERIC(12,3);\n  v_unit      TEXT;\n  v_cost      NUMERIC(12,3);\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.services s\n  WHERE s.id = p_service_id AND s.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'service_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  SELECT id INTO v_recipe_id\n  FROM public.service_recipes sr\n  WHERE sr.service_id = p_service_id AND sr.center_id = p_center_id\n  FOR UPDATE;\n\n  IF v_recipe_id IS NULL THEN\n    INSERT INTO public.service_recipes (center_id, service_id, is_active)\n    VALUES (p_center_id, p_service_id, true)\n    RETURNING id INTO v_recipe_id;\n  ELSE\n    DELETE FROM public.service_recipe_items sri WHERE sri.recipe_id = v_recipe_id;\n    UPDATE public.service_recipes SET is_active = true, updated_at = now()\n    WHERE id = v_recipe_id;\n  END IF;\n\n  IF p_items IS NOT NULL AND jsonb_typeof(p_items) = 'array' THEN\n    FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)\n    LOOP\n      v_product := NULLIF(v_item->>'productId', '')::UUID;\n      v_qty     := NULLIF(v_item->>'quantity', '')::NUMERIC;\n      v_unit    := NULLIF(v_item->>'unit', '');\n      v_cost    := COALESCE(NULLIF(v_item->>'estimatedCost', '')::NUMERIC, 0);\n\n      IF v_product IS NULL OR v_qty IS NULL OR v_qty <= 0 THEN\n        RAISE EXCEPTION 'invalid_recipe_item' USING ERRCODE = '22023';\n      END IF;\n\n      PERFORM 1 FROM public.products p\n      WHERE p.id = v_product AND p.center_id = p_center_id;\n      IF NOT FOUND THEN\n        RAISE EXCEPTION 'recipe_product_not_available' USING ERRCODE = '23503';\n      END IF;\n\n      INSERT INTO public.service_recipe_items\n        (center_id, recipe_id, product_id, quantity, unit, estimated_cost)\n      VALUES\n        (p_center_id, v_recipe_id, v_product, round(v_qty, 3), v_unit, round(v_cost, 3));\n    END LOOP;\n  END IF;\n\n  RETURN jsonb_build_object('recipe_id', v_recipe_id, 'service_id', p_service_id);\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.save_service_recipe_v1(p_center_id uuid, p_service_id uuid, p_items jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_recipe_id UUID;\n  v_item      JSONB;\n  v_product   UUID;\n  v_qty       NUMERIC(12,3);\n  v_unit      TEXT;\n  v_cost      NUMERIC(12,3);\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'not_authorized_for_center' USING ERRCODE = '42501';\n  END IF;\n\n  PERFORM 1 FROM public.services s\n  WHERE s.id = p_service_id AND s.center_id = p_center_id;\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'service_not_available' USING ERRCODE = '23503';\n  END IF;\n\n  SELECT id INTO v_recipe_id\n  FROM public.service_recipes sr\n  WHERE sr.service_id = p_service_id AND sr.center_id = p_center_id\n  FOR UPDATE;\n\n  IF v_recipe_id IS NULL THEN\n    INSERT INTO public.service_recipes (center_id, service_id, is_active)\n    VALUES (p_center_id, p_service_id, true)\n    RETURNING id INTO v_recipe_id;\n  ELSE\n    DELETE FROM public.service_recipe_items sri WHERE sri.recipe_id = v_recipe_id;\n    UPDATE public.service_recipes SET is_active = true, updated_at = now()\n    WHERE id = v_recipe_id;\n  END IF;\n\n  IF p_items IS NOT NULL AND jsonb_typeof(p_items) = 'array' THEN\n    IF EXISTS (\n      SELECT 1\n      FROM jsonb_array_elements(p_items) AS it\n      WHERE NULLIF(it->>'productId', '') IS NOT NULL\n      GROUP BY it->>'productId'\n      HAVING COUNT(*) > 1\n    ) THEN\n      RAISE EXCEPTION 'duplicate_recipe_product' USING ERRCODE = '22023';\n    END IF;\n\n    FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)\n    LOOP\n      v_product := NULLIF(v_item->>'productId', '')::UUID;\n      v_qty     := NULLIF(v_item->>'quantity', '')::NUMERIC;\n      v_unit    := NULLIF(v_item->>'unit', '');\n      v_cost    := COALESCE(NULLIF(v_item->>'estimatedCost', '')::NUMERIC, 0);\n\n      IF v_product IS NULL OR v_qty IS NULL OR v_qty <= 0 THEN\n        RAISE EXCEPTION 'invalid_recipe_item' USING ERRCODE = '22023';\n      END IF;\n\n      PERFORM 1 FROM public.products p\n      WHERE p.id = v_product AND p.center_id = p_center_id;\n      IF NOT FOUND THEN\n        RAISE EXCEPTION 'recipe_product_not_available' USING ERRCODE = '23503';\n      END IF;\n\n      INSERT INTO public.service_recipe_items\n        (center_id, recipe_id, product_id, quantity, unit, estimated_cost)\n      VALUES\n        (p_center_id, v_recipe_id, v_product, round(v_qty, 3), v_unit, round(v_cost, 3));\n    END LOOP;\n  END IF;\n\n  RETURN jsonb_build_object('recipe_id', v_recipe_id, 'service_id', p_service_id);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -19192,6 +19208,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "service_recipe_items_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "service_recipe_items_product_unique",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },

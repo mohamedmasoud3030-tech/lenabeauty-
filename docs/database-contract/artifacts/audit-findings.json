@@ -5,14 +5,14 @@
       "columns": 392,
       "enum_types": 2,
       "enum_labels": 9,
-      "constraints": 408,
+      "constraints": 409,
       "foreign_keys": 89,
-      "indexes": 110,
+      "indexes": 111,
       "triggers": 23,
       "views": 0,
       "functions": 62,
       "policies": 49,
-      "grants": 1325
+      "grants": 1333
     },
     "frontend": {
       "tables": 29,

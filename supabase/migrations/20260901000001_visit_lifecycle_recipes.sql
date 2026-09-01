@@ -65,7 +65,11 @@ CREATE TABLE IF NOT EXISTS public.service_recipe_items (
   quantity       NUMERIC(12,3) NOT NULL CHECK (quantity > 0),
   unit           TEXT,
   estimated_cost NUMERIC(12,3) NOT NULL DEFAULT 0 CHECK (estimated_cost >= 0),
-  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- A recipe lists each product once. Duplicate rows would make the
+  -- consumption idempotency key (invoice_id, service_id, product_id) silently
+  -- drop the later duplicates' quantities, under-counting consumed stock.
+  CONSTRAINT service_recipe_items_product_unique UNIQUE (recipe_id, product_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_service_recipes_center ON public.service_recipes(center_id);
@@ -239,6 +243,16 @@ BEGIN
   END IF;
 
   IF p_items IS NOT NULL AND jsonb_typeof(p_items) = 'array' THEN
+    IF EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(p_items) AS it
+      WHERE NULLIF(it->>'productId', '') IS NOT NULL
+      GROUP BY it->>'productId'
+      HAVING COUNT(*) > 1
+    ) THEN
+      RAISE EXCEPTION 'duplicate_recipe_product' USING ERRCODE = '22023';
+    END IF;
+
     FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)
     LOOP
       v_product := NULLIF(v_item->>'productId', '')::UUID;
