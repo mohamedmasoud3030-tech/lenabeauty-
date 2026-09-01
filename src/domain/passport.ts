@@ -147,7 +147,7 @@ export function composePassportSummary(
     ? Number(input.lifetimeSpend)
     : paidInvoices.reduce((sum, i) => sum + Number(i.totalAmount), 0);
 
-  const last = timeline[timeline.length - 1];
+  const last = timeline.at(-1);
 
   return {
     lastVisitISO: last?.dateTimeISO,

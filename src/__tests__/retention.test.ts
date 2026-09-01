@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  getCustomerVisitPattern,
   getNextBestCustomerAction,
   getRetentionStatus,
   getSuggestedRebookingWindow,
+  retentionVisitsFromHistory,
   RetentionVisit,
 } from "../domain/retention";
 
@@ -70,5 +72,23 @@ describe("Retention Engine", () => {
     const action = getNextBestCustomerAction(visits([-90, -60, -34]));
     expect(action.kind).toBe("REBOOK");
     expect(action.daysSinceLastVisit).toBe(34);
+  });
+
+  it("does not double-count an invoice already linked to a completed appointment", () => {
+    const reduced = retentionVisitsFromHistory({
+      appointments: [
+        { id: "a1", dateTime: new Date("2026-09-01T10:00:00Z"), status: "COMPLETED", serviceId: "nails", service: { name: "Nails" } },
+      ],
+      invoices: [
+        { id: "i1", date: new Date("2026-09-01T10:00:00Z"), totalAmount: 30, appointmentId: "a1" },
+        { id: "i2", date: new Date("2026-08-01T10:00:00Z"), totalAmount: 20 },
+      ],
+    });
+
+    expect(reduced).toHaveLength(2);
+    // The linked invoice is represented by its appointment; only the unlinked
+    // invoice survives as its own visit.
+    expect(reduced.map((v) => v.id)).toEqual(["i2", "a1"]);
+    expect(getCustomerVisitPattern(reduced).totalVisits).toBe(2);
   });
 });

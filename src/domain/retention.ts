@@ -119,22 +119,24 @@ export function getRetentionStatus(
   if (ordered.length === 0) {
     return { status: "INSUFFICIENT_HISTORY", daysSinceLastVisit: null, rebookingWindow: null };
   }
-  const last = ordered[ordered.length - 1];
-  const daysSinceLastVisit = daysBetween(last.dateTimeISO, now.toISOString());
+  const last = ordered.at(-1);
+  const daysSinceLastVisit = daysBetween(last!.dateTimeISO, now.toISOString());
   const window = getSuggestedRebookingWindow(ordered, serviceId);
 
   if (ordered.length < 2) {
     return { status: "NEW", daysSinceLastVisit, rebookingWindow: window };
   }
   if (!window) {
-    const status =
-      daysSinceLastVisit <= 14
-        ? "ACTIVE"
-        : daysSinceLastVisit <= 45
-          ? "DUE_FOR_REBOOK"
-          : daysSinceLastVisit <= 90
-            ? "DORMANT"
-            : "WINBACK";
+    let status: RetentionStatus;
+    if (daysSinceLastVisit <= 14) {
+      status = "ACTIVE";
+    } else if (daysSinceLastVisit <= 45) {
+      status = "DUE_FOR_REBOOK";
+    } else if (daysSinceLastVisit <= 90) {
+      status = "DORMANT";
+    } else {
+      status = "WINBACK";
+    }
     return { status, daysSinceLastVisit, rebookingWindow: null };
   }
 
@@ -217,7 +219,6 @@ export function getNextBestCustomerAction(
   now: Date = new Date(),
   preferredServiceId?: string,
 ): NextBestAction {
-  const pattern = getCustomerVisitPattern(visits);
   const status = getRetentionStatus(visits, now, preferredServiceId);
   const window = status.rebookingWindow ?? getSuggestedRebookingWindow(visits);
 
@@ -262,8 +263,10 @@ export function retentionVisitsFromHistory(history: {
     id: string;
     date: Date;
     totalAmount: number;
+    appointmentId?: string;
   }[];
 }): RetentionVisit[] {
+  const appointmentIds = new Set(history.appointments.map((a) => a.id));
   const visits: RetentionVisit[] = history.appointments
     .filter((a) => a.status === "COMPLETED")
     .map((a) => ({
@@ -272,14 +275,18 @@ export function retentionVisitsFromHistory(history: {
       serviceId: a.serviceId,
       serviceName: a.service?.name,
     }));
-  // Merge completed invoices that may not have a matching appointment record.
-  const invoiceVisits: RetentionVisit[] = history.invoices.map((inv) => ({
-    id: inv.id,
-    dateTimeISO: new Date(inv.date).toISOString(),
-    amount: Number(inv.totalAmount) || 0,
-  }));
-  const merged = [...visits, ...invoiceVisits].sort(
+  // Merge invoices that are not already represented by their linked
+  // appointment (checkout links invoice → appointment). Without this guard a
+  // single paid visit would be counted twice — once from the appointment and
+  // once from its linked invoice — distorting cadence and totals.
+  const invoiceVisits: RetentionVisit[] = history.invoices
+    .filter((inv) => !inv.appointmentId || !appointmentIds.has(inv.appointmentId))
+    .map((inv) => ({
+      id: inv.id,
+      dateTimeISO: new Date(inv.date).toISOString(),
+      amount: Number(inv.totalAmount) || 0,
+    }));
+  return [...visits, ...invoiceVisits].sort(
     (a, b) => new Date(a.dateTimeISO).getTime() - new Date(b.dateTimeISO).getTime(),
   );
-  return merged;
 }
