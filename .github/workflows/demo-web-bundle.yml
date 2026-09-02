@@ -1,0 +1,43 @@
+name: Build Demo web bundle
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lena-demo-web-bundle-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-demo-web:
+    name: Build deployable Demo web bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build canonical Demo web bundle
+        run: node scripts/vercel-demo-build.mjs
+
+      - name: Upload deployable Demo web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: lena-demo-web-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
