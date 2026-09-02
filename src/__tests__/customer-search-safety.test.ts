@@ -1,15 +1,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { repositoriesSource } from "./helpers/repositoriesSource";
 
-const repositories = readFileSync(
-  resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
+const customerBlock = readFileSync(
+  resolve(process.cwd(), "src/infrastructure/supabase/repositories/customers.ts"),
   "utf8",
 );
-const customerBlock = repositories.slice(
-  repositories.indexOf("class SupabaseCustomerAdapter"),
-  repositories.indexOf("class SupabaseEmployeeAdapter"),
-);
+const repositories = repositoriesSource();
 
 describe("customer search safety", () => {
   it("does not interpolate user text into PostgREST raw or grammar", () => {

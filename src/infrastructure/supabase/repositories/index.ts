@@ -1,0 +1,15 @@
+export { SupabaseAuthAdapter } from "./auth.ts";
+export { SupabaseCustomerAdapter } from "./customers.ts";
+export { SupabaseEmployeeAdapter } from "./employees.ts";
+export { SupabaseServiceAdapter, SupabaseServiceRecipeAdapter } from "./services.ts";
+export { SupabaseAppointmentAdapter } from "./appointments.ts";
+export { SupabaseProductAdapter } from "./inventory.ts";
+export { SupabaseExpenseAdapter } from "./expenses.ts";
+export { SupabaseInvoiceAdapter } from "./pos.ts";
+export { SupabaseSettingsAdapter } from "./settings.ts";
+export { SupabaseDashboardAdapter } from "./dashboard.ts";
+export { SupabaseReportAdapter } from "./reports.ts";
+export { SupabaseGiftCardAdapter, SupabaseEntitlementAdapter, SupabaseServicePackageAdapter } from "./gifting.ts";
+export { SupabaseCustomerExperienceAdapter, SupabaseForecastAdapter, SupabaseAccountingAdapter, SupabaseAdvancedAdapter } from "./engagement.ts";
+export { SupabaseBookingAdapter } from "./booking.ts";
+export { SupabaseAttendanceAdapter, SupabaseAdvanceAdapter, SupabasePayrollAdapter } from "./workforce.ts";

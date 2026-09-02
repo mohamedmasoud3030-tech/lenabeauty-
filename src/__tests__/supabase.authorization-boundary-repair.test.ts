@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { repositoriesSource } from "./helpers/repositoriesSource";
 
 const migration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260817000001_authorization_boundary_repair.sql"),
@@ -10,10 +11,7 @@ const inventory = JSON.parse(readFileSync(
   resolve(process.cwd(), "docs/database-contract/artifacts/schema-inventory.json"),
   "utf8",
 ));
-const repositories = readFileSync(
-  resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
-  "utf8",
-);
+const repositories = repositoriesSource();
 
 const sensitiveRpcs = [
   "upsert_notification_settings_v1",

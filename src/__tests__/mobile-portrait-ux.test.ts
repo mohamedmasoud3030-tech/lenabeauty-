@@ -12,6 +12,7 @@ import {
 const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 const customers = readFileSync(resolve(process.cwd(), "src/pages/CustomersPage.tsx"), "utf8");
 const appointments = readFileSync(resolve(process.cwd(), "src/pages/AppointmentsPage.tsx"), "utf8");
+const bookingDialog = readFileSync(resolve(process.cwd(), "src/pages/appointments/AppointmentBookingDialog.tsx"), "utf8");
 const pos = readFileSync(resolve(process.cwd(), "src/pages/PosInvoicesPage.tsx"), "utf8");
 const layout = readFileSync(resolve(process.cwd(), "src/ui/layout/Layout.tsx"), "utf8");
 const receipt = readFileSync(resolve(process.cwd(), "src/shared/components/ReceiptPreviewModal.tsx"), "utf8");
@@ -77,7 +78,7 @@ describe("small-phone portrait UX contracts", () => {
     expect(appointments).toContain("window.innerWidth < 1024 ? \"day\" : \"week\"");
     expect(appointments).toContain("skip empty days");
     expect(appointments).toContain("above-bottom-nav");
-    expect(appointments).toContain("<Modal");
+    expect(bookingDialog).toContain("<Modal");
     expect(modal).toContain("--keyboard-inset");
   });
 

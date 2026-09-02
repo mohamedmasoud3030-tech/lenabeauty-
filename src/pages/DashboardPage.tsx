@@ -1,15 +1,13 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { 
   AlertTriangle, CalendarDays, Coins, List, 
   ArrowUpRight, TrendingUp, Users, Scissors, 
-  Receipt, Sparkles, ArrowRight, Plus, 
+  Sparkles, ArrowRight, Plus, 
   ShoppingBag, Calendar, UserPlus, FileText,
   Activity, Zap, Clock, ChevronRight, MoreVertical,
   LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown, CheckCircle2
 } from "lucide-react";
-import { useCases } from "../app/composition/useCases";
-import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../auth";
@@ -19,10 +17,12 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, Legend, Cell
 } from "recharts";
-import { LazyChart, AutoRefreshChart, ChartSkeleton } from "../shared/components/LazyChart";
+import { LazyChart } from "../shared/components/LazyChart";
 import { useNavigate } from "react-router-dom";
-import { DashboardSummary, PnlData } from "../application/dto";
+import { useDashboardData } from "./dashboard/useDashboardData";
+import { StatCard, QuickActionButton, FinancialRow, ActivityIcon } from "./dashboard/widgets";
 import { ScreenState } from "../shared/components/ScreenState";
+import { Spinner } from "../shared/components/Spinner";
 import { GettingStartedCard } from "../shared/components/GettingStartedCard";
 import { NavigationNotice } from "../shared/components/NavigationNotice";
 import { getDisplayName } from "../shared/displayName";
@@ -34,25 +34,18 @@ export default function DashboardPage() {
   const { showToast } = useToast();
   const me = useAuth().me;
   const nav = useNavigate();
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [pnl, setPnl] = useState<PnlData | null>(null);
-  const [last7Days, setLast7Days] = useState<{date: string; revenue: number}[]>([]);
-  const [activity, setActivity] = useState<{id: string, type: string, message: string, createdAt: string, user?: {username?: string}}[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    summary,
+    pnl,
+    last7Days,
+    activity,
+    loading,
+    todayAppts,
+    lowStockItems,
+    trackedProductCount,
+    load,
+  } = useDashboardData();
   const [isMobile, setIsMobile] = useState(false);
-  // تشغيلية حقيقية: مواعيد اليوم القادمة + تنبيهات المخزون
-  const [todayAppts, setTodayAppts] = useState<{
-    id: string;
-    time: string;
-    dateTime: string;
-    customerName: string;
-    serviceName?: string;
-    employeeName?: string;
-    status: string;
-    depositAmount?: number;
-  }[]>([]);
-  const [lowStockItems, setLowStockItems] = useState<{ id: string; name: string; stock: number }[]>([]);
-  const [trackedProductCount, setTrackedProductCount] = useState<number | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -60,157 +53,6 @@ export default function DashboardPage() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-
-  // Auto-refresh every 60 seconds
-  const loadRef = useCallback(async () => { await load(); }, []);
-
-  async function load() {
-    setLoading(true);
-    try {
-      const s = await unwrap(useCases.dashboard.getSummary());
-      setSummary(s);
-
-      void loadActivity(s);
-      void loadTodayOps();
-
-      if (s && s.canViewRevenue) {
-        try {
-          const p = await unwrap(useCases.dashboard.getPnlMonth());
-          setPnl(p);
-        } catch (e) {
-          console.error("Failed to load P&L:", e);
-        }
-
-        try {
-          const last7 = await unwrap(useCases.dashboard.getRevenueLast7Days());
-          setLast7Days(last7 || []);
-        } catch (e) {
-          console.error("Failed to load 7-day revenue:", e);
-        }
-      } else {
-        setPnl(null);
-        setLast7Days([]);
-      }
-    } catch (err: any) {
-      showToast('error', t("Error"), err.message || t("Failed to load dashboard"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  /** مواعيد اليوم القادمة + تنبيهات المخزون — بيانات حقيقية فقط. */
-  async function loadTodayOps() {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
-
-    try {
-      const [apptsRes, customersRes, servicesRes] = await Promise.all([
-        useCases.appointments.list({ fromISO: todayStart.toISOString(), toISO: todayEnd.toISOString() }),
-        useCases.customers.list(),
-        useCases.services.list(),
-      ]);
-      const customerNames = new Map((customersRes.ok ? customersRes.data : []).map((c) => [c.id, c.name]));
-      const serviceNames = new Map((servicesRes.ok ? servicesRes.data : []).map((s) => [s.id, s.name]));
-      const upcoming = (apptsRes.ok ? apptsRes.data : [])
-        .filter((a) => a.status !== "CANCELLED")
-        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
-        .map((a) => ({
-          id: a.id,
-          time: a.dateTime.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US", { hour: "2-digit", minute: "2-digit" }),
-          dateTime: a.dateTime.toISOString(),
-          customerName: a.customerId ? (customerNames.get(a.customerId) ?? "—") : "—",
-          serviceName: a.serviceId ? serviceNames.get(a.serviceId) : undefined,
-          employeeName: a.employee?.name,
-          status: a.status,
-          depositAmount: a.depositAmount,
-        }));
-      setTodayAppts(upcoming);
-    } catch {
-      setTodayAppts([]);
-    }
-
-    try {
-      const productsRes = await useCases.products.list();
-      const catalog = productsRes.ok ? productsRes.data : [];
-      setTrackedProductCount(productsRes.ok ? catalog.length : null);
-      const low = catalog
-        .filter((p) => p.isActive && p.trackInventory && p.stockQuantity <= (p.reorderLevel ?? 5))
-        .sort((a, b) => a.stockQuantity - b.stockQuantity)
-        .slice(0, 5)
-        .map((p) => ({ id: p.id, name: p.name, stock: p.stockQuantity }));
-      setLowStockItems(low);
-    } catch {
-      setLowStockItems([]);
-    }
-  }
-
-  async function loadActivity(s: DashboardSummary | null) {
-    type ActivityEvent = { id: string; type: string; message: string; createdAt: string; user?: { username?: string } };
-    try {
-      const now = new Date();
-      const windowStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      const windowEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      const tasks: Promise<ActivityEvent[]>[] = [
-        useCases.appointments
-          .list({ fromISO: windowStart.toISOString(), toISO: windowEnd.toISOString() })
-          .then((res) =>
-            res.ok
-              ? res.data.map((a) => ({
-                  id: `appt-${a.id}`,
-                  type: "APPOINTMENT_CREATED",
-                  message: t("New appointment scheduled"),
-                  createdAt: new Date(a.createdAt).toISOString(),
-                }))
-              : []
-          )
-          .catch(() => []),
-        useCases.customers
-          .list()
-          .then((res) =>
-            res.ok
-              ? res.data.map((c) => ({
-                  id: `cust-${c.id}`,
-                  type: "USER_CREATED",
-                  message: `${t("New customer")}: ${c.name}`,
-                  createdAt: new Date(c.createdAt).toISOString(),
-                }))
-              : []
-          )
-          .catch(() => []),
-      ];
-
-      if (s?.canViewRevenue) {
-        tasks.push(
-          useCases.expenses
-            .list()
-            .then((res) =>
-              res.ok
-                ? res.data.map((e) => ({
-                    id: `exp-${e.id}`,
-                    type: "EXPENSE_CREATED",
-                    message: `${t("New expense recorded")}: ${formatOMRAmount(e.amount)} ${s.currency || ""}`.trim(),
-                    createdAt: new Date(e.createdAt).toISOString(),
-                  }))
-                : []
-            )
-            .catch(() => [])
-        );
-      }
-
-      const results = await Promise.all(tasks);
-      const merged = results
-        .flat()
-        .sort((x, y) => new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime())
-        .slice(0, 6);
-
-      setActivity(merged);
-    } catch {
-      setActivity([]);
-    }
-  }
 
   useEffect(() => {
     void load();
@@ -568,7 +410,7 @@ export default function DashboardPage() {
             {loading ? (
               <div className="w-full h-full min-h-[260px] flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4">
-                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <Spinner />
                   <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Chart...")}</p>
                 </div>
               </div>
@@ -647,7 +489,7 @@ export default function DashboardPage() {
           <div className="p-4 sm:p-6 flex-1 flex flex-col">
             {loading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-40">
-                <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <Spinner />
                 <p className="text-[10px] font-bold uppercase tracking-widest">{t("Processing...")}</p>
               </div>
             ) : !pnl ? (
@@ -809,126 +651,4 @@ export default function DashboardPage() {
       </div>
     </motion.div>
   );
-}
-
-function StatCard({ title, value, subValue, icon, color, variants, compact = false }: {
-  title: string
-  value: string | number
-  subValue: string
-  icon: React.ReactNode
-  color: string
-  variants: import("motion/react").Variants
-  compact?: boolean
-}) {
-  const colorMap: Record<string, string> = {
-    emerald: "bg-success/10 text-success",
-    blue: "bg-info/10 text-info",
-    purple: "bg-primary/10 text-primary",
-    rose: "bg-destructive/10 text-destructive",
-  };
-
-  return (
-    <motion.div 
-      variants={variants}
-      className={clsx(
-        "group relative rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm transition-all hover:shadow-md overflow-hidden",
-        compact ? "p-2.5 sm:p-3" : "p-3 sm:p-6"
-      )}
-    >
-      <div className="flex items-start justify-between relative z-10">
-        <div className={clsx(
-          "rounded-lg transition-all group-hover:scale-110 shadow-sm",
-          compact ? "p-1.5 sm:p-2" : "p-2.5 sm:p-3",
-          colorMap[color]
-        )}>
-          {icon}
-        </div>
-      </div>
-      <div className={clsx("relative z-10", compact ? "mt-2 sm:mt-4" : "mt-4 sm:mt-6")}>
-        <p className={clsx(
-          "font-bold text-muted-foreground uppercase tracking-wider",
-          compact ? "text-[8px] sm:text-[9px]" : "text-[9px]"
-        )}>{title}</p>
-        <h3 className={clsx(
-          "font-bold text-foreground tracking-tighter truncate",
-          compact ? "text-lg sm:text-2xl mt-0.5" : "text-2xl sm:text-3xl mt-1 sm:mt-2"
-        )}>{value}</h3>
-        <p className={clsx(
-          "text-muted-foreground font-bold uppercase tracking-wider opacity-60 truncate",
-          compact ? "text-[8px] sm:text-[9px] mt-0.5" : "text-[9px] mt-1 sm:mt-2"
-        )}>{subValue}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-function QuickActionButton({ title, icon, color, onClick }: {
-  title: string
-  icon: React.ReactNode
-  color: string
-  onClick: () => void
-}) {
-  const colorClasses: Record<string, string> = {
-    blue: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
-    emerald: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
-    purple: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
-    amber: "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground",
-    slate: "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground",
-  };
-
-  return (
-    <button 
-      onClick={onClick}
-      className={clsx(
-        "group min-h-11 w-full flex items-center gap-3 rounded-lg border border-border p-3 transition-all hover:shadow-lg hover:-translate-y-0.5",
-        colorClasses[color]
-      )}
-    >
-      <div className="flex-shrink-0">
-        {icon}
-      </div>
-      <span className="text-xs font-bold uppercase tracking-[0.1em] text-start flex-1">{title}</span>
-      <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-    </button>
-  );
-}
-
-function FinancialRow({ label, value, currency, icon, color }: {
-  label: string
-  value: number | string
-  currency?: string
-  icon: React.ReactNode
-  color: string
-}) {
-  const colorClasses: Record<string, string> = {
-    emerald: "bg-success/10 text-success",
-    orange: "bg-warning/10 text-warning",
-    blue: "bg-info/10 text-info",
-    rose: "bg-destructive/10 text-destructive"
-  };
-
-  return (
-    <div className="group flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 transition-all border border-transparent hover:border-border">
-      <div className="flex items-center gap-2.5">
-        <div className={clsx("h-8 w-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm", colorClasses[color])}>
-          {icon}
-        </div>
-        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{label}</span>
-      </div>
-      <div className="text-end">
-        <span className="text-sm font-bold text-foreground">{formatOMRAmount(value)}</span>
-        <span className="ms-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{currency}</span>
-      </div>
-    </div>
-  );
-}
-
-function ActivityIcon({ type }: { type: string }) {
-  switch (type) {
-    case "INVOICE_CREATED": return <Receipt className="h-5 w-5" />;
-    case "APPOINTMENT_CREATED": return <CalendarDays className="h-5 w-5" />;
-    case "USER_CREATED": return <Users className="h-5 w-5" />;
-    case "EXPENSE_CREATED": return <Coins className="h-5 w-5" />;
-    default: return <List className="h-5 w-5" />;
-  }
 }

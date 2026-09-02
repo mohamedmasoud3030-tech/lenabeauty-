@@ -198,100 +198,7 @@
       "table": "customer_entitlements",
       "exists": true,
       "missing_columns": [],
-      "embed_results": [
-        {
-          "relation": "customers",
-          "columns": [
-            "name"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "service_packages",
-          "columns": [
-            "name"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "gift_cards",
-          "columns": [
-            "code"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "invoices",
-          "columns": [
-            "serial_number"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "package_entitlement_units",
-          "columns": [
-            "id",
-            "center_id",
-            "entitlement_id",
-            "service_id",
-            "total_units",
-            "used_units",
-            "created_at"
-          ],
-          "resolvable": true,
-          "direction": "to-many"
-        },
-        {
-          "relation": "customers",
-          "columns": [
-            "name"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "service_packages",
-          "columns": [
-            "name"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "gift_cards",
-          "columns": [
-            "code"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "invoices",
-          "columns": [
-            "serial_number"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "package_entitlement_units",
-          "columns": [
-            "id",
-            "center_id",
-            "entitlement_id",
-            "service_id",
-            "total_units",
-            "used_units",
-            "created_at"
-          ],
-          "resolvable": true,
-          "direction": "to-many"
-        }
-      ]
+      "embed_results": []
     },
     {
       "table": "customer_reviews",
@@ -370,6 +277,14 @@
       "missing_columns": [],
       "embed_results": [
         {
+          "relation": "invoices",
+          "columns": [
+            "center_id"
+          ],
+          "resolvable": true,
+          "direction": "to-one"
+        },
+        {
           "relation": "services",
           "columns": [
             "name"
@@ -397,14 +312,6 @@
           "relation": "gift_cards",
           "columns": [
             "code"
-          ],
-          "resolvable": true,
-          "direction": "to-one"
-        },
-        {
-          "relation": "invoices",
-          "columns": [
-            "center_id"
           ],
           "resolvable": true,
           "direction": "to-one"

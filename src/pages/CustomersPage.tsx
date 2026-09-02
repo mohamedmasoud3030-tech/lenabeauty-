@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { 
   History, Search, User, Phone, Calendar,
-  Receipt, FileText, Save, CheckCircle2, UserPlus,
+  Receipt, FileText, Save, UserPlus,
   MoreVertical, Sparkles,
   TrendingUp, Pencil,
   Download, Star, Users, Crown,
@@ -28,12 +28,12 @@ import {
   getNextBestCustomerAction,
   getRetentionStatus,
   getCustomerVisitPattern,
-  RetentionStatus,
 } from "../domain/retention";
 import { buildCustomerWallet } from "../domain/wallet";
 import { formatSalonDate } from "../shared/dateTime";
-import { visitStageI18nKey } from "../shared/visitStage";
 import { effectiveVisitStage } from "../domain/visit";
+import { passportStageLabel, passportStageClass, retentionStatusClass, exportCustomersCSV } from "./customers/helpers";
+import { CustomerFormDialog } from "./customers/CustomerFormDialog";
 
 interface InvoiceHistoryItem extends Invoice {
   items?: {
@@ -46,62 +46,6 @@ interface InvoiceHistoryItem extends Invoice {
 interface CustomerHistoryType {
   appointments: Appointment[];
   invoices: InvoiceHistoryItem[];
-}
-
-/** i18n label for a unified lifecycle stage (terminal states use their status). */
-function passportStageLabel(stage: string, t: (k: string) => string): string {
-  if (stage === "COMPLETED" || stage === "CANCELLED" || stage === "NO_SHOW") return t(stage);
-  return t(visitStageI18nKey(stage as any));
-}
-
-/** Semantic badge classes for a unified lifecycle stage. */
-function passportStageClass(stage: string): string {
-  switch (stage) {
-    case "COMPLETED": return "bg-success/10 text-success border-success/20";
-    case "CANCELLED": return "bg-destructive/10 text-destructive border-destructive/20";
-    case "NO_SHOW": return "bg-warning/10 text-warning border-warning/20";
-    case "IN_SERVICE":
-    case "READY_FOR_CHECKOUT": return "bg-info/10 text-info border-info/20";
-    case "ARRIVED": return "bg-primary/10 text-primary border-primary/20";
-    case "CONFIRMED": return "bg-info/10 text-info border-info/20";
-    default: return "bg-muted text-muted-foreground border-border";
-  }
-}
-
-/** Semantic badge classes for the deterministic retention status. */
-function retentionStatusClass(status: RetentionStatus): string {
-  switch (status) {
-    case "ACTIVE": return "bg-success/10 text-success border-success/20";
-    case "NEW":
-    case "INSUFFICIENT_HISTORY": return "bg-info/10 text-info border-info/20";
-    case "DUE_FOR_REBOOK": return "bg-primary/10 text-primary border-primary/20";
-    case "DORMANT": return "bg-warning/10 text-warning border-warning/20";
-    case "WINBACK": return "bg-destructive/10 text-destructive border-destructive/20";
-    default: return "bg-muted text-muted-foreground border-border";
-  }
-}
-
-// Loyalty tier is derived from lifetime spend via the shared domain model
-// (src/domain/loyalty.ts) — single source of truth across the app.
-
-// Export customers to CSV
-function exportCustomersCSV(customers: Customer[], t: (k: string) => string) {
-  const headers = [t('Name'), t('Phone'), t('Total Spent'), t('Loyalty Points'), t('Tier')];
-  const rows = customers.map(c => [
-    c.name,
-    c.phone ?? '',
-    c.totalSpent.toFixed(3),
-    c.loyaltyPoints,
-    t(getTierBySpend(c.totalSpent).labelKey)
-  ]);
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `customers_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 export default function CustomersPage() {
@@ -895,121 +839,29 @@ export default function CustomersPage() {
         </div>
       </Modal>
 
-      <Modal
-        isOpen={showAddModal}
+      <CustomerFormDialog
+        mode="add"
+        open={showAddModal}
         onClose={() => setShowAddModal(false)}
-        size="sm"
-        title={
-          <span className="flex items-center gap-3">
-            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-              <UserPlus className="h-5 w-5" />
-            </span>
-            <span>{t("Add Customer")}</span>
-          </span>
-        }
-        description={t("Create New Client")}
-        disableClose={adding}
-        className="sm:rounded-[3rem]"
-      >
-        <div className="space-y-6 sm:space-y-8 sm:p-5">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Full Name")}</label>
-                  <div className="relative">
-                    <User className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                      placeholder={t("Enter customer name")}
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Phone Number")}</label>
-                  <div className="relative">
-                    <Phone className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-start shadow-inner"
-                      dir="ltr"
-                      placeholder="968XXXXXXXX"
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
+        name={newName}
+        onNameChange={(v) => setNewName(v)}
+        phone={newPhone}
+        onPhoneChange={(v) => setNewPhone(v)}
+        busy={adding}
+        onSubmit={() => void handleAddCustomer()}
+      />
 
-                <button
-                  disabled={adding}
-                  onClick={handleAddCustomer}
-                  className="group relative w-full h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 overflow-hidden flex items-center justify-center gap-3"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <CheckCircle2 className="h-6 w-6 relative z-10" />
-                  <span className="text-lg relative z-10">{adding ? t("Creating...") : t("Create Customer")}</span>
-                </button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={editId !== null}
+      <CustomerFormDialog
+        mode="edit"
+        open={editId !== null}
         onClose={() => setEditId(null)}
-        size="sm"
-        title={
-          <span className="flex items-center gap-3">
-            <span className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-              <Pencil className="h-5 w-5" />
-            </span>
-            <span>{t("Edit Customer")}</span>
-          </span>
-        }
-        description={t("Update Details")}
-        disableClose={adding}
-        className="sm:rounded-[3rem]"
-      >
-        <div className="space-y-6 sm:space-y-8 sm:p-5">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Full Name")}</label>
-                  <div className="relative">
-                    <User className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-inner"
-                      placeholder={t("Enter customer name")}
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] ms-2">{t("Phone Number")}</label>
-                  <div className="relative">
-                    <Phone className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <input
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      className="w-full rounded-[1.5rem] border border-border bg-muted/30 ps-14 pe-6 py-4.5 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-start shadow-inner"
-                      dir="ltr"
-                      placeholder="968XXXXXXXX"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  disabled={adding}
-                  onClick={handleEditCustomer}
-                  className="group relative w-full h-16 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 overflow-hidden flex items-center justify-center gap-3"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <Save className="h-6 w-6 relative z-10" />
-                  <span className="text-lg relative z-10">{adding ? t("Saving...") : t("Save Changes")}</span>
-                </button>
-        </div>
-      </Modal>
+        name={editName}
+        onNameChange={(v) => setEditName(v)}
+        phone={editPhone}
+        onPhoneChange={(v) => setEditPhone(v)}
+        busy={adding}
+        onSubmit={() => void handleEditCustomer()}
+      />
     </div>
   );
 }

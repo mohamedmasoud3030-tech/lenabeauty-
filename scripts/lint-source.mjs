@@ -43,9 +43,10 @@ for (const dir of SCAN_DIRS) {
   }
 }
 
-const repositories = await readFile(join(ROOT, "src/infrastructure/supabase/repositories.ts"), "utf8");
-if (/\.or\s*\(/.test(repositories)) {
-  violations.push("src/infrastructure/supabase/repositories.ts: raw PostgREST .or() grammar is not permitted");
+const repoFiles = await filesUnder("src/infrastructure/supabase/repositories");
+const repositoryLayer = (await Promise.all(repoFiles.map((f) => readFile(join(ROOT, f), "utf8")))).join("\n");
+if (/\.or\s*\(/.test(repositoryLayer)) {
+  violations.push("src/infrastructure/supabase/repositories/: raw PostgREST .or() grammar is not permitted");
 }
 
 if (violations.length > 0) {

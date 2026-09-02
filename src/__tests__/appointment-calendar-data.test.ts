@@ -38,13 +38,9 @@ describe("appointment calendar data", () => {
   });
 
   it("requests calendar relations and treats its upper instant as exclusive", () => {
-    const source = readFileSync(
-      resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
+    const adapter = readFileSync(
+      resolve(process.cwd(), "src/infrastructure/supabase/repositories/appointments.ts"),
       "utf8",
-    );
-    const adapter = source.slice(
-      source.indexOf("class SupabaseAppointmentAdapter"),
-      source.indexOf("class SupabaseProductAdapter"),
     );
 
     expect(adapter).toContain("customers (id, name, phone)");

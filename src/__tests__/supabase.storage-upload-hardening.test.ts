@@ -7,7 +7,7 @@ const migration = readFileSync(
   "utf8",
 );
 const repository = readFileSync(
-  resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
+  resolve(process.cwd(), "src/infrastructure/supabase/repositories/settings.ts"),
   "utf8",
 );
 
