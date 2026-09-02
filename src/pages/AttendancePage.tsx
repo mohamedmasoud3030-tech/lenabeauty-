@@ -7,6 +7,7 @@ import { Fingerprint, Plus, Pencil, Clock } from "lucide-react";
 import { Modal } from "../shared/components/Modal";
 import { AttendanceRecord, AttendanceStatus, AttendanceMethod, Employee } from "../domain/entities";
 import { computeAttendanceWorkHours, isCheckoutAfterCheckin } from "../domain/attendance";
+import { StatusPill, StatusTone } from "../shared/components/StatusPill";
 
 const STATUS_LABEL_KEYS: Record<AttendanceStatus, string> = {
   PRESENT: "Present",
@@ -21,11 +22,11 @@ const METHOD_LABEL_KEYS: Record<AttendanceMethod, string> = {
   MOBILE: "Mobile",
 };
 
-const statusBadge: Record<AttendanceStatus, string> = {
-  PRESENT: "border-success/25 bg-success/10 text-success",
-  LATE: "border-warning/25 bg-warning/10 text-warning",
-  ABSENT: "border-destructive/25 bg-destructive/10 text-destructive",
-  HALF_DAY: "border-primary/25 bg-primary/10 text-primary",
+const statusTone: Record<AttendanceStatus, StatusTone> = {
+  PRESENT: "success",
+  LATE: "warning",
+  ABSENT: "destructive",
+  HALF_DAY: "primary",
 };
 
 const fieldClass = "w-full min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
@@ -232,9 +233,9 @@ export default function AttendancePage() {
                   <td className="px-4 py-4 font-bold text-primary">{record.workHours.toFixed(1)}</td>
                   <td className="px-4 py-4 text-sm text-muted-foreground">{t(METHOD_LABEL_KEYS[record.method])}</td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadge[record.status]}`}>
+                    <StatusPill tone={statusTone[record.status]}>
                       {t(STATUS_LABEL_KEYS[record.status])}
-                    </span>
+                    </StatusPill>
                   </td>
                   <td className="px-4 py-4">
                     <button
