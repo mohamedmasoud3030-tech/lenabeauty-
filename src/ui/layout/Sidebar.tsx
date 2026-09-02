@@ -15,7 +15,7 @@ import { useAuth } from "../../auth";
 import { motion } from "motion/react";
 import { SalonLogo } from "../../shared/components/LazyImage";
 import { persistLanguage, persistTheme } from "../../preferences";
-import { useCases } from "../../app/composition/useCases";
+import { useOptionalModules } from "../../shared/hooks/useOptionalModules";
 import { NAV_GROUPS, visibleDestinations, type NavDestination } from "../../app/navigation";
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -23,26 +23,14 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { t, i18n } = useTranslation();
   const [isDark, setIsDark] = useState(true);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [optionalModules, setOptionalModules] = useState({ giftCards: false, packages: false });
+  // Same canonical owner the mobile menu uses, so both surfaces agree on which
+  // optional modules exist and the availability read happens once per page load.
+  const optionalModules = useOptionalModules();
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
     const stored = localStorage.getItem("lenabeauty_logo");
     if (stored) setLogoUrl(stored);
-
-    let active = true;
-    void Promise.all([
-      useCases.giftCards.list().catch(() => ({ ok: false as const })),
-      useCases.servicePackages.list().catch(() => ({ ok: false as const })),
-    ]).then(([giftCards, packages]) => {
-      if (!active) return;
-      setOptionalModules({
-        giftCards: giftCards.ok && Array.isArray(giftCards.data) && giftCards.data.length > 0,
-        packages: packages.ok && Array.isArray(packages.data) && packages.data.length > 0,
-      });
-    });
-
-    return () => { active = false; };
   }, []);
 
   const navGroups = useMemo(() => {

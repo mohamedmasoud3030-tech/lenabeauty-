@@ -5,9 +5,10 @@
  * - دعم WebP مع fallback تلقائي
  * - معالجة أخطاء التحميل
  */
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState } from "react";
 import { clsx } from "clsx";
 import { getInitials } from "../displayName";
+import { useInView } from "../hooks/useInView";
 
 interface LazyImageProps {
   src: string;
@@ -38,10 +39,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   onLoad,
   onError,
 }) => {
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [imgRef, inView] = useInView<HTMLImageElement>();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-  const [inView, setInView] = useState(false);
 
   const roundedClasses = {
     none: "",
@@ -61,22 +61,6 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     "scale-down": "object-scale-down",
   };
 
-  useEffect(() => {
-    const el = imgRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   const handleLoad = () => {
     setLoaded(true);

@@ -3,8 +3,9 @@
  * يؤجل تحميل recharts حتى يصبح العنصر مرئياً في الشاشة
  * يقلل وقت التحميل الأولي بشكل كبير على الهواتف
  */
-import React, { useRef, useState, useEffect, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { useTranslation } from "react-i18next";
+import { useInView } from "../hooks/useInView";
 
 // ---- Skeleton placeholder ----
 const ChartSkeleton: React.FC<{ height?: number; className?: string }> = ({
@@ -17,32 +18,6 @@ const ChartSkeleton: React.FC<{ height?: number; className?: string }> = ({
     aria-hidden="true"
   />
 );
-
-// ---- Intersection Observer hook ----
-function useInView(rootMargin = "200px"): [React.RefObject<HTMLDivElement>, boolean] {
-  const ref = useRef<HTMLDivElement>(null!);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    if (inView) return; // once visible, stay visible
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [inView, rootMargin]);
-
-  return [ref, inView];
-}
 
 // ---- Generic lazy chart wrapper ----
 interface LazyChartProps {

@@ -12,7 +12,7 @@ import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
 import { useKeyboardInset, useScrollFieldIntoView } from "../../shared/hooks/useKeyboardInset";
-import { useCases } from "../../app/composition/useCases";
+import { useOptionalModules } from "../../shared/hooks/useOptionalModules";
 import {
   MOBILE_MORE_PATHS,
   MOBILE_PRIMARY_PATHS,
@@ -36,24 +36,12 @@ export default function Layout() {
   const { isOpen: isKeyboardOpen } = useKeyboardInset();
   useScrollFieldIntoView();
 
-  // Optional modules are resolved here with the same rule the sidebar uses, so
-  // the mobile menu can never advertise a module the sidebar hides. A failed
-  // read leaves them hidden rather than linking to an empty feature.
-  const [optionalModules, setOptionalModules] = useState({ giftCards: false, packages: false });
-  useEffect(() => {
-    let active = true;
-    void Promise.all([
-      useCases.giftCards.list().catch(() => ({ ok: false as const })),
-      useCases.servicePackages.list().catch(() => ({ ok: false as const })),
-    ]).then(([giftCards, packages]) => {
-      if (!active) return;
-      setOptionalModules({
-        giftCards: giftCards.ok && Array.isArray(giftCards.data) && giftCards.data.length > 0,
-        packages: packages.ok && Array.isArray(packages.data) && packages.data.length > 0,
-      });
-    });
-    return () => { active = false; };
-  }, []);
+  // Optional modules come from one canonical owner shared with the sidebar
+  // (shared/hooks/useOptionalModules), so the mobile menu can never advertise a
+  // module the sidebar hides, and the availability read is not fired twice per
+  // page load. A failed read still leaves them hidden rather than linking to an
+  // empty feature.
+  const optionalModules = useOptionalModules();
 
   // Close more menu on click/tap outside (touch-first: mousedown alone misses taps).
   useEffect(() => {
