@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
   "installCommand": "npm ci",
   "buildCommand": "node scripts/vercel-demo-build.mjs",
   "outputDirectory": "dist",
