@@ -2,6 +2,7 @@ import { Customer } from "../../domain/entities";
 import { getTierBySpend } from "../../domain/loyalty";
 import { RetentionStatus } from "../../domain/retention";
 import { visitStageI18nKey } from "../../shared/visitStage";
+import { downloadCSV } from "../../shared/downloadCSV";
 
 /** i18n label for a unified lifecycle stage (terminal states use their status). */
 export function passportStageLabel(stage: string, t: (k: string) => string): string {
@@ -49,12 +50,5 @@ export function exportCustomersCSV(customers: Customer[], t: (k: string) => stri
     c.loyaltyPoints,
     t(getTierBySpend(c.totalSpent).labelKey)
   ]);
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `customers_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadCSV(`customers_${new Date().toISOString().slice(0,10)}.csv`, headers, rows);
 }
