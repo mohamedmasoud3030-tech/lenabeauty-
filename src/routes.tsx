@@ -6,7 +6,13 @@ import { PageLoader } from "./shared/components/PageLoader";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const DashboardPage = lazy(() => import("./pages/DashboardCompatPage"));
+// The routed owner of /dashboard is the degradation wrapper, NOT DashboardPage.
+// DashboardCompatPage probes useCases.dashboard.getSummary() and renders the
+// full DashboardPage when the dashboard contract is available; otherwise it
+// falls back to a reduced operational dashboard built from list endpoints, and
+// finally to an error ScreenState. Named after the module it mounts so the
+// route table cannot be misread as pointing at a superseded page.
+const DashboardCompatPage = lazy(() => import("./pages/DashboardCompatPage"));
 const ActionCenterPage = lazy(() => import("./pages/ActionCenterPage"));
 const PosInvoicesPage = lazy(() => import("./pages/PosInvoicesPage"));
 const ServicesPage = lazy(() => import("./pages/ServicesPage"));
@@ -51,7 +57,7 @@ export function AppRoutes() {
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+          <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><DashboardCompatPage /></Suspense>} />
           <Route path="/action-center" element={<Suspense fallback={<PageLoader />}><ActionCenterPage /></Suspense>} />
           <Route path="/pos" element={<Suspense fallback={<PageLoader />}><PosInvoicesPage /></Suspense>} />
           <Route path="/services" element={<Suspense fallback={<PageLoader />}><ServicesPage /></Suspense>} />
