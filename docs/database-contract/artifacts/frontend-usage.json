@@ -1,10 +1,10 @@
 {
-  "files": 240,
+  "files": 257,
   "tables": [
     {
       "table": "accounting_journal_entries",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "selects": [
         {
@@ -23,7 +23,7 @@
     {
       "table": "ai_booking_leads",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "selects": [
         {
@@ -41,7 +41,10 @@
     {
       "table": "appointments",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/appointments.ts",
+        "src/infrastructure/supabase/repositories/customers.ts",
+        "src/infrastructure/supabase/repositories/reports.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -121,43 +124,6 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": [
-            {
-              "relation": "customers",
-              "join": "default",
-              "columns": [
-                "id",
-                "name",
-                "phone"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "employees",
-              "join": "default",
-              "columns": [
-                "id",
-                "name"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "services",
-              "join": "default",
-              "columns": [
-                "id",
-                "name",
-                "category_id",
-                "price",
-                "duration_minutes"
-              ],
-              "embeds": []
-            }
-          ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
           "embeds": []
         },
         {
@@ -205,7 +171,39 @@
         {
           "hasStar": true,
           "columns": [],
-          "embeds": []
+          "embeds": [
+            {
+              "relation": "customers",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "phone"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "employees",
+              "join": "default",
+              "columns": [
+                "id",
+                "name"
+              ],
+              "embeds": []
+            },
+            {
+              "relation": "services",
+              "join": "default",
+              "columns": [
+                "id",
+                "name",
+                "category_id",
+                "price",
+                "duration_minutes"
+              ],
+              "embeds": []
+            }
+          ]
         },
         {
           "hasStar": false,
@@ -243,6 +241,11 @@
               "embeds": []
             }
           ]
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
         }
       ],
       "filters": [
@@ -258,7 +261,8 @@
     {
       "table": "attendance_records",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "selects": [
         {
@@ -300,7 +304,7 @@
     {
       "table": "center_memberships",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/auth.ts"
       ],
       "selects": [
         {
@@ -327,7 +331,8 @@
     {
       "table": "center_settings",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/pos.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -362,131 +367,9 @@
     {
       "table": "customer_entitlements",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": [
-            {
-              "relation": "customers",
-              "join": "default",
-              "columns": [
-                "name"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "service_packages",
-              "join": "default",
-              "columns": [
-                "name"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "gift_cards",
-              "join": "default",
-              "columns": [
-                "code"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "invoices",
-              "join": "default",
-              "columns": [
-                "serial_number"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "package_entitlement_units",
-              "join": "default",
-              "columns": [
-                "id",
-                "center_id",
-                "entitlement_id",
-                "service_id",
-                "total_units",
-                "used_units",
-                "created_at"
-              ],
-              "embeds": [
-                {
-                  "relation": "services",
-                  "join": "default",
-                  "columns": [
-                    "name"
-                  ],
-                  "embeds": []
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": [
-            {
-              "relation": "customers",
-              "join": "default",
-              "columns": [
-                "name"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "service_packages",
-              "join": "default",
-              "columns": [
-                "name"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "gift_cards",
-              "join": "default",
-              "columns": [
-                "code"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "invoices",
-              "join": "default",
-              "columns": [
-                "serial_number"
-              ],
-              "embeds": []
-            },
-            {
-              "relation": "package_entitlement_units",
-              "join": "default",
-              "columns": [
-                "id",
-                "center_id",
-                "entitlement_id",
-                "service_id",
-                "total_units",
-                "used_units",
-                "created_at"
-              ],
-              "embeds": [
-                {
-                  "relation": "services",
-                  "join": "default",
-                  "columns": [
-                    "name"
-                  ],
-                  "embeds": []
-                }
-              ]
-            }
-          ]
-        },
         {
           "hasStar": false,
           "columns": [
@@ -506,7 +389,7 @@
     {
       "table": "customer_reviews",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "selects": [
         {
@@ -524,7 +407,9 @@
     {
       "table": "customers",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/customers.ts",
+        "src/infrastructure/supabase/repositories/pos.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -582,7 +467,8 @@
     {
       "table": "employee_advances",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "selects": [
         {
@@ -624,7 +510,7 @@
     {
       "table": "employees",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [],
       "filters": [],
@@ -633,17 +519,10 @@
     {
       "table": "entitlement_ledger",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts",
+        "src/infrastructure/supabase/repositories/reports.ts"
       ],
       "selects": [
-        {
-          "hasStar": false,
-          "columns": [
-            "invoice_id",
-            "amount"
-          ],
-          "embeds": []
-        },
         {
           "hasStar": true,
           "columns": [],
@@ -674,6 +553,14 @@
             "legacy_flag"
           ],
           "embeds": []
+        },
+        {
+          "hasStar": false,
+          "columns": [
+            "invoice_id",
+            "amount"
+          ],
+          "embeds": []
         }
       ],
       "filters": [
@@ -688,35 +575,37 @@
     {
       "table": "expenses",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts",
+        "src/infrastructure/supabase/repositories/expenses.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
-        },
         {
           "hasStar": false,
           "columns": [
             "amount",
             "created_at"
           ],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": true,
+          "columns": [],
           "embeds": []
         }
       ],
@@ -733,7 +622,7 @@
     {
       "table": "gift_card_transactions",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "selects": [
         {
@@ -752,7 +641,7 @@
     {
       "table": "gift_cards",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "selects": [
         {
@@ -778,7 +667,7 @@
     {
       "table": "inventory_consumptions",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/services.ts"
       ],
       "selects": [
         {
@@ -796,9 +685,28 @@
     {
       "table": "invoice_items",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts",
+        "src/infrastructure/supabase/repositories/pos.ts"
       ],
       "selects": [
+        {
+          "hasStar": false,
+          "columns": [
+            "product_id",
+            "quantity",
+            "created_at"
+          ],
+          "embeds": [
+            {
+              "relation": "invoices",
+              "join": "inner",
+              "columns": [
+                "center_id"
+              ],
+              "embeds": []
+            }
+          ]
+        },
         {
           "hasStar": true,
           "columns": [],
@@ -836,24 +744,6 @@
               "embeds": []
             }
           ]
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "product_id",
-            "quantity",
-            "created_at"
-          ],
-          "embeds": [
-            {
-              "relation": "invoices",
-              "join": "inner",
-              "columns": [
-                "center_id"
-              ],
-              "embeds": []
-            }
-          ]
         }
       ],
       "filters": [
@@ -866,12 +756,36 @@
     {
       "table": "invoices",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/customers.ts",
+        "src/infrastructure/supabase/repositories/engagement.ts",
+        "src/infrastructure/supabase/repositories/gifting.ts",
+        "src/infrastructure/supabase/repositories/pos.ts",
+        "src/infrastructure/supabase/repositories/reports.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
           "hasStar": true,
           "columns": [],
+          "embeds": []
+        },
+        {
+          "hasStar": false,
+          "columns": [
+            "total_amount",
+            "tax",
+            "created_at"
+          ],
+          "embeds": []
+        },
+        {
+          "hasStar": false,
+          "columns": [
+            "total_amount",
+            "tax",
+            "gift_card_discount",
+            "entitlement_redemption"
+          ],
           "embeds": []
         },
         {
@@ -887,11 +801,6 @@
               "embeds": []
             }
           ]
-        },
-        {
-          "hasStar": true,
-          "columns": [],
-          "embeds": []
         },
         {
           "hasStar": true,
@@ -958,22 +867,8 @@
           ]
         },
         {
-          "hasStar": false,
-          "columns": [
-            "total_amount",
-            "tax",
-            "gift_card_discount",
-            "entitlement_redemption"
-          ],
-          "embeds": []
-        },
-        {
-          "hasStar": false,
-          "columns": [
-            "total_amount",
-            "tax",
-            "created_at"
-          ],
+          "hasStar": true,
+          "columns": [],
           "embeds": []
         }
       ],
@@ -992,7 +887,7 @@
     {
       "table": "notification_settings",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -1011,7 +906,7 @@
     {
       "table": "payment_gateway_settings",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -1030,7 +925,7 @@
     {
       "table": "payments",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "selects": [
         {
@@ -1050,7 +945,8 @@
     {
       "table": "payroll_line_items",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "selects": [
         {
@@ -1074,7 +970,8 @@
     {
       "table": "payroll_runs",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "selects": [
         {
@@ -1105,7 +1002,10 @@
     {
       "table": "products",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts",
+        "src/infrastructure/supabase/repositories/inventory.ts",
+        "src/infrastructure/supabase/repositories/reports.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -1157,7 +1057,7 @@
     {
       "table": "service_categories",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/shared.ts"
       ],
       "selects": [
         {
@@ -1186,7 +1086,7 @@
     {
       "table": "service_files",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "selects": [
         {
@@ -1214,7 +1114,7 @@
     {
       "table": "service_packages",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "selects": [
         {
@@ -1241,7 +1141,7 @@
     {
       "table": "service_recipes",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/services.ts"
       ],
       "selects": [
         {
@@ -1270,7 +1170,8 @@
     {
       "table": "services",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/services.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "selects": [
         {
@@ -1335,7 +1236,7 @@
     {
       "name": "admin_create_employee_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/employees.ts"
       ],
       "args": [
         "p_center_id",
@@ -1345,7 +1246,7 @@
     {
       "name": "admin_delete_employee_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/employees.ts"
       ],
       "args": [
         "p_center_id",
@@ -1355,7 +1256,7 @@
     {
       "name": "admin_update_employee_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/employees.ts"
       ],
       "args": [
         "p_center_id",
@@ -1366,7 +1267,7 @@
     {
       "name": "create_accounting_journal_entry_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "args": [
         "p_amount",
@@ -1384,7 +1285,7 @@
     {
       "name": "create_ai_booking_lead_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "args": [
         "p_center_id",
@@ -1399,7 +1300,7 @@
     {
       "name": "create_customer_review_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1413,7 +1314,7 @@
     {
       "name": "create_payroll_run_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "args": [
         "p_center_id",
@@ -1424,7 +1325,7 @@
     {
       "name": "create_service_file_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/engagement.ts"
       ],
       "args": [
         "p_after_images",
@@ -1441,7 +1342,7 @@
     {
       "name": "create_service_package_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "args": [
         "p_center_id",
@@ -1454,7 +1355,7 @@
     {
       "name": "delete_payroll_run_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/workforce.ts"
       ],
       "args": [
         "p_center_id",
@@ -1464,14 +1365,14 @@
     {
       "name": "expire_entitlement_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "args": []
     },
     {
       "name": "get_dashboard_pnl_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/dashboard.ts"
       ],
       "args": [
         "p_center_id",
@@ -1482,7 +1383,7 @@
     {
       "name": "get_dashboard_revenue_entries_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/dashboard.ts"
       ],
       "args": [
         "p_center_id",
@@ -1493,7 +1394,7 @@
     {
       "name": "get_dashboard_summary_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/dashboard.ts"
       ],
       "args": [
         "p_center_id",
@@ -1505,7 +1406,8 @@
     {
       "name": "list_employees_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/employees.ts",
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "args": [
         "p_center_id"
@@ -1514,7 +1416,7 @@
     {
       "name": "mark_appointment_no_show_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/appointments.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1526,7 +1428,8 @@
     {
       "name": "process_checkout_idempotent_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts",
+        "src/infrastructure/supabase/repositories/pos.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1545,7 +1448,7 @@
     {
       "name": "public_cancel_booking_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1558,7 +1461,7 @@
     {
       "name": "public_center_info_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id"
@@ -1567,7 +1470,7 @@
     {
       "name": "public_client_portal_login_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id",
@@ -1578,7 +1481,7 @@
     {
       "name": "public_client_portal_profile_v2",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id",
@@ -1590,7 +1493,7 @@
     {
       "name": "public_create_booking_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id",
@@ -1605,7 +1508,7 @@
     {
       "name": "public_list_services_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id"
@@ -1614,7 +1517,7 @@
     {
       "name": "public_list_staff_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id"
@@ -1623,7 +1526,7 @@
     {
       "name": "public_reschedule_booking_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1638,7 +1541,7 @@
     {
       "name": "public_taken_slots_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/booking.ts"
       ],
       "args": [
         "p_center_id",
@@ -1648,7 +1551,7 @@
     {
       "name": "refund_entitlement_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "args": [
         "p_actor_employee_id",
@@ -1660,7 +1563,7 @@
     {
       "name": "rotate_customer_portal_token_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/customers.ts"
       ],
       "args": [
         "p_center_id",
@@ -1670,7 +1573,7 @@
     {
       "name": "save_service_recipe_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/services.ts"
       ],
       "args": [
         "p_center_id",
@@ -1681,7 +1584,7 @@
     {
       "name": "transition_visit_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/appointments.ts"
       ],
       "args": [
         "p_appointment_id",
@@ -1692,7 +1595,7 @@
     {
       "name": "upsert_notification_settings_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "args": [
         "p_center_id",
@@ -1710,7 +1613,7 @@
     {
       "name": "upsert_payment_gateway_settings_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ],
       "args": [
         "p_booking_deposit_enabled",
@@ -1730,7 +1633,7 @@
     {
       "name": "void_entitlement_v1",
       "files": [
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ],
       "args": []
     }
@@ -1744,7 +1647,14 @@
       "reason": "non-literal .from() argument (non-Supabase or dynamic)",
       "files": [
         "src/infrastructure/services/printService.ts",
-        "src/infrastructure/supabase/repositories.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
+      ]
+    },
+    {
+      "key": "dynamic-select",
+      "reason": "non-literal .select() argument",
+      "files": [
+        "src/infrastructure/supabase/repositories/gifting.ts"
       ]
     }
   ]

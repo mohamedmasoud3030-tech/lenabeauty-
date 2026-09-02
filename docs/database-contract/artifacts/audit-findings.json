@@ -23,7 +23,7 @@
       "high": 0,
       "medium": 0,
       "low": 0,
-      "info": 4
+      "info": 5
     }
   },
   "findings": [
@@ -57,17 +57,32 @@
       "needs": "manual-review",
       "title": "Scanner limitation (manual review): dynamic-from",
       "category": "scanner-limitation",
-      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories.ts",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts",
       "affected": {
         "files": [
           "src/infrastructure/services/printService.ts",
-          "src/infrastructure/supabase/repositories.ts"
+          "src/infrastructure/supabase/repositories/settings.ts"
         ]
       },
       "remediation": "Manually confirm this construct against the canonical schema."
     },
     {
       "id": "DB-003",
+      "severity": "info",
+      "status": "confirmed",
+      "needs": "manual-review",
+      "title": "Scanner limitation (manual review): dynamic-select",
+      "category": "scanner-limitation",
+      "evidence": "non-literal .select() argument in src/infrastructure/supabase/repositories/gifting.ts",
+      "affected": {
+        "files": [
+          "src/infrastructure/supabase/repositories/gifting.ts"
+        ]
+      },
+      "remediation": "Manually confirm this construct against the canonical schema."
+    },
+    {
+      "id": "DB-004",
       "severity": "info",
       "status": "confirmed",
       "needs": "no-code-change",
@@ -80,7 +95,7 @@
       "remediation": "No code change; the constraint exists in the canonical migration and applies in Supabase."
     },
     {
-      "id": "DB-004",
+      "id": "DB-005",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",
