@@ -7,6 +7,7 @@ import { Plus, Check, X, TrendingDown, RotateCcw } from "lucide-react";
 import { Modal } from "../shared/components/Modal";
 import { EmployeeAdvance, AdvanceStatus, Employee } from "../domain/entities";
 import { formatOMRAmount } from "../shared/money";
+import { StatusPill, StatusTone } from "../shared/components/StatusPill";
 
 const STATUS_LABEL_KEYS: Record<AdvanceStatus, string> = {
   PENDING: "Pending",
@@ -15,11 +16,11 @@ const STATUS_LABEL_KEYS: Record<AdvanceStatus, string> = {
   DEDUCTED: "Deducted",
 };
 
-const statusBadge: Record<AdvanceStatus, string> = {
-  PENDING: "border-warning/25 bg-warning/10 text-warning",
-  APPROVED: "border-primary/25 bg-primary/10 text-primary",
-  REJECTED: "border-destructive/25 bg-destructive/10 text-destructive",
-  DEDUCTED: "border-success/25 bg-success/10 text-success",
+const statusTone: Record<AdvanceStatus, StatusTone> = {
+  PENDING: "warning",
+  APPROVED: "primary",
+  REJECTED: "destructive",
+  DEDUCTED: "success",
 };
 
 const fieldClass = "w-full min-h-11 rounded-xl border border-input bg-background px-3 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15";
@@ -196,9 +197,9 @@ export default function AdvancesPage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">{t("Status")}</p>
-                <span className={`mt-1 inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusBadge[advance.status]}`}>
+                <StatusPill tone={statusTone[advance.status]} className="mt-1">
                   {t(STATUS_LABEL_KEYS[advance.status])}
-                </span>
+                </StatusPill>
               </div>
               <div className="flex justify-end gap-2">
                 {advance.status === "PENDING" ? (

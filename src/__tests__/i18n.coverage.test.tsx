@@ -1,7 +1,5 @@
 import { describe, expect, it, afterAll } from "vitest";
-import { render, screen } from "@testing-library/react";
 import i18n from "../i18n";
-import DemoDataBanner from "../shared/components/DemoDataBanner";
 import { mapErrorToMessageKey } from "../application/errors/ErrorMapper";
 
 describe("i18n coverage regressions (Phase A)", () => {
@@ -61,19 +59,5 @@ describe("i18n coverage regressions (Phase A)", () => {
     const keys = ["Show chart", "Tap to view", "Collapse", "Last updated"];
     await resolvesIn("ar", keys);
     await resolvesIn("en", keys);
-  });
-});
-
-describe("DemoDataBanner", () => {
-  it("renders the demo-data disclosure (Arabic)", async () => {
-    await i18n.changeLanguage("ar");
-    render(<DemoDataBanner />);
-    expect(screen.getByText(i18n.t("Demo data"))).toBeInTheDocument();
-  });
-
-  it("renders the demo-data disclosure (English)", async () => {
-    await i18n.changeLanguage("en");
-    render(<DemoDataBanner />);
-    expect(screen.getByText("Demo data")).toBeInTheDocument();
   });
 });

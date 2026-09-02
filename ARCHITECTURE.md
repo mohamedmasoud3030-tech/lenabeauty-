@@ -19,9 +19,8 @@ src/                         React application
   app/composition/           use-case facade / lazy repository bundle
   infrastructure/supabase/   Supabase adapters, mappers, generated DB types
   infrastructure/services/   branding, printing, WhatsApp-link helpers
-  desktop/                   Tauri bridge/helper layer
-  infrastructure/tauri/      unfinished alternative adapter factory
-src-tauri/                   Rust/Tauri shell
+  desktop/                   Tauri bridge/helper layer (isolated from web/PWA path)
+src-tauri/                   Rust/Tauri shell (experimental, not built in CI)
 supabase/
   migrations/                canonical DDL/security/business rules
   seeds/                     gated Demo/Staging data only
@@ -346,7 +345,6 @@ Manifest وshortcuts تستعمل `/#/dashboard` و`/#/pos` بما يطابق `H
 ### غير الموجود
 
 - لا SQLite engine؛ الملف اسمه `.sqlite.json` ويحتوي JSON.
-- `createTauriAdapters()` فارغ مع TODO.
 - `createRepositoryBundle()` لا يدعم Tauri backend.
 - لا Supabase sync.
 - updater disabled ولا signing/package acceptance.
