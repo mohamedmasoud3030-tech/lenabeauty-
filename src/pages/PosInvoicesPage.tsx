@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
@@ -8,22 +8,20 @@ import { getDisplayName, getInitials } from "../shared/displayName";
 import {
   ShoppingCart, User, CreditCard, Search, Trash2, Plus, 
   Scissors, Package, Boxes, ChevronRight, CheckCircle2, Sparkles, 
-  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle, AlertTriangle,
-  CalendarClock
+  ArrowRight, Minus, Receipt, Wallet, Banknote, UserPlus, XCircle
 } from "lucide-react";
 // UserPlus used for inline new-customer creation at the POS checkout panel
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
-import { Customer, Employee, Product, Service, CustomerEntitlement, Appointment, AppointmentStatus, VisitStage } from "../domain/entities";
+import { Customer, Product, Service, CustomerEntitlement, Appointment, AppointmentStatus } from "../domain/entities";
+import { usePosCatalog } from "./pos/usePosCatalog";
+import { VisitContextCard } from "./pos/VisitContextCard";
 import { getTierBySpend } from "../domain/loyalty";
 import { InvoicePrintData, EntitlementRedemptionInput } from "../application/dto";
 import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../domain/commerce";
 import { buildCustomerWallet, walletAvailableForCheckout } from "../domain/wallet";
-import { effectiveVisitStage } from "../domain/visit";
-import { visitStageI18nKey } from "../shared/visitStage";
-import { formatSalonDateTime } from "../shared/dateTime";
 import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { formatOMRAmount } from "../shared/money";
@@ -56,21 +54,26 @@ type PosPrintData = InvoicePrintData;
 
 export default function PosInvoicesPage() {
   const { showToast } = useToast();
-  const { t, i18n } = useTranslation();
-  const [services, setServices] = useState<Service[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const { t } = useTranslation();
+  const {
+    services,
+    products,
+    packages,
+    employees,
+    giftCards,
+    taxRate,
+    loading,
+    loadError,
+    loadData,
+  } = usePosCatalog();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [discount, setDiscount] = useState(0);
-  const [taxRate, setTaxRate] = useState(0);
   const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
   const [giftCardCode, setGiftCardCode] = useState("");
-  const [giftCards, setGiftCards] = useState<any[]>([]);
   // Customer-owned entitlements (packages) available for redemption at checkout.
   const [entitlements, setEntitlements] = useState<CustomerEntitlement[]>([]);
   const [entitlementRedemptions, setEntitlementRedemptions] = useState<EntitlementRedemptionInput[]>([]);
@@ -87,8 +90,6 @@ export default function PosInvoicesPage() {
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS" | "PACKAGES">("SERVICES");
   const [printData, setPrintData] = useState<PosPrintData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
@@ -207,37 +208,6 @@ export default function PosInvoicesPage() {
     visitHydrationRef.current = "";
     servicePrefillRef.current = "";
     if (appointmentParam) setSearchParams({}, { replace: true });
-  }
-
-  async function loadData() {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [s, p, pkg, e, settings, gc] = await Promise.all([
-        unwrap(useCases.services.list()),
-        unwrap(useCases.products.list()),
-        useCases.servicePackages.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
-        unwrap(useCases.employees.list()),
-        useCases.settings.get().then((r) => (r.ok ? r.data : null)).catch(() => null),
-        useCases.giftCards.list().then((r: any) => (r.ok ? r.data : [])).catch(() => []),
-      ]);
-      // Disabled or zero-priced catalog entries remain manageable in their
-      // admin screens but are never exposed as sellable POS lines.
-      setServices(s.filter((service) => service.isActive !== false && Number.isFinite(service.price) && service.price > 0));
-      setProducts(p.filter((product) => product.isActive !== false && Number.isFinite(product.price) && product.price > 0));
-      // Packages arrive with packagePrice (domain field) — expose it as `price`
-      // so the cart, totals, and checkout payload work for package lines too.
-      setPackages((pkg as any[])
-        .filter((entry) => entry.isActive !== false && Number.isFinite(Number(entry.packagePrice)) && Number(entry.packagePrice) > 0)
-        .map((entry) => ({ ...entry, price: Number(entry.packagePrice) })));
-      setEmployees(e.filter((employee) => employee.isActive !== false));
-      setGiftCards(gc.filter((card: any) => card.isActive !== false));
-      if (settings && typeof settings.taxRate === "number") setTaxRate(settings.taxRate);
-    } catch (error) {
-      setLoadError(formatError(error));
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function searchCustomers(q: string) {
@@ -578,58 +548,11 @@ export default function PosInvoicesPage() {
       <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
 
       {/* Visit context — shown only when POS was opened from an appointment */}
-      {visitContextError && (
-        <div className="rounded-2xl border border-warning/30 bg-warning/5 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-            <p className="text-xs font-bold text-muted-foreground">{t("pos.visitContext.unavailable")}</p>
-          </div>
-          <button
-            onClick={detachVisit}
-            className="h-9 px-3 rounded-lg bg-card border border-border text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all shrink-0 touch-target"
-          >
-            {t("pos.visitContext.detach")}
-          </button>
-        </div>
-      )}
-
-      {visitAppointment && (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <CalendarClock className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{t("pos.visitContext.title")}</p>
-                <p className="text-xs font-bold text-foreground truncate">{formatSalonDateTime(visitAppointment.dateTime, i18n.language)}</p>
-              </div>
-            </div>
-            <button
-              onClick={detachVisit}
-              className="h-9 px-3 rounded-lg bg-card border border-border text-[10px] font-bold text-muted-foreground hover:text-foreground transition-all shrink-0 touch-target"
-            >
-              {t("pos.visitContext.detach")}
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              { label: t("pos.visitContext.customer"), value: visitAppointment.customer?.name },
-              { label: t("pos.visitContext.service"), value: visitAppointment.service?.name },
-              { label: t("pos.visitContext.employee"), value: visitAppointment.employee?.name },
-              { label: t("pos.visitContext.stage"), value: t(visitStageI18nKey(effectiveVisitStage(visitAppointment) as VisitStage)) },
-              ...((visitAppointment.depositAmount ?? 0) > 0
-                ? [{ label: t("pos.visitContext.deposit"), value: `${formatOMRAmount(visitAppointment.depositAmount ?? 0)} ${t("OMR")}` }]
-                : []),
-            ].map((chip) => (
-              <span key={chip.label} className="flex items-center gap-1 rounded-lg bg-card border border-border px-2 py-1 text-[10px] font-bold">
-                <span className="text-muted-foreground uppercase tracking-wider">{chip.label}</span>
-                <span className="text-foreground">{chip.value || "—"}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <VisitContextCard
+        appointment={visitAppointment}
+        error={visitContextError}
+        onDetach={detachVisit}
+      />
 
       {/* Mobile: Quick Catalog/Cart Toggle + Sticky categories */}
       {isMobile && (
