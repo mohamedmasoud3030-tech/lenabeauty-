@@ -112,25 +112,25 @@ describe("i18n language-leak guard", () => {
   });
 
   it("declares no duplicate keys in either dictionary", () => {
-    const lines = readFileSync(join(SRC, "i18n.ts"), "utf8").split("\n");
-    const arStart = lines.findIndex((l) => l.trim() === "ar: {");
-    const enStart = lines.findIndex((l) => l.trim() === "en: {");
-    expect(arStart).toBeGreaterThan(-1);
-    expect(enStart).toBeGreaterThan(arStart);
-
-    const duplicatesIn = (from: number, to: number) => {
+    // The dictionaries are split into per-domain modules under src/i18n/{ar,en};
+    // the same key appearing twice (within or across modules) is a defect.
+    const duplicatesIn = (lang: string) => {
+      const dir = join(SRC, "i18n", lang);
       const seen = new Set<string>();
       const dupes: string[] = [];
-      for (let i = from; i < to; i++) {
-        const match = lines[i].match(/^\s*"((?:[^"\\]|\\.)*)":/);
-        if (!match) continue;
-        if (seen.has(match[1])) dupes.push(`${match[1]} (line ${i + 1})`);
-        seen.add(match[1]);
+      for (const file of readdirSync(dir).filter((f) => f.endsWith(".ts")).sort()) {
+        const lines = readFileSync(join(dir, file), "utf8").split("\n");
+        for (const line of lines) {
+          const match = line.match(/^\s*"((?:[^"\\]|\\.)*)":/);
+          if (!match) continue;
+          if (seen.has(match[1])) dupes.push(`${match[1]} (${lang}/${file})`);
+          seen.add(match[1]);
+        }
       }
       return dupes;
     };
 
-    expect(duplicatesIn(arStart, enStart), "duplicate Arabic keys").toEqual([]);
-    expect(duplicatesIn(enStart, lines.length), "duplicate English keys").toEqual([]);
+    expect(duplicatesIn("ar"), "duplicate Arabic keys").toEqual([]);
+    expect(duplicatesIn("en"), "duplicate English keys").toEqual([]);
   });
 });
