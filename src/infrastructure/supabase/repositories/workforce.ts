@@ -6,7 +6,7 @@ import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem } from ".././mappers";
 import { requiredText, nonNegativeNumber, positiveNumber, dateField, DomainValidationError } from "../../../domain/validation";
 import { isCheckoutAfterCheckin } from "../../../domain/attendance";
-import { validatePayload, okValue, getCenterIdFor, toDateOnly } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, toDateOnly, deleteById } from "./shared";
 
 export class SupabaseAttendanceAdapter implements AttendanceRepository {
   async list(range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>> {
@@ -140,19 +140,7 @@ export class SupabaseAttendanceAdapter implements AttendanceRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Attendance.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('attendance_records')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-      if (error) return { ok: false, error: createQueryError("Attendance.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Attendance.delete", (e as Error).message) };
-    }
+    return deleteById('attendance_records', 'Attendance.delete', id);
   }
 }
 
@@ -263,19 +251,7 @@ export class SupabaseAdvanceAdapter implements AdvanceRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Advance.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('employee_advances')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-      if (error) return { ok: false, error: createQueryError("Advance.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Advance.delete", (e as Error).message) };
-    }
+    return deleteById('employee_advances', 'Advance.delete', id);
   }
 }
 

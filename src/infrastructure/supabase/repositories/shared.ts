@@ -92,6 +92,33 @@ export function toDateOnly(date: Date): string {
 }
 
 /**
+ * Canonical center-scoped hard delete. Every domain adapter's `delete(id)`
+ * was a byte-for-byte duplicate of this query plus the standard center guard
+ * and error mapping; one owner keeps center isolation and error shapes
+ * identical across the layer. (RPC-based deletes stay inline: they carry a
+ * different contract.)
+ */
+export async function deleteById(
+  table: string,
+  context: string,
+  id: string,
+): Promise<Result<void, DomainError>> {
+  const centerRes = getCenterIdFor(context);
+  if (!centerRes.ok) return centerRes as any;
+  try {
+    const { error } = await getSupabaseClient()
+      .from(table as any)
+      .delete()
+      .eq('id', id)
+      .eq('center_id', centerRes.data);
+    if (error) return { ok: false, error: createQueryError(context, error.message) };
+    return { ok: true, data: undefined };
+  } catch (e: unknown) {
+    return { ok: false, error: createQueryError(context, (e as Error).message) };
+  }
+}
+
+/**
  * PostgREST caps every response at the project's `max_rows` (1000 by default).
  * The cap is applied SILENTLY — HTTP 200, no error, just fewer rows — so a
  * caller that reads `data` cannot tell a complete result from a truncated one.

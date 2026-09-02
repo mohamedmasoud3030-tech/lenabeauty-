@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapCustomer, mapAppointment, mapInvoice } from ".././mappers";
 import { requiredText, phoneField, emailField } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
 
 export class SupabaseCustomerAdapter implements CustomerRepository {
   async list(query?: string): Promise<Result<Customer[], DomainError>> {
@@ -180,20 +180,7 @@ export class SupabaseCustomerAdapter implements CustomerRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Customer.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('customers')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
-      if (error) return { ok: false, error: createQueryError("Customer.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Customer.delete", (e as Error).message) };
-    }
+    return deleteById('customers', 'Customer.delete', id);
   }
 
   async getHistory(id: string): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>> {

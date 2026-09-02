@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapExpense } from ".././mappers";
 import { requiredText, positiveNumber } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
 
 export class SupabaseExpenseAdapter implements ExpenseRepository {
   async list(): Promise<Result<Expense[], DomainError>> {
@@ -98,19 +98,6 @@ export class SupabaseExpenseAdapter implements ExpenseRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Expense.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('expenses')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
-      if (error) return { ok: false, error: createQueryError("Expense.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Expense.delete", (e as Error).message) };
-    }
+    return deleteById('expenses', 'Expense.delete', id);
   }
 }

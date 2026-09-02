@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { Json, TablesInsert, TablesUpdate } from ".././database.types";
 import { mapService, mapServiceRecipe, mapInventoryConsumption } from ".././mappers";
 import { requiredText, positiveNumber, positiveInteger } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, resolveServiceCategoryId } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, resolveServiceCategoryId, deleteById } from "./shared";
 
 export class SupabaseServiceAdapter implements ServiceRepository {
   async list(): Promise<Result<Service[], DomainError>> {
@@ -112,20 +112,7 @@ export class SupabaseServiceAdapter implements ServiceRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Service.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('services')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
-      if (error) return { ok: false, error: createQueryError("Service.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Service.delete", (e as Error).message) };
-    }
+    return deleteById('services', 'Service.delete', id);
   }
 }
 

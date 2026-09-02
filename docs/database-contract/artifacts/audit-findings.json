@@ -57,11 +57,12 @@
       "needs": "manual-review",
       "title": "Scanner limitation (manual review): dynamic-from",
       "category": "scanner-limitation",
-      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts, src/infrastructure/supabase/repositories/shared.ts",
       "affected": {
         "files": [
           "src/infrastructure/services/printService.ts",
-          "src/infrastructure/supabase/repositories/settings.ts"
+          "src/infrastructure/supabase/repositories/settings.ts",
+          "src/infrastructure/supabase/repositories/shared.ts"
         ]
       },
       "remediation": "Manually confirm this construct against the canonical schema."

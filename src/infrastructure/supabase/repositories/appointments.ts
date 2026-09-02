@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapAppointment } from ".././mappers";
 import { requiredText, nonNegativeNumber, dateField } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
 
 export class SupabaseAppointmentAdapter implements AppointmentRepository {
   async list(range: { fromISO: string, toISO: string }): Promise<Result<Appointment[], DomainError>> {
@@ -191,20 +191,7 @@ export class SupabaseAppointmentAdapter implements AppointmentRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Appointment.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('appointments')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
-      if (error) return { ok: false, error: createQueryError("Appointment.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Appointment.delete", (e as Error).message) };
-    }
+    return deleteById('appointments', 'Appointment.delete', id);
   }
 
   async transitionVisit(id: string, stage: VisitStage): Promise<Result<Appointment, DomainError>> {

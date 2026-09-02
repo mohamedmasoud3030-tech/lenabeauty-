@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapProduct } from ".././mappers";
 import { requiredText, nonNegativeNumber, positiveNumber, nonNegativeInteger } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
 
 export class SupabaseProductAdapter implements ProductRepository {
   async list(): Promise<Result<Product[], DomainError>> {
@@ -122,19 +122,6 @@ export class SupabaseProductAdapter implements ProductRepository {
   }
 
   async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Product.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient()
-        .from('products')
-        .delete()
-        .eq('id', id)
-        .eq('center_id', centerRes.data);
-
-      if (error) return { ok: false, error: createQueryError("Product.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Product.delete", (e as Error).message) };
-    }
+    return deleteById('products', 'Product.delete', id);
   }
 }

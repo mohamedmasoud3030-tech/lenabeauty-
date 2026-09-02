@@ -1647,7 +1647,8 @@
       "reason": "non-literal .from() argument (non-Supabase or dynamic)",
       "files": [
         "src/infrastructure/services/printService.ts",
-        "src/infrastructure/supabase/repositories/settings.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/infrastructure/supabase/repositories/shared.ts"
       ]
     },
     {
