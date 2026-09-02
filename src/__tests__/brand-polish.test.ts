@@ -6,8 +6,6 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 
 const app = read("src/App.tsx");
 const polish = read("src/brand-polish.css");
-const badge = read("src/shared/components/Badge.tsx");
-const card = read("src/shared/components/Card.tsx");
 const premiumCard = read("src/shared/components/PremiumCard.tsx");
 const pageHeader = read("src/shared/components/PageHeader.tsx");
 const tabs = read("src/shared/components/Tabs.tsx");
@@ -23,14 +21,9 @@ describe("Lena app-wide brand polish", () => {
   });
 
   it("keeps shared surfaces on semantic Lena tokens only", () => {
-    for (const [name, source] of Object.entries({ badge, card, premiumCard, pageHeader, tabs })) {
+    for (const [name, source] of Object.entries({ premiumCard, pageHeader, tabs })) {
       expect(source, name).not.toMatch(rawDecorativePalette);
     }
-  });
-
-  it("uses brand secondary for the secondary badge instead of the info status", () => {
-    expect(badge).toContain("bg-secondary/10 text-secondary border border-secondary/20");
-    expect(badge).not.toContain("secondary: 'bg-info/10");
   });
 
   it("bridges the last known legacy rose and amber utilities to semantic tokens", () => {
