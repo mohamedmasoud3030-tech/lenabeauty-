@@ -4,6 +4,7 @@ import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
+import { Spinner } from "../shared/components/Spinner";
 import { Download, Printer, Trash2, FileText, Users, DollarSign, TrendingDown, CalendarClock } from "lucide-react";
 import { PayrollRun, PayrollLineItem, Employee } from "../domain/entities";
 import printService, { escapePrintText } from "../infrastructure/services/printService";
@@ -224,7 +225,7 @@ export default function PayrollPageEnhanced() {
 
         {loading ? (
           <div className="flex min-h-48 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+            <Spinner size="md" />
           </div>
         ) : selectedRun ? (
           <div className="overflow-x-auto">

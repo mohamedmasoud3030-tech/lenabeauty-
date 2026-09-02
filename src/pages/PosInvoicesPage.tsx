@@ -13,6 +13,7 @@ import {
 // UserPlus used for inline new-customer creation at the POS checkout panel
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
+import { Spinner } from "../shared/components/Spinner";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { Customer, Product, Service, CustomerEntitlement, Appointment, AppointmentStatus } from "../domain/entities";
@@ -658,7 +659,7 @@ export default function PosInvoicesPage() {
             <div className="flex-1 overflow-auto p-3 lg:p-6 bg-muted/5 scrollbar-hide min-h-[40vh] lg:min-h-0 safe-area-bottom">
               {loading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 opacity-40 py-20">
-                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <Spinner />
                   <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Catalog...")}</p>
                 </div>
               ) : (

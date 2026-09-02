@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "./dashboard/useDashboardData";
 import { StatCard, QuickActionButton, FinancialRow, ActivityIcon } from "./dashboard/widgets";
 import { ScreenState } from "../shared/components/ScreenState";
+import { Spinner } from "../shared/components/Spinner";
 import { GettingStartedCard } from "../shared/components/GettingStartedCard";
 import { NavigationNotice } from "../shared/components/NavigationNotice";
 import { getDisplayName } from "../shared/displayName";
@@ -409,7 +410,7 @@ export default function DashboardPage() {
             {loading ? (
               <div className="w-full h-full min-h-[260px] flex items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4">
-                  <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  <Spinner />
                   <p className="text-[10px] font-bold uppercase tracking-widest">{t("Loading Chart...")}</p>
                 </div>
               </div>
@@ -488,7 +489,7 @@ export default function DashboardPage() {
           <div className="p-4 sm:p-6 flex-1 flex flex-col">
             {loading ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-40">
-                <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <Spinner />
                 <p className="text-[10px] font-bold uppercase tracking-widest">{t("Processing...")}</p>
               </div>
             ) : !pnl ? (
