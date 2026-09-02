@@ -222,39 +222,16 @@ textarea {
   touch-action: manipulation;
 }
 
-/* Compact spacing for mobile to reduce scrolling */
+/* Mobile-only utilities that a live surface actually renders.
+   The historical compact-spacing set (mobile-compact, mobile-compact-card,
+   mobile-compact-text, mobile-compact-heading, mobile-bottom-sheet,
+   mobile-sticky-header, mobile-sticky-footer, timeline-line,
+   mobile-footer-action) was removed: no markup in the app referenced it, those
+   surfaces are composed from Tailwind utilities directly. */
 @media (max-width: 640px) {
-  .mobile-compact {
-    @apply p-3 gap-3;
-  }
-  
-  .mobile-compact-card {
-    @apply p-3 rounded-xl;
-  }
-  
-  .mobile-compact-text {
-    @apply text-xs;
-  }
-  
-  .mobile-compact-heading {
-    @apply text-sm;
-  }
-  
-  .mobile-bottom-sheet {
-    @apply rounded-t-3xl;
-  }
-  
-  /* Sticky header on mobile */
-  .mobile-sticky-header {
-    @apply sticky top-0 z-30 backdrop-blur-xl bg-background/80;
-  }
-  
-  /* Sticky footer action bar */
-  .mobile-sticky-footer {
-    @apply fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border;
-  }
-  
-  /* Horizontal scroll container for categories/filters */
+  /* Horizontal scroll container for categories/filters. No surface opts in
+     today; it is kept because mobile-portrait-ux.test.ts guards POS against
+     re-introducing a second scrollable category row with this class. */
   .mobile-scroll-x {
     @apply overflow-x-auto;
     -webkit-overflow-scrolling: touch;
@@ -265,20 +242,9 @@ textarea {
     scroll-snap-align: start;
   }
   
-  /* Timeline connector line */
-  .timeline-line::before {
-    content: '';
-    @apply absolute left-4 top-0 bottom-0 w-0.5 bg-border;
-  }
-  
   /* Compact form inputs */
   .mobile-input {
     @apply py-3 text-base; /* Larger touch target + readable font */
-  }
-  
-  /* Action button in footer */
-  .mobile-footer-action {
-    @apply fixed bottom-0 inset-x-0 z-40 p-4 bg-gradient-to-t from-background via-background to-transparent;
   }
 }
 
@@ -290,11 +256,6 @@ textarea {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-/* Visual hierarchy - color for status/action only */
-.status-indicator {
-  @apply font-bold uppercase tracking-wider;
 }
 
 /* Optimized animations for mobile performance */
@@ -309,38 +270,14 @@ textarea {
 }
 
 /* ========================================
-   PWA FEEL IMPROVEMENTS
-   ======================================== */
-
-/* Connection status banner - mobile optimized */
-.offline-banner {
-  @apply fixed top-0 inset-x-0 z-[var(--z-overlay-top)] bg-warning text-warning-foreground;
-  @apply px-4 py-2 text-center text-xs font-bold;
-  @apply transform translate-y-0;
-  padding-top: max(0.5rem, env(safe-area-inset-top));
-}
-
-/* Full-screen offline overlay */
-.offline-overlay {
-  @apply fixed inset-0 z-[var(--z-overlay-top)] bg-background;
-  @apply flex flex-col items-center justify-center gap-4 p-6 text-center;
-}
-
-/* Install prompt - mobile friendly, sits above the bottom nav */
-.install-prompt {
-  @apply fixed inset-x-4 z-50;
-  @apply bg-card border border-border rounded-2xl shadow-2xl p-4;
-  @apply flex items-center gap-4;
-  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
-}
-
-html.keyboard-open .install-prompt {
-  bottom: 0.5rem;
-}
-
-.install-prompt button {
-  @apply flex-shrink-0 h-12 px-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm;
-}
+   PWA FEEL
+   ========================================
+   The offline banner/overlay and the update prompt are owned by their real
+   components (shared/components/NetworkStatus and
+   shared/components/PwaUpdatePrompt), which compose Tailwind utilities and the
+   z-index tokens directly. The CSS-class predecessors that used to live here
+   (offline-banner, offline-overlay, install-prompt) were dead: no markup
+   referenced them, so the components were the only runtime owner. */
 
 /* ========================================
    FORM OPTIMIZATIONS FOR MOBILE
@@ -373,49 +310,19 @@ input[type="search"] {
   inputmode: search;
 }
 
-/* Number pad for quantity inputs */
-.quantity-input {
-  @apply w-full rounded-lg border border-border bg-card px-3 py-3 text-center text-sm font-bold;
-  @apply focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none;
-  /* Prevent zoom on iOS */
-  font-size: 16px;
-}
-
-/* Inline validation feedback */
-.field-error {
-  @apply text-[10px] font-bold text-destructive mt-1;
-}
-
-.field-hint {
-  @apply text-[10px] font-medium text-muted-foreground mt-1;
-}
-
-/* Section dividers for forms */
-.form-section {
-  @apply border-t border-border pt-4 mt-4;
-}
-
-.form-section-title {
-  @apply text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3;
-}
+/* The historical form helper classes (quantity-input, field-error, field-hint,
+   form-section, form-section-title) were removed: no markup referenced them.
+   iOS zoom is already prevented globally by the 16px input rule above, and
+   inline validation copy is rendered by the forms themselves. */
 
 @layer components {
-  .ui-card {
-    @apply rounded-2xl border border-border bg-card shadow-sm;
-  }
-
-  .ui-icon {
-    @apply flex items-center justify-center rounded-xl bg-primary/10 text-primary;
-  }
-
-  .status-success {
-    @apply border-success/20 bg-success/10 text-success;
-  }
-
-  .status-warning {
-    @apply border-warning/20 bg-warning/10 text-warning;
-  }
-
+  /* Canonical status owner is shared/components/StatusPill (STATUS_TONE_CLASS),
+     which renders pill-shaped chips from semantic tokens. The two classes below
+     are the only surviving non-pill status surfaces and are kept because they
+     are live: the inventory low-stock cell and the printable invoice notice,
+     where a pill shape would be wrong. The unused .ui-card / .ui-icon card
+     primitives were superseded by shared/components/PremiumCard and removed,
+     together with the matching dead rule in brand-polish.css. */
   .status-danger {
     @apply border-destructive/20 bg-destructive/10 text-destructive;
   }

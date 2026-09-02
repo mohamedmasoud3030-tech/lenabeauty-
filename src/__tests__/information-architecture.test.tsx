@@ -114,6 +114,25 @@ describe("route and registry integrity", () => {
     const paths = NAV_DESTINATIONS.map((d) => d.path);
     expect(new Set(paths).size).toBe(paths.length);
   });
+
+  it("IA-T1d — /dashboard mounts the degradation wrapper, which delegates to the full dashboard", () => {
+    // The routed owner of /dashboard is DashboardCompatPage, NOT DashboardPage.
+    // It probes the dashboard summary contract and degrades to a reduced
+    // operational dashboard when the hosted schema cannot serve it. Guard both
+    // halves of the wiring: the route must keep the degradation path, and the
+    // wrapper must keep delegating to the real page so the full dashboard can
+    // never be silently unmounted by a refactor.
+    expect(routesSource).toContain(
+      'const DashboardCompatPage = lazy(() => import("./pages/DashboardCompatPage"))',
+    );
+    const dashboardRoute = routesSource.slice(routesSource.indexOf('path="/dashboard"'));
+    expect(dashboardRoute).toContain("<DashboardCompatPage />");
+
+    const compat = readFileSync(resolve(process.cwd(), "src/pages/DashboardCompatPage.tsx"), "utf8");
+    expect(compat).toContain('import DashboardPage from "./DashboardPage"');
+    expect(compat).toContain("useCases.dashboard.getSummary()");
+    expect(compat).toContain("return <DashboardPage />");
+  });
 });
 
 /* ── Naming ──────────────────────────────────────────────────────────────── */

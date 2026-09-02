@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { repositoriesSource } from "./helpers/repositoriesSource";
 
 const migration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260817000002_financial_reporting_repair.sql"),
@@ -10,8 +11,9 @@ const inventory = JSON.parse(readFileSync(
   resolve(process.cwd(), "docs/database-contract/artifacts/schema-inventory.json"),
   "utf8",
 ));
-const repositories = readFileSync(
-  resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
+const repositories = repositoriesSource();
+const dashboardBlock = readFileSync(
+  resolve(process.cwd(), "src/infrastructure/supabase/repositories/dashboard.ts"),
   "utf8",
 );
 
@@ -54,10 +56,6 @@ describe("financial reporting repair", () => {
     expect(repositories).toContain("rpc('get_dashboard_pnl_v1'");
     expect(repositories).toContain("rpc('get_dashboard_revenue_entries_v1'");
 
-    const dashboardBlock = repositories.slice(
-      repositories.indexOf("class SupabaseDashboardAdapter"),
-      repositories.indexOf("class SupabaseReportAdapter"),
-    );
     expect(dashboardBlock).not.toContain("from('employees')");
     expect(dashboardBlock).not.toContain("from('expenses')");
     expect(dashboardBlock).not.toContain("from('invoices')");

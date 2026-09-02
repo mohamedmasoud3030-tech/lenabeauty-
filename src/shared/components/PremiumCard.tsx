@@ -78,55 +78,18 @@ export function CardFooter({ children, className }: CardFooterProps) {
   );
 }
 
-// Stat Card - for displaying metrics
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  unit?: string;
-  trend?: { value: number; isPositive: boolean };
-  icon?: ReactNode;
-  color?: "blue" | "emerald" | "amber" | "rose" | "purple";
-}
-
-export function StatCard({ label, value, unit, trend, icon, color = "blue" }: StatCardProps) {
-  const colorClasses = {
-    blue: "bg-info/10 text-info",
-    emerald: "bg-success/10 text-success",
-    amber: "bg-warning/10 text-warning",
-    rose: "bg-secondary/10 text-secondary",
-    purple: "bg-primary/10 text-primary",
-  };
-
-  return (
-    <PremiumCard variant="glass" hoverable>
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          {icon && (
-            <div className={clsx("h-10 w-10 rounded-xl flex items-center justify-center shadow-inner", colorClasses[color])}>
-              {icon}
-            </div>
-          )}
-          {trend && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className={clsx(
-                "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold",
-                trend.isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-              )}
-            >
-              {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
-            </motion.div>
-          )}
-        </div>
-        <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-foreground">{value}</span>
-            {unit && <span className="text-xs font-bold text-muted-foreground uppercase">{unit}</span>}
-          </div>
-        </div>
-      </div>
-    </PremiumCard>
-  );
-}
+// A StatCard used to live here as a second, incompatible metric-card owner
+// (label / value / unit / trend API, decorative color names). The live
+// canonical owner is the dashboard widget StatCard in
+// src/pages/dashboard/widgets.tsx (title / subValue / variants API), which is
+// what DashboardPage actually renders through the /dashboard route.
+//
+// The duplicate was imported by nothing in the application, so two same-named
+// exports with different props were pure ownership ambiguity: reaching for the
+// "shared" one gave you a card the product does not render. Removed in Round 2
+// Phase 13 to leave exactly one metric-card owner.
+//
+// Note for traceability: docs/archive/PREMIUM_FEATURES.md still shows the old
+// shared StatCard signature. That document is an archived proposal, not a live
+// contract; if a shared metric card is wanted again, adopt the dashboard
+// widget's API rather than reintroducing a second one.

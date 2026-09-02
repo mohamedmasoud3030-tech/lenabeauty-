@@ -8,7 +8,9 @@ import { ConfirmProvider } from "./shared/components/ConfirmDialog";
 import { ErrorBoundary } from "./shared/components/ErrorBoundary";
 import { NetworkStatus } from "./shared/components/NetworkStatus";
 import { PwaUpdatePrompt } from "./shared/components/PwaUpdatePrompt";
-import "./brand-polish.css";
+
+// Global CSS is owned solely by src/main.tsx (see the cascade-order contract
+// documented there). This component must not import stylesheets.
 
 export default function App() {
   return (
