@@ -10,8 +10,8 @@ const inventory = JSON.parse(readFileSync(
   resolve(process.cwd(), "docs/database-contract/artifacts/schema-inventory.json"),
   "utf8",
 ));
-const repositories = readFileSync(
-  resolve(process.cwd(), "src/infrastructure/supabase/repositories.ts"),
+const workforce = readFileSync(
+  resolve(process.cwd(), "src/infrastructure/supabase/repositories/workforce.ts"),
   "utf8",
 );
 
@@ -55,10 +55,7 @@ describe("transactional payroll repair", () => {
   });
 
   it("removes the browser-side multi-request payroll mutation sequence", () => {
-    const block = repositories.slice(
-      repositories.indexOf("class SupabasePayrollAdapter"),
-      repositories.indexOf("export {", repositories.indexOf("class SupabasePayrollAdapter")),
-    );
+    const block = workforce.slice(workforce.indexOf("class SupabasePayrollAdapter"));
     expect(block).toContain("rpc('create_payroll_run_v1'");
     expect(block).toContain("rpc('delete_payroll_run_v1'");
     expect(block).not.toContain(".insert(lineRows)");
