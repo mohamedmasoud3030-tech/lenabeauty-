@@ -37,4 +37,4 @@ No service-role key, database password, or private key is committed. Browser pub
 
 ## Verdict
 
-**NO-GO FOR PRODUCTION TODAY.** Static/local repairs pass repository gates, but migrations `20260817000001`–`20260817000005` are not applied or accepted on hosted Supabase. Owner policy is also still required for commission semantics, final retention/anonymization, audit retention and disaster recovery. See `PROJECT_DEFECTS.md` for evidence and exact closure criteria.
+**NO-GO FOR PRODUCTION TODAY.** Static/local repairs pass repository gates, but migrations `20260817000001`–`20260817000005` are not applied or accepted on hosted Supabase. Owner policy is also still required for commission semantics, final retention/anonymization, audit retention and disaster recovery. See `archive/PROJECT_DEFECTS.md` for evidence and exact closure criteria.
