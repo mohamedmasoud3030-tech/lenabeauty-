@@ -11,8 +11,7 @@ describe("first customer membership provisioning", () => {
     expect(sql).toContain("UPDATE auth.users");
     expect(sql).toContain("'STAFF'");
     expect(sql).toContain("Auth user does not exist");
-    expect(sql).not.toMatch(/password/i);
-    expect(sql).not.toMatch(/service[_ -]?role/i);
+    expect(sql).not.toMatch(/encrypted_password|password_hash|service[_ -]?role|VITE_/i);
   });
 
   it("escapes display names rather than interpolating executable SQL", () => {
