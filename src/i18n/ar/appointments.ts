@@ -30,6 +30,7 @@ export const arAppointments = {
   "Appointment Report": "تقرير المواعيد",
   "Total Appointments": "إجمالي المواعيد",
   "Scheduled": "مجدول",
+  "Cancelled": "ملغى",
   "Appointment reminders and messages": "تذكيرات المواعيد والرسائل",
   "Booking deposit configuration": "إعداد عربون الحجز",
   "No-show fee cannot be negative": "لا يمكن أن تكون رسوم عدم الحضور سالبة",
