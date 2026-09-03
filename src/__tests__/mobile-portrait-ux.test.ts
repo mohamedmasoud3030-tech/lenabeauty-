@@ -90,10 +90,13 @@ describe("small-phone portrait UX contracts", () => {
     expect(customers).not.toContain("useCases.customers.delete");
   });
 
-  it("defaults Appointments to day mode on a phone-sized viewport", () => {
+  it("defaults Appointments to day mode and lets the dock open booking directly", () => {
     expect(appointments).toContain("window.innerWidth < 1024 ? \"day\" : \"week\"");
+    expect(appointments).toContain("useSearchParams");
+    expect(appointments).toContain('searchParams.get("new") !== "1"');
+    expect(appointments).toContain("openBooking();");
     expect(appointmentsSchedule).toContain("window.innerWidth >= 1024");
-    expect(appointmentsSchedule).toContain("above-bottom-nav");
+    expect(appointmentsSchedule).not.toContain("fixed end-4 above-bottom-nav");
     expect(bookingDialog).toContain("<Modal");
     expect(modal).toContain("--keyboard-inset");
   });
