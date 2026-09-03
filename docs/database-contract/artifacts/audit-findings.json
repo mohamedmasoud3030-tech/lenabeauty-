@@ -79,7 +79,7 @@
       "needs": "manual-review",
       "title": "RPC return shapes (jsonb/record) are untyped at rest",
       "category": "rpc-return-shape",
-      "evidence": "Several RPCs return jsonb or record (e.g. process_checkout_v1, public_*_v1) and the frontend reads specific fields; generated types cannot fully guarantee these shapes.",
+      "evidence": "Several frontend-used RPCs return jsonb or record (for example process_checkout_v1); generated SQL types cannot fully guarantee application-level result shapes.",
       "affected": {
         "layer": "RPC results"
       },
