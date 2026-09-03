@@ -1,30 +1,57 @@
 import { describe, expect, it } from "vitest";
 import { validateProductionEnvironment } from "../../scripts/launch/production-preflight.mjs";
 
+const productionProjectRef = "abcdefghijklmnopqrst";
 const baseEnv = {
   VITE_ENVIRONMENT: "production",
   VITE_DATA_BACKEND: "supabase",
   VITE_BRANCH_MODE: "single",
-  VITE_SUPABASE_URL: "https://customer-prod.supabase.co",
+  PRODUCTION_SUPABASE_PROJECT_REF: productionProjectRef,
+  VITE_SUPABASE_URL: `https://${productionProjectRef}.supabase.co`,
   VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_example",
   VITE_CENTER_ID: "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d",
   VITE_USE_DEMO_CREDENTIALS: "false",
 };
+
+function legacyJwt(role) {
+  const payload = Buffer.from(JSON.stringify({ role })).toString("base64url");
+  return `header.${payload}.signature`;
+}
 
 describe("first customer production preflight", () => {
   it("accepts an isolated explicit Production target", () => {
     const result = validateProductionEnvironment(baseEnv);
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
+    expect(result.summary.productionProjectRef).toBe(productionProjectRef);
   });
 
   it("rejects the public Lena Demo project even with otherwise complete values", () => {
     const result = validateProductionEnvironment({
       ...baseEnv,
+      PRODUCTION_SUPABASE_PROJECT_REF: "tuzzvqsnbtzvkffmazyf",
       VITE_SUPABASE_URL: "https://tuzzvqsnbtzvkffmazyf.supabase.co/",
     });
     expect(result.ok).toBe(false);
+    expect(result.errors).toContain("Production project ref must not equal the Lena Demo project");
     expect(result.errors).toContain("Production must not target the Lena Demo Supabase project");
+  });
+
+  it("rejects a URL that does not match the explicitly approved production project ref", () => {
+    const result = validateProductionEnvironment({
+      ...baseEnv,
+      VITE_SUPABASE_URL: "https://zzzzzzzzzzzzzzzzzzzz.supabase.co",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain("VITE_SUPABASE_URL must match PRODUCTION_SUPABASE_PROJECT_REF");
+  });
+
+  it("rejects missing or malformed production project refs", () => {
+    const missing = validateProductionEnvironment({ ...baseEnv, PRODUCTION_SUPABASE_PROJECT_REF: "" });
+    const malformed = validateProductionEnvironment({ ...baseEnv, PRODUCTION_SUPABASE_PROJECT_REF: "not-a-ref" });
+    expect(missing.ok).toBe(false);
+    expect(malformed.ok).toBe(false);
+    expect(missing.errors).toContain("PRODUCTION_SUPABASE_PROJECT_REF must be an explicit 20-character Supabase project ref");
   });
 
   it("rejects placeholder centers and demo opt-in", () => {
@@ -36,6 +63,25 @@ describe("first customer production preflight", () => {
     expect(result.ok).toBe(false);
     expect(result.errors).toContain("VITE_CENTER_ID must be a real non-placeholder UUID");
     expect(result.errors).toContain("VITE_USE_DEMO_CREDENTIALS must not be enabled in Production");
+  });
+
+  it("rejects modern and legacy privileged keys exposed through the publishable slot", () => {
+    for (const key of ["sb_secret_server-only", legacyJwt("service_role")]) {
+      const result = validateProductionEnvironment({
+        ...baseEnv,
+        VITE_SUPABASE_PUBLISHABLE_KEY: key,
+      });
+      expect(result.ok).toBe(false);
+      expect(result.errors).toContain("A Supabase privileged/service-role key must never be exposed as VITE_SUPABASE_PUBLISHABLE_KEY");
+    }
+  });
+
+  it("still accepts legacy anon JWTs as browser-safe publishable credentials", () => {
+    const result = validateProductionEnvironment({
+      ...baseEnv,
+      VITE_SUPABASE_PUBLISHABLE_KEY: legacyJwt("anon"),
+    });
+    expect(result.ok).toBe(true);
   });
 
   it("rejects privileged server credentials exposed through VITE variables", () => {
