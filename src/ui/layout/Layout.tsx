@@ -147,7 +147,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-primary lg:hidden"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-primary lg:hidden"
                 aria-label={t("Change Theme")}
                 aria-pressed={isDark}
                 title={t("Change Theme")}
@@ -160,7 +160,7 @@ export default function Layout() {
                   ref={userButtonRef}
                   type="button"
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-xs font-bold text-primary shadow-inner transition hover:scale-105 active:scale-95 sm:h-10 sm:w-10 lg:h-11 lg:w-11 lg:text-sm"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-xs font-bold text-primary shadow-inner transition hover:scale-105 active:scale-95 lg:text-sm"
                   aria-label={t("User menu")}
                   aria-expanded={showUserMenu}
                   aria-haspopup="menu"
@@ -213,7 +213,7 @@ export default function Layout() {
               <button
                 type="button"
                 onClick={toggleLanguage}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-primary lg:hidden"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-primary lg:hidden"
                 aria-label={t("Change Language")}
                 title={t("Change Language")}
               >
