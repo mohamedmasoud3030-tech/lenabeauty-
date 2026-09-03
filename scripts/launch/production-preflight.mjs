@@ -1,6 +1,8 @@
-const DEMO_SUPABASE_HOST = "tuzzvqsnbtzvkffmazyf.supabase.co";
+const DEMO_SUPABASE_PROJECT_REF = "tuzzvqsnbtzvkffmazyf";
+const DEMO_SUPABASE_HOST = `${DEMO_SUPABASE_PROJECT_REF}.supabase.co`;
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PROJECT_REF_RE = /^[a-z0-9]{20}$/;
 
 function read(value) {
   return typeof value === "string" ? value.trim() : "";
@@ -14,6 +16,26 @@ function hostOf(value) {
   }
 }
 
+function jwtRole(value) {
+  const token = read(value);
+  const parts = token.split(".");
+  if (parts.length !== 3) return "";
+
+  try {
+    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const payload = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+    return read(payload?.role).toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isPrivilegedBrowserKey(value) {
+  const key = read(value);
+  return key.startsWith("sb_secret_") || jwtRole(key) === "service_role";
+}
+
 export function validateProductionEnvironment(env) {
   const errors = [];
   const environment = read(env.VITE_ENVIRONMENT).toLowerCase();
@@ -22,6 +44,7 @@ export function validateProductionEnvironment(env) {
   const supabaseUrl = read(env.VITE_SUPABASE_URL);
   const publishableKey = read(env.VITE_SUPABASE_PUBLISHABLE_KEY);
   const centerId = read(env.VITE_CENTER_ID);
+  const productionProjectRef = read(env.PRODUCTION_SUPABASE_PROJECT_REF).toLowerCase();
   const demoOptIn = read(env.VITE_USE_DEMO_CREDENTIALS).toLowerCase();
 
   if (environment !== "production") {
@@ -34,17 +57,28 @@ export function validateProductionEnvironment(env) {
     errors.push("VITE_BRANCH_MODE must be single for the first-customer production deployment");
   }
 
+  if (!PROJECT_REF_RE.test(productionProjectRef)) {
+    errors.push("PRODUCTION_SUPABASE_PROJECT_REF must be an explicit 20-character Supabase project ref");
+  } else if (productionProjectRef === DEMO_SUPABASE_PROJECT_REF) {
+    errors.push("Production project ref must not equal the Lena Demo project");
+  }
+
   const host = hostOf(supabaseUrl);
   if (!host || !supabaseUrl.startsWith("https://")) {
     errors.push("VITE_SUPABASE_URL must be a valid HTTPS URL");
-  } else if (host === DEMO_SUPABASE_HOST) {
-    errors.push("Production must not target the Lena Demo Supabase project");
+  } else {
+    if (host === DEMO_SUPABASE_HOST) {
+      errors.push("Production must not target the Lena Demo Supabase project");
+    }
+    if (PROJECT_REF_RE.test(productionProjectRef) && host !== `${productionProjectRef}.supabase.co`) {
+      errors.push("VITE_SUPABASE_URL must match PRODUCTION_SUPABASE_PROJECT_REF");
+    }
   }
 
   if (!publishableKey) {
     errors.push("VITE_SUPABASE_PUBLISHABLE_KEY is required");
-  } else if (publishableKey.startsWith("sb_secret_")) {
-    errors.push("A Supabase secret key must never be exposed as a VITE_* variable");
+  } else if (isPrivilegedBrowserKey(publishableKey)) {
+    errors.push("A Supabase privileged/service-role key must never be exposed as VITE_SUPABASE_PUBLISHABLE_KEY");
   }
 
   if (!UUID_RE.test(centerId) || centerId === NIL_UUID) {
@@ -71,6 +105,7 @@ export function validateProductionEnvironment(env) {
       environment,
       backend,
       branchMode,
+      productionProjectRef: PROJECT_REF_RE.test(productionProjectRef) ? productionProjectRef : null,
       supabaseHost: host || null,
       centerId: UUID_RE.test(centerId) && centerId !== NIL_UUID ? centerId : null,
     },
@@ -90,6 +125,7 @@ function runCli() {
   console.log(` - environment: ${result.summary.environment}`);
   console.log(` - backend: ${result.summary.backend}`);
   console.log(` - branch mode: ${result.summary.branchMode}`);
+  console.log(` - production project ref: ${result.summary.productionProjectRef}`);
   console.log(` - Supabase host: ${result.summary.supabaseHost}`);
   console.log(` - center id: ${result.summary.centerId}`);
 }
