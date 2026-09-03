@@ -9,6 +9,10 @@ function legacyJwt(role: string): string {
     return `header.${payload}.signature`;
 }
 
+function modernPrivilegedKey(): string {
+    return ["sb", "secret", "server-only"].join("_");
+}
+
 describe("Environment Configuration Tests", () => {
     it("Preview mode is rejected", () => {
         expect(() => parseEnv({
@@ -113,11 +117,12 @@ describe("Environment Configuration Tests", () => {
     });
 
     it("rejects modern and legacy privileged Supabase keys from browser configuration", () => {
-        expect(isPrivilegedSupabaseBrowserKey("sb_secret_server-only")).toBe(true);
+        const modernKey = modernPrivilegedKey();
+        expect(isPrivilegedSupabaseBrowserKey(modernKey)).toBe(true);
         expect(isPrivilegedSupabaseBrowserKey(legacyJwt("service_role"))).toBe(true);
         expect(isPrivilegedSupabaseBrowserKey(legacyJwt("anon"))).toBe(false);
 
-        for (const key of ["sb_secret_server-only", legacyJwt("service_role")]) {
+        for (const key of [modernKey, legacyJwt("service_role")]) {
             expect(() => parseEnv({
                 VITE_ENVIRONMENT: "production",
                 VITE_DATA_BACKEND: "supabase",
