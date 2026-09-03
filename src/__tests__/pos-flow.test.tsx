@@ -367,10 +367,10 @@ describe("POS operational flow", () => {
     fireEvent.click(await screen.findByText("أمل"));
     fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "e1" } });
 
-    // Wallet panel lists the gift card and the matching package session.
+    // Wallet panel lists the gift card and a concrete matching package session.
     expect(await screen.findByText(i18n.t("wallet.title"))).toBeInTheDocument();
     expect(screen.getByText("GC-1234")).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("wallet.packageSession"))).toBeInTheDocument();
+    expect(screen.getByText(/باقة كاملة/)).toBeInTheDocument();
 
     // Apply the package session, then checkout links the redemption in the payload.
     fireEvent.click(screen.getByRole("button", { name: i18n.t("wallet.use") }));
