@@ -16,42 +16,19 @@
     },
     "frontend": {
       "tables": 29,
-      "rpc": 33,
+      "rpc": 23,
       "storage": 1
     },
     "findings_by_severity": {
       "high": 0,
       "medium": 0,
       "low": 0,
-      "info": 5
+      "info": 4
     }
   },
   "findings": [
     {
       "id": "DB-001",
-      "severity": "info",
-      "status": "confirmed",
-      "needs": "no-code-change",
-      "title": "Dormant public booking/portal RPCs are correctly deny-by-default",
-      "category": "rpc-dormant-disabled",
-      "evidence": "public_cancel_booking_v1, public_center_info_v1, public_client_portal_login_v1, public_client_portal_profile_v2, public_create_booking_v1, public_list_services_v1, public_list_staff_v1, public_reschedule_booking_v1, public_taken_slots_v1 have no PUBLIC, anon, or authenticated EXECUTE grant and their pages are not registered in src/routes.tsx.",
-      "affected": {
-        "rpcs": [
-          "public_cancel_booking_v1",
-          "public_center_info_v1",
-          "public_client_portal_login_v1",
-          "public_client_portal_profile_v2",
-          "public_create_booking_v1",
-          "public_list_services_v1",
-          "public_list_staff_v1",
-          "public_reschedule_booking_v1",
-          "public_taken_slots_v1"
-        ]
-      },
-      "remediation": "No change. Re-audit grants, rate limiting, and abuse controls before enabling the public routes."
-    },
-    {
-      "id": "DB-002",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",
@@ -68,7 +45,7 @@
       "remediation": "Manually confirm this construct against the canonical schema."
     },
     {
-      "id": "DB-003",
+      "id": "DB-002",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",
@@ -83,7 +60,7 @@
       "remediation": "Manually confirm this construct against the canonical schema."
     },
     {
-      "id": "DB-004",
+      "id": "DB-003",
       "severity": "info",
       "status": "confirmed",
       "needs": "no-code-change",
@@ -96,7 +73,7 @@
       "remediation": "No code change; the constraint exists in the canonical migration and applies in Supabase."
     },
     {
-      "id": "DB-005",
+      "id": "DB-004",
       "severity": "info",
       "status": "confirmed",
       "needs": "manual-review",
