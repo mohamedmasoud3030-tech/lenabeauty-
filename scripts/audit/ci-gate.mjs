@@ -100,12 +100,7 @@ for (const f of findings) {
 const after = snapshotArtifacts();
 let stale = false;
 for (const [name, content] of before) {
-  if (semanticArtifact(name, after.get(name)) !== semanticArtifact(name, content)) {
-    stale = true;
-    console.error(`FRESH_AUDIT_ARTIFACT_BEGIN:${name}`);
-    console.error(after.get(name));
-    console.error(`FRESH_AUDIT_ARTIFACT_END:${name}`);
-  }
+  if (semanticArtifact(name, after.get(name)) !== semanticArtifact(name, content)) stale = true;
 }
 if (stale) violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
 
