@@ -12,7 +12,15 @@ This pack starts after Round 4. It is not another cleanup round. Its purpose is 
 - Confirm the authenticated owner resolves to the intended `center_id` before entering operational data.
 - Keep public booking/portal RPCs deny-by-default unless that channel is intentionally released with its abuse controls.
 
-Exit gate: owner can sign in and can access only the intended center.
+Before deploying the customer build, configure its production environment and run:
+
+```bash
+npm run launch:preflight
+```
+
+The preflight fails closed unless the target is explicitly `production`, uses Supabase in single-center mode, has a real center UUID, contains no privileged `VITE_*` credential, and points to a project other than the known Lena Demo project.
+
+Exit gate: production preflight passes, and the owner can sign in and access only the intended center.
 
 ## 2. Configure salon identity
 
@@ -37,11 +45,24 @@ Exit gate: a newly rendered invoice/report carries the customer's identity, not 
 
 ## 3. Create owner and staff operating access
 
-- Owner/admin account is the launch authority.
-- Add only the staff that will operate the first shift.
-- Assign the minimum supported role required for each operator.
-- Test one staff login separately from the owner login.
-- Verify admin-only routes remain unavailable to non-admin staff.
+An `employees` record is an operational staff record; it is not an authentication account. Login access requires an Auth user plus server-governed profile, center membership, and `app_metadata.role`.
+
+1. Create the Auth user in Supabase Authentication and copy its UUID.
+2. Generate the reviewed membership SQL locally; the helper never accepts or prints a password/service-role key:
+
+```bash
+npm run launch:membership -- \
+  --user-id <AUTH_USER_UUID> \
+  --center-id <CENTER_UUID> \
+  --role STAFF \
+  --name "Staff Full Name"
+```
+
+3. Review the generated SQL and run it only in a trusted Supabase SQL/admin context.
+4. Sign the user out/in so the fresh server-owned role reaches the Auth token.
+5. Test one staff login separately from the owner login and verify admin-only routes remain unavailable.
+
+Supported launch roles are `ADMIN`, `MANAGER`, and `STAFF`. Assign the minimum role required. Never expose service-role credentials to the browser and never add a client RPC that grants memberships.
 
 Exit gate: owner and at least one real operator can sign in with the intended permissions.
 
@@ -57,6 +78,8 @@ Load only data required to operate day one:
 6. gift cards/packages only when the salon has real outstanding customer liabilities/entitlements to carry forward
 
 Do not fabricate historical invoices to make dashboards look populated. Financial history is created through canonical checkout flows.
+
+The existing `GettingStartedCard` remains the staff-facing onboarding path for services → employees → customers → appointments → sale. Settings → Go-Live is the separate production-certification view; it must not become a duplicate onboarding implementation.
 
 Exit gate: the salon can create a valid appointment and POS catalog contains the intended opening services/products.
 
@@ -100,6 +123,8 @@ At the first genuine customer visit:
 9. confirm consumed inventory moved exactly once
 10. check Action Center for any new operational exception
 
+The Settings → Go-Live activation milestone derives first-sale evidence from the canonical Sales report, which reads tenant-scoped invoices filtered to `status = PAID`. It deliberately does not trust an imported `customer.totalSpent` value as proof of a production checkout.
+
 Exit gate: one real PAID invoice exists, receipt is correct, customer history is correct, reporting includes the sale, and inventory/accounting side effects occurred once.
 
 ## 8. Go-live sign-off
@@ -107,6 +132,7 @@ Exit gate: one real PAID invoice exists, receipt is correct, customer history is
 The salon is LIVE only when all boxes are true:
 
 - [ ] isolated production tenant
+- [ ] `npm run launch:preflight` passes
 - [ ] canonical migrations/audit green
 - [ ] owner/admin login verified
 - [ ] staff login and role boundary verified
@@ -120,7 +146,7 @@ The salon is LIVE only when all boxes are true:
 - [ ] pre-go-live operational export saved
 - [ ] managed database recovery procedure confirmed
 - [ ] golden workflow rehearsed
-- [ ] first real checkout verified end-to-end
+- [ ] first real checkout verified end-to-end from a PAID invoice
 
 ## Non-negotiable launch rules
 
@@ -129,4 +155,5 @@ The salon is LIVE only when all boxes are true:
 - No disabling RLS/RPC/auth controls to make onboarding easier.
 - No destructive restore test against the live tenant.
 - No claim that JSON export is a full financial/database backup.
+- No browser-side membership grants or privileged credentials.
 - No second customer is onboarded from an undocumented one-off process: improvements discovered during customer one must be folded back into this pack.
