@@ -1,6 +1,7 @@
 import { enCommonCore } from "./common-core";
 import { enCommonPlatform } from "./common-platform";
 import { enCommonOperations } from "./common-operations";
+import { enLaunch } from "./launch";
 import { enMarketing } from "./marketing";
 
 /**
@@ -12,5 +13,6 @@ export const enCommon = {
   ...enCommonCore,
   ...enCommonPlatform,
   ...enCommonOperations,
+  ...enLaunch,
   ...enMarketing,
 };
