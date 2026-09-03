@@ -19,7 +19,19 @@ describe("first customer launch pack", () => {
     expect(readiness).toContain("useCases.services.list()");
     expect(readiness).toContain("useCases.employees.list()");
     expect(readiness).toContain("useCases.products.listFull()");
+    expect(readiness).toContain("useCases.customers.list()");
+    expect(readiness).toContain("useCases.appointments.list(");
+    expect(readiness).toContain("useCases.reports.getSales(");
     expect(readiness).not.toContain("localStorage");
+  });
+
+  it("certifies the first sale from PAID invoice reporting rather than imported customer totals", () => {
+    const readiness = read("src/pages/settings/LaunchReadinessSection.tsx");
+    const reports = read("src/infrastructure/supabase/repositories/reports.ts");
+
+    expect(readiness).toContain("firstSale: sales.length > 0");
+    expect(readiness).not.toContain("customer.totalSpent");
+    expect(reports).toContain(".eq('status', 'PAID')");
   });
 
   it("does not misrepresent operational export as a full financial restore", () => {
