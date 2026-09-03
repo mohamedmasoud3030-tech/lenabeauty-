@@ -69,11 +69,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         : "";
 
   return (
-    <aside className="relative flex h-full flex-col overflow-hidden border-border bg-card/98 backdrop-blur-xl lg:border-e lg:bg-card/95">
-      <div aria-hidden="true" className="absolute left-1/2 top-2 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-border lg:hidden" />
+    <aside className="relative flex h-full flex-col overflow-hidden border-e border-border bg-card/95 backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-primary/8 to-transparent" />
 
-      <div className="relative z-10 flex h-20 flex-col justify-center border-b border-border px-4 pt-2 sm:px-6 lg:pt-0">
+      <div className="relative z-10 flex h-20 flex-col justify-center border-b border-border px-4 sm:px-6">
         <div className="flex items-center gap-3">
           {logoUrl ? (
             <SalonLogo logoUrl={logoUrl} salonName="LenaBeauty" size="md" />
@@ -88,20 +87,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {t("Salon operations")}
             </span>
           </div>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="ms-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition hover:text-destructive lg:hidden"
-              aria-label={t("Close")}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          )}
         </div>
       </div>
 
-      <div className="relative z-10 hidden items-center justify-between gap-2 px-4 py-3 sm:px-6 lg:flex">
+      <div className="relative z-10 flex items-center justify-between gap-2 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           <button type="button" onClick={toggleLanguage} className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-primary" aria-label={t("Change Language")} title={t("Change Language")}>
             <Globe aria-hidden="true" className="h-4 w-4" />
@@ -110,6 +99,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             {isDark ? <Sun aria-hidden="true" className="h-4 w-4" /> : <Moon aria-hidden="true" className="h-4 w-4" />}
           </button>
         </div>
+        {onClose && (
+          <button type="button" onClick={onClose} className="ms-auto flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-destructive lg:hidden" aria-label={t("Close")}>
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <nav aria-label={t("Primary navigation")} className="relative z-10 flex-1 overflow-y-auto px-3 py-2 scrollbar-hide sm:px-4">
@@ -144,7 +138,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      <div className="relative z-10 border-t border-border bg-card/60 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pb-4">
+      <div className="relative z-10 border-t border-border bg-card/60 p-4">
         <div className="mb-3 flex items-center gap-3 rounded-xl bg-muted/60 p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
             {me?.username?.[0]?.toUpperCase()}
