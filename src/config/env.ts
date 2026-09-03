@@ -38,6 +38,25 @@ function validateUrl(url: string | undefined): boolean {
   }
 }
 
+function legacyJwtRole(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const parts = value.split(".");
+  if (parts.length !== 3 || typeof globalThis.atob !== "function") return undefined;
+
+  try {
+    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    const payload = JSON.parse(globalThis.atob(padded)) as { role?: unknown };
+    return typeof payload.role === "string" ? payload.role.toLowerCase() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function isPrivilegedSupabaseBrowserKey(key: string | undefined): boolean {
+  return Boolean(key && (key.startsWith("sb_secret_") || legacyJwtRole(key) === "service_role"));
+}
+
 export function isLenaDemoSupabaseUrl(url: string | undefined): boolean {
   if (!url) return false;
   try {
@@ -131,9 +150,11 @@ export function parseEnv(
     throw new EnvironmentConfigurationError(`UNSUPPORTED_BRANCH_CONFIGURATION: ${backend} with ${branchMode}`);
   }
 
-  // Security check: reject explicit secret keys injected anywhere
+  // Security check: reject every known privileged Supabase key form before a
+  // VITE_* value can be bundled into browser code. This covers both modern
+  // sb_secret_* keys and legacy JWTs whose payload role is service_role.
   if (backend === "supabase") {
-    if (key && key.startsWith("sb_secret_")) {
+    if (isPrivilegedSupabaseBrowserKey(key)) {
       throw new EnvironmentConfigurationError("INVALID_SUPABASE_CONFIGURATION");
     }
 
