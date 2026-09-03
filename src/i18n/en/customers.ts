@@ -47,6 +47,7 @@ export const enCustomers = {
   "Could not load client portal profile": "Could not load client portal profile",
   "Tier": "Tier",
   "Total Clients": "Total Clients",
+  "VIP": "VIP",
   "VIP Clients": "VIP Clients",
   "New Clients": "New Clients",
   "Customer created successfully": "Customer created successfully",

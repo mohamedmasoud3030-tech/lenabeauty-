@@ -21,6 +21,7 @@ import { parseSelect, topLevelObjectKeys } from "./lib/parse.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const ARTIFACTS_DIR = resolve(ROOT, "docs/database-contract/artifacts");
 const SRC_DIR = resolve(ROOT, "src");
+const DOMAIN_PORTS_DIR = `${resolve(SRC_DIR, "domain/ports/repositories")}/`;
 
 const isSpace = (c) => c === " " || c === "\t" || c === "\n" || c === "\r";
 const byLocale = (a, b) => a.localeCompare(b);
@@ -32,7 +33,12 @@ function walk(dir) {
   });
 }
 
-const sourceFiles = walk(SRC_DIR).filter((p) => /\.(ts|tsx)$/.test(p));
+// Domain repository ports are pure contracts and cannot own Supabase usage.
+// Excluding their split implementation directory keeps this database-usage
+// artifact tied to executable DB callers instead of architectural file count.
+const sourceFiles = walk(SRC_DIR).filter(
+  (p) => /\.(ts|tsx)$/.test(p) && !p.startsWith(DOMAIN_PORTS_DIR),
+);
 
 /** Find every `.method(` occurrence; returns `[{start, argsStart}]`. */
 function findMethodCalls(source, method) {

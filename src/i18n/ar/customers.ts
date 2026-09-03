@@ -53,6 +53,7 @@ export const arCustomers = {
   "Could not load client portal profile": "تعذّر تحميل ملف بوابة العميل",
   "Tier": "الفئة",
   "Total Clients": "إجمالي العملاء",
+  "VIP": "كبار العملاء",
   "VIP Clients": "عملاء VIP",
   "New Clients": "عملاء جدد",
   "Customer Experience": "تجربة العميل",

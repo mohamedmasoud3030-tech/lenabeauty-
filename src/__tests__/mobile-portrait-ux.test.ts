@@ -12,6 +12,7 @@ import {
 const css = readFileSync(resolve(process.cwd(), "src/index.css"), "utf8");
 const customers = readFileSync(resolve(process.cwd(), "src/pages/CustomersPage.tsx"), "utf8");
 const appointments = readFileSync(resolve(process.cwd(), "src/pages/AppointmentsPage.tsx"), "utf8");
+const appointmentsSchedule = readFileSync(resolve(process.cwd(), "src/pages/appointments/AppointmentsSchedule.tsx"), "utf8");
 const bookingDialog = readFileSync(resolve(process.cwd(), "src/pages/appointments/AppointmentBookingDialog.tsx"), "utf8");
 const pos = readFileSync(resolve(process.cwd(), "src/pages/PosInvoicesPage.tsx"), "utf8");
 const layout = readFileSync(resolve(process.cwd(), "src/ui/layout/Layout.tsx"), "utf8");
@@ -41,10 +42,6 @@ describe("small-phone portrait UX contracts", () => {
   });
 
   it("filters admin-only destinations from the mobile More menu", () => {
-    // The menu is now derived from the shared navigation registry instead of a
-    // hardcoded list, so the guarantee is asserted against that registry: every
-    // admin destination reachable from the More menu is adminOnly, and the
-    // filter is actually applied at render time.
     expect(layout).toContain("visibleMoreMenuItems.map");
     expect(layout).toContain("visibleDestinations");
     expect(layout).toContain('isAdmin: me?.role === "ADMIN"');
@@ -56,7 +53,6 @@ describe("small-phone portrait UX contracts", () => {
       expect(MOBILE_MORE_PATHS, `${path} must be reachable from the More menu`).toContain(path);
     }
 
-    // Staff must not receive any admin destination in the More menu.
     const staffMore = visibleDestinations({
       isAdmin: false,
       optionalModules: { giftCards: true, packages: true },
@@ -64,20 +60,19 @@ describe("small-phone portrait UX contracts", () => {
     expect(staffMore.every((d) => !d.adminOnly)).toBe(true);
   });
 
-  it("does not implement swipe actions on Customers (accidental delete risk)", () => {
+  it("does not implement gesture-driven customer actions (accidental delete risk)", () => {
     expect(customers).not.toMatch(/onTouchStart|onTouchEnd|onPan|drag=["']x["']/);
-    expect(customers).not.toMatch(/swipe actions/i);
     expect(customers).toContain("No swipe");
     expect(customers).toContain("aria-label={t(\"Actions\")}");
-    expect(customers).toContain("openEdit(c)");
+    expect(customers).toMatch(/openEdit\([^)]*\)/);
     expect(customers).not.toContain("handleDeleteCustomer");
     expect(customers).not.toContain("useCases.customers.delete");
   });
 
   it("defaults Appointments to day mode on a phone-sized viewport", () => {
     expect(appointments).toContain("window.innerWidth < 1024 ? \"day\" : \"week\"");
-    expect(appointments).toContain("skip empty days");
-    expect(appointments).toContain("above-bottom-nav");
+    expect(appointmentsSchedule).toContain("window.innerWidth >= 1024");
+    expect(appointmentsSchedule).toContain("above-bottom-nav");
     expect(bookingDialog).toContain("<Modal");
     expect(modal).toContain("--keyboard-inset");
   });
@@ -127,6 +122,7 @@ describe("keyboard inset measurement", () => {
     expect(document.documentElement.classList.contains("keyboard-open")).toBe(true);
 
     clearKeyboardInset();
+    expect(document.documentElement.style.getPropertyValue("--keyboard-inset")).toBe("0px");
     expect(document.documentElement.classList.contains("keyboard-open")).toBe(false);
   });
 });

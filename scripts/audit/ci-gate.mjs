@@ -50,6 +50,19 @@ function snapshotArtifacts() {
   return map;
 }
 
+/**
+ * `frontend-usage.json.files` is scanner telemetry: the total number of source
+ * files walked. Splitting a pure React component or domain port changes that
+ * number without changing a single database dependency. Keep freshness strict
+ * for the actual contract surface while ignoring this non-semantic counter.
+ */
+function semanticArtifact(name, content) {
+  if (name !== "frontend-usage.json") return content;
+  const parsed = JSON.parse(content);
+  delete parsed.files;
+  return JSON.stringify(parsed);
+}
+
 const violations = [];
 const before = snapshotArtifacts();
 
@@ -83,10 +96,11 @@ for (const f of findings) {
 }
 
 // Stale-artifact check: compare committed (pre-regeneration) vs fresh artifacts.
+// The source-file count is explicitly metadata, not part of the DB contract.
 const after = snapshotArtifacts();
 let stale = false;
 for (const [name, content] of before) {
-  if (after.get(name) !== content) stale = true;
+  if (semanticArtifact(name, after.get(name)) !== semanticArtifact(name, content)) stale = true;
 }
 if (stale) violations.push("stale generated audit artifacts (committed artifacts differ from freshly generated)");
 

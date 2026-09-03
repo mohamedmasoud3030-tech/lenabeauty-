@@ -28,6 +28,7 @@ export const enAppointments = {
   "Previous Appointments": "Previous Appointments",
   "Total Appointments": "Total Appointments",
   "Scheduled": "Scheduled",
+  "Cancelled": "Cancelled",
   "Appointment Report": "Appointment Report",
   "No-show fee cannot be negative": "No-show fee cannot be negative",
   "Scheduled for today": "Scheduled for today",
