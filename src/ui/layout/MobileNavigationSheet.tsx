@@ -47,6 +47,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
           />
 
           <motion.div
+            id="mobile-navigation-sheet"
             role="dialog"
             aria-modal="true"
             aria-label={t("Primary navigation")}
