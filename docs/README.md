@@ -19,6 +19,10 @@ generated database artifacts, or runtime checks.
 - `src/infrastructure/supabase/database.types.ts` — generated types (do not hand-edit).
 - `.github/workflows/` — CI/release gates.
 
+Runtime source must have a real owner: application entrypoint reachability, an explicit test/tool
+entrypoint, or a documented platform boundary. Self-only tests, speculative adapters and duplicate
+package-manager/build-tool ownership are not valid reasons to retain dead code.
+
 ## Operations
 
 - [`SUPABASE_SETUP_CHECKOUT.md`](./SUPABASE_SETUP_CHECKOUT.md)
