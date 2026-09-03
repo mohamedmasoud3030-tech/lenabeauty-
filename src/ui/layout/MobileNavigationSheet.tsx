@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { NavLink } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
@@ -17,6 +17,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
   const { me } = useAuth();
   const { t } = useTranslation();
   const optionalModules = useOptionalModules();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const groups = useMemo(() => {
     const visible = visibleDestinations({
@@ -32,6 +33,17 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
       .filter((group) => group.items.length > 0);
   }, [me?.role, optionalModules]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open ? (
@@ -39,6 +51,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
           <motion.button
             type="button"
             aria-label={t("Close")}
+            tabIndex={-1}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -69,6 +82,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
                 </div>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={onClose}
                 aria-label={t("Close")}
