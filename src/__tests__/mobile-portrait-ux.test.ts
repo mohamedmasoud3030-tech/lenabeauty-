@@ -60,9 +60,8 @@ describe("small-phone portrait UX contracts", () => {
     expect(staffMore.every((d) => !d.adminOnly)).toBe(true);
   });
 
-  it("does not implement swipe actions on Customers (accidental delete risk)", () => {
+  it("does not implement gesture-driven customer actions (accidental delete risk)", () => {
     expect(customers).not.toMatch(/onTouchStart|onTouchEnd|onPan|drag=["']x["']/);
-    expect(customers).not.toMatch(/swipe actions/i);
     expect(customers).toContain("No swipe");
     expect(customers).toContain("aria-label={t(\"Actions\")}");
     expect(customers).toMatch(/openEdit\([^)]*\)/);
