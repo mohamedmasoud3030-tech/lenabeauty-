@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import {
   Save, Download, Building2, Database,
   Globe, Phone, MapPin, Hash, Coins,
-  ChevronRight, Bell, Palette, CreditCard,
+  ChevronRight, Bell, Palette, CreditCard, Rocket,
 } from "lucide-react";
 import { CenterSettings } from "../domain/entities";
 import { useCases } from "../app/composition/useCases";
@@ -19,9 +19,10 @@ import { ScreenState } from "../shared/components/ScreenState";
 const BrandingSettingsSection = lazy(() => import("./BrandingSettingsPage"));
 const NotificationsSettingsSection = lazy(() => import("./NotificationsSettingsPage"));
 const PaymentGatewaySettingsSection = lazy(() => import("./PaymentGatewaySettingsPage"));
+const LaunchReadinessSection = lazy(() => import("./settings/LaunchReadinessSection"));
 
-type SettingsTab = "center" | "backup" | "branding" | "notifications" | "payments";
-const SETTINGS_TABS = new Set<SettingsTab>(["center", "backup", "branding", "notifications", "payments"]);
+type SettingsTab = "center" | "launch" | "backup" | "branding" | "notifications" | "payments";
+const SETTINGS_TABS = new Set<SettingsTab>(["center", "launch", "backup", "branding", "notifications", "payments"]);
 
 function readSettingsTab(value: string | null): SettingsTab {
   return value && SETTINGS_TABS.has(value as SettingsTab) ? value as SettingsTab : "center";
@@ -140,6 +141,7 @@ export default function SettingsPage() {
 
   const navItems: { id: SettingsTab; label: string; icon: typeof Building2; desc: string }[] = [
     { id: "center", label: t("Center Profile"), icon: Building2, desc: t("Manage your business details") },
+    { id: "launch", label: t("Go-Live"), icon: Rocket, desc: t("Verify first customer launch readiness") },
     { id: "backup", label: t("Data Export"), icon: Database, desc: t("Export operational data safely") },
     { id: "branding", label: t("Branding"), icon: Palette, desc: t("Manage salon visual identity") },
     { id: "notifications", label: t("Notifications"), icon: Bell, desc: t("Appointment reminders and messages") },
@@ -338,6 +340,12 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 </div>
+              ) : null}
+
+              {tab === "launch" ? (
+                <Suspense fallback={<PageLoader />}>
+                  <LaunchReadinessSection />
+                </Suspense>
               ) : null}
 
               {tab === "branding" ? (
