@@ -57,6 +57,17 @@ describe("canonical Supabase migration chain", () => {
     expect(repair).toContain("GRANT EXECUTE ON FUNCTION public.process_checkout_v1(");
   });
 
+  it("keeps the checkout idempotency ledger server-owned and the client on the guarded RPC", () => {
+    const idempotency = readMigration("20260816000002_checkout_idempotency.sql");
+
+    expect(idempotency).toContain("ALTER TABLE public.checkout_idempotency ENABLE ROW LEVEL SECURITY");
+    expect(idempotency).toContain("REVOKE ALL ON public.checkout_idempotency FROM PUBLIC, anon, authenticated");
+    expect(idempotency).toContain("NOT app_private.is_center_member(p_center_id)");
+    expect(idempotency).toContain("SET search_path = pg_catalog, public, app_private");
+    expect(idempotency).toContain("REVOKE ALL ON FUNCTION public.process_checkout_v1(");
+    expect(idempotency).toContain("GRANT EXECUTE ON FUNCTION public.process_checkout_idempotent_v1(");
+  });
+
   it("keeps every canonical migration file present and lexically ordered", () => {
     const canonical = [
       "20260623000001_initial_schema.sql",
