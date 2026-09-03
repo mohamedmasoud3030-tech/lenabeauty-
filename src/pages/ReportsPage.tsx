@@ -60,7 +60,7 @@ export default function ReportsPage() {
       setData(result);
     } catch (loadError: any) {
       if (seq !== requestSeq.current) return;
-      setError(loadError.code === "BACKEND_METHOD_UNSUPPORTED" ? "BACKEND_METHOD_UNSUPPORTED" : loadError.message || t("Failed to load data"));
+      setError(loadError.code === "BACKEND_METHOD_UNSUPPORTED" ? "BACKEND_METHOD_UNSUPPORTED" : loadError.message || String(t("Failed to load data")));
       setData([]);
     } finally {
       if (seq === requestSeq.current) setLoading(false);
@@ -119,20 +119,20 @@ export default function ReportsPage() {
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-3xl border border-border bg-card/50 shadow-xl"><ScreenState state="loading" title={t("Loading analytics...")} description={t("Please wait a moment")} /></motion.div>
         ) : tab === "sales" ? (
           <motion.div key="sales" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <SalesReportSection data={data as SalesReportRow[]} error={error} entitlementSummary={entitlementSummary} onRetry={() => void load()} onNewInvoice={() => navigate("/pos")} onSelectSale={setSelectedSale} t={(key, values) => t(key, values as any)} formatDay={formatDay} />
+            <SalesReportSection data={data as SalesReportRow[]} error={error} entitlementSummary={entitlementSummary} onRetry={() => void load()} onNewInvoice={() => navigate("/pos")} onSelectSale={setSelectedSale} t={(key, values) => String(t(key, values as any))} formatDay={formatDay} />
           </motion.div>
         ) : tab === "appointments" ? (
           <motion.div key="appointments" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <AppointmentsReportSection data={data as AppointmentReportRow[]} error={error} onRetry={() => void load()} onBookAppointment={() => navigate("/appointments")} t={(key) => t(key)} />
+            <AppointmentsReportSection data={data as AppointmentReportRow[]} error={error} onRetry={() => void load()} onBookAppointment={() => navigate("/appointments")} t={(key) => String(t(key))} />
           </motion.div>
         ) : (
           <motion.div key="inventory" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <InventoryReportSection data={data as InventoryReportRow[]} error={error} onRetry={() => void load()} onOpenInventory={() => navigate("/inventory")} t={(key, values) => t(key, values as any)} />
+            <InventoryReportSection data={data as InventoryReportRow[]} error={error} onRetry={() => void load()} onOpenInventory={() => navigate("/inventory")} t={(key, values) => String(t(key, values as any))} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      <SalesTransactionDialog sale={selectedSale} onClose={() => setSelectedSale(null)} t={(key) => t(key)} formatDay={formatDay} />
+      <SalesTransactionDialog sale={selectedSale} onClose={() => setSelectedSale(null)} t={(key) => String(t(key))} formatDay={formatDay} />
     </motion.div>
   );
 }
