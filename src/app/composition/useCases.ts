@@ -60,7 +60,6 @@ export const useCases = {
     getById: async (id: string) => getRepositoryBundle().customerAdapter.getById(id),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
-    rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),
     getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
     delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
   },
