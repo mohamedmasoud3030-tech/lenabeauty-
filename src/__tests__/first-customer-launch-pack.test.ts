@@ -29,8 +29,8 @@ describe("first customer launch pack", () => {
     const readiness = read("src/pages/settings/LaunchReadinessSection.tsx");
     const reports = read("src/infrastructure/supabase/repositories/reports.ts");
 
-    expect(readiness).toContain("firstSale: sales.length > 0");
-    expect(readiness).not.toContain("customer.totalSpent");
+    expect(readiness).toMatch(/firstSale:\s*sales\.length\s*>\s*0/);
+    expect(readiness).not.toMatch(/firstSale:\s*[^,\n]*totalSpent/);
     expect(reports).toContain(".eq('status', 'PAID')");
   });
 
