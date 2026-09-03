@@ -150,7 +150,7 @@ jobs:
       - name: Enforce first-customer Production preflight
         run: npm run launch:preflight
 
-      - name: Enforce hosted password-change reauthentication
+      - name: Enforce hosted Production Auth policy
         shell: bash
         run: |
           set -euo pipefail
@@ -159,12 +159,14 @@ jobs:
             -X PATCH "$auth_config_url" \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
-            --data '{"security_update_password_require_reauthentication":true}' \
+            --data '{"disable_signup":true,"password_min_length":8,"security_update_password_require_reauthentication":true}' \
             >/tmp/lena-production-auth-config-patch.json
           curl --fail-with-body --silent --show-error \
             "$auth_config_url" \
             -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
             >/tmp/lena-production-auth-config.json
+          jq -e '.disable_signup == true' /tmp/lena-production-auth-config.json >/dev/null
+          jq -e '.password_min_length >= 8' /tmp/lena-production-auth-config.json >/dev/null
           jq -e '.security_update_password_require_reauthentication == true' \
             /tmp/lena-production-auth-config.json >/dev/null
           if jq -e '.password_hibp_enabled == true' /tmp/lena-production-auth-config.json >/dev/null; then
@@ -172,6 +174,8 @@ jobs:
           else
             echo "::warning::Hosted leaked-password protection is not enabled. Enable it when the selected Supabase plan supports it."
           fi
+          echo "PASS hosted public self-signup is disabled."
+          echo "PASS hosted minimum password length is at least 8."
           echo "PASS hosted password-change reauthentication is enabled."
 
       - uses: supabase/setup-cli@v1
@@ -243,7 +247,7 @@ jobs:
             sudo apt-get install -y postgresql-client
           fi
 
-      - name: Provision the explicitly configured Production center shell
+      - name: Provision the canonical Production center shell
         shell: bash
         env:
           PGPASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
