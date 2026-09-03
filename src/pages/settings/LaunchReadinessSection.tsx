@@ -9,6 +9,8 @@ import { useAuth } from "../../auth";
 
 const ONBOARDING_FROM_ISO = "2000-01-01T00:00:00.000Z";
 const ONBOARDING_TO_ISO = "2100-01-01T00:00:00.000Z";
+const LAUNCH_SALES_FROM_DATE = "2000-01-01";
+const LAUNCH_SALES_TO_DATE = "2100-01-01";
 
 type Readiness = {
   profile: boolean;
@@ -50,13 +52,14 @@ export default function LaunchReadinessSection() {
     setLoading(true);
     setError(false);
     try {
-      const [settings, services, employees, products, customers, appointments] = await Promise.all([
+      const [settings, services, employees, products, customers, appointments, sales] = await Promise.all([
         unwrap(useCases.settings.get()),
         unwrap(useCases.services.list()),
         unwrap(useCases.employees.list()),
         unwrap(useCases.products.listFull()),
         unwrap(useCases.customers.list()),
         unwrap(useCases.appointments.list({ fromISO: ONBOARDING_FROM_ISO, toISO: ONBOARDING_TO_ISO })),
+        unwrap(useCases.reports.getSales(LAUNCH_SALES_FROM_DATE, LAUNCH_SALES_TO_DATE)),
       ]);
       setState({
         profile: Boolean(settings.name.trim() && settings.phone?.trim() && settings.address?.trim()),
@@ -66,7 +69,11 @@ export default function LaunchReadinessSection() {
         inventory: products.length > 0,
         customers: customers.length > 0,
         appointments: appointments.length > 0,
-        firstSale: customers.some((customer) => Number(customer.totalSpent) > 0),
+        // The report adapter is tenant-scoped and explicitly filters invoices
+        // to status=PAID. Do not infer this launch milestone from an imported
+        // customer.totalSpent snapshot: certification needs canonical ledger
+        // evidence that a checkout actually committed.
+        firstSale: sales.length > 0,
       });
     } catch (cause) {
       console.error("Launch readiness load failed", cause);
