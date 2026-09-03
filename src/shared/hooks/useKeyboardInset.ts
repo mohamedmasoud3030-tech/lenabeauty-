@@ -25,7 +25,7 @@ export function applyKeyboardInset(inset: number) {
 export function clearKeyboardInset() {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.style.removeProperty("--keyboard-inset");
+  root.style.setProperty("--keyboard-inset", "0px");
   root.classList.remove("keyboard-open");
 }
 
