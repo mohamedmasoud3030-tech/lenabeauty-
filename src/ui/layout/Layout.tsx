@@ -5,7 +5,6 @@ import { Globe, LayoutGrid, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
-import { clsx } from "clsx";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
 import { EnvironmentBadge } from "../../shared/components/EnvironmentBadge";
 import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
@@ -15,17 +14,18 @@ import { useKeyboardInset, useScrollFieldIntoView } from "../../shared/hooks/use
 import { destinationLabelKey } from "../../app/navigation";
 import { persistLanguage, persistTheme } from "../../preferences";
 import { MobileActionDock } from "./MobileActionDock";
+import { MobileNavigationSheet } from "./MobileNavigationSheet";
 
 export default function Layout() {
   const nav = useNavigate();
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isDark, setIsDark] = useState(() =>
     typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
   );
-  const sidebarButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
@@ -54,24 +54,19 @@ export default function Layout() {
   }, [showUserMenu]);
 
   useEffect(() => {
-    if (!showSidebar) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!showMobileMenu) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
-      setShowSidebar(false);
-      window.setTimeout(() => sidebarButtonRef.current?.focus(), 0);
+      setShowMobileMenu(false);
+      window.setTimeout(() => mobileMenuButtonRef.current?.focus(), 0);
     };
     window.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [showSidebar]);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [showMobileMenu]);
 
   useEffect(() => {
-    if (isKeyboardOpen) setShowSidebar(false);
+    if (isKeyboardOpen) setShowMobileMenu(false);
   }, [isKeyboardOpen]);
 
   useEffect(() => {
@@ -81,7 +76,7 @@ export default function Layout() {
   }, [i18n.language]);
 
   useEffect(() => {
-    setShowSidebar(false);
+    setShowMobileMenu(false);
   }, [location.pathname]);
 
   const pageTitle = useMemo(() => {
@@ -118,29 +113,10 @@ export default function Layout() {
       <a className="skip-link print:hidden" href="#main-content">
         {t("Skip to main content")}
       </a>
-      <div className="relative lg:grid lg:min-h-screen lg:grid-cols-[320px_1fr]">
-        <AnimatePresence>
-          {showSidebar && (
-            <motion.button
-              type="button"
-              aria-label={t("Close")}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[var(--z-bottom-nav)] bg-black/55 backdrop-blur-sm lg:hidden"
-              onClick={() => setShowSidebar(false)}
-            />
-          )}
-        </AnimatePresence>
 
-        <div
-          id="app-sidebar"
-          className={clsx(
-            "fixed inset-x-0 bottom-0 z-[var(--z-sidebar)] h-[82dvh] w-full transform overflow-hidden rounded-t-[28px] shadow-2xl transition-transform duration-300 ease-[0.23,1,0.32,1] lg:static lg:h-screen lg:w-auto lg:translate-y-0 lg:rounded-none lg:shadow-none print:hidden",
-            showSidebar ? "translate-y-0" : "translate-y-full lg:translate-y-0",
-          )}
-        >
-          <Sidebar onClose={() => setShowSidebar(false)} />
+      <div className="relative lg:grid lg:min-h-screen lg:grid-cols-[320px_1fr]">
+        <div id="app-sidebar" className="hidden h-screen print:hidden lg:block">
+          <Sidebar />
         </div>
 
         <div className="relative flex min-w-0 flex-col">
@@ -269,12 +245,14 @@ export default function Layout() {
         </div>
       </div>
 
+      <MobileNavigationSheet open={showMobileMenu} onClose={() => setShowMobileMenu(false)} />
+
       <MobileActionDock
         userRole={me?.role}
         isKeyboardOpen={isKeyboardOpen}
-        menuOpen={showSidebar}
-        menuButtonRef={sidebarButtonRef}
-        onOpenMenu={() => setShowSidebar(true)}
+        menuOpen={showMobileMenu}
+        menuButtonRef={mobileMenuButtonRef}
+        onOpenMenu={() => setShowMobileMenu(true)}
         onNewAppointment={openNewAppointment}
       />
     </div>
