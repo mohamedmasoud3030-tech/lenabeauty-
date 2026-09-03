@@ -1,6 +1,13 @@
 DO $$
 DECLARE
   v_demo_center CONSTANT uuid := '7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d';
+  v_target_serials CONSTANT text[] := ARRAY[
+    'INV-20260809-D1FE39A6',
+    'INV-20260809-2C9EF4CA',
+    'INV-20260809-406EB21F',
+    'INV-20260809-D479A500',
+    'INV-20260809-9E7AB927'
+  ]::text[];
   v_remaining integer;
   v_eligible integer;
   v_distinct_customers integer;
@@ -10,13 +17,7 @@ BEGIN
   SELECT count(*) INTO v_remaining
   FROM public.invoices i
   WHERE i.center_id = v_demo_center
-    AND i.serial_number = ANY (ARRAY[
-      'INV-20260809-D1FE39A6',
-      'INV-20260809-2C9EF4CA',
-      'INV-20260809-406EB21F',
-      'INV-20260809-D479A500',
-      'INV-20260809-9E7AB927'
-    ]::text[]);
+    AND i.serial_number = ANY (v_target_serials);
 
   IF v_remaining = 0 THEN
     RAISE NOTICE 'LENA Demo financial residue already repaired; no-op.';
@@ -31,15 +32,9 @@ BEGIN
   INTO v_eligible, v_distinct_customers
   FROM public.invoices i
   WHERE i.center_id = v_demo_center
-    AND i.serial_number = ANY (ARRAY[
-      'INV-20260809-D1FE39A6',
-      'INV-20260809-2C9EF4CA',
-      'INV-20260809-406EB21F',
-      'INV-20260809-D479A500',
-      'INV-20260809-9E7AB927'
-    ]::text[])
+    AND i.serial_number = ANY (v_target_serials)
     AND i.created_at >= timestamptz '2026-08-09 00:00:00+00'
-    AND i.created_at <  timestamptz '2026-08-10 00:00:00+00'
+    AND i.created_at < timestamptz '2026-08-10 00:00:00+00'
     AND i.status = 'PAID'
     AND i.total_amount = 10.000
     AND i.amount_paid = 0.000
@@ -86,13 +81,7 @@ BEGIN
       SELECT DISTINCT i.customer_id
       FROM public.invoices i
       WHERE i.center_id = v_demo_center
-        AND i.serial_number = ANY (ARRAY[
-          'INV-20260809-D1FE39A6',
-          'INV-20260809-2C9EF4CA',
-          'INV-20260809-406EB21F',
-          'INV-20260809-D479A500',
-          'INV-20260809-9E7AB927'
-        ]::text[])
+        AND i.serial_number = ANY (v_target_serials)
     );
   GET DIAGNOSTICS v_updated = ROW_COUNT;
 
@@ -102,13 +91,7 @@ BEGIN
 
   DELETE FROM public.invoices i
   WHERE i.center_id = v_demo_center
-    AND i.serial_number = ANY (ARRAY[
-      'INV-20260809-D1FE39A6',
-      'INV-20260809-2C9EF4CA',
-      'INV-20260809-406EB21F',
-      'INV-20260809-D479A500',
-      'INV-20260809-9E7AB927'
-    ]::text[]);
+    AND i.serial_number = ANY (v_target_serials);
   GET DIAGNOSTICS v_deleted = ROW_COUNT;
 
   IF v_deleted <> 5 THEN
