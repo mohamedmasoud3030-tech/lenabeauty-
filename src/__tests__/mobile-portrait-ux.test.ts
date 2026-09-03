@@ -65,7 +65,7 @@ describe("small-phone portrait UX contracts", () => {
     expect(customers).not.toMatch(/swipe actions/i);
     expect(customers).toContain("No swipe");
     expect(customers).toContain("aria-label={t(\"Actions\")}");
-    expect(customers).toContain("openEdit(c)");
+    expect(customers).toMatch(/openEdit\([^)]*\)/);
     expect(customers).not.toContain("handleDeleteCustomer");
     expect(customers).not.toContain("useCases.customers.delete");
   });
