@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { deriveDefaultEnvironment, EnvironmentConfigurationError, isLenaDemoSupabaseUrl, parseEnv } from "../config/env";
+import { deriveDefaultEnvironment, EnvironmentConfigurationError, isLenaDemoSupabaseUrl, isPrivilegedSupabaseBrowserKey, parseEnv } from "../config/env";
+
+function legacyJwt(role: string): string {
+    const payload = btoa(JSON.stringify({ role }))
+        .replaceAll("+", "-")
+        .replaceAll("/", "_")
+        .replaceAll("=", "");
+    return `header.${payload}.signature`;
+}
 
 describe("Environment Configuration Tests", () => {
     it("Preview mode is rejected", () => {
@@ -102,6 +110,23 @@ describe("Environment Configuration Tests", () => {
             VITE_BRANCH_MODE: "single",
             VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
         })).toThrowError("PRODUCTION_DEMO_PROJECT_FORBIDDEN");
+    });
+
+    it("rejects modern and legacy privileged Supabase keys from browser configuration", () => {
+        expect(isPrivilegedSupabaseBrowserKey("sb_secret_server-only")).toBe(true);
+        expect(isPrivilegedSupabaseBrowserKey(legacyJwt("service_role"))).toBe(true);
+        expect(isPrivilegedSupabaseBrowserKey(legacyJwt("anon"))).toBe(false);
+
+        for (const key of ["sb_secret_server-only", legacyJwt("service_role")]) {
+            expect(() => parseEnv({
+                VITE_ENVIRONMENT: "production",
+                VITE_DATA_BACKEND: "supabase",
+                VITE_SUPABASE_URL: "https://prod.example.supabase.co",
+                VITE_SUPABASE_PUBLISHABLE_KEY: key,
+                VITE_BRANCH_MODE: "single",
+                VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+            })).toThrowError("INVALID_SUPABASE_CONFIGURATION");
+        }
     });
 
     it("fails closed when an optimized explicit Production target omits its project configuration", () => {
