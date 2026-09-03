@@ -67,6 +67,20 @@ describe("repository CI coverage", () => {
     expect(productionWorkflow).not.toContain("VITE_SUPABASE_SERVICE_ROLE_KEY");
   });
 
+  it("enforces the hosted Production Auth policy before database mutation", () => {
+    const authPolicy = productionWorkflow.indexOf("Enforce hosted Production Auth policy");
+    const dbPush = productionWorkflow.indexOf("supabase db push --linked --yes");
+
+    expect(authPolicy).toBeGreaterThan(0);
+    expect(dbPush).toBeGreaterThan(authPolicy);
+    expect(productionWorkflow).toContain('"disable_signup":true');
+    expect(productionWorkflow).toContain('"password_min_length":8');
+    expect(productionWorkflow).toContain('"security_update_password_require_reauthentication":true');
+    expect(productionWorkflow).toContain(".disable_signup == true");
+    expect(productionWorkflow).toContain(".password_min_length >= 8");
+    expect(productionWorkflow).toContain(".security_update_password_require_reauthentication == true");
+  });
+
   it("runs Production preflight and suppresses the manual bootstrap before db push", () => {
     const launchPreflight = productionWorkflow.indexOf("npm run launch:preflight");
     const repair = productionWorkflow.indexOf("supabase migration repair 20260628000002 --status applied");
@@ -80,8 +94,8 @@ describe("repository CI coverage", () => {
     expect(productionWorkflow).toContain("without executing its placeholder Auth UUID SQL");
   });
 
-  it("provisions only the configured center shell and then runs rollback-safe Production acceptance", () => {
-    expect(productionWorkflow).toContain("Provision the explicitly configured Production center shell");
+  it("provisions only the canonical center shell and then runs rollback-safe Production acceptance", () => {
+    expect(productionWorkflow).toContain("Provision the canonical Production center shell");
     expect(productionWorkflow).toContain("INSERT INTO public.centers (id, name)");
     expect(productionWorkflow).toContain("INSERT INTO public.center_settings (center_id, name, currency)");
     expect(productionWorkflow).toContain("for test_file in supabase/tests/*.sql");
