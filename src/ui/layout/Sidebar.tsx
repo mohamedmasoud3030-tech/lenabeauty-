@@ -23,8 +23,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { t, i18n } = useTranslation();
   const [isDark, setIsDark] = useState(true);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  // Same canonical owner the mobile menu uses, so both surfaces agree on which
-  // optional modules exist and the availability read happens once per page load.
   const optionalModules = useOptionalModules();
 
   useEffect(() => {

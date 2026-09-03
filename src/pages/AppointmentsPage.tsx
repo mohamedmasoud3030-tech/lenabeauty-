@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import { AppointmentStatus, VisitStage } from "../domain/entities";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -28,6 +28,7 @@ export default function AppointmentsPage() {
   const { showToast } = useToast();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isRtl = i18n.language === "ar";
   const [mode, setMode] = useState<"day" | "week">(() =>
     typeof window !== "undefined" && window.innerWidth < 1024 ? "day" : "week",
@@ -222,6 +223,14 @@ export default function AppointmentsPage() {
     setChargeNoShowFee(true);
     setNoShowNote("");
   }
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    openBooking();
+    const next = new URLSearchParams(searchParams);
+    next.delete("new");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   function openEditBooking(appt: Appt) {
     setEditApptId(appt.id);
