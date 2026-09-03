@@ -38,6 +38,15 @@ function validateUrl(url: string | undefined): boolean {
   }
 }
 
+export function isLenaDemoSupabaseUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname === new URL(LENA_DEMO_SUPABASE_URL).hostname;
+  } catch {
+    return false;
+  }
+}
+
 function validateUUID(uuid: string | undefined): boolean {
   if (!uuid) return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -143,6 +152,13 @@ export function parseEnv(
           `INVALID_SUPABASE_CONFIGURATION: Missing or invalid ${missing.join(", ")}.${hint}`,
         );
       }
+    }
+
+    // A customer Production deployment must be physically separated from the
+    // public Demo project. Explicit variables do not make the Demo project a
+    // Production database, so reject that target even when every value exists.
+    if (environment === "production" && isLenaDemoSupabaseUrl(url)) {
+      throw new EnvironmentConfigurationError("PRODUCTION_DEMO_PROJECT_FORBIDDEN: provision a separate Supabase project for customer production data");
     }
   }
 
