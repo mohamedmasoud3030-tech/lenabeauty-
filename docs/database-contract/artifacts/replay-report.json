@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 41,
-    "automated": 40,
+    "total": 42,
+    "automated": 41,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -207,6 +207,11 @@
       "file": "20260901102758_recipe_consumption_aggregation_hardening.sql",
       "status": "ok",
       "error": null
+    },
+    {
+      "file": "20260903001710_demo_financial_residue_repair_20260903.sql",
+      "status": "ok",
+      "error": null
     }
   ],
   "idempotency": [
@@ -407,6 +412,11 @@
     },
     {
       "file": "20260901102758_recipe_consumption_aggregation_hardening.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260903001710_demo_financial_residue_repair_20260903.sql",
       "status": "idempotent",
       "error": null
     }
