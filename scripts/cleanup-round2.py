@@ -1,0 +1,232 @@
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    p = Path(path)
+    text = p.read_text()
+    if old not in text:
+        raise SystemExit(f"expected block missing in {path}: {old[:80]!r}")
+    p.write_text(text.replace(old, new, 1))
+
+
+replace_once(
+    "src/domain/entities/index.ts",
+    "  portalAccessToken?: string;\n  portalAccessEnabled?: boolean;\n  portalLastLoginAt?: Date;\n",
+    "",
+)
+
+replace_once(
+    "src/infrastructure/supabase/mappers.ts",
+    "    portalAccessToken: typeof row.portal_access_token === \"string\" ? row.portal_access_token : undefined,\n"
+    "    portalAccessEnabled: typeof row.portal_access_enabled === \"boolean\" ? row.portal_access_enabled : true,\n"
+    "    portalLastLoginAt: parseOptionalDate(row.portal_last_login_at, \"portal_last_login_at\", \"mapCustomer\"),\n",
+    "",
+)
+
+p = Path("scripts/audit/build-matrix.mjs")
+text = p.read_text()
+start = text.index("const dormantRpcCorrectlyDisabled = [];")
+end = text.index("for (const r of frontend.rpc) {", start)
+text = text[:start] + text[end:]
+old = """    if (DORMANT_PUBLIC_RPC.has(r.name)) {
+      if (hasClientGrant || unexpectedPublic) dormantRpcUnexpectedlyGranted.push(r.name);
+      else dormantRpcCorrectlyDisabled.push(r.name);
+    } else if (!hasClientGrant) {
+      rpcNoClientGrant.push(r.name);
+    }
+"""
+if old not in text:
+    raise SystemExit("dormant RPC conditional block missing")
+text = text.replace(old, "    if (!hasClientGrant) rpcNoClientGrant.push(r.name);\n", 1)
+start = text.index("if (dormantRpcUnexpectedlyGranted.length) {")
+end = text.index("if (rpcPublicGrant.length) {", start)
+text = text[:start] + text[end:]
+text = text.replace(
+    'evidence: `${rpcNoClientGrant.join(", ")} have EXECUTE only for the owner (postgres); no anon/authenticated grant. The security-grant-repair migration deliberately left the public booking/portal RPCs un-granted; the frontend still references them.`,',
+    'evidence: `${rpcNoClientGrant.join(", ")} have no anon/authenticated EXECUTE grant.`,',
+)
+text = text.replace(
+    '"For each: grant EXECUTE to the intended client role (if the feature should be live) OR mark the frontend call as not-yet-enabled and remove it from the live surface.",',
+    '"Grant EXECUTE to the intended client role, or remove the frontend call if the capability is not part of the live application.",',
+)
+text = text.replace(
+    '"Several RPCs return jsonb or record (e.g. process_checkout_v1, public_*_v1) and the frontend reads specific fields; generated types cannot fully guarantee these shapes.",',
+    '"Several frontend-used RPCs return jsonb or record (for example process_checkout_v1); generated SQL types cannot fully guarantee application-level result shapes.",',
+)
+if any(token in text for token in ("DORMANT_PUBLIC_RPC", "dormantRpcCorrectlyDisabled", "dormantRpcUnexpectedlyGranted")):
+    raise SystemExit("dormant public RPC audit residue still present")
+p.write_text(text)
+
+for path in ("src/i18n/en/customers.ts", "src/i18n/ar/customers.ts"):
+    p = Path(path)
+    lines = p.read_text().splitlines(True)
+    lines = [
+        line
+        for line in lines
+        if '"Client Portal":' not in line
+        and '"Could not load client portal profile":' not in line
+    ]
+    p.write_text("".join(lines))
+
+p = Path(".gitignore")
+text = p.read_text()
+if ".vercel/" not in text.splitlines():
+    text = text.rstrip() + "\n.vercel/\n"
+p.write_text(text)
+
+for path in (
+    ".vercel-deploy-trigger",
+    ".vercel/project.json",
+    "src/__tests__/client-portal.test.ts",
+):
+    p = Path(path)
+    if not p.exists():
+        raise SystemExit(f"expected dead file missing: {path}")
+    p.unlink()
+
+Path("docs/database-contract/02_CONTRACT_MATRIX.md").write_text("""# 02 — Contract Matrix
+
+This document summarizes the generated database contract artifacts for the current frontend.
+Machine-readable sources remain `artifacts/contract-matrix.json` and
+`artifacts/frontend-usage.json`; `npm run audit:gate` is authoritative.
+
+## Current frontend database surface
+
+| Surface | Current count |
+| --- | ---: |
+| Tables referenced through Supabase | 29 |
+| RPCs invoked by the frontend | 23 |
+| Storage buckets | 1 (`center-assets`) |
+
+All frontend-referenced tables and RPCs resolve against the replayed canonical schema.
+Nested PostgREST embeds are validated against real foreign keys, including depth-2 embeds.
+
+The old public booking/client-portal TypeScript adapters are no longer part of the live
+frontend contract. Their historical SQL migrations/functions remain in the canonical schema
+for migration history and rollback/security continuity, but they are not counted as frontend
+RPC dependencies.
+
+## RLS and authorization
+
+Every frontend-used business table has RLS enabled in the canonical schema. Sensitive
+payroll surfaces (`attendance_records`, `employee_advances`, `payroll_runs`, and
+`payroll_line_items`) are governed by center role and ADMIN-only mutation policies. The
+current generated audit has no blocking RLS-role-governance finding.
+
+## RPC contract
+
+The 23 frontend-referenced RPCs are checked for canonical existence and argument names,
+client-role EXECUTE grants, absence of unexpected PUBLIC execution, and pinned `search_path`
+on `SECURITY DEFINER` functions.
+
+Historical public booking/portal functions remain schema inventory, not frontend usage,
+because no current TypeScript adapter calls them.
+
+## Storage contract
+
+`center-assets` is the only frontend-referenced bucket. Its canonical bucket declaration and
+storage policies remain covered by the SQL contract audit.
+
+## Data-layer typing
+
+`src/infrastructure/supabase/database.types.ts` is committed and
+`src/infrastructure/supabase/client.ts` uses `SupabaseClient<Database>`. Drift is checked by
+`npm run db:types:check`.
+
+## Scanner limitations
+
+The current generated findings contain no high, medium, or low severity contract defects.
+The remaining informational/manual-review classes are:
+
+1. dynamic/non-Supabase `.from()` expressions that require scanner review;
+2. a dynamic `.select()` expression in the gifting repository;
+3. the PGlite replay surrogate for the PostgreSQL `btree_gist` exclusion constraint;
+4. application-level runtime shapes for RPCs returning `jsonb`/`record`.
+
+These limitations do not relax `npm run audit:gate`; committed generated artifacts must stay
+semantically fresh and repeat replay must remain deterministic.
+""")
+
+Path("docs/database-contract/03_VERIFIED_DRIFT_REGISTER.md").write_text("""# 03 — Verified Drift Register
+
+Machine-readable source: [`artifacts/audit-findings.json`](./artifacts/audit-findings.json),
+regenerated by the audit scripts and enforced by `npm run audit:gate`.
+
+## Current result — 2026-09-03
+
+- Migration replay failures: **0**
+- Migration idempotency failures: **0**
+- Repeat-replay fingerprint drift: **none**
+- Blocking contract findings: **0**
+- High / medium / low findings: **0 / 0 / 0**
+- Informational findings: **4**
+
+## Closed findings
+
+- Payroll/attendance/advance tables are center-role governed and ADMIN-only for sensitive mutations.
+- Public booking/client-portal frontend adapters and portal-token UI contracts were removed from the live TypeScript surface; historical SQL remains deny-by-default and preserved as migration history.
+- Previously non-idempotent policy migrations replay deterministically.
+- Tenant-scoped foreign keys and PostgREST relationships resolve without ambiguous duplicate relationships.
+- Internal trigger-only routines have no client EXECUTE grant.
+- A canonical generated `Database` type is committed and threaded through `SupabaseClient<Database>`.
+
+## Informational findings
+
+1. Dynamic/non-Supabase `.from()` expressions require manual scanner review.
+2. A dynamic `.select()` expression in the gifting repository requires manual scanner review.
+3. PGlite cannot execute the canonical `btree_gist` exclusion constraint; replay uses a documented surrogate while PostgreSQL/Supabase installs the real constraint.
+4. RPCs returning `jsonb`/`record` still require application-level runtime shape validation.
+
+The executable release gate is `npm run audit:gate`.
+""")
+
+Path("docs/database-contract/04_ROOT_CAUSE_REMEDIATION_PLAN.md").write_text("""# 04 — Root-Cause Remediation Status
+
+The blocking findings from the database-contract audit are remediated. This file records the
+current ownership model rather than historical implementation debt.
+
+| Area | Current resolution | Verification |
+| --- | --- | --- |
+| Migration idempotency / fingerprint drift | Repeat replay is deterministic | `npm run audit:replay` / `npm run audit:gate` |
+| Payroll role governance | Sensitive workforce/payroll writes are server-governed and ADMIN-only | canonical replay + migration tests |
+| Public booking / client portal | Removed from the live frontend TypeScript contract; historical DB functions remain deny-by-default | frontend scan + migration/grant tests |
+| Tenant reference integrity | Center-scoped foreign keys are canonical and PostgREST relationships resolve | contract matrix |
+| Internal function grants | Trigger-only/internal routines are not client executable | contract matrix + migration tests |
+| Database TypeScript contract | Generated `Database` types are committed and the Supabase client is typed | `npm run db:types:check` + typecheck |
+| CI wiring | Contract, migration/RPC, tests, typecheck, lint, build and audit checks run in GitHub Actions | `.github/workflows/demo-supabase-migrations.yml` |
+
+## Live deployment acceptance
+
+Repository verification and live deployment verification are separate. Production acceptance
+still requires the hosted Supabase project to have the canonical migrations applied and the
+committed live QA/security checks to pass. Repository cleanup must not rewrite migration
+history to remove dormant database objects.
+""")
+
+Path("docs/database-contract/CI_WIRING.md").write_text("""# CI Wiring for the Database Contract
+
+The database contract is wired into the repository's GitHub Actions gate.
+
+The static application/database job runs the canonical checks before any live Demo migration
+step is allowed to proceed. The enforced command set includes:
+
+- `npm run audit:gate`
+- `npm run db:types:check`
+- `npm run ci:migrations`
+- `npm run ci:rpc-check`
+- `npm test`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- dependency audit and `git diff --check`
+
+The live Demo migration/security job is conditional on the required deployment credentials.
+If those secrets are unavailable, that live job is skipped; the static repository gates still
+run and must pass.
+
+Canonical workflow: `.github/workflows/demo-supabase-migrations.yml`.
+""")
+
+# Remove the one-shot execution machinery from the resulting commit.
+Path(".github/workflows/cleanup-round2.yml").unlink(missing_ok=True)
+Path("scripts/cleanup-round2.py").unlink(missing_ok=True)
