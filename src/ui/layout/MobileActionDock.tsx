@@ -13,6 +13,9 @@ interface MobileActionDockProps {
   onNewAppointment: () => void;
 }
 
+const actionClass =
+  "grid h-11 w-11 min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border-0 bg-transparent text-foreground outline-none transition-colors duration-150 hover:bg-muted active:bg-muted/80 focus-visible:ring-2 focus-visible:ring-primary/20";
+
 export function MobileActionDock({
   userRole,
   isKeyboardOpen,
@@ -24,41 +27,44 @@ export function MobileActionDock({
   const { t } = useTranslation();
 
   return (
-    <nav
-      aria-label={t("Primary navigation")}
+    <div
       aria-hidden={isKeyboardOpen}
       className={clsx(
-        "fixed bottom-[calc(0.55rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[var(--z-bottom-nav)] flex h-14 w-[min(13rem,calc(100vw-2rem))] -translate-x-1/2 items-center justify-between rounded-full border border-border bg-card/95 px-2 shadow-2xl backdrop-blur-3xl transition-all duration-200 lg:hidden print:hidden",
-        isKeyboardOpen && "translate-y-[calc(100%+2rem)] pointer-events-none opacity-0",
+        "pointer-events-none fixed inset-x-0 bottom-0 z-[var(--z-bottom-nav)] flex justify-center px-3 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] transition-[transform,opacity] duration-200 lg:hidden print:hidden",
+        isKeyboardOpen ? "translate-y-[calc(100%+2rem)] opacity-0" : "translate-y-0 opacity-100",
       )}
     >
-      <button
-        ref={menuButtonRef}
-        type="button"
-        onClick={onOpenMenu}
-        aria-label={t("Open menu")}
-        aria-expanded={menuOpen}
-        aria-controls="app-sidebar"
-        className={clsx(
-          "flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition active:scale-95",
-          menuOpen ? "bg-primary/15 text-primary" : "hover:bg-muted hover:text-foreground",
-        )}
+      <nav
+        aria-label={t("Primary navigation")}
+        className="pointer-events-auto relative flex w-auto items-center gap-1 rounded-full border border-border bg-card/95 px-1.5 py-1 shadow-sm backdrop-blur-3xl"
       >
-        <Menu aria-hidden="true" className="h-5 w-5" />
-      </button>
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={onOpenMenu}
+          aria-label={t("Open menu")}
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-navigation-sheet"
+          className={clsx(actionClass, menuOpen && "bg-primary/10 text-primary")}
+        >
+          <Menu aria-hidden="true" className="h-[21px] w-[21px]" />
+        </button>
 
-      <div className="[&>button]:h-11 [&>button]:w-11 [&>button]:rounded-full [&>button]:border-0 [&>button]:bg-transparent [&>button]:shadow-none [&>button]:hover:bg-muted">
-        <GlobalSearch userRole={userRole} />
-      </div>
+        <div className="[&>button]:h-11 [&>button]:w-11 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:rounded-xl [&>button]:border-0 [&>button]:bg-transparent [&>button]:p-0 [&>button]:shadow-none [&>button]:hover:bg-muted">
+          <GlobalSearch userRole={userRole} />
+        </div>
 
-      <button
-        type="button"
-        onClick={onNewAppointment}
-        aria-label={t("New Appointment")}
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition hover:scale-105 active:scale-95"
-      >
-        <Plus aria-hidden="true" className="h-5 w-5" />
-      </button>
-    </nav>
+        <button
+          type="button"
+          onClick={onNewAppointment}
+          aria-label={t("New Appointment")}
+          title={t("New Appointment")}
+          className={clsx(actionClass, "text-primary hover:text-primary")}
+        >
+          <Plus aria-hidden="true" className="h-6 w-6" />
+        </button>
+      </nav>
+    </div>
   );
 }
