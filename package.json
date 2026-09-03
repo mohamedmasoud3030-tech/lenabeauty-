@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
+    "launch:preflight": "node scripts/launch/production-preflight.mjs",
     "ci:rpc-check": "node scripts/check-rpc-contracts.mjs",
     "ci:migrations": "node scripts/check-migration-chain.mjs",
     "db:types": "node scripts/generate-database-types.mjs",
