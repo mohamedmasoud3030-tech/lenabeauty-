@@ -1,5 +1,6 @@
 const DEMO_SUPABASE_PROJECT_REF = "tuzzvqsnbtzvkffmazyf";
 const DEMO_SUPABASE_HOST = `${DEMO_SUPABASE_PROJECT_REF}.supabase.co`;
+const CANONICAL_SINGLE_CENTER_ID = "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d";
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PROJECT_REF_RE = /^[a-z0-9]{20}$/;
@@ -43,7 +44,7 @@ export function validateProductionEnvironment(env) {
   const branchMode = read(env.VITE_BRANCH_MODE).toLowerCase();
   const supabaseUrl = read(env.VITE_SUPABASE_URL);
   const publishableKey = read(env.VITE_SUPABASE_PUBLISHABLE_KEY);
-  const centerId = read(env.VITE_CENTER_ID);
+  const centerId = read(env.VITE_CENTER_ID).toLowerCase();
   const productionProjectRef = read(env.PRODUCTION_SUPABASE_PROJECT_REF).toLowerCase();
   const demoOptIn = read(env.VITE_USE_DEMO_CREDENTIALS).toLowerCase();
 
@@ -83,6 +84,8 @@ export function validateProductionEnvironment(env) {
 
   if (!UUID_RE.test(centerId) || centerId === NIL_UUID) {
     errors.push("VITE_CENTER_ID must be a real non-placeholder UUID");
+  } else if (centerId !== CANONICAL_SINGLE_CENTER_ID) {
+    errors.push("VITE_CENTER_ID must equal the canonical first-customer center UUID seeded by the migration chain");
   }
 
   if (demoOptIn === "true") {
