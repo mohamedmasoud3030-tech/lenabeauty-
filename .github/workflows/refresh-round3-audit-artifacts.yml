@@ -1,14 +1,14 @@
 name: Refresh Round 3 audit artifacts
 
 on:
-  push:
-    branches:
-      - ops/round3-closeout
+  pull_request:
+    branches: [main]
 
 permissions: {}
 
 jobs:
   refresh:
+    if: github.head_ref == 'ops/round3-closeout'
     runs-on: ubuntu-latest
     permissions:
       contents: write
