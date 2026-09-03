@@ -11,6 +11,15 @@ on:
         description: "Type the exact Production center UUID to authorize this release"
         required: true
         type: string
+      salon_name:
+        description: "Production salon name used only to provision an empty/default center shell"
+        required: true
+        type: string
+      recovery_confirmed:
+        description: "Confirm a current recovery point/procedure exists before changing Production schema"
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: lena-production-supabase-release
@@ -22,7 +31,6 @@ permissions:
 jobs:
   static-validation:
     name: Production static application and database gates
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -30,6 +38,15 @@ jobs:
       VITE_BRANCH_MODE: single
 
     steps:
+      - name: Refuse Production dispatch from anything except main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Refusing Production release: dispatch must target main." >&2
+            exit 1
+          fi
+
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
@@ -56,7 +73,6 @@ jobs:
   production-release:
     name: Explicit Production migration and security gates
     needs: static-validation
-    if: github.ref == 'refs/heads/main'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -90,6 +106,8 @@ jobs:
         env:
           CONFIRMED_PROJECT_REF: ${{ inputs.project_ref }}
           CONFIRMED_CENTER_ID: ${{ inputs.center_id }}
+          CONFIRMED_SALON_NAME: ${{ inputs.salon_name }}
+          RECOVERY_CONFIRMED: ${{ inputs.recovery_confirmed }}
         run: |
           set -euo pipefail
           required=(
@@ -118,6 +136,14 @@ jobs:
           fi
           if [ "$CONFIRMED_CENTER_ID" != "$VITE_CENTER_ID" ]; then
             echo "Refusing Production release: typed center UUID does not match the configured Production center." >&2
+            exit 1
+          fi
+          if [ -z "$CONFIRMED_SALON_NAME" ]; then
+            echo "Refusing Production release: salon name confirmation is empty." >&2
+            exit 1
+          fi
+          if [ "$RECOVERY_CONFIRMED" != "true" ]; then
+            echo "Refusing Production release: recovery point/procedure was not explicitly confirmed." >&2
             exit 1
           fi
 
@@ -158,6 +184,27 @@ jobs:
       - name: Show Production migration state before apply
         run: supabase migration list --linked
 
+      - name: Mark manual admin bootstrap as handled out-of-band
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(supabase migration list --linked)"
+          if printf '%s\n' "$history" | awk -F '│' '
+            NF >= 2 {
+              local_version=$1
+              remote_version=$2
+              gsub(/[[:space:]]/, "", local_version)
+              gsub(/[[:space:]]/, "", remote_version)
+              if (local_version == "20260628000002" && remote_version == "20260628000002") found=1
+            }
+            END { exit(found ? 0 : 1) }
+          '; then
+            echo "Manual admin bootstrap is already recorded in Production migration history."
+          else
+            echo "Recording manual admin bootstrap as applied without executing its placeholder Auth UUID SQL."
+            supabase migration repair 20260628000002 --status applied
+          fi
+
       - name: Apply pending canonical migrations
         run: supabase db push --linked --yes
 
@@ -187,10 +234,7 @@ jobs:
           fi
           echo "PASS local and Production migration histories are aligned."
 
-      - name: Verify live Production schema and configured center
-        run: npm run preflight:supabase
-
-      - name: Install PostgreSQL client for rollback-safe acceptance
+      - name: Install PostgreSQL client for provisioning and rollback-safe acceptance
         shell: bash
         run: |
           set -euo pipefail
@@ -198,6 +242,35 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y postgresql-client
           fi
+
+      - name: Provision the explicitly configured Production center shell
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
+          CONFIRMED_SALON_NAME: ${{ inputs.salon_name }}
+        run: |
+          set -euo pipefail
+          connection="host=db.${SUPABASE_PROJECT_REF}.supabase.co port=5432 dbname=postgres user=postgres sslmode=require"
+          psql "$connection" -X -v ON_ERROR_STOP=1 \
+            -v center_id="$VITE_CENTER_ID" \
+            -v salon_name="$CONFIRMED_SALON_NAME" <<'SQL'
+          BEGIN;
+          INSERT INTO public.centers (id, name)
+          VALUES (:'center_id'::uuid, :'salon_name')
+          ON CONFLICT (id) DO UPDATE
+            SET name = EXCLUDED.name
+            WHERE public.centers.name IN ('LenaBeauty', 'My Salon');
+
+          INSERT INTO public.center_settings (center_id, name, currency)
+          VALUES (:'center_id'::uuid, :'salon_name', 'OMR')
+          ON CONFLICT (center_id) DO UPDATE
+            SET name = EXCLUDED.name
+            WHERE public.center_settings.name IN ('LenaBeauty', 'My Salon');
+          COMMIT;
+          SQL
+
+      - name: Verify live Production schema and configured center
+        run: npm run preflight:supabase
 
       - name: Run rollback-safe SQL acceptance tests
         shell: bash
@@ -219,5 +292,6 @@ jobs:
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Project ref: ${SUPABASE_PROJECT_REF}"
             echo "- Center id: ${VITE_CENTER_ID}"
+            echo "- Recovery confirmation: supplied"
             echo "- Canonical migrations and rollback-safe acceptance: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
