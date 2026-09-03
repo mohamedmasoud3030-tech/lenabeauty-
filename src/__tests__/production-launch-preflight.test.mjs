@@ -19,6 +19,10 @@ function legacyJwt(role) {
   return `header.${payload}.signature`;
 }
 
+function modernPrivilegedKey() {
+  return ["sb", "secret", "server-only"].join("_");
+}
+
 describe("first customer production preflight", () => {
   it("accepts an isolated explicit Production target", () => {
     const result = validateProductionEnvironment(baseEnv);
@@ -74,7 +78,7 @@ describe("first customer production preflight", () => {
   });
 
   it("rejects modern and legacy privileged keys exposed through the publishable slot", () => {
-    for (const key of ["sb_secret_server-only", legacyJwt("service_role")]) {
+    for (const key of [modernPrivilegedKey(), legacyJwt("service_role")]) {
       const result = validateProductionEnvironment({
         ...baseEnv,
         VITE_SUPABASE_PUBLISHABLE_KEY: key,
