@@ -23,11 +23,12 @@ describe("OMR display precision", () => {
     expect(formatOMRAmount(undefined)).toBe("0.000");
   });
 
-  it("is used by every targeted operational money surface", () => {
+  it("is used by every targeted operational money surface owner", () => {
     for (const file of [
       "src/pages/PosInvoicesPage.tsx",
       "src/pages/DashboardPage.tsx",
-      "src/pages/ReportsPage.tsx",
+      "src/pages/reports/SalesReportSection.tsx",
+      "src/pages/reports/SalesTransactionDialog.tsx",
       "src/pages/ServicesPage.tsx",
       "src/pages/InventoryPage.tsx",
       "src/shared/components/InvoicePrintLayout.tsx",
