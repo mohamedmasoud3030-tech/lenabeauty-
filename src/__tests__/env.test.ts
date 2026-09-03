@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveDefaultEnvironment, EnvironmentConfigurationError, parseEnv } from "../config/env";
+import { deriveDefaultEnvironment, EnvironmentConfigurationError, isLenaDemoSupabaseUrl, parseEnv } from "../config/env";
 
 describe("Environment Configuration Tests", () => {
     it("Preview mode is rejected", () => {
@@ -85,6 +85,23 @@ describe("Environment Configuration Tests", () => {
             VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
         });
         expect(env.environment).toBe("production");
+    });
+
+    it("recognizes the Lena Demo project regardless of a trailing slash", () => {
+        expect(isLenaDemoSupabaseUrl("https://tuzzvqsnbtzvkffmazyf.supabase.co")).toBe(true);
+        expect(isLenaDemoSupabaseUrl("https://tuzzvqsnbtzvkffmazyf.supabase.co/")).toBe(true);
+        expect(isLenaDemoSupabaseUrl("https://prod.example.supabase.co")).toBe(false);
+    });
+
+    it("rejects an explicit Production target that points to the Lena Demo project", () => {
+        expect(() => parseEnv({
+            VITE_ENVIRONMENT: "production",
+            VITE_DATA_BACKEND: "supabase",
+            VITE_SUPABASE_URL: "https://tuzzvqsnbtzvkffmazyf.supabase.co/",
+            VITE_SUPABASE_PUBLISHABLE_KEY: "mock-key",
+            VITE_BRANCH_MODE: "single",
+            VITE_CENTER_ID: "123e4567-e89b-12d3-a456-426614174000"
+        })).toThrowError("PRODUCTION_DEMO_PROJECT_FORBIDDEN");
     });
 
     it("fails closed when an optimized explicit Production target omits its project configuration", () => {

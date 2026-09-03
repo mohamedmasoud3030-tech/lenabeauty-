@@ -1,6 +1,7 @@
 import { arCommonCore } from "./common-core";
 import { arCommonPlatform } from "./common-platform";
 import { arCommonOperations } from "./common-operations";
+import { arLaunch } from "./launch";
 import { arMarketing } from "./marketing";
 
 /**
@@ -12,5 +13,6 @@ export const arCommon = {
   ...arCommonCore,
   ...arCommonPlatform,
   ...arCommonOperations,
+  ...arLaunch,
   ...arMarketing,
 };
