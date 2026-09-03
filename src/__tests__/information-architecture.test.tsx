@@ -29,6 +29,8 @@ import i18n from "../i18n";
 const routesSource = readFileSync(resolve(process.cwd(), "src/routes.tsx"), "utf8");
 const layoutSource = readFileSync(resolve(process.cwd(), "src/ui/layout/Layout.tsx"), "utf8");
 const sidebarSource = readFileSync(resolve(process.cwd(), "src/ui/layout/Sidebar.tsx"), "utf8");
+const mobileSheetSource = readFileSync(resolve(process.cwd(), "src/ui/layout/MobileNavigationSheet.tsx"), "utf8");
+const mobileDockSource = readFileSync(resolve(process.cwd(), "src/ui/layout/MobileActionDock.tsx"), "utf8");
 const searchSource = readFileSync(resolve(process.cwd(), "src/shared/components/GlobalSearch.tsx"), "utf8");
 const guardsSource = readFileSync(resolve(process.cwd(), "src/route-guards.tsx"), "utf8");
 
@@ -306,8 +308,13 @@ describe("discoverability of previously hidden features", () => {
 /* ── Mobile / desktop parity ─────────────────────────────────────────────── */
 
 describe("mobile and desktop parity", () => {
-  it("IA-T17 — the bottom bar holds exactly 5 slots (4 links + More)", () => {
-    expect(MOBILE_PRIMARY_PATHS).toHaveLength(4);
+  it("IA-T17 — phones use an icon dock, not a destination-style bottom bar", () => {
+    expect(MOBILE_PRIMARY_PATHS).toHaveLength(0);
+    expect(layoutSource).toContain("<MobileActionDock");
+    expect(layoutSource).toContain("<MobileNavigationSheet");
+    expect(mobileDockSource).toContain("<Menu");
+    expect(mobileDockSource).toContain("<GlobalSearch");
+    expect(mobileDockSource).toContain("<Plus");
   });
 
   it("IA-T16 — every shipped destination is mobile-reachable", () => {
@@ -320,16 +327,13 @@ describe("mobile and desktop parity", () => {
     expect(new Set(desktop.map((d) => d.path))).toEqual(mobileReachable);
   });
 
-  it("IA-T15 — mobile never shows a destination the sidebar hides", () => {
-    // Optional modules with no data are hidden on BOTH surfaces, because both
-    // now derive from visibleDestinations(). The mobile More menu previously
-    // listed /gift-cards unconditionally while the sidebar hid it.
+  it("IA-T15 — mobile never shows a destination the desktop navigation hides", () => {
     const ctx = { isAdmin: true, optionalModules: { giftCards: false, packages: false } };
     const visible = new Set(visibleDestinations(ctx).map((d) => d.path));
     expect(visible.has("/gift-cards")).toBe(false);
     expect(visible.has("/packages")).toBe(false);
-    expect(layoutSource).toContain("visibleDestinations");
-    expect(layoutSource).not.toMatch(/labelKey:\s*"Gift Cards"/);
+    expect(mobileSheetSource).toContain("visibleDestinations");
+    expect(mobileSheetSource).not.toMatch(/labelKey:\s*"Gift Cards"/);
   });
 });
 
