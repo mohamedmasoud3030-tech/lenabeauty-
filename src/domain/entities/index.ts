@@ -10,9 +10,6 @@ export interface Customer {
   totalSpent: number;
   loyaltyPoints: number;
   lastVisit?: Date;
-  portalAccessToken?: string;
-  portalAccessEnabled?: boolean;
-  portalLastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

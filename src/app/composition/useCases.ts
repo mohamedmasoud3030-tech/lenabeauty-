@@ -1,5 +1,5 @@
 import { createRepositoryBundle } from "../../infrastructure/createRepositoryBundle";
-import { Result, BookingInput, RecipeItemInput } from "../../domain/ports/repositories";
+import { Result, RecipeItemInput } from "../../domain/ports/repositories";
 import { Appointment, Customer, Employee, Expense, Product, Service, CenterSettings, AttendanceRecord, EmployeeAdvance, VisitStage } from "../../domain/entities";
 import { CheckoutPayload, BackupPayload, IssueGiftCardInput, CreateServicePackageInput, NotificationSettingsInput, PaymentGatewaySettingsInput, CreateCustomerReviewInput, CreateServiceFileInput, CreateJournalEntryInput, CreateAiBookingLeadInput } from "../../application/dto";
 import { tenantContext, requireConfiguredCenterId, setActiveCenter } from "../../infrastructure/tenantContext";
@@ -60,7 +60,6 @@ export const useCases = {
     getById: async (id: string) => getRepositoryBundle().customerAdapter.getById(id),
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
-    rotatePortalToken: async (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),
     getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
     delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
   },
@@ -168,17 +167,6 @@ export const useCases = {
     deleteRun: async (id: string) => getRepositoryBundle().payrollAdapter.deleteRun(id),
   },
 
-  booking: {
-    listServices: () => getRepositoryBundle().bookingAdapter.listServices(),
-    listStaff: () => getRepositoryBundle().bookingAdapter.listStaff(),
-    getCenterInfo: () => getRepositoryBundle().bookingAdapter.getCenterInfo(),
-    getTakenSlots: (dayISO: string) => getRepositoryBundle().bookingAdapter.getTakenSlots(dayISO),
-    createBooking: (input: BookingInput) => getRepositoryBundle().bookingAdapter.createBooking(input),
-    cancelBooking: (input: { appointmentId: string; phone: string; token: string; reason?: string }) => getRepositoryBundle().bookingAdapter.cancelBooking(input),
-    rescheduleBooking: (input: { appointmentId: string; phone: string; token: string; newDateTimeISO: string; newEmployeeId?: string; reason?: string }) => getRepositoryBundle().bookingAdapter.rescheduleBooking(input),
-    clientPortalLogin: (phone: string, token: string) => getRepositoryBundle().bookingAdapter.clientPortalLogin(phone, token),
-    getClientPortalProfile: (customerId: string, phone: string, token: string) => getRepositoryBundle().bookingAdapter.getClientPortalProfile(customerId, phone, token),
-  },
   tenant: {
     setActiveCenterId: (id: string | null) => { setActiveCenter(id); },
     getActiveCenterId: () => {

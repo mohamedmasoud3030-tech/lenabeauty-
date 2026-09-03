@@ -49,8 +49,6 @@ export const arCustomers = {
   "Complete customer management": "إدارة شاملة للعملاء",
   "Assign to customer (optional)": "ربط بعميل (اختياري)",
   "Manage WhatsApp and SMS notifications for your customers": "إدارة إشعارات واتساب والرسائل النصية لعملائك",
-  "Client Portal": "بوابة العميل",
-  "Could not load client portal profile": "تعذّر تحميل ملف بوابة العميل",
   "Tier": "الفئة",
   "Total Clients": "إجمالي العملاء",
   "VIP": "كبار العملاء",
