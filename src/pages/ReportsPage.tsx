@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { Calendar, Package, RefreshCw, ShoppingBag, Sparkles } from "lucide-react";
+import { BarChart3, Calendar, Package, RefreshCw, ShoppingBag } from "lucide-react";
 import { clsx } from "clsx";
 import { useCases } from "../app/composition/useCases";
 import type { AppointmentReportRow, EntitlementSummary, InventoryReportRow, SalesReportRow } from "../application/dto";
+import { PageHeader } from "../shared/components/PageHeader";
 import { ScreenState } from "../shared/components/ScreenState";
 import { formatLocalDateOnly } from "../shared/dateRange";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -86,22 +87,22 @@ export default function ReportsPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary shadow-sm w-fit"><Sparkles className="h-3 w-3" />{t("Advanced Analytics")}</div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tighter text-foreground">{t("Reports & Analytics")}</h1>
-          <p className="text-sm text-muted-foreground font-medium max-w-2xl">{t("Deep insights into your business performance")}</p>
-        </div>
-        <div className="flex items-end gap-2 sm:gap-3 flex-wrap">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <input type="date" aria-label={t("From date")} className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto" value={dateRange.from} max={dateRange.to} onChange={(event) => event.target.value && setDateRange((previous) => ({ ...previous, from: event.target.value }))} />
-            <span className="text-xs font-bold text-muted-foreground">—</span>
-            <input type="date" aria-label={t("To date")} className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto" value={dateRange.to} min={dateRange.from} onChange={(event) => event.target.value && setDateRange((previous) => ({ ...previous, to: event.target.value }))} />
-          </div>
-          <button onClick={() => void load()} className="h-11 w-11 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-lg touch-target" title={t("Refresh")}><RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} /></button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<BarChart3 className="h-7 w-7 sm:h-8 sm:w-8" />}
+        title={t("Reports & Analytics")}
+        subtitle={t("Deep insights into your business performance")}
+        actions={
+          <>
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <input type="date" aria-label={t("From date")} className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto" value={dateRange.from} max={dateRange.to} onChange={(event) => event.target.value && setDateRange((previous) => ({ ...previous, from: event.target.value }))} />
+              <span className="text-xs font-bold text-muted-foreground">—</span>
+              <input type="date" aria-label={t("To date")} className="bg-transparent text-xs font-bold text-foreground outline-none w-[110px] sm:w-auto" value={dateRange.to} min={dateRange.from} onChange={(event) => event.target.value && setDateRange((previous) => ({ ...previous, to: event.target.value }))} />
+            </div>
+            <button onClick={() => void load()} className="h-11 w-11 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all shadow-lg touch-target" title={t("Refresh")}><RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} /></button>
+          </>
+        }
+      />
 
       <div className="flex gap-2 border-b border-border overflow-x-auto">
         {[
@@ -118,16 +119,7 @@ export default function ReportsPage() {
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-3xl border border-border bg-card/50 shadow-xl"><ScreenState state="loading" title={t("Loading analytics...")} description={t("Please wait a moment")} /></motion.div>
         ) : tab === "sales" ? (
           <motion.div key="sales" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <SalesReportSection
-              data={data as SalesReportRow[]}
-              error={error}
-              entitlementSummary={entitlementSummary}
-              onRetry={() => void load()}
-              onNewInvoice={() => navigate("/pos")}
-              onSelectSale={setSelectedSale}
-              t={(key, values) => t(key, values as any)}
-              formatDay={formatDay}
-            />
+            <SalesReportSection data={data as SalesReportRow[]} error={error} entitlementSummary={entitlementSummary} onRetry={() => void load()} onNewInvoice={() => navigate("/pos")} onSelectSale={setSelectedSale} t={(key, values) => t(key, values as any)} formatDay={formatDay} />
           </motion.div>
         ) : tab === "appointments" ? (
           <motion.div key="appointments" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
