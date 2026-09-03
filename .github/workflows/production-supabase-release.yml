@@ -1,0 +1,301 @@
+name: Release Production Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        description: "Type the exact Production Supabase project ref to authorize this release"
+        required: true
+        type: string
+      center_id:
+        description: "Type the exact Production center UUID to authorize this release"
+        required: true
+        type: string
+      salon_name:
+        description: "Production salon name used only to provision an empty/default center shell"
+        required: true
+        type: string
+      recovery_confirmed:
+        description: "Confirm a current recovery point/procedure exists before changing Production schema"
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: lena-production-supabase-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    name: Production static application and database gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VITE_DATA_BACKEND: supabase
+      VITE_BRANCH_MODE: single
+
+    steps:
+      - name: Refuse Production dispatch from anything except main
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Refusing Production release: dispatch must target main." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate canonical contracts
+        run: |
+          npm run audit:gate
+          npm run db:types:check
+          npm run ci:migrations
+          npm run ci:rpc-check
+          npm test
+          npm run typecheck
+          npm run lint
+          npm run build
+          npm audit --audit-level=low
+          git diff --check
+
+  production-release:
+    name: Explicit Production migration and security gates
+    needs: static-validation
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.PRODUCTION_SUPABASE_PROJECT_REF }}
+      PRODUCTION_SUPABASE_PROJECT_REF: ${{ secrets.PRODUCTION_SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
+      VITE_ENVIRONMENT: production
+      VITE_DATA_BACKEND: supabase
+      VITE_BRANCH_MODE: single
+      VITE_USE_DEMO_CREDENTIALS: "false"
+      VITE_SUPABASE_URL: ${{ secrets.PRODUCTION_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_CENTER_ID: ${{ secrets.PRODUCTION_CENTER_ID }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PRODUCTION_SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refuse incomplete or mismatched Production authorization
+        shell: bash
+        env:
+          CONFIRMED_PROJECT_REF: ${{ inputs.project_ref }}
+          CONFIRMED_CENTER_ID: ${{ inputs.center_id }}
+          CONFIRMED_SALON_NAME: ${{ inputs.salon_name }}
+          RECOVERY_CONFIRMED: ${{ inputs.recovery_confirmed }}
+        run: |
+          set -euo pipefail
+          required=(
+            SUPABASE_ACCESS_TOKEN
+            SUPABASE_PROJECT_REF
+            SUPABASE_DB_PASSWORD
+            VITE_SUPABASE_URL
+            VITE_SUPABASE_PUBLISHABLE_KEY
+            VITE_CENTER_ID
+            SUPABASE_SERVICE_ROLE_KEY
+          )
+          for name in "${required[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "Refusing Production release: required secret/environment value ${name} is missing." >&2
+              exit 1
+            fi
+          done
+
+          if [ "$SUPABASE_PROJECT_REF" = "tuzzvqsnbtzvkffmazyf" ]; then
+            echo "Refusing Production release: target is the canonical Lena Demo project." >&2
+            exit 1
+          fi
+          if [ "$CONFIRMED_PROJECT_REF" != "$SUPABASE_PROJECT_REF" ]; then
+            echo "Refusing Production release: typed project ref does not match the configured Production project." >&2
+            exit 1
+          fi
+          if [ "$CONFIRMED_CENTER_ID" != "$VITE_CENTER_ID" ]; then
+            echo "Refusing Production release: typed center UUID does not match the configured Production center." >&2
+            exit 1
+          fi
+          if [ -z "$CONFIRMED_SALON_NAME" ]; then
+            echo "Refusing Production release: salon name confirmation is empty." >&2
+            exit 1
+          fi
+          if [ "$RECOVERY_CONFIRMED" != "true" ]; then
+            echo "Refusing Production release: recovery point/procedure was not explicitly confirmed." >&2
+            exit 1
+          fi
+
+      - name: Enforce first-customer Production preflight
+        run: npm run launch:preflight
+
+      - name: Enforce hosted Production Auth policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_config_url="https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/config/auth"
+          curl --fail-with-body --silent --show-error \
+            -X PATCH "$auth_config_url" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"disable_signup":true,"password_min_length":8,"security_update_password_require_reauthentication":true}' \
+            >/tmp/lena-production-auth-config-patch.json
+          curl --fail-with-body --silent --show-error \
+            "$auth_config_url" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            >/tmp/lena-production-auth-config.json
+          jq -e '.disable_signup == true' /tmp/lena-production-auth-config.json >/dev/null
+          jq -e '.password_min_length >= 8' /tmp/lena-production-auth-config.json >/dev/null
+          jq -e '.security_update_password_require_reauthentication == true' \
+            /tmp/lena-production-auth-config.json >/dev/null
+          if jq -e '.password_hibp_enabled == true' /tmp/lena-production-auth-config.json >/dev/null; then
+            echo "PASS hosted leaked-password protection is enabled."
+          else
+            echo "::warning::Hosted leaked-password protection is not enabled. Enable it when the selected Supabase plan supports it."
+          fi
+          echo "PASS hosted public self-signup is disabled."
+          echo "PASS hosted minimum password length is at least 8."
+          echo "PASS hosted password-change reauthentication is enabled."
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link explicitly approved Production project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Show Production migration state before apply
+        run: supabase migration list --linked
+
+      - name: Mark manual admin bootstrap as handled out-of-band
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(supabase migration list --linked)"
+          if printf '%s\n' "$history" | awk -F '│' '
+            NF >= 2 {
+              local_version=$1
+              remote_version=$2
+              gsub(/[[:space:]]/, "", local_version)
+              gsub(/[[:space:]]/, "", remote_version)
+              if (local_version == "20260628000002" && remote_version == "20260628000002") found=1
+            }
+            END { exit(found ? 0 : 1) }
+          '; then
+            echo "Manual admin bootstrap is already recorded in Production migration history."
+          else
+            echo "Recording manual admin bootstrap as applied without executing its placeholder Auth UUID SQL."
+            supabase migration repair 20260628000002 --status applied
+          fi
+
+      - name: Apply pending canonical migrations
+        run: supabase db push --linked --yes
+
+      - name: Verify Production migration history is fully aligned
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(supabase migration list --linked)"
+          printf '%s\n' "$history"
+          drift="$(printf '%s\n' "$history" | awk -F '│' '
+            NF >= 2 {
+              local_version=$1
+              remote_version=$2
+              gsub(/[[:space:]]/, "", local_version)
+              gsub(/[[:space:]]/, "", remote_version)
+              local_is_version=(local_version ~ /^[0-9]+$/ && length(local_version) == 14)
+              remote_is_version=(remote_version ~ /^[0-9]+$/ && length(remote_version) == 14)
+              if ((local_is_version || remote_is_version) && local_version != remote_version) {
+                print local_version " != " remote_version
+              }
+            }
+          ')"
+          if [ -n "$drift" ]; then
+            echo "Production migration history drift remains after db push:" >&2
+            printf '%s\n' "$drift" >&2
+            exit 1
+          fi
+          echo "PASS local and Production migration histories are aligned."
+
+      - name: Install PostgreSQL client for provisioning and rollback-safe acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+      - name: Provision the canonical Production center shell
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
+          CONFIRMED_SALON_NAME: ${{ inputs.salon_name }}
+        run: |
+          set -euo pipefail
+          connection="host=db.${SUPABASE_PROJECT_REF}.supabase.co port=5432 dbname=postgres user=postgres sslmode=require"
+          psql "$connection" -X -v ON_ERROR_STOP=1 \
+            -v center_id="$VITE_CENTER_ID" \
+            -v salon_name="$CONFIRMED_SALON_NAME" <<'SQL'
+          BEGIN;
+          INSERT INTO public.centers (id, name)
+          VALUES (:'center_id'::uuid, :'salon_name')
+          ON CONFLICT (id) DO UPDATE
+            SET name = EXCLUDED.name
+            WHERE public.centers.name IN ('LenaBeauty', 'My Salon');
+
+          INSERT INTO public.center_settings (center_id, name, currency)
+          VALUES (:'center_id'::uuid, :'salon_name', 'OMR')
+          ON CONFLICT (center_id) DO UPDATE
+            SET name = EXCLUDED.name
+            WHERE public.center_settings.name IN ('LenaBeauty', 'My Salon');
+          COMMIT;
+          SQL
+
+      - name: Verify live Production schema and configured center
+        run: npm run preflight:supabase
+
+      - name: Run rollback-safe SQL acceptance tests
+        shell: bash
+        env:
+          PGPASSWORD: ${{ secrets.PRODUCTION_SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          connection="host=db.${SUPABASE_PROJECT_REF}.supabase.co port=5432 dbname=postgres user=postgres sslmode=require"
+          for test_file in supabase/tests/*.sql; do
+            echo "Running rollback-safe Production acceptance: ${test_file}"
+            psql "$connection" -X -v ON_ERROR_STOP=1 --file "$test_file"
+          done
+
+      - name: Record release target without secrets
+        shell: bash
+        run: |
+          {
+            echo "### LENA Beauty Production release"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Project ref: ${SUPABASE_PROJECT_REF}"
+            echo "- Center id: ${VITE_CENTER_ID}"
+            echo "- Recovery confirmation: supplied"
+            echo "- Canonical migrations and rollback-safe acceptance: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"

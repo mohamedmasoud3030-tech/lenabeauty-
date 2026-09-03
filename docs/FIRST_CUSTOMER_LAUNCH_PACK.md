@@ -6,21 +6,41 @@ This pack starts after Round 4. It is not another cleanup round. Its purpose is 
 
 ## 1. Provision the production tenant
 
-- Use an isolated production center/tenant. Never convert the shared demo center into the customer's permanent production tenant.
+- Create an isolated Supabase Production project. Never convert the shared Demo project into the customer's permanent production database.
 - Apply the repository's canonical Supabase migrations in order and require the database contract/audit gates to pass.
 - Create the owner/admin identity through the supported authentication path; do not insert auth identities directly into application tables.
 - Confirm the authenticated owner resolves to the intended `center_id` before entering operational data.
 - Keep public booking/portal RPCs deny-by-default unless that channel is intentionally released with its abuse controls.
 
-Before deploying the customer build, configure its production environment and run:
+Before deploying the customer build, configure the production environment and run:
 
 ```bash
 npm run launch:preflight
 ```
 
-The preflight fails closed unless the target is explicitly `production`, uses Supabase in single-center mode, has a real center UUID, contains no privileged `VITE_*` credential, and points to a project other than the known Lena Demo project.
+The preflight fails closed unless the target is explicitly `production`, uses Supabase in single-center mode, has a real center UUID, contains no privileged `VITE_*` credential, rejects both modern `sb_secret_*` and legacy `service_role` browser keys, points away from the known Lena Demo project, and has a server-only `PRODUCTION_SUPABASE_PROJECT_REF` that exactly matches the Supabase URL host.
 
-Exit gate: production preflight passes, and the owner can sign in and access only the intended center.
+### Canonical GitHub Production release lane
+
+The repository contains `.github/workflows/production-supabase-release.yml`. It is **manual-dispatch only** and must be run from `main` after configuring the GitHub `production` environment with these secrets:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `PRODUCTION_SUPABASE_PROJECT_REF`
+- `PRODUCTION_SUPABASE_DB_PASSWORD`
+- `PRODUCTION_SUPABASE_URL`
+- `PRODUCTION_SUPABASE_PUBLISHABLE_KEY`
+- `PRODUCTION_CENTER_ID`
+- `PRODUCTION_SUPABASE_SERVICE_ROLE_KEY`
+
+At dispatch, the operator must type the exact project ref, exact center UUID and salon name, and explicitly confirm that a current recovery point/procedure exists. The workflow refuses mismatches, refuses the canonical Demo project, runs all static application/database gates, runs `launch:preflight`, enforces password-change reauthentication, links only the approved project, records the manual placeholder admin bootstrap as handled out-of-band, applies pending canonical migrations, provisions only the configured center shell, verifies the live schema/center, and runs rollback-safe SQL acceptance tests.
+
+The service-role key is server-only inside the Production workflow. It must never be stored in a `VITE_*` variable or exposed to the browser.
+
+### Repository governance gate
+
+Before accepting real transactions, GitHub `main` must be protected by branch protection or a repository ruleset that requires PR review/CI and blocks accidental force/deletion/direct-write paths appropriate to the account. This is repository configuration, not application runtime code; the launch pack is not complete merely because tests are green if `main` remains unprotected.
+
+Exit gate: production preflight passes, the guarded Production release succeeds, repository protection is active, and the owner can sign in and access only the intended center.
 
 ## 2. Configure salon identity
 
@@ -93,6 +113,7 @@ Therefore production recovery is:
 
 - before go-live: take a fresh operational JSON export and record its timestamp
 - database disaster recovery: use the managed Supabase/Postgres backup/PITR procedure available for the production project; validate that capability for the chosen production plan before accepting real transactions
+- before any Production schema release: confirm a current recovery point/procedure in the manual Production workflow; the confirmation is a release guard, not a substitute for an actual backup
 - operational import/restore: execute only as a controlled operator procedure after validating the payload and target tenant; never present it to salon staff as a full financial database restore
 - never overwrite a live tenant merely to test restore
 
@@ -131,9 +152,12 @@ Exit gate: one real PAID invoice exists, receipt is correct, customer history is
 
 The salon is LIVE only when all boxes are true:
 
-- [ ] isolated production tenant
+- [ ] isolated Production Supabase project
+- [ ] `PRODUCTION_SUPABASE_PROJECT_REF` matches the Production URL
 - [ ] `npm run launch:preflight` passes
+- [ ] guarded Production release workflow succeeds
 - [ ] canonical migrations/audit green
+- [ ] `main` branch protection/ruleset active
 - [ ] owner/admin login verified
 - [ ] staff login and role boundary verified
 - [ ] center profile completed
@@ -150,10 +174,12 @@ The salon is LIVE only when all boxes are true:
 
 ## Non-negotiable launch rules
 
-- No demo database as the permanent customer production database.
+- No Demo database as the permanent customer production database.
+- No Production URL/project-ref mismatch.
 - No direct financial inserts or manual invoice fabrication.
 - No disabling RLS/RPC/auth controls to make onboarding easier.
 - No destructive restore test against the live tenant.
 - No claim that JSON export is a full financial/database backup.
-- No browser-side membership grants or privileged credentials.
+- No browser-side membership grants or privileged credentials, including legacy `service_role` JWTs.
+- No automatic Production database migration on push or pull request; Production schema changes require explicit dispatch and target confirmation.
 - No second customer is onboarded from an undocumented one-off process: improvements discovered during customer one must be folded back into this pack.
