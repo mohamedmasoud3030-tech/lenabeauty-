@@ -157,7 +157,7 @@ describe("C — exactly one primary action, using the right credential", () => {
     expect(field).toHaveAttribute("type", "email");
     expect(field).toHaveAttribute("autocomplete", "email");
     expect(field).toHaveAttribute("inputmode", "email");
-    expect(field).toHaveAttribute("placeholder", "name@yourcenter.com");
+    expect(field).toHaveAttribute("placeholder", "name@larabeauty.com");
 
     const adapter = readFileSync(resolve(process.cwd(), "src/infrastructure/supabase/repositories/auth.ts"), "utf8");
     expect(adapter).toContain("signInWithPassword({");

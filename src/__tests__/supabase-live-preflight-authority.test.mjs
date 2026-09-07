@@ -38,6 +38,18 @@ describe("live Supabase preflight browser-key authority guard", () => {
     expect(isPrivilegedPublishableKey(env.VITE_SUPABASE_PUBLISHABLE_KEY)).toBe(true);
   });
 
+  it("lets .env.local override an empty publishable key in .env", () => {
+    const root = mkdtempSync(join(tmpdir(), "lena-preflight-"));
+    tempDirs.push(root);
+    const anonKey = legacyJwt("anon");
+    writeFileSync(join(root, ".env"), "VITE_SUPABASE_PUBLISHABLE_KEY=\n");
+    writeFileSync(join(root, ".env.local"), `VITE_SUPABASE_PUBLISHABLE_KEY=${anonKey}\n`);
+
+    const env = loadPreflightEnvironment(root, {});
+    expect(env.VITE_SUPABASE_PUBLISHABLE_KEY).toBe(anonKey);
+    expect(isPrivilegedPublishableKey(env.VITE_SUPABASE_PUBLISHABLE_KEY)).toBe(false);
+  });
+
   it("lets explicit process environment override file configuration", () => {
     const root = mkdtempSync(join(tmpdir(), "lena-preflight-"));
     tempDirs.push(root);

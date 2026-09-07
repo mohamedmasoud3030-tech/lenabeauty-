@@ -9,7 +9,8 @@ import { resolve } from "node:path";
 // The browser runtime has its own copy in src/config/env.ts because it must
 // decode with `atob` instead of `Buffer`; keep the two decision rules aligned.
 
-export const ENV_FILES = [".env.local", ".env"];
+// Same overlay order as Vite: `.env` first, then `.env.local` wins.
+export const ENV_FILES = [".env", ".env.local"];
 
 // Assembled at runtime so the literal prefix never appears in tracked source,
 // which keeps secret scanners from flagging the guard itself as a leaked key.

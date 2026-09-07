@@ -398,7 +398,7 @@ export default function LoginPage() {
                         inputMode="email"
                         autoComplete="email"
                         required
-                        placeholder="name@yourcenter.com"
+                        placeholder="name@larabeauty.com"
                         aria-invalid={Boolean(displayError)}
                         aria-describedby={displayError ? "login-error" : undefined}
                         className={inputClass}

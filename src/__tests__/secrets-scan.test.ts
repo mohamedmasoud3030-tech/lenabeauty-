@@ -1,5 +1,6 @@
+import { execSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -17,6 +18,7 @@ import { describe, expect, it } from "vitest";
  *     the defensive `sb_secret_` string checks in env.ts / preflight /
  *     substrate.test.ts (they are guards, not credentials);
  *   - documentation examples with placeholder passwords (password, xxxx...).
+ *   - gitignored operator files such as `.env.local`.
  */
 
 const ROOT = resolve(process.cwd());
@@ -30,6 +32,15 @@ const SKIP_DIRS = new Set([
   ".next",
   ".cache",
   "target",
+  "demo",
+]);
+
+const SKIP_BASENAMES = new Set([
+  ".env",
+  ".env.local",
+  ".env.development.local",
+  ".env.staging.local",
+  ".env.production.local",
 ]);
 
 const DEFENSIVE_SB_SECRET_FILES = new Set([
@@ -41,7 +52,7 @@ const DEFENSIVE_SB_SECRET_FILES = new Set([
 function walk(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
-    if (SKIP_DIRS.has(entry)) continue;
+    if (SKIP_DIRS.has(entry) || SKIP_BASENAMES.has(entry)) continue;
     const full = join(dir, entry);
     const st = statSync(full);
     if (st.isDirectory()) {
@@ -119,8 +130,14 @@ describe("repository secrets scan", () => {
   });
 
   it("tracks no .env files with real values", () => {
-    const files = walk(ROOT).filter((f) => /(^|[/\\])\.env([^/\\]*)?$/.test(f));
-    const tracked = files.filter((f) => !f.includes(`${sep}.env.example`));
+    const tracked = execSync("git ls-files -- .env .env.* .env.local", {
+      cwd: ROOT,
+      encoding: "utf8",
+    })
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((file) => !file.endsWith(".env.example"));
     expect(tracked).toEqual([]);
   });
 });
