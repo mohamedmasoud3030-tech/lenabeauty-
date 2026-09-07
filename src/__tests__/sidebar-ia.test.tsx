@@ -37,7 +37,7 @@ describe("Sidebar client-trial navigation", () => {
       "Dashboard", "Action Center", "Appointments", "POS", "Customers", "Services",
       "Inventory", "Employees", "Reports", "Expenses", "Accounting", "Attendance",
       "Advances", "Payroll", "Staff Analytics", "Settings",
-      "Customer Experience", "Forecasting", "Booking requests", "Admin assistant",
+      "Customer Experience", "Forecasting", "Booking requests",
     ]) {
       expect(screen.getByText(i18n.t(label))).toBeInTheDocument();
     }

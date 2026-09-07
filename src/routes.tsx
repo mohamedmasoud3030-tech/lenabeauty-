@@ -29,7 +29,6 @@ const CustomerExperiencePage = lazy(() => import("./pages/CustomerExperiencePage
 const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
-const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 
 const PASSWORD_RESET_ROUTE = "/reset-password";
 
@@ -81,7 +80,6 @@ export function AppRoutes() {
             <Route path="/staff-analytics" element={<Suspense fallback={<PageLoader />}><StaffAnalyticsPage /></Suspense>} />
             <Route path="/accounting" element={<Suspense fallback={<PageLoader />}><AccountingPage /></Suspense>} />
             <Route path="/advanced-automation" element={<Suspense fallback={<PageLoader />}><AdvancedAutomationPage /></Suspense>} />
-            <Route path="/assistant" element={<Suspense fallback={<PageLoader />}><AssistantPage /></Suspense>} />
             <Route path="/branding" element={<Navigate to="/settings?tab=branding" replace />} />
             <Route path="/notifications" element={<Navigate to="/settings?tab=notifications" replace />} />
             <Route path="/payment-gateway" element={<Navigate to="/settings?tab=payments" replace />} />

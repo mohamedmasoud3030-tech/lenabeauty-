@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Menu, Plus } from "lucide-react";
+import { Menu, MessageCircle, Plus } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import { GlobalSearch } from "../../shared/components/GlobalSearch";
@@ -11,6 +11,9 @@ interface MobileActionDockProps {
   menuButtonRef: RefObject<HTMLButtonElement | null>;
   onOpenMenu: () => void;
   onNewAppointment: () => void;
+  showAssistant?: boolean;
+  assistantOpen?: boolean;
+  onToggleAssistant?: () => void;
 }
 
 const actionClass =
@@ -23,6 +26,9 @@ export function MobileActionDock({
   menuButtonRef,
   onOpenMenu,
   onNewAppointment,
+  showAssistant = false,
+  assistantOpen = false,
+  onToggleAssistant,
 }: MobileActionDockProps) {
   const { t } = useTranslation();
 
@@ -54,6 +60,21 @@ export function MobileActionDock({
         <div className="[&>button]:h-11 [&>button]:w-11 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:rounded-xl [&>button]:border-0 [&>button]:bg-transparent [&>button]:p-0 [&>button]:shadow-none [&>button]:hover:bg-muted">
           <GlobalSearch userRole={userRole} />
         </div>
+
+        {showAssistant ? (
+          <button
+            type="button"
+            onClick={onToggleAssistant}
+            aria-label={t("Admin assistant")}
+            title={t("Admin assistant")}
+            aria-haspopup="dialog"
+            aria-expanded={assistantOpen}
+            aria-controls="admin-assistant-panel"
+            className={clsx(actionClass, assistantOpen && "bg-primary/10 text-primary")}
+          >
+            <MessageCircle aria-hidden="true" className="h-[21px] w-[21px]" />
+          </button>
+        ) : null}
 
         <button
           type="button"

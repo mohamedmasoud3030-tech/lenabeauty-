@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../auth";
-import { Globe, LayoutGrid, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Globe, LayoutGrid, LogOut, MessageCircle, Moon, Settings, Sun } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
@@ -15,12 +15,15 @@ import { destinationLabelKey } from "../../app/navigation";
 import { persistLanguage, persistTheme } from "../../preferences";
 import { MobileActionDock } from "./MobileActionDock";
 import { MobileNavigationSheet } from "./MobileNavigationSheet";
+import { AdminAssistantPanel } from "../../shared/components/AdminAssistantPanel";
+import { UserRole } from "../../domain/entities/Session";
 
 export default function Layout() {
   const nav = useNavigate();
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isDark, setIsDark] = useState(() =>
     typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
@@ -70,6 +73,10 @@ export default function Layout() {
   }, [isKeyboardOpen]);
 
   useEffect(() => {
+    if (showMobileMenu) setShowAssistant(false);
+  }, [showMobileMenu]);
+
+  useEffect(() => {
     const currentLang = i18n.language || "ar";
     document.documentElement.lang = currentLang;
     document.documentElement.dir = currentLang === "ar" ? "rtl" : "ltr";
@@ -107,6 +114,8 @@ export default function Layout() {
   function openNewAppointment() {
     nav("/appointments?new=1");
   }
+
+  const isAdmin = me?.role === UserRole.ADMIN;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 selection:text-primary-foreground pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
@@ -254,7 +263,27 @@ export default function Layout() {
         menuButtonRef={mobileMenuButtonRef}
         onOpenMenu={() => setShowMobileMenu(true)}
         onNewAppointment={openNewAppointment}
+        showAssistant={isAdmin}
+        assistantOpen={showAssistant}
+        onToggleAssistant={() => setShowAssistant((open) => !open)}
       />
+
+      {isAdmin ? (
+        <button
+          type="button"
+          onClick={() => setShowAssistant((open) => !open)}
+          aria-label={t("Admin assistant")}
+          title={t("Admin assistant")}
+          aria-haspopup="dialog"
+          aria-expanded={showAssistant}
+          aria-controls="admin-assistant-panel"
+          className="pointer-events-auto fixed bottom-6 end-6 z-[var(--z-bottom-nav)] hidden h-11 w-11 place-items-center rounded-full border border-border bg-card text-primary shadow-lg print:hidden lg:grid"
+        >
+          <MessageCircle aria-hidden="true" className="h-5 w-5" />
+        </button>
+      ) : null}
+
+      {isAdmin ? <AdminAssistantPanel open={showAssistant} onClose={() => setShowAssistant(false)} /> : null}
     </div>
   );
 }
