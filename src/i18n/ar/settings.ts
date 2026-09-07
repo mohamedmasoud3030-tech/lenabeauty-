@@ -141,6 +141,7 @@ export const arSettings = {
   "Add a Gemini key to start": "أضيفي مفتاح Gemini للبدء",
   "Gemini rejected this key. Check it in Google AI Studio.": "Gemini رفض هذا المفتاح. تحققي منه في Google AI Studio.",
   "Could not reach Gemini. Try again.": "تعذّر الوصول إلى Gemini. حاولي مرة أخرى.",
+  "The browser blocked the call to Gemini itself. Check the connection, and that the site allows generativelanguage.googleapis.com.": "المتصفح نفسه حجب الاتصال بـ Gemini. تحققي من الاتصال بالإنترنت، ومن أن الموقع يسمح بالنطاق generativelanguage.googleapis.com.",
   "The assistant returned an empty reply.": "المساعد أعاد ردًا فارغًا.",
   "Conversation is not saved.": "المحادثة لا تُحفظ.",
   "Write a question": "اكتبي سؤالًا",

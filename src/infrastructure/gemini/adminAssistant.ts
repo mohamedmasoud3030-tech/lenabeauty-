@@ -16,7 +16,19 @@
  */
 
 export const GEMINI_KEY_STORAGE_KEY = "lara_admin_gemini_key";
-export const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"] as const;
+/**
+ * Tried in order. `gemini-2.5-flash` stays first because it is the model the
+ * free AI Studio tier serves today; the 3.5 entries take over automatically
+ * once 2.5 is retired, and the lite entries are the cheap last resort.
+ * An unknown id only costs one 404 — the next model is tried straight away.
+ */
+export const GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-latest",
+  "gemini-2.5-flash-lite",
+] as const;
 export const GEMINI_MODEL = GEMINI_MODELS[0];
 export const GEMINI_STUDIO_KEY_URL = "https://aistudio.google.com/apikey";
 
@@ -181,7 +193,15 @@ async function callGenerate(params: {
     );
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new GeminiError("GEMINI_UNREACHABLE", error instanceof Error ? error.message : "");
+    // fetch() rejects with a TypeError when the browser itself stops the
+    // request before any answer comes back: a Content-Security-Policy
+    // `connect-src` rule, a failed CORS preflight, an extension, or an offline
+    // device. None of those say anything about the key, and the panel must not
+    // blame the key for them.
+    throw new GeminiError(
+      "GEMINI_BLOCKED_BY_BROWSER",
+      error instanceof Error ? error.message : "",
+    );
   }
 
   if (!response.ok) {
@@ -216,11 +236,17 @@ function emptyReplyCode(result: GenerateResult): string {
   return "GEMINI_EMPTY_REPLY";
 }
 
-const RETRYABLE_ON_NEXT_MODEL = new Set([
-  "GEMINI_MODEL_UNAVAILABLE",
-  "GEMINI_SERVER_ERROR",
-  "GEMINI_EMPTY_REPLY",
-  "GEMINI_TRUNCATED_REPLY",
+/**
+ * Verdicts about the *key* (or the whole browser), not about one model: trying
+ * another model cannot change them, so they surface immediately instead of
+ * burning the rest of the list.
+ */
+const FINAL_ON_FIRST_MODEL = new Set([
+  "GEMINI_KEY_INVALID",
+  "GEMINI_KEY_REFERRER_BLOCKED",
+  "GEMINI_API_DISABLED",
+  "GEMINI_BLOCKED_BY_BROWSER",
+  "GEMINI_BUSY",
 ]);
 
 async function generateWithFallback(params: {
@@ -234,7 +260,12 @@ async function generateWithFallback(params: {
   const apiKey = sanitizeGeminiKey(params.apiKey);
   if (!apiKey) throw new GeminiError("GEMINI_KEY_MISSING");
 
-  let lastError: GeminiError = new GeminiError("GEMINI_REQUEST_FAILED");
+  // Everything outside FINAL_ON_FIRST_MODEL is per-model: a retired id (404),
+  // a model this project is not enabled for (403), a flaky server (5xx), or an
+  // empty candidate. The next model is tried, and if the whole list fails the
+  // *first* model's answer is what the admin is told — for a genuinely bad key
+  // every model answers the same thing anyway.
+  let firstError: GeminiError | null = null;
   for (const model of GEMINI_MODELS) {
     try {
       const result = await callGenerate({ ...params, apiKey, model, disableThinking: true });
@@ -243,14 +274,16 @@ async function generateWithFallback(params: {
       throw new GeminiError(emptyReplyCode(result), result.finishReason || result.blockReason);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") throw error;
-      lastError = error instanceof GeminiError
+      const failure = error instanceof GeminiError
         ? error
         : new GeminiError(error instanceof Error ? error.message : "GEMINI_REQUEST_FAILED");
-      if (RETRYABLE_ON_NEXT_MODEL.has(lastError.message)) continue;
-      throw lastError;
+      if (firstError === null) {
+        firstError = failure;
+        if (FINAL_ON_FIRST_MODEL.has(failure.message)) throw failure;
+      }
     }
   }
-  throw lastError;
+  throw firstError ?? new GeminiError("GEMINI_REQUEST_FAILED");
 }
 
 /**

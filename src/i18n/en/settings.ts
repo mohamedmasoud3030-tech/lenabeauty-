@@ -141,6 +141,7 @@ export const enSettings = {
   "Add a Gemini key to start": "Add a Gemini key to start",
   "Gemini rejected this key. Check it in Google AI Studio.": "Gemini rejected this key. Check it in Google AI Studio.",
   "Could not reach Gemini. Try again.": "Could not reach Gemini. Try again.",
+  "The browser blocked the call to Gemini itself. Check the connection, and that the site allows generativelanguage.googleapis.com.": "The browser blocked the call to Gemini itself. Check the connection, and that the site allows generativelanguage.googleapis.com.",
   "The assistant returned an empty reply.": "The assistant returned an empty reply.",
   "Conversation is not saved.": "Conversation is not saved.",
   "Write a question": "Write a question",

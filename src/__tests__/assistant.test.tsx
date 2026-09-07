@@ -96,6 +96,47 @@ describe("admin Gemini assistant", () => {
     expect(source).not.toContain("supabase");
     expect(source).not.toContain("gemini-2.0-flash");
     expect(GEMINI_MODEL).toBe("gemini-2.5-flash");
+    // 2.5 is retired in October 2026; a current-generation id must already be
+    // in the chain so the assistant keeps working without another release.
+    expect(GEMINI_MODELS).toContain("gemini-3.5-flash");
+  });
+
+  it("lets the browser reach Google's Generative Language API", () => {
+    // The panel calls Gemini straight from the page. A deploy that forgets this
+    // host in connect-src blocks every request before it leaves the browser,
+    // and the admin only ever sees "could not reach Gemini".
+    const geminiHosts = [
+      "https://generativelanguage.googleapis.com",
+      "wss://generativelanguage.googleapis.com",
+    ];
+    const vercel = JSON.parse(readFileSync(resolve(process.cwd(), "vercel.json"), "utf8")) as {
+      headers: Array<{ headers: Array<{ key: string; value: string }> }>;
+    };
+    const policies = vercel.headers
+      .flatMap((entry) => entry.headers)
+      .filter((header) => header.key === "Content-Security-Policy")
+      .map((header) => header.value);
+    expect(policies.length).toBeGreaterThan(0);
+    for (const policy of policies) {
+      const connectSrc = /connect-src ([^;]+);/.exec(policy)?.[1] ?? "";
+      for (const host of geminiHosts) expect(connectSrc).toContain(host);
+    }
+
+    const tauri = JSON.parse(readFileSync(resolve(process.cwd(), "src-tauri/tauri.conf.json"), "utf8")) as {
+      app: { security: { csp: string } };
+    };
+    for (const host of geminiHosts) expect(tauri.app.security.csp).toContain(host);
+  });
+
+  it("blames the browser, not the key, when the request never leaves the page", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "AIzaSyTEST-key-value" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/browser blocked the call to Gemini/i);
+    expect(screen.queryByText(/this key is not valid/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBeNull();
   });
 
   it("does not activate until Gemini accepts the key", async () => {
