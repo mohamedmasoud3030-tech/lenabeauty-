@@ -280,16 +280,20 @@ export class SupabaseAdvancedAdapter implements AdvancedRepository {
       return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Invalid lead update") };
     }
     try {
-      const { data, error } = await getSupabaseClient()
-        .from("ai_booking_leads")
-        .update({ status })
-        .eq("id", id)
-        .eq("center_id", centerRes.data)
-        .select("*")
-        .maybeSingle();
-      if (error) return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", error.message) };
-      if (!data) return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Lead not found") };
-      return { ok: true, data: mapAiBookingLead(data) };
+      const { data, error } = await (getSupabaseClient() as any).rpc("update_ai_booking_lead_status_v1", {
+        p_center_id: centerRes.data,
+        p_lead_id: id,
+        p_status: status,
+      });
+      if (error) {
+        if (error.code === "PGRST202" || error.code === "42883" || error.message?.includes("Could not find the function")) {
+          return { ok: false, error: createUnsupportedWriteError("Advanced.updateAiBookingLeadStatus") };
+        }
+        return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", error.message) };
+      }
+      const row = (data || {}) as any;
+      if (!row.lead) return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Lead not found") };
+      return { ok: true, data: mapAiBookingLead(row.lead) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", (e as Error).message) };
     }

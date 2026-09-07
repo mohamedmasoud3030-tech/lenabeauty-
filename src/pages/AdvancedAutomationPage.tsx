@@ -121,10 +121,11 @@ export default function AdvancedAutomationPage() {
     try {
       await unwrap(useCases.advanced.updateAiBookingLeadStatus(lead.id, status));
       setLeads((previous) => previous.map((row) => (row.id === lead.id ? { ...row, status } : row)));
-      if (status === "BOOKED") nav(schedulePath(lead));
     } catch (error) {
       showToast("error", t("Error"), formatError(error));
+      if (status !== "BOOKED") return;
     }
+    if (status === "BOOKED") nav(schedulePath(lead));
   }
 
   return (
