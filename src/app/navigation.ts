@@ -18,6 +18,7 @@ import {
   Sparkles,
   Bot,
   Activity,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -119,6 +120,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { path: "/advanced-automation", labelKey: "Booking requests", icon: Bot, group: "growth", adminOnly: true, searchIcon: "📋" },
 
   // System.
+  { path: "/assistant", labelKey: "Admin assistant", icon: MessageCircle, group: "system", adminOnly: true, searchIcon: "💬" },
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },
 ];
 

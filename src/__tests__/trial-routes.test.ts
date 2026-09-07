@@ -15,7 +15,7 @@ describe("client-trial route context", () => {
     const adminBlock = routes.slice(routes.indexOf('<Route element={<RequireAdmin />}>'));
     for (const path of [
       "/customer-experience", "/forecasting", "/expenses", "/attendance",
-      "/advances", "/payroll", "/staff-analytics", "/accounting", "/advanced-automation",
+      "/advances", "/payroll", "/staff-analytics", "/accounting", "/advanced-automation", "/assistant",
     ]) {
       expect(adminBlock).toContain(`path="${path}"`);
     }
