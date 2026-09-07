@@ -191,7 +191,7 @@ export default function CustomersPage() {
         subtitle={t("Manage your client database")}
         actions={
           <>
-            <div className="relative w-full sm:w-72 group">
+            <div className="relative hidden w-full sm:w-72 group lg:block">
               <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 className="w-full rounded-[1.5rem] border border-border bg-card py-3.5 ps-11 pe-4 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
@@ -228,23 +228,23 @@ export default function CustomersPage() {
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="print:hidden space-y-4 lg:space-y-0 lg:rounded-[3rem] lg:border border-border lg:bg-card lg:shadow-2xl">
         <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[800px] text-sm md:min-w-full">
-            <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-              <tr className="[&>th]:px-5 sm:[&>th]:px-10 [&>th]:py-4 sm:[&>th]:py-8 [&>th]:text-start">
+            <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+              <tr className="[&>th]:px-5 [&>th]:py-3 [&>th]:text-start">
                 <th>{t("Customer")}</th><th>{t("Contact")}</th><th>{t("Total Spent")}</th><th>{t("Loyalty")}</th><th className="w-[150px]">{t("Actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               <AnimatePresence mode="popLayout">
                 {filtered.map((customer, index) => (
-                  <motion.tr layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0, transition: { delay: index * 0.02 } }} exit={{ opacity: 0, scale: 0.95 }} key={customer.id} className="group hover:bg-muted/30 transition-all [&>td]:px-5 sm:[&>td]:px-10 [&>td]:py-4 sm:[&>td]:py-8 [&>td]:text-start">
+                  <motion.tr layout initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0, transition: { delay: index * 0.02 } }} exit={{ opacity: 0, scale: 0.95 }} key={customer.id} className="group hover:bg-muted/30 transition-all [&>td]:px-5 [&>td]:py-3 [&>td]:text-start">
                     <td>
-                      <div className="flex items-center gap-5">
-                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-lg uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all group-hover:scale-110 shadow-inner">{getInitials(customer, "·")}</div>
-                        <div className="space-y-0.5"><span className="font-bold text-foreground text-lg block group-hover:text-primary transition-colors">{getDisplayName(customer, t("Unnamed"))}</span><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Client ID")}: {customer.id.slice(-6).toUpperCase()}</span></div>
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner">{getInitials(customer, "·")}</div>
+                        <div className="space-y-0.5"><span className="font-bold text-foreground text-sm block group-hover:text-primary transition-colors">{getDisplayName(customer, t("Unnamed"))}</span><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Client ID")}: {customer.id.slice(-6).toUpperCase()}</span></div>
                       </div>
                     </td>
                     <td className="text-muted-foreground font-medium"><div className="flex items-center gap-3 bg-muted/50 px-4 py-2 rounded-xl w-fit"><Phone className="h-4 w-4 text-primary" /><span className="font-bold text-foreground" dir="ltr">{customer.phone ?? "—"}</span></div></td>
-                    <td><div className="flex flex-col"><div className="flex items-center gap-2"><span className="font-bold text-foreground text-xl">{formatOMRAmount(customer.totalSpent)}</span><TrendingUp className="h-4 w-4 text-success" /></div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR Total")}</span></div></td>
+                    <td><div className="flex flex-col"><div className="flex items-center gap-2"><span className="font-bold text-foreground text-base">{formatOMRAmount(customer.totalSpent)}</span><TrendingUp className="h-4 w-4 text-success" /></div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR Total")}</span></div></td>
                     <td>{(() => { const tier = getTierBySpend(customer.totalSpent); return <div className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold border shadow-sm ${tier.bg} ${tier.color} ${tier.border}`}><span>{tier.icon}</span><span>{t(tier.labelKey)}</span><span className="opacity-60">· {customer.loyaltyPoints} {t("pts")}</span></div>; })()}</td>
                     <td><div className="flex items-center gap-2"><button onClick={() => void openHistory(customer)} className="relative h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-sm hover:scale-110 active:scale-95" title={t("History")}><History className="h-6 w-6" /></button><button onClick={() => openEdit(customer)} className="h-12 w-12 rounded-2xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info hover:border-info/20 transition-all shadow-sm hover:scale-110 active:scale-95" title={t("Edit")}><Pencil className="h-5 w-5" /></button></div></td>
                   </motion.tr>

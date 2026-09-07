@@ -61,6 +61,7 @@ export default function AppointmentsPage() {
 
   const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [customerSearchDone, setCustomerSearchDone] = useState(false);
+  const [pendingGuestPhone, setPendingGuestPhone] = useState("");
   const customerSearchRequestRef = useRef(0);
 
   const range = useMemo(() => {
@@ -91,8 +92,8 @@ export default function AppointmentsPage() {
       setServices(serviceRows.filter((service) => service.isActive !== false).map(mapService));
       setEmployees(employeeRows.filter((employee) => employee.isActive !== false).map(mapEmployee));
       setAppts(appointmentRows.map(mapAppt));
-      if (serviceRows.length && !serviceId) setServiceId(serviceRows[0].id);
-      if (employeeRows.length && !employeeId) setEmployeeId(employeeRows[0].id);
+      if (serviceRows.length) setServiceId((current) => current || serviceRows[0].id);
+      if (employeeRows.length) setEmployeeId((current) => current || employeeRows[0].id);
     } catch (error: any) {
       console.error(error);
       setLoadError(error?.message || String(error));
@@ -134,7 +135,11 @@ export default function AppointmentsPage() {
     if (!name || creatingCustomer) return;
     setCreatingCustomer(true);
     try {
-      const created = await unwrap(useCases.customers.create({ name }));
+      const created = await unwrap(useCases.customers.create({
+        name,
+        phone: pendingGuestPhone.trim() || undefined,
+      }));
+      setPendingGuestPhone("");
       setCustomerId(created.id);
       setCustomerQ(created.name);
       setCustomers([]);
@@ -222,13 +227,29 @@ export default function AppointmentsPage() {
     setNoShowFeeAmount(0);
     setChargeNoShowFee(true);
     setNoShowNote("");
+    setPendingGuestPhone("");
   }
 
   useEffect(() => {
     if (searchParams.get("new") !== "1") return;
+    const guestName = searchParams.get("guest")?.trim() || "";
+    const guestPhone = searchParams.get("phone")?.trim() || "";
+    const service = searchParams.get("service") || "";
+    const when = searchParams.get("when");
     openBooking();
+    if (guestName) setCustomerQ(guestName);
+    if (guestPhone) setPendingGuestPhone(guestPhone);
+    if (service) setServiceId(service);
+    if (when) {
+      const parsed = new Date(when);
+      if (!Number.isNaN(parsed.getTime())) setSlotDate(parsed);
+    }
     const next = new URLSearchParams(searchParams);
     next.delete("new");
+    next.delete("guest");
+    next.delete("phone");
+    next.delete("service");
+    next.delete("when");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 

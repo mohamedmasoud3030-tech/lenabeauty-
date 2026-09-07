@@ -5,7 +5,7 @@ import {
   ArrowUpRight, TrendingUp, Users, Scissors, 
   Sparkles, ArrowRight, Plus, 
   ShoppingBag, Calendar, UserPlus, FileText,
-  Activity, Zap, Clock, ChevronRight, MoreVertical,
+  Activity, RefreshCw, Clock, ChevronRight, MoreVertical,
   LayoutGrid, Wallet, BarChart3, DollarSign, TrendingDown, CheckCircle2
 } from "lucide-react";
 import { useToast } from "../shared/components/Toast";
@@ -148,7 +148,7 @@ export default function DashboardPage() {
             aria-label={t("Refresh")}
             className="group relative h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 transition-all shadow-lg hover:scale-110 active:scale-95"
           >
-            <Zap className={clsx("h-5 w-5", loading && "animate-spin")} />
+            <RefreshCw className={clsx("h-5 w-5", loading && "animate-spin")} />
           </button>
           <button 
             onClick={() => nav(isFirstRun ? "/services" : "/appointments")}
@@ -284,67 +284,27 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 bg-muted/20">
-            <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              {t("Operational Alerts")}
-            </h2>
-            <button
-              onClick={() => nav("/inventory")}
-              className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
-            >
-              {t("View All")}
-            </button>
-          </div>
-          <div className="p-4 sm:p-6">
-            {lowStockItems.length === 0 ? (
-              <ScreenState
-                state="empty"
-                compact
-                icon={<CheckCircle2 className="h-6 w-6" />}
-                title={t("No low stock alerts")}
-                description={trackedProductCount === 0
-                  ? t("Add products when you start tracking stock.")
-                  : t("Inventory levels are healthy")}
-              />
-            ) : (
-              <div className="space-y-2">
-                {lowStockItems.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => nav("/inventory")}
-                    className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-start hover:bg-muted/40 hover:border-warning/40 transition-all"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-foreground truncate">{p.name}</p>
-                      <p className="text-[10px] font-bold text-muted-foreground">{t("Low Stock")}</p>
-                    </div>
-                    <span className="h-8 w-8 rounded-lg bg-warning/10 text-warning flex items-center justify-center text-xs font-bold shrink-0">
-                      {p.stock}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </motion.div>
-      </div>
-      )}
-
-      {!isFirstRun && (
         <motion.section variants={item} aria-labelledby="needs-attention-title" className="rounded-2xl sm:rounded-3xl border border-warning/20 bg-card shadow-xl overflow-hidden">
           <div className="flex items-center justify-between gap-4 border-b border-warning/20 bg-warning/5 px-4 sm:px-6 py-4">
-            <div>
+            <div className="min-w-0">
               <h2 id="needs-attention-title" className="text-lg sm:text-xl font-bold flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" aria-hidden="true" />
                 {t("Needs Attention")}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">{t("Resolve today's exceptions before they become delays.")}</p>
             </div>
-            <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-bold text-warning">
-              {needsAttention.length}
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="rounded-full bg-warning/10 px-3 py-1 text-xs font-bold text-warning">
+                {needsAttention.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => nav("/action-center")}
+                className="min-h-11 inline-flex items-center text-[10px] font-bold uppercase tracking-widest text-primary hover:opacity-80 transition-opacity"
+              >
+                {t("View All")}
+              </button>
+            </div>
           </div>
           <div className="p-4 sm:p-6">
             {needsAttention.length === 0 ? (
@@ -352,17 +312,21 @@ export default function DashboardPage() {
                 state="empty"
                 compact
                 icon={<CheckCircle2 className="h-6 w-6" />}
-                title={t("Nothing needs attention")}
-                description={t("Today's schedule and stock have no recorded exceptions.")}
+                title={trackedProductCount === 0 && todayAppts.length === 0
+                  ? t("No low stock alerts")
+                  : t("Nothing needs attention")}
+                description={trackedProductCount === 0
+                  ? t("Add products when you start tracking stock.")
+                  : t("Today's schedule and stock have no recorded exceptions.")}
               />
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
                 {needsAttention.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => nav(item.route)}
-                    className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-background/40 p-3 text-start transition-colors hover:border-warning/40 hover:bg-warning/5 touch-target"
+                    className="flex min-h-11 w-full items-center gap-3 rounded-xl border border-border bg-background/40 p-3 text-start transition-colors hover:border-warning/40 hover:bg-warning/5 touch-target"
                   >
                     <span className={clsx(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
@@ -381,9 +345,12 @@ export default function DashboardPage() {
             )}
           </div>
         </motion.section>
+      </div>
       )}
 
-      {/* Main Content Grid */}
+      {/* Revenue panels stay hidden until the summary confirms this role may
+          read money — never flash the chart at STAFF during the first load. */}
+      {Boolean(summary?.canViewRevenue) && (
       <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
         
         {/* 7-Day Revenue Chart */}
@@ -555,6 +522,7 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+      )}
 
       {/* Activity & Quick Actions */}
       <div className="grid gap-4 sm:gap-6 lg:gap-8 lg:grid-cols-3">
@@ -576,7 +544,7 @@ export default function DashboardPage() {
               className="group min-h-11 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.2em] text-primary hover:opacity-80 transition-opacity"
             >
               {t("Refresh")}
-              <Zap className={clsx("h-3 w-3 transition-transform", loading && "animate-spin")} />
+              <RefreshCw className={clsx("h-3 w-3 transition-transform", loading && "animate-spin")} />
             </button>
           </div>
           <div className="p-4 sm:p-6 space-y-2 max-h-[400px] overflow-auto scrollbar-hide">
@@ -616,7 +584,7 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <motion.div variants={item} className="rounded-2xl sm:rounded-3xl border border-border bg-card shadow-xl overflow-hidden p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-primary" />
             {t("Quick Actions")}
           </h2>
           <div className="space-y-2">

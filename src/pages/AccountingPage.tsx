@@ -1,117 +1,229 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BookOpen, Plus, Save } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
-import { unwrap } from "../shared/hooks/useApplication";
+import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
-import { requiredText, nonNegativeNumber, collectIssues, issuesToMap } from "../domain/validation";
+import { PageHeader } from "../shared/components/PageHeader";
+import { ListState } from "../shared/components/ListState";
+import { Modal } from "../shared/components/Modal";
+import { formatOMRAmount } from "../shared/money";
+import type { PnlData } from "../application/dto";
 
-const fieldClass = "min-h-11 rounded-xl border border-border/80 bg-card/80 px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus:border-primary/60 focus:ring-4 focus:ring-primary/10";
+const fieldClass = "min-h-11 w-full rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/15";
+
+const ACCOUNTS = ["Cash", "Bank", "Sales", "Expense", "Payroll", "Inventory", "Owner"] as const;
+const ENTRY_TYPES = ["ADJUSTMENT", "SALE", "EXPENSE", "PAYROLL", "TRANSFER"] as const;
+
+function defaultsForType(type: (typeof ENTRY_TYPES)[number]): { debit: string; credit: string } {
+  if (type === "SALE") return { debit: "Cash", credit: "Sales" };
+  if (type === "EXPENSE") return { debit: "Expense", credit: "Cash" };
+  if (type === "PAYROLL") return { debit: "Payroll", credit: "Cash" };
+  if (type === "TRANSFER") return { debit: "Bank", credit: "Cash" };
+  return { debit: "Cash", credit: "Sales" };
+}
 
 export default function AccountingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const [entries, setEntries] = useState<any[]>([]);
+  const [pnl, setPnl] = useState<PnlData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("0");
+  const [amount, setAmount] = useState("");
+  const [entryType, setEntryType] = useState<(typeof ENTRY_TYPES)[number]>("ADJUSTMENT");
   const [debit, setDebit] = useState("Cash");
   const [credit, setCredit] = useState("Sales");
-  const [entryType, setEntryType] = useState<"SALE" | "EXPENSE" | "PAYROLL" | "ADJUSTMENT" | "TRANSFER">("ADJUSTMENT");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   async function load() {
+    setLoading(true);
+    setLoadError(null);
     try {
-      setEntries(await unwrap(useCases.accounting.listJournalEntries()));
-    } catch (err: any) {
-      showToast("error", t("Error"), t("Could not load journal entries. Please check your connection and try again."));
+      const [journal, month] = await Promise.all([
+        unwrap(useCases.accounting.listJournalEntries()),
+        useCases.dashboard.getPnlMonth().then((result) => (result.ok ? result.data : null)).catch(() => null),
+      ]);
+      setEntries(journal);
+      setPnl(month);
+    } catch (error) {
+      setLoadError(formatError(error));
+    } finally {
+      setLoading(false);
     }
   }
+
   useEffect(() => { void load(); }, []);
 
+  function resetForm() {
+    setDescription("");
+    setAmount("");
+    setEntryType("ADJUSTMENT");
+    setDebit("Cash");
+    setCredit("Sales");
+    setEntryDate(new Date().toISOString().slice(0, 10));
+  }
+
   async function save() {
-    const descR = requiredText(description);
-    const amountR = nonNegativeNumber(amount);
-    const issues = collectIssues([
-      { field: "description", result: descR },
-      { field: "amount", result: amountR },
-    ]);
-    if (issues.length > 0) {
-      setErrors(issuesToMap(issues));
+    const value = Number(amount);
+    if (!description.trim() || !Number.isFinite(value) || value <= 0) {
+      showToast("error", t("Error"), t("Please fill all required fields"));
       return;
     }
-    setErrors({});
+    if (saving) return;
+    setSaving(true);
     try {
       await unwrap(useCases.accounting.createJournalEntry({
-        description: (descR as { ok: true; value: string }).value,
-        amount: (amountR as { ok: true; value: number }).value,
+        description: description.trim(),
+        amount: value,
         debitAccount: debit,
         creditAccount: credit,
         entryType,
+        entryDateISO: entryDate,
       }));
-      setDescription(""); setAmount("0");
-      await load();
+      resetForm();
+      setOpen(false);
       showToast("success", t("Success"), t("Journal entry saved successfully"));
-    } catch (err: any) {
-      showToast("error", t("Error"), t("Could not load journal entries. Please check your connection and try again."));
+      await load();
+    } catch (error) {
+      showToast("error", t("Error"), formatError(error) || t("Could not save journal entry. Please check your input and try again."));
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
     <div className="space-y-6 pb-10">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("Accounting")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("General journal for sales, expenses, payroll, and adjustments")}</p>
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-border/80 bg-card/86 p-4 shadow-lg shadow-primary/5 backdrop-blur-sm md:grid-cols-5">
-        <select value={entryType} onChange={(e) => setEntryType(e.target.value as any)} className={fieldClass}>
-          <option value="ADJUSTMENT">ADJUSTMENT</option>
-          <option value="SALE">SALE</option>
-          <option value="EXPENSE">EXPENSE</option>
-          <option value="PAYROLL">PAYROLL</option>
-          <option value="TRANSFER">TRANSFER</option>
-        </select>
-        <input value={description} onChange={(e) => { setDescription(e.target.value); if (errors.description) setErrors((p) => ({ ...p, description: "" })); }} placeholder={t("Description") as string} className={`${fieldClass} md:col-span-2`} />
-        <input value={debit} onChange={(e) => setDebit(e.target.value)} placeholder={t("Debit account") as string} className={fieldClass} />
-        <input value={credit} onChange={(e) => setCredit(e.target.value)} placeholder={t("Credit account") as string} className={fieldClass} />
-        <input value={amount} onChange={(e) => { setAmount(e.target.value); if (errors.amount) setErrors((p) => ({ ...p, amount: "" })); }} type="number" step="0.01" className={fieldClass} />
-        <div className="flex items-center gap-3 md:col-span-5">
-          {(errors.description || errors.amount) && (
-            <span className="text-xs font-bold text-destructive">
-              {errors.description ? t(errors.description) : t(errors.amount)}
-            </span>
-          )}
-          <button onClick={save} className="ms-auto min-h-11 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/15 transition hover:brightness-105 active:scale-[0.99]">
-            {t("Save Journal Entry")}
+      <PageHeader
+        icon={<BookOpen className="h-7 w-7" />}
+        title={t("Accounting")}
+        actions={
+          <button type="button" onClick={() => setOpen(true)} className="min-h-11 px-4 rounded-xl bg-primary font-bold text-primary-foreground flex items-center justify-center gap-2">
+            <Plus className="h-4 w-4" />
+            {t("Add journal entry")}
           </button>
+        }
+      />
+
+      <p className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        {t("Journal is for manual entries. Sales and expenses this month come from recorded operations — they are not posted here automatically.")}
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("From recorded sales")}</p>
+          <p className="mt-2 text-2xl font-bold">{formatOMRAmount(pnl?.revenue)} <span className="text-xs text-muted-foreground">{t("OMR")}</span></p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("From recorded expenses")}</p>
+          <p className="mt-2 text-2xl font-bold">{formatOMRAmount(pnl?.expenses)} <span className="text-xs text-muted-foreground">{t("OMR")}</span></p>
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("Journal entries")}</p>
+          <p className="mt-2 text-2xl font-bold">{entries.length}</p>
         </div>
       </div>
 
-      <div className="overflow-auto rounded-2xl border border-border/80 bg-card/90 p-4 shadow-lg shadow-primary/5 backdrop-blur-sm">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted-foreground">
-              <th className="py-2">{t("Date")}</th>
-              <th>{t("Type")}</th>
-              <th>{t("Description")}</th>
-              <th>{t("Debit")}</th>
-              <th>{t("Credit")}</th>
-              <th>{t("Amount")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={entry.id} className="border-t border-border/60 transition hover:bg-primary/[0.035]">
-                <td className="py-2">{new Date(entry.entryDate).toLocaleDateString()}</td>
-                <td>{entry.entryType}</td>
-                <td>{entry.description}</td>
-                <td>{entry.debitAccount}</td>
-                <td>{entry.creditAccount}</td>
-                <td className="font-semibold">{entry.amount.toFixed(2)} {entry.currency}</td>
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <tr className="[&>th]:px-5 [&>th]:py-3 [&>th]:text-start">
+                <th>{t("Date")}</th>
+                <th>{t("Entry type")}</th>
+                <th>{t("Description")}</th>
+                <th>{t("Debit account")}</th>
+                <th>{t("Credit account")}</th>
+                <th>{t("Amount")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {entries.map((entry) => (
+                <tr key={entry.id} className="[&>td]:px-5 [&>td]:py-3 [&>td]:text-start">
+                  <td>{new Date(entry.entryDate).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US")}</td>
+                  <td>{t(entry.entryType === "SALE" ? "Sale" : entry.entryType === "EXPENSE" ? "Expense" : entry.entryType === "PAYROLL" ? "Payroll" : entry.entryType === "TRANSFER" ? "Transfer" : "Adjustment")}</td>
+                  <td className="font-bold">{entry.description}</td>
+                  <td>{t(entry.debitAccount)}</td>
+                  <td>{t(entry.creditAccount)}</td>
+                  <td className="font-bold">{formatOMRAmount(entry.amount)}</td>
+                </tr>
+              ))}
+              <ListState loading={loading && entries.length === 0} error={loadError} empty={entries.length === 0} onRetry={() => void load()} loadingTitle={t("Loading journal...")} errorTitle={t("Failed to load journal")} emptyTitle={t("No journal entries")} emptyDescription={t("Record the first adjustment")} emptyIcon={<BookOpen className="h-6 w-6" />} colSpan={6} compact />
+            </tbody>
+          </table>
+        </div>
+        <div className="lg:hidden p-4 space-y-3">
+          {entries.map((entry) => (
+            <div key={entry.id} className="rounded-xl border border-border p-3 space-y-1">
+              <p className="font-bold">{entry.description}</p>
+              <p className="text-xs text-muted-foreground">{new Date(entry.entryDate).toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US")} · {t(entry.debitAccount)} → {t(entry.creditAccount)}</p>
+              <p className="font-bold">{formatOMRAmount(entry.amount)} {t("OMR")}</p>
+            </div>
+          ))}
+          <ListState loading={loading && entries.length === 0} error={loadError} empty={entries.length === 0} onRetry={() => void load()} loadingTitle={t("Loading journal...")} errorTitle={t("Failed to load journal")} emptyTitle={t("No journal entries")} emptyDescription={t("Record the first adjustment")} emptyIcon={<BookOpen className="h-6 w-6" />} compact />
+        </div>
       </div>
+
+      <Modal
+        isOpen={open}
+        onClose={() => { setOpen(false); resetForm(); }}
+        title={t("Add journal entry")}
+        size="md"
+        footer={
+          <button type="button" onClick={() => void save()} disabled={saving} className="w-full min-h-11 rounded-xl bg-primary font-bold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2">
+            <Save className="h-4 w-4" />
+            {saving ? t("Processing...") : t("Save Journal Entry")}
+          </button>
+        }
+      >
+        <div className="space-y-4">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Entry type")}</span>
+            <select className={fieldClass} value={entryType} onChange={(event) => {
+              const next = event.target.value as (typeof ENTRY_TYPES)[number];
+              setEntryType(next);
+              const accounts = defaultsForType(next);
+              setDebit(accounts.debit);
+              setCredit(accounts.credit);
+            }}>
+              {ENTRY_TYPES.map((type) => (
+                <option key={type} value={type}>{t(type === "SALE" ? "Sale" : type === "EXPENSE" ? "Expense" : type === "PAYROLL" ? "Payroll" : type === "TRANSFER" ? "Transfer" : "Adjustment")}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Description")}</span>
+            <input className={fieldClass} value={description} onChange={(event) => setDescription(event.target.value)} />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold text-muted-foreground">{t("Debit account")}</span>
+              <select className={fieldClass} value={debit} onChange={(event) => setDebit(event.target.value)}>
+                {ACCOUNTS.map((account) => <option key={account} value={account}>{t(account)}</option>)}
+              </select>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold text-muted-foreground">{t("Credit account")}</span>
+              <select className={fieldClass} value={credit} onChange={(event) => setCredit(event.target.value)}>
+                {ACCOUNTS.map((account) => <option key={account} value={account}>{t(account)}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold text-muted-foreground">{t("Amount")}</span>
+              <input className={fieldClass} type="number" min="0" step="0.001" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold text-muted-foreground">{t("Date")}</span>
+              <input className={fieldClass} type="date" value={entryDate} onChange={(event) => setEntryDate(event.target.value)} />
+            </label>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

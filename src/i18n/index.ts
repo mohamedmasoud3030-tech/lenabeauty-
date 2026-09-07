@@ -14,6 +14,7 @@ import { arAccounting } from "./ar/accounting";
 import { arWorkforce } from "./ar/workforce";
 import { arSettings } from "./ar/settings";
 import { arErrors } from "./ar/errors";
+import { arGrowth } from "./ar/growth";
 import { enCommon } from "./en/common";
 import { enAuth } from "./en/auth";
 import { enDashboard } from "./en/dashboard";
@@ -26,6 +27,7 @@ import { enAccounting } from "./en/accounting";
 import { enWorkforce } from "./en/workforce";
 import { enSettings } from "./en/settings";
 import { enErrors } from "./en/errors";
+import { enGrowth } from "./en/growth";
 
 const resources = {
   ar: {
@@ -41,7 +43,8 @@ const resources = {
       ...arAccounting,
       ...arWorkforce,
       ...arSettings,
-      ...arErrors
+      ...arErrors,
+      ...arGrowth
     }
   },
   en: {
@@ -57,7 +60,8 @@ const resources = {
       ...enAccounting,
       ...enWorkforce,
       ...enSettings,
-      ...enErrors
+      ...enErrors,
+      ...enGrowth
     }
   }
 };

@@ -2,8 +2,8 @@ import { Result, DomainError, CustomerExperienceRepository, ForecastRepository, 
 import { createUnsupportedWriteError, createQueryError } from ".././errors";
 import { getSupabaseClient } from ".././client";
 import { mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead } from ".././mappers";
-import { requiredText, nonNegativeNumber, phoneField, numberField } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor } from "./shared";
+import { requiredText, nonNegativeNumber, phoneField, numberField, DomainValidationError } from "../../../domain/validation";
+import { validatePayload, okValue, getCenterIdFor, resolveCenterAssetUrl, UUID_RE } from "./shared";
 
 export class SupabaseCustomerExperienceAdapter implements CustomerExperienceRepository {
   async listReviews(): Promise<Result<any[], DomainError>> {
@@ -59,7 +59,15 @@ export class SupabaseCustomerExperienceAdapter implements CustomerExperienceRepo
       if (customerId) query = query.eq('customer_id', customerId);
       const { data, error } = await query;
       if (error) return { ok: false, error: createQueryError("CustomerExperience.listServiceFiles", error.message) };
-      return { ok: true, data: (data || []).map(mapServiceFile) };
+      const files = (data || []).map(mapServiceFile);
+      for (const file of files) {
+        if (!file.images?.length) continue;
+        file.images = await Promise.all(file.images.map(async (image) => ({
+          ...image,
+          imageUrl: (await resolveCenterAssetUrl(image.imageUrl)) || image.imageUrl,
+        })));
+      }
+      return { ok: true, data: files };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("CustomerExperience.listServiceFiles", (e as Error).message) };
     }
@@ -91,6 +99,30 @@ export class SupabaseCustomerExperienceAdapter implements CustomerExperienceRepo
       return { ok: false, error: createQueryError("CustomerExperience.createServiceFile", (e as Error).message) };
     }
   }
+
+  async uploadServiceImage(file: File): Promise<Result<{ path: string; url: string }, DomainError>> {
+    const centerRes = getCenterIdFor("CustomerExperience.uploadServiceImage");
+    if (!centerRes.ok) return centerRes as any;
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    if (!allowedTypes.has(file.type) || file.size <= 0 || file.size > 2 * 1024 * 1024) {
+      return { ok: false, error: new DomainValidationError([{ field: "photo", key: "validation.logo_type" }]) };
+    }
+    try {
+      const client: any = getSupabaseClient();
+      if (!client.storage?.from) return { ok: false, error: createUnsupportedWriteError("CustomerExperience.uploadServiceImage") };
+      const path = `${centerRes.data}/service-files/${globalThis.crypto.randomUUID()}`;
+      const { error } = await client.storage.from("center-assets").upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+        cacheControl: "3600",
+      });
+      if (error) return { ok: false, error: createQueryError("CustomerExperience.uploadServiceImage", error.message) };
+      const url = (await resolveCenterAssetUrl(path)) || path;
+      return { ok: true, data: { path, url } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("CustomerExperience.uploadServiceImage", (e as Error).message) };
+    }
+  }
 }
 
 export class SupabaseForecastAdapter implements ForecastRepository {
@@ -117,7 +149,7 @@ export class SupabaseForecastAdapter implements ForecastRepository {
       if (itemsRes.error) return { ok:false, error:createQueryError("Forecast.getInventoryForecast", itemsRes.error.message)};
       const usage = new Map();
       for (const item of (itemsRes.data||[])) usage.set(item.product_id, (usage.get(item.product_id)||0)+Number(item.quantity||0));
-      return { ok:true, data:(productsRes.data||[]).map((p:any)=>{ const sold=Number(usage.get(p.id)||0); const avg=sold/30; const stock=Number(p.stock_quantity)||0; const days=avg>0?stock/avg:999; return { productId:String(p.id), productName:String(p.name||''), stockQuantity:stock, averageDailyUnits:Number(avg.toFixed(2)), daysRemaining:Number(days.toFixed(1)), reorderAlert:days <= 14 || stock <= 5 }; }) };
+      return { ok:true, data:(productsRes.data||[]).map((p:any)=>{ const sold=Number(usage.get(p.id)||0); const avg=sold/30; const stock=Number(p.stock_quantity)||0; const days=avg>0?stock/avg:999; return { productId:String(p.id), productName:String(p.name||''), stockQuantity:stock, averageDailyUnits:avg, daysRemaining:days, reorderAlert:days <= 14 || stock <= 5 }; }) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Forecast.getInventoryForecast", (e as Error).message) };
     }
@@ -138,7 +170,7 @@ export class SupabaseForecastAdapter implements ForecastRepository {
       const revenue=(invoicesRes.data||[]).reduce((s:any,r:any)=>s+Number(r.total_amount||0),0);
       const expenses=(expensesRes.data||[]).reduce((s:any,r:any)=>s+Number(r.amount||0),0);
       const daily=revenue/30;
-      return { ok:true, data:{ projectedMonthlyRevenue:Number(revenue.toFixed(2)), projectedMonthlyExpenses:Number(expenses.toFixed(2)), projectedMonthlyProfit:Number((revenue-expenses).toFixed(2)), revenueRunRateDaily:Number(daily.toFixed(2)) } };
+      return { ok:true, data:{ projectedMonthlyRevenue:revenue, projectedMonthlyExpenses:expenses, projectedMonthlyProfit:revenue-expenses, revenueRunRateDaily:daily } };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Forecast.getFinancialForecast", (e as Error).message) };
     }
@@ -238,6 +270,28 @@ export class SupabaseAdvancedAdapter implements AdvancedRepository {
       return { ok:true, data: mapAiBookingLead(row.lead) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Advanced.createAiBookingLead", (e as Error).message) };
+    }
+  }
+
+  async updateAiBookingLeadStatus(id: string, status: "NEW" | "QUALIFIED" | "BOOKED" | "CLOSED"): Promise<Result<any, DomainError>> {
+    const centerRes = getCenterIdFor("Advanced.updateAiBookingLeadStatus");
+    if (!centerRes.ok) return centerRes as any;
+    if (!UUID_RE.test(id) || !["NEW", "QUALIFIED", "BOOKED", "CLOSED"].includes(status)) {
+      return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Invalid lead update") };
+    }
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from("ai_booking_leads")
+        .update({ status })
+        .eq("id", id)
+        .eq("center_id", centerRes.data)
+        .select("*")
+        .maybeSingle();
+      if (error) return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", error.message) };
+      if (!data) return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Lead not found") };
+      return { ok: true, data: mapAiBookingLead(data) };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", (e as Error).message) };
     }
   }
 }

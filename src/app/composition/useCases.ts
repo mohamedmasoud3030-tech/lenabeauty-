@@ -130,6 +130,7 @@ export const useCases = {
     createReview: (input: CreateCustomerReviewInput) => getRepositoryBundle().customerExperienceAdapter.createReview(input),
     listServiceFiles: (customerId?: string) => getRepositoryBundle().customerExperienceAdapter.listServiceFiles(customerId),
     createServiceFile: (input: CreateServiceFileInput) => getRepositoryBundle().customerExperienceAdapter.createServiceFile(input),
+    uploadServiceImage: (file: File) => getRepositoryBundle().customerExperienceAdapter.uploadServiceImage(file),
   },
   forecasts: {
     getInventoryForecast: () => getRepositoryBundle().forecastAdapter.getInventoryForecast(),
@@ -142,6 +143,8 @@ export const useCases = {
   advanced: {
     listAiBookingLeads: () => getRepositoryBundle().advancedAdapter.listAiBookingLeads(),
     createAiBookingLead: (input: CreateAiBookingLeadInput) => getRepositoryBundle().advancedAdapter.createAiBookingLead(input),
+    updateAiBookingLeadStatus: (id: string, status: "NEW" | "QUALIFIED" | "BOOKED" | "CLOSED") =>
+      getRepositoryBundle().advancedAdapter.updateAiBookingLeadStatus(id, status),
   },
 
   attendance: {

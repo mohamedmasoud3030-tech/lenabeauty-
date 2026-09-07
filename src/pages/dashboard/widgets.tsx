@@ -40,7 +40,7 @@ export function StatCard({ title, value, subValue, icon, color, variants, compac
       <div className={clsx("relative z-10", compact ? "mt-2 sm:mt-4" : "mt-4 sm:mt-6")}>
         <p className={clsx(
           "font-bold text-muted-foreground uppercase tracking-wider",
-          compact ? "text-[8px] sm:text-[9px]" : "text-[9px]"
+          compact ? "text-[10px] sm:text-xs" : "text-[10px] sm:text-xs"
         )}>{title}</p>
         <h3 className={clsx(
           "font-bold text-foreground tracking-tighter truncate",
@@ -48,7 +48,7 @@ export function StatCard({ title, value, subValue, icon, color, variants, compac
         )}>{value}</h3>
         <p className={clsx(
           "text-muted-foreground font-bold uppercase tracking-wider opacity-60 truncate",
-          compact ? "text-[8px] sm:text-[9px] mt-0.5" : "text-[9px] mt-1 sm:mt-2"
+          compact ? "text-[10px] sm:text-xs mt-0.5" : "text-[10px] mt-1 sm:mt-2"
         )}>{subValue}</p>
       </div>
     </motion.div>
@@ -81,7 +81,7 @@ export function QuickActionButton({ title, icon, color, onClick }: {
         {icon}
       </div>
       <span className="text-xs font-bold uppercase tracking-[0.1em] text-start flex-1">{title}</span>
-      <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity rtl:rotate-180" />
     </button>
   );
 }

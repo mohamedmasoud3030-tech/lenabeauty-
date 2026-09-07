@@ -86,6 +86,24 @@ describe("Appointments operational UX", () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
+  it("prefills a booking-request deep link with the guest name and phone", async () => {
+    await i18n.changeLanguage("en");
+    vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    const createSpy = vi.spyOn(useCases.customers, "create").mockResolvedValue({
+      ok: true,
+      data: { id: "c-new", name: "Nora", phone: "96891111111", createdAt: new Date(), updatedAt: new Date() },
+    } as any);
+
+    renderPage(["/appointments?new=1&guest=Nora&phone=96891111111&service=s1"]);
+
+    const searchInput = await screen.findByPlaceholderText(i18n.t("Search by name or phone..."));
+    await waitFor(() => expect(searchInput).toHaveValue("Nora"));
+
+    const createButton = await screen.findByText(`${i18n.t("Create customer")}: Nora`, undefined, { timeout: 2000 });
+    fireEvent.click(createButton);
+    await waitFor(() => expect(createSpy).toHaveBeenCalledWith({ name: "Nora", phone: "96891111111" }));
+  });
+
   it("creates a new customer inline from the booking dialog when search has no results", async () => {
     await i18n.changeLanguage("ar");
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);

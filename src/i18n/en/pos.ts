@@ -171,5 +171,7 @@ export const enPos = {
   "wallet.rewards": "Reward points",
   "wallet.deposit": "Visit deposit",
   "wallet.use": "Use",
-  "wallet.used": "Applied"
+  "wallet.used": "Applied",
+  "Expires at": "Expires at",
+  "Confirm selling price": "Confirm selling price"
 };

@@ -171,5 +171,7 @@ export const arPos = {
   "wallet.rewards": "نقاط المكافآت",
   "wallet.deposit": "عربون الزيارة",
   "wallet.use": "استخدام",
-  "wallet.used": "مُستخدمة"
+  "wallet.used": "مُستخدمة",
+  "Expires at": "تاريخ الانتهاء",
+  "Confirm selling price": "تأكيد سعر البيع"
 };

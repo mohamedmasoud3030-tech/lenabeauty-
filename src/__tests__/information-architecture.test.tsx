@@ -99,7 +99,8 @@ describe("route and registry integrity", () => {
       expect(navigable, `${path} is searchable but has no menu entry`).toContain(path);
     }
     for (const path of ["/customer-experience", "/forecasting", "/accounting", "/advanced-automation"]) {
-      expect(searchable, `${path} is deferred and must not be searchable`).not.toContain(path);
+      expect(searchable, `${path} is shipped and must be searchable`).toContain(path);
+      expect(navigable, `${path} is shipped and must have a menu entry`).toContain(path);
     }
   });
 
@@ -268,27 +269,23 @@ describe("discoverability of previously hidden features", () => {
     vi.spyOn(useCases.servicePackages, "list").mockResolvedValue({ ok: true, data: [] } as any);
   });
 
-  it("IA-T2 — deferred modules stay out of navigation AND search", async () => {
+  it("IA-T2 — growth modules are in admin navigation and search", async () => {
     await i18n.changeLanguage("en");
     const { unmount } = render(<MemoryRouter><Sidebar /></MemoryRouter>);
     await screen.findByText(i18n.t("Dashboard"));
 
-    for (const label of ["Customer Experience", "Forecasting", "Accounting", "Automation"]) {
-      expect(screen.queryByText(i18n.t(label)), `${label} is deferred and must stay hidden`)
-        .not.toBeInTheDocument();
+    const nav = await screen.findByRole("navigation", { name: i18n.t("Primary navigation") });
+    for (const label of ["Customer Experience", "Forecasting", "Accounting", "Booking requests"]) {
+      expect(within(nav).getByText(i18n.t(label)), `${label} must be in the admin menu`)
+        .toBeInTheDocument();
     }
     unmount();
 
     render(<MemoryRouter><GlobalSearch userRole="ADMIN" /></MemoryRouter>);
     fireEvent.click(screen.getByRole("button", { name: i18n.t("Search") }));
     const input = screen.getByRole("combobox");
-    for (const term of ["forecast", "accounting", "automation", "experience"]) {
-      fireEvent.change(input, { target: { value: term } });
-      expect(
-        screen.queryAllByRole("option"),
-        `search for "${term}" must not surface a deferred module`,
-      ).toHaveLength(0);
-    }
+    fireEvent.change(input, { target: { value: "accounting" } });
+    expect(screen.getByRole("option", { name: /Accounting/i })).toBeInTheDocument();
   });
 
   it("IA-T2b — admin sees every shipped, non-optional destination in the sidebar", async () => {

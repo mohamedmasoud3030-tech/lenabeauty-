@@ -447,7 +447,7 @@ export default function ServicesPage() {
                         <button
                           onClick={() => onToggleActive(s)}
                           className={clsx(
-                            "h-9 w-9 rounded-lg border flex items-center justify-center transition-all",
+                            "h-11 w-11 rounded-lg border flex items-center justify-center transition-all",
                             s.isActive === false
                               ? "border-success/30 bg-success/10 text-success hover:bg-success hover:text-white"
                               : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning"
@@ -526,7 +526,7 @@ export default function ServicesPage() {
                 <div className="flex items-center gap-1 pt-0.5">
                   <button
                     onClick={() => void openRecipe(s)}
-                    className="h-9 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
+                    className="h-11 min-w-0 flex-1 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors"
                     title={t("recipe.title")}
                     aria-label={t("recipe.title")}
                   >
@@ -535,7 +535,7 @@ export default function ServicesPage() {
                   <button
                     onClick={() => void onToggleActive(s)}
                     className={clsx(
-                      "h-9 min-w-0 flex-1 rounded-lg flex items-center justify-center transition-colors",
+                      "h-11 min-w-0 flex-1 rounded-lg flex items-center justify-center transition-colors",
                       s.isActive ? "text-muted-foreground hover:bg-warning/10 hover:text-warning" : "text-success hover:bg-success/10"
                     )}
                     title={s.isActive ? t("Disable") : t("Enable")}

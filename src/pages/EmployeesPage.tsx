@@ -221,7 +221,7 @@ export default function EmployeesPage() {
                           <button
                             onClick={() => void handleToggleActive(emp)}
                             className={clsx(
-                              "h-9 w-9 rounded-lg border bg-card flex items-center justify-center transition-all",
+                              "h-11 w-11 rounded-lg border bg-card flex items-center justify-center transition-all",
                               emp.isActive
                                 ? "border-border text-muted-foreground hover:bg-warning/10 hover:text-warning"
                                 : "border-success/30 text-success hover:bg-success/10",
@@ -303,7 +303,7 @@ export default function EmployeesPage() {
                     <button
                       onClick={() => void handleToggleActive(emp)}
                       className={clsx(
-                        "h-9 flex-1 rounded-lg border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all",
+                        "h-11 flex-1 rounded-lg border bg-card flex items-center justify-center gap-1.5 text-[11px] font-bold transition-all",
                         emp.isActive
                           ? "border-border text-muted-foreground hover:bg-warning/10 hover:text-warning"
                           : "border-success/30 text-success hover:bg-success/10",

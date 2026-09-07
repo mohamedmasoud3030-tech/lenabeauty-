@@ -29,6 +29,7 @@ import { desktopRepository } from "../desktop/repository";
 import { isDesktopShell } from "../desktop/config";
 import { escapePrintText } from "../infrastructure/services/printService";
 import { ALL_SERVICE_CATEGORIES, filterServicesForCatalog } from "../shared/catalog/ServiceCategoryFilters";
+import { Modal } from "../shared/components/Modal";
 import { ReceiptPreviewModal } from "../shared/components/ReceiptPreviewModal";
 import { ScreenState } from "../shared/components/ScreenState";
 import { useToast } from "../shared/components/Toast";
@@ -97,6 +98,14 @@ export default function PosInvoicesPage() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024);
   const [showCheckoutSummary, setShowCheckoutSummary] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [pendingPricedItem, setPendingPricedItem] = useState<{
+    id: string;
+    name: string;
+    price: number;
+    qty?: number;
+    pricingMode?: "FIXED" | "STARTING_FROM";
+  } | null>(null);
+  const [customPrice, setCustomPrice] = useState("");
 
   const checkoutInFlightRef = useRef(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -259,19 +268,38 @@ export default function PosInvoicesPage() {
       return;
     }
 
-    let finalPrice = item.price;
     if (type === "service" && item.pricingMode === "STARTING_FROM") {
-      const entered = window.prompt(t("Enter the final selling price for this service"), formatOMRAmount(item.price));
-      if (entered === null) return;
-      finalPrice = Number(entered);
-      if (!Number.isFinite(finalPrice) || finalPrice < item.price || finalPrice <= 0) {
-        showToast("error", t("Error"), t("Final price must be at least the starting price"));
-        return;
-      }
+      setPendingPricedItem({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        qty: item.qty,
+        pricingMode: item.pricingMode,
+      });
+      setCustomPrice(formatOMRAmount(item.price));
+      return;
     }
 
-    setCart((previous) => [...previous, { ...item, price: finalPrice, type, cartId: globalThis.crypto.randomUUID() }]);
+    setCart((previous) => [...previous, { ...item, price: item.price, type, cartId: globalThis.crypto.randomUUID() }]);
     showToast("success", t("Added"), `${item.name} ${t("added to cart")}`);
+  }
+
+  function confirmCustomPrice() {
+    if (!pendingPricedItem) return;
+    const finalPrice = Number(customPrice);
+    if (!Number.isFinite(finalPrice) || finalPrice < pendingPricedItem.price || finalPrice <= 0) {
+      showToast("error", t("Error"), t("Final price must be at least the starting price"));
+      return;
+    }
+    setCart((previous) => [...previous, {
+      ...pendingPricedItem,
+      price: finalPrice,
+      type: "service" as const,
+      cartId: globalThis.crypto.randomUUID(),
+    }]);
+    showToast("success", t("Added"), `${pendingPricedItem.name} ${t("added to cart")}`);
+    setPendingPricedItem(null);
+    setCustomPrice("");
   }
 
   function clearCart() {
@@ -438,6 +466,51 @@ export default function PosInvoicesPage() {
   return (
     <div className="flex flex-col gap-3 lg:gap-6 min-h-0 lg:min-h-[calc(100vh-120px)] pb-4 lg:pb-0 min-w-0 overflow-x-clip">
       <ReceiptPreviewModal data={showPrintModal ? printData : null} onClose={() => setShowPrintModal(false)} />
+      <Modal
+        isOpen={pendingPricedItem !== null}
+        onClose={() => { setPendingPricedItem(null); setCustomPrice(""); }}
+        title={t("Confirm selling price")}
+        description={pendingPricedItem?.name}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => { setPendingPricedItem(null); setCustomPrice(""); }}
+              className="h-11 px-4 rounded-lg border border-border bg-card font-bold text-foreground hover:bg-muted transition-all"
+            >
+              {t("Cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={confirmCustomPrice}
+              className="h-11 px-4 rounded-lg bg-primary font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+            >
+              {t("Add to Cart")}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t("Enter the final selling price for this service")}</p>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Price")}</span>
+            <input
+              className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+              inputMode="decimal"
+              value={customPrice}
+              onChange={(event) => setCustomPrice(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") confirmCustomPrice(); }}
+              aria-label={t("Price")}
+            />
+          </label>
+          {pendingPricedItem ? (
+            <p className="text-xs font-bold text-muted-foreground">
+              {t("From")} {formatOMRAmount(pendingPricedItem.price)} {t("OMR")}
+            </p>
+          ) : null}
+        </div>
+      </Modal>
       <VisitContextCard appointment={visitAppointment} error={visitContextError} onDetach={detachVisit} />
 
       {/* Catalog and Cart stay the only mobile modes; no duplicate category row. */}

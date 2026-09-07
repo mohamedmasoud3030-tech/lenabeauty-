@@ -141,36 +141,46 @@ export default function PackagesPage() {
             <h2 className="font-semibold">{t("Create Package")}</h2>
           </div>
 
-          <input
-            className={fieldClass}
-            placeholder={t("Package Name")}
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
-            }}
-          />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Package Name")}</span>
+            <input
+              className={fieldClass}
+              placeholder={t("Package Name")}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: "" }));
+              }}
+            />
+          </label>
           {errors.name ? <div className="text-xs font-bold text-destructive">{t(errors.name)}</div> : null}
 
-          <textarea
-            className={`${fieldClass} min-h-24 resize-y`}
-            placeholder={t("Package Description")}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Package Description")}</span>
+            <textarea
+              className={`${fieldClass} min-h-24 resize-y`}
+              placeholder={t("Package Description")}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
 
-          <input
-            className={fieldClass}
-            type="number"
-            min="0"
-            step="0.001"
-            placeholder={t("Package Price")}
-            value={packagePrice}
-            onChange={(event) => {
-              setPackagePrice(event.target.value);
-              if (errors.packagePrice) setErrors((prev) => ({ ...prev, packagePrice: "" }));
-            }}
-          />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Package Price")}</span>
+            <input
+              className={fieldClass}
+              type="number"
+              min="0"
+              step="0.001"
+              inputMode="decimal"
+              placeholder={t("Package Price")}
+              value={packagePrice}
+              onChange={(event) => {
+                setPackagePrice(event.target.value);
+                if (errors.packagePrice) setErrors((prev) => ({ ...prev, packagePrice: "" }));
+              }}
+            />
+          </label>
           {errors.packagePrice ? <div className="text-xs font-bold text-destructive">{t(errors.packagePrice)}</div> : null}
 
           <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-background p-3">

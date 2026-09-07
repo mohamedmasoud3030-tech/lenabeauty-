@@ -16,6 +16,10 @@ const operationalSurfaces = [
   "src/pages/BrandingSettingsPage.tsx",
   "src/pages/NotificationsSettingsPage.tsx",
   "src/pages/PaymentGatewaySettingsPage.tsx",
+  "src/pages/AccountingPage.tsx",
+  "src/pages/ForecastingPage.tsx",
+  "src/pages/CustomerExperiencePage.tsx",
+  "src/pages/AdvancedAutomationPage.tsx",
 ];
 
 describe("Lena visual identity tokens", () => {

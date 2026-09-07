@@ -189,7 +189,7 @@ export default function SettingsPage() {
                   </div>
                   {tab === item.id ? (
                     <motion.div layoutId="active-tab" className="mt-2">
-                      <ChevronRight className="h-4 w-4 opacity-50" />
+                      <ChevronRight className="h-4 w-4 opacity-50 rtl:rotate-180" />
                     </motion.div>
                   ) : null}
                 </button>

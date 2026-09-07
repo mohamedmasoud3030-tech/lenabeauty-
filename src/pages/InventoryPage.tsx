@@ -275,7 +275,7 @@ export default function InventoryPage() {
             <button
               onClick={() => setShowLowStockOnly(v => !v)}
               className={clsx(
-                "h-9 px-2.5 rounded-lg border flex items-center gap-1.5 text-[11px] font-bold transition-all",
+                "min-h-11 px-2.5 rounded-lg border flex items-center gap-1.5 text-[11px] font-bold transition-all",
                 showLowStockOnly
                   ? "bg-warning text-warning-foreground border-warning"
                   : "border-border bg-card text-muted-foreground hover:bg-warning/10 hover:text-warning"
@@ -366,7 +366,7 @@ export default function InventoryPage() {
                           <button
                             onClick={() => void onToggleActive(p)}
                             className={clsx(
-                              "h-9 w-9 rounded-lg border flex items-center justify-center transition-all",
+                              "h-11 w-11 rounded-lg border flex items-center justify-center transition-all",
                               p.isActive ? "border-border text-muted-foreground hover:text-warning" : "border-success/30 text-success"
                             )}
                             title={p.isActive ? t("Disable") : t("Enable")}

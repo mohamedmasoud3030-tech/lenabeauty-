@@ -14,10 +14,11 @@ import { clsx } from "clsx";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
 import { Modal } from "../shared/components/Modal";
+import { formatOMRAmount } from "../shared/money";
 
 export default function ExpensesPage() {
   const { showToast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -137,11 +138,11 @@ export default function ExpensesPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="flex items-center gap-6">
-          <div className="h-16 w-16 rounded-[2rem] bg-primary flex items-center justify-center text-primary-foreground shadow-2xl shadow-primary/30 group transition-all hover:scale-110">
+          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/30">
             <Receipt className="h-8 w-8 transition-transform group-hover:rotate-12" />
           </div>
           <div className="space-y-1">
-            <h1 className="text-4xl font-bold text-foreground tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight flex items-center gap-3">
               {t("Expenses")}
             </h1>
             <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Track your business costs")}</p>
@@ -165,7 +166,7 @@ export default function ExpensesPage() {
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Total Expenses")}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-foreground">{totalExpenses.toFixed(2)}</span>
+            <span className="text-4xl font-bold text-foreground">{formatOMRAmount(totalExpenses)}</span>
             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
           </div>
         </motion.div>
@@ -186,7 +187,7 @@ export default function ExpensesPage() {
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Current Period")}</span>
           </div>
           <div className="text-2xl font-bold text-foreground uppercase tracking-tight">
-            {new Date().toLocaleDateString("ar-OM", { month: "long", year: "numeric" })}
+            {new Date().toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { month: "long", year: "numeric" })}
           </div>
         </motion.div>
       </div>
@@ -206,7 +207,7 @@ export default function ExpensesPage() {
           <button
             onClick={() => setSelectedCategory("All")}
             className={clsx(
-              "px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shadow-sm",
+              "min-h-11 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shadow-sm",
               selectedCategory === "All" ? "bg-primary text-primary-foreground shadow-primary/20 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-muted"
             )}
           >
@@ -217,7 +218,7 @@ export default function ExpensesPage() {
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={clsx(
-                "px-6 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shadow-sm",
+                "min-h-11 px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap shadow-sm",
                 selectedCategory === cat ? "bg-primary text-primary-foreground shadow-primary/20 scale-105" : "bg-card border border-border text-muted-foreground hover:bg-muted"
               )}
             >
@@ -250,7 +251,7 @@ export default function ExpensesPage() {
                     animate={{ opacity: 1, x: 0, transition: { delay: idx * 0.02 } }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     key={exp.id}
-                    className="group hover:bg-muted/30 transition-all [&>td]:px-10 [&>td]:py-8 [&>td]:text-start"
+                    className="group hover:bg-muted/30 transition-all [&>td]:px-5 [&>td]:py-3 [&>td]:text-start"
                   >
                     <td>
                       <div className="flex items-center gap-4">
@@ -269,8 +270,8 @@ export default function ExpensesPage() {
                     <td>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground text-xl">{exp.amount.toFixed(2)}</span>
-                          <ArrowDownRight className="h-4 w-4 text-rose-500" />
+                          <span className="font-bold text-foreground text-xl">{formatOMRAmount(exp.amount)}</span>
+                          <ArrowDownRight className="h-4 w-4 text-destructive" />
                         </div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
                       </div>
@@ -329,8 +330,8 @@ export default function ExpensesPage() {
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("Amount")}</span>
                     <div className="flex items-center gap-1">
-                      <span className="font-bold text-foreground text-xl">{exp.amount.toFixed(2)}</span>
-                      <ArrowDownRight className="h-4 w-4 text-rose-500" />
+                      <span className="font-bold text-foreground text-xl">{formatOMRAmount(exp.amount)}</span>
+                      <ArrowDownRight className="h-4 w-4 text-destructive" />
                     </div>
                   </div>
                   <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-xl shadow-sm">

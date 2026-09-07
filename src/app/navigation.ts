@@ -104,7 +104,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   // Money — everything financial in one predictable place.
   { path: "/reports", labelKey: "Reports", icon: FileBarChart, group: "money", adminOnly: true, searchIcon: "📈" },
   { path: "/expenses", labelKey: "Expenses", icon: Wallet, group: "money", adminOnly: true, searchIcon: "💰" },
-  { path: "/accounting", labelKey: "Accounting", icon: BookOpen, group: "money", adminOnly: true, deferred: true, searchIcon: "📚" },
+  { path: "/accounting", labelKey: "Accounting", icon: BookOpen, group: "money", adminOnly: true, searchIcon: "📚" },
 
   // Team — workforce administration, previously scattered under "Management".
   { path: "/attendance", labelKey: "Attendance", icon: Clock, group: "team", adminOnly: true, searchIcon: "🕒" },
@@ -112,12 +112,11 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { path: "/payroll", labelKey: "Payroll", icon: Receipt, group: "team", adminOnly: true, searchIcon: "🧾" },
   { path: "/staff-analytics", labelKey: "Staff Analytics", icon: TrendingUp, group: "team", adminOnly: true, searchIcon: "📊" },
 
-  // Growth — deferred modules. Their routes stay live so existing links work,
-  // but they are hidden from BOTH navigation and search until finished, rather
-  // than being search-only (which advertised them to anyone who guessed).
-  { path: "/customer-experience", labelKey: "Customer Experience", icon: Sparkles, group: "growth", adminOnly: true, deferred: true, searchIcon: "✨" },
-  { path: "/forecasting", labelKey: "Forecasting", icon: TrendingUp, group: "growth", adminOnly: true, deferred: true, searchIcon: "📉" },
-  { path: "/advanced-automation", labelKey: "Automation", icon: Bot, group: "growth", adminOnly: true, deferred: true, searchIcon: "🤖" },
+  // Growth — these used to be unfinished sketches. They now ship with
+  // loading/empty/error states, so they belong in the menu.
+  { path: "/customer-experience", labelKey: "Customer Experience", icon: Sparkles, group: "growth", adminOnly: true, searchIcon: "✨" },
+  { path: "/forecasting", labelKey: "Forecasting", icon: TrendingUp, group: "growth", adminOnly: true, searchIcon: "📉" },
+  { path: "/advanced-automation", labelKey: "Booking requests", icon: Bot, group: "growth", adminOnly: true, searchIcon: "📋" },
 
   // System.
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },

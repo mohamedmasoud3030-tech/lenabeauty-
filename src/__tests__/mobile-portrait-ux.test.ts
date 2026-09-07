@@ -109,6 +109,8 @@ describe("small-phone portrait UX contracts", () => {
     expect(pos).toContain("above-bottom-nav");
     expect(pos).toContain("Catalog");
     expect(pos).toContain("Cart");
+    expect(pos).not.toContain("window.prompt");
+    expect(pos).toContain("Confirm selling price");
   });
 
   it("keeps receipt share / print / save as 44px targets", () => {

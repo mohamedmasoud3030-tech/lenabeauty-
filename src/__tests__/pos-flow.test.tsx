@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
-import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
 import PosInvoicesPage from "../pages/PosInvoicesPage";
@@ -138,6 +138,29 @@ describe("POS operational flow", () => {
         },
       });
     });
+  });
+
+  it("asks for a starting-from price in a modal, never window.prompt", async () => {
+    await i18n.changeLanguage("ar");
+    const promptSpy = vi.spyOn(window, "prompt").mockImplementation(() => "99");
+    vi.mocked(useCases.services.list).mockResolvedValue({
+      ok: true,
+      data: [{ id: "s1", name: "قص شعر", price: 5, durationMinutes: 30, isActive: true, pricingMode: "STARTING_FROM" }],
+    } as any);
+
+    renderPos();
+    fireEvent.click(await screen.findByText("قص شعر"));
+
+    expect(promptSpy).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog", { name: i18n.t("Confirm selling price") });
+    const price = within(dialog).getByLabelText(i18n.t("Price"));
+    fireEvent.change(price, { target: { value: "7.5" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("Add to Cart") }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: i18n.t("Confirm selling price") })).not.toBeInTheDocument();
+    });
+    expect(screen.getAllByText("7.500").length).toBeGreaterThan(0);
   });
 
   it("adds service + product + package, checks out and shows the receipt", async () => {

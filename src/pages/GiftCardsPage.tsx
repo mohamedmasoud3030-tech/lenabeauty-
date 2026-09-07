@@ -141,24 +141,45 @@ export default function GiftCardsPage() {
             <Plus className="h-4 w-4" />
             <h2 className="font-semibold">{t("Sell Gift Card")}</h2>
           </div>
-          <input className="w-full rounded-xl border px-3 py-2" placeholder={t("Gift Card Code")} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
-          <input className="w-full rounded-xl border px-3 py-2" type="number" min="0" step="0.001" placeholder={t("Card Value (OMR)")} value={form.initialBalance} onChange={(e) => setForm({ ...form, initialBalance: e.target.value })} />
-          <select className="w-full rounded-xl border px-3 py-2" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
-            <option value="">{t("Customer (required)")}</option>
-            {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
-          </select>
-          <select className="w-full rounded-xl border px-3 py-2" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
-            <option value="">{t("Employee (required)")}</option>
-            {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
-          </select>
-          <select className="w-full rounded-xl border px-3 py-2" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
-            <option value="cash">{t("Cash")}</option>
-            <option value="card">{t("Card")}</option>
-            <option value="transfer">{t("Transfer")}</option>
-          </select>
-          <input className="w-full rounded-xl border px-3 py-2" type="datetime-local" value={form.expiresAtISO} onChange={(e) => setForm({ ...form, expiresAtISO: e.target.value })} />
-          <textarea className="w-full rounded-xl border px-3 py-2 min-h-24" placeholder={t("Note (optional)")} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-          <button onClick={handleSell} disabled={saving} className="w-full rounded-xl bg-primary text-primary-foreground py-2.5 font-semibold disabled:opacity-50">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Gift Card Code")}</span>
+            <input className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" placeholder={t("Gift Card Code")} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Card Value (OMR)")}</span>
+            <input className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" type="number" min="0" step="0.001" inputMode="decimal" placeholder={t("Card Value (OMR)")} value={form.initialBalance} onChange={(e) => setForm({ ...form, initialBalance: e.target.value })} />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Customer (required)")}</span>
+            <select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })}>
+              <option value="">{t("Customer (required)")}</option>
+              {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Employee (required)")}</span>
+            <select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
+              <option value="">{t("Employee (required)")}</option>
+              {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Payment")}</span>
+            <select className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}>
+              <option value="cash">{t("Cash")}</option>
+              <option value="card">{t("Card")}</option>
+              <option value="transfer">{t("Transfer")}</option>
+            </select>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Expires at")}</span>
+            <input className="min-h-11 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" type="datetime-local" value={form.expiresAtISO} onChange={(e) => setForm({ ...form, expiresAtISO: e.target.value })} />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-muted-foreground">{t("Note (optional)")}</span>
+            <textarea className="min-h-24 w-full rounded-xl border border-border bg-background px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" placeholder={t("Note (optional)")} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+          </label>
+          <button type="button" onClick={handleSell} disabled={saving} className="min-h-11 w-full rounded-xl bg-primary py-2.5 font-semibold text-primary-foreground disabled:opacity-50">
             {saving ? t("Processing...") : t("Sell Gift Card")}
           </button>
           <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
