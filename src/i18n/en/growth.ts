@@ -18,8 +18,6 @@ export const enGrowth = {
   "Mark as contacted": "Mark as contacted",
   "Mark as booked": "Mark as booked",
   "Close request": "Close request",
-  "Open schedule": "Open schedule",
-  "Could not load leads. Please try again later.": "Could not load requests. Please try again later.",
   "Request saved": "Request saved",
   "Contact on WhatsApp": "Contact on WhatsApp",
   "Loading requests...": "Loading requests...",

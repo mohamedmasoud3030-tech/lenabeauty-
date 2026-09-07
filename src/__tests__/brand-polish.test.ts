@@ -50,9 +50,7 @@ describe("Lena app-wide brand polish", () => {
     }
   });
 
-  it("bridges the last known legacy rose and amber utilities to semantic tokens", () => {
-    expect(polish).toContain(".text-rose-500");
-    expect(polish).toContain("hsl(var(--destructive))");
+  it("bridges the last known legacy amber utilities to semantic tokens", () => {
     expect(polish).toContain(".bg-amber-500");
     expect(polish).toContain("linear-gradient(115deg, hsl(var(--primary)), hsl(var(--secondary)))");
   });

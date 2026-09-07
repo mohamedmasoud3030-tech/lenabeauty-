@@ -34,9 +34,10 @@ describe("Sidebar client-trial navigation", () => {
     await renderSidebar();
 
     for (const label of [
-      "Dashboard", "Appointments", "POS", "Customers", "Services",
-      "Inventory", "Employees", "Reports", "Expenses", "Attendance",
+      "Dashboard", "Action Center", "Appointments", "POS", "Customers", "Services",
+      "Inventory", "Employees", "Reports", "Expenses", "Accounting", "Attendance",
       "Advances", "Payroll", "Staff Analytics", "Settings",
+      "Customer Experience", "Forecasting", "Booking requests",
     ]) {
       expect(screen.getByText(i18n.t(label))).toBeInTheDocument();
     }
@@ -46,9 +47,7 @@ describe("Sidebar client-trial navigation", () => {
       expect(screen.queryByText(i18n.t("Packages"))).not.toBeInTheDocument();
     });
 
-    for (const hidden of ["Customer Experience", "Branding"]) {
-      expect(screen.queryByText(i18n.t(hidden))).not.toBeInTheDocument();
-    }
+    expect(screen.queryByText(i18n.t("Branding"))).not.toBeInTheDocument();
   });
 
   it("shows optional gift-card and package links only when real rows exist", async () => {

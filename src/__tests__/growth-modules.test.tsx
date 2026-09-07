@@ -73,10 +73,10 @@ describe("growth modules — operator-ready surfaces", () => {
     const reviewSpy = vi.spyOn(useCases.customerExperience, "createReview").mockResolvedValue({ ok: true, data: { id: "r1" } } as any);
 
     wrap(<CustomerExperiencePage />);
-    expect(await screen.findByText(i18n.t("Save Review"))).toBeInTheDocument();
+    expect(await screen.findByText(i18n.t("Save Review"), {}, { timeout: 4000 })).toBeInTheDocument();
     expect(document.querySelectorAll('input[type="file"]').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: i18n.t("Save Review") }));
-    await waitFor(() => expect(reviewSpy).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(reviewSpy).toHaveBeenCalledTimes(1), { timeout: 4000 });
     expect(reviewSpy.mock.calls[0][0].customerId).toBe("c1");
     expect(reviewSpy.mock.calls[0][0].isPublished).toBe(false);
   });

@@ -52,19 +52,11 @@ function translatedKeys(): Map<string, string> {
 }
 
 /**
- * Deferred modules are hidden from navigation AND search
- * (`src/app/navigation.ts`, `deferred: true`), so an operator cannot reach
- * them. Their untranslated strings are tracked as a known gap in
- * FINAL_INDEPENDENT_REVIEW.md rather than blocking the shipped surface.
- * Remove a file from this list when its module is un-deferred — the Arabic
- * check below will then enforce full coverage for it.
+ * Pages that stay out of navigation (`deferred: true`) may keep untranslated
+ * strings without blocking CI. The four growth modules now ship, so this set
+ * is empty until a future unfinished destination is deferred again.
  */
-const DEFERRED_PAGES = new Set([
-  join("src", "pages", "AccountingPage.tsx"),
-  join("src", "pages", "AdvancedAutomationPage.tsx"),
-  join("src", "pages", "CustomerExperiencePage.tsx"),
-  join("src", "pages", "ForecastingPage.tsx"),
-]);
+const DEFERRED_PAGES = new Set<string>([]);
 
 afterAll(async () => {
   await i18n.changeLanguage("ar");

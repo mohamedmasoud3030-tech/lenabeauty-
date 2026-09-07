@@ -80,7 +80,7 @@ describe("Dashboard page smoke (empty revenue state)", () => {
         appointments: 0,
         sales: 0,
         revenue: 0,
-        canViewRevenue: false,
+        canViewRevenue: true,
         lowStockCount: 0,
       },
     } as any);
@@ -88,6 +88,7 @@ describe("Dashboard page smoke (empty revenue state)", () => {
     vi.spyOn(useCases.customers, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.services, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.products, "list").mockResolvedValue({ ok: true, data: [] } as any);
+    vi.spyOn(useCases.expenses, "list").mockResolvedValue({ ok: true, data: [] } as any);
     vi.spyOn(useCases.dashboard, "getPnlMonth").mockRejectedValue(new Error("no access"));
     vi.spyOn(useCases.dashboard, "getRevenueLast7Days").mockRejectedValue(new Error("no access"));
 

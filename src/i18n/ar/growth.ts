@@ -19,8 +19,6 @@ export const arGrowth = {
   "Mark as contacted": "سجّلي التواصل",
   "Mark as booked": "احجزي الموعد",
   "Close request": "إغلاق الطلب",
-  "Open schedule": "فتح المواعيد",
-  "Could not load leads. Please try again later.": "تعذّر تحميل الطلبات. حاولي لاحقًا.",
   "Request saved": "تم حفظ الطلب",
   "Contact on WhatsApp": "تواصل عبر واتساب",
   "Loading requests...": "جاري تحميل الطلبات...",
