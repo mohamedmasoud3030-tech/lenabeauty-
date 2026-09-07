@@ -7,7 +7,7 @@ import { ToastProvider } from "../shared/components/Toast";
 import { AdminAssistantPanel } from "../shared/components/AdminAssistantPanel";
 import { MobileActionDock } from "../ui/layout/MobileActionDock";
 import i18n from "../i18n";
-import { GEMINI_KEY_STORAGE_KEY } from "../infrastructure/gemini/adminAssistant";
+import { GEMINI_KEY_STORAGE_KEY, GEMINI_MODEL } from "../infrastructure/gemini/adminAssistant";
 import { NAV_DESTINATIONS } from "../app/navigation";
 
 function wrapPanel(open = true) {
@@ -18,6 +18,16 @@ function wrapPanel(open = true) {
       </ToastProvider>
     </MemoryRouter>,
   );
+}
+
+function mockGeminiOk(text = "OK") {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ candidates: [{ content: { parts: [{ text }] } }] }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 describe("admin Gemini assistant", () => {
@@ -76,7 +86,7 @@ describe("admin Gemini assistant", () => {
     wrapPanel(true);
     expect(await screen.findByRole("dialog", { name: i18n.t("Admin assistant") })).toBeInTheDocument();
     expect(screen.getByText(i18n.t("Activate with a Gemini API key"))).toBeInTheDocument();
-    expect(screen.getByText(/not saved on the server/i)).toBeInTheDocument();
+    expect(screen.getByText(/staff cannot see it/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(i18n.t("Write a question"))).not.toBeInTheDocument();
 
     const source = readFileSync(resolve(process.cwd(), "src/infrastructure/gemini/adminAssistant.ts"), "utf8");
@@ -84,14 +94,17 @@ describe("admin Gemini assistant", () => {
     expect(source).not.toContain("VITE_");
     expect(source).toContain("localStorage");
     expect(source).not.toContain("supabase");
+    expect(source).not.toContain("gemini-2.0-flash");
+    expect(GEMINI_MODEL).toBe("gemini-2.5-flash");
   });
 
-  it("does not book or write records after a key is saved", async () => {
+  it("does not activate until Gemini accepts the key", async () => {
+    mockGeminiOk("OK");
     wrapPanel();
     fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "test-gemini-key" } });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
-    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBe("test-gemini-key");
     expect(await screen.findByLabelText(i18n.t("Write a question"))).toBeInTheDocument();
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBe("test-gemini-key");
     expect(screen.getByText(/does not book/i)).toBeInTheDocument();
 
     const panel = readFileSync(resolve(process.cwd(), "src/shared/components/AdminAssistantPanel.tsx"), "utf8");
@@ -99,14 +112,19 @@ describe("admin Gemini assistant", () => {
     expect(panel).not.toContain("window.prompt");
   });
 
+  it("keeps the key form when Gemini rejects the key", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403, json: async () => ({}) }));
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "bad-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/rejected this key/i);
+    expect(screen.queryByLabelText(i18n.t("Write a question"))).not.toBeInTheDocument();
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBeNull();
+  });
+
   it("sends the typed question to Gemini and shows the reply", async () => {
     localStorage.setItem(GEMINI_KEY_STORAGE_KEY, "test-gemini-key");
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ candidates: [{ content: { parts: [{ text: "Open the appointments screen." }] } }] }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockGeminiOk("Open the appointments screen.");
 
     wrapPanel();
     fireEvent.change(await screen.findByLabelText(i18n.t("Write a question")), { target: { value: "How do I book?" } });
@@ -114,6 +132,22 @@ describe("admin Gemini assistant", () => {
 
     expect(await screen.findByText("How do I book?")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Open the appointments screen.")).toBeInTheDocument());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalled();
+    expect(String(fetchMock.mock.calls[0][0])).toContain("gemini-2.5-flash");
+  });
+
+  it("offers a live voice call after the key is saved", async () => {
+    localStorage.setItem(GEMINI_KEY_STORAGE_KEY, "test-gemini-key");
+    wrapPanel();
+    expect(await screen.findByRole("button", { name: i18n.t("Start live call") })).toBeInTheDocument();
+    expect(screen.getByText(i18n.t("Talk now. The assistant will answer by voice."))).toBeInTheDocument();
+
+    const live = readFileSync(resolve(process.cwd(), "src/infrastructure/gemini/adminAssistantLive.ts"), "utf8");
+    expect(live).toContain("BidiGenerateContent");
+    expect(live).toContain("responseModalities");
+    expect(live).not.toContain("VITE_");
+    expect(live).not.toContain("createAppointment");
+    expect(live).not.toContain("gemini-2.0-flash");
+    expect(live).not.toMatch(/AIza[0-9A-Za-z_-]{10,}/);
   });
 });
