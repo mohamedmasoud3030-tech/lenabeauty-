@@ -280,7 +280,7 @@ export class SupabaseAdvancedAdapter implements AdvancedRepository {
       return { ok: false, error: createQueryError("Advanced.updateAiBookingLeadStatus", "Invalid lead update") };
     }
     try {
-      const { data, error } = await (getSupabaseClient() as any).rpc("update_ai_booking_lead_status_v1", {
+      const { data, error } = await getSupabaseClient().rpc("update_ai_booking_lead_status_v1", {
         p_center_id: centerRes.data,
         p_lead_id: id,
         p_status: status,

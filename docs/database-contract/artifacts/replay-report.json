@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 42,
-    "automated": 41,
+    "total": 43,
+    "automated": 42,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -210,6 +210,11 @@
     },
     {
       "file": "20260903001710_demo_financial_residue_repair_20260903.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260907090000_update_ai_booking_lead_status.sql",
       "status": "ok",
       "error": null
     }
@@ -419,6 +424,11 @@
       "file": "20260903001710_demo_financial_residue_repair_20260903.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260907090000_update_ai_booking_lead_status.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -439,8 +449,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "79d42e63347f3d71586b4944d5e5782e454c02847a612f39dfcce2321d264ec4",
-    "after_repeat": "79d42e63347f3d71586b4944d5e5782e454c02847a612f39dfcce2321d264ec4",
+    "after_first_replay": "bc9e40b4534d3611efeff636c2dd3d6aeacf2359549162770837241a66675e15",
+    "after_repeat": "bc9e40b4534d3611efeff636c2dd3d6aeacf2359549162770837241a66675e15",
     "identical": true,
     "diff": {
       "changed_sections": [],

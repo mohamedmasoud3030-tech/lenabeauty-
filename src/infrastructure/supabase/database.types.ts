@@ -2338,6 +2338,10 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_appointment_id": string | null; "p_stage": string | null }
         Returns: Json
       },
+      "update_ai_booking_lead_status_v1": {
+        Args: { "p_center_id": string | null; "p_lead_id": string | null; "p_status": string | null }
+        Returns: Json
+      },
       "upsert_notification_settings_admin_impl_v1": {
         Args: { "p_center_id": string | null; "p_whatsapp_enabled": boolean | null; "p_sms_enabled": boolean | null; "p_reminder_enabled": boolean | null; "p_reminder_hours_before": number | null; "p_whatsapp_sender_name": string | null; "p_sms_sender_name": string | null; "p_whatsapp_template_booking": string | null; "p_whatsapp_template_reminder": string | null; "p_sms_template_reminder": string | null }
         Returns: Json

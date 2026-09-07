@@ -10,13 +10,13 @@
       "indexes": 117,
       "triggers": 23,
       "views": 0,
-      "functions": 62,
+      "functions": 63,
       "policies": 49,
-      "grants": 1383
+      "grants": 1385
     },
     "frontend": {
       "tables": 29,
-      "rpc": 23,
+      "rpc": 24,
       "storage": 1
     },
     "findings_by_severity": {

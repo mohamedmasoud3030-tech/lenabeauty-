@@ -1,5 +1,5 @@
 {
-  "files": 313,
+  "files": 317,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1477,6 +1477,17 @@
         "p_appointment_id",
         "p_center_id",
         "p_stage"
+      ]
+    },
+    {
+      "name": "update_ai_booking_lead_status_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/engagement.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_lead_id",
+        "p_status"
       ]
     },
     {
