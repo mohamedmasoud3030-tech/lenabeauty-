@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   isPrivilegedPublishableKey,
   loadPreflightEnvironment,
-} from "../../scripts/supabase-live-preflight-entry.mjs";
+} from "../../scripts/lib/supabase-key-authority.mjs";
 
 const tempDirs = [];
 

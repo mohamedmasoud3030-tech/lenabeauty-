@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 
 const ROOT = resolve(process.cwd());
 const source = readFileSync(resolve(ROOT, "scripts/supabase-live-preflight.mjs"), "utf8");
-const entry = readFileSync(resolve(ROOT, "scripts/supabase-live-preflight-entry.mjs"), "utf8");
+const keyAuthority = readFileSync(resolve(ROOT, "scripts/lib/supabase-key-authority.mjs"), "utf8");
 const packageJson = JSON.parse(readFileSync(resolve(ROOT, "package.json"), "utf8"));
 
 describe("live preflight migration discovery", () => {
@@ -36,10 +36,14 @@ describe("live preflight migration discovery", () => {
     expect(source).toContain('resolve(root, "supabase/migrations")');
   });
 
-  it("routes the canonical live preflight through a browser-key authority guard", () => {
-    expect(packageJson.scripts["preflight:supabase"]).toBe("node scripts/supabase-live-preflight-entry.mjs");
-    expect(entry).toContain('jwtRole(publishableKey) === "service_role"');
-    expect(entry).toContain('await import("./supabase-live-preflight.mjs")');
-    expect(entry).toContain("modernPrivilegedPrefix");
+  it("applies the shared browser-key authority guard before any live check", () => {
+    expect(packageJson.scripts["preflight:supabase"]).toBe("node scripts/supabase-live-preflight.mjs");
+    expect(source).toContain('from "./lib/supabase-key-authority.mjs"');
+    const guard = source.indexOf("isPrivilegedPublishableKey(env.VITE_SUPABASE_PUBLISHABLE_KEY)");
+    const firstLiveCheck = source.indexOf("await fetch(");
+    expect(guard).toBeGreaterThan(0);
+    expect(guard).toBeLessThan(firstLiveCheck);
+    expect(keyAuthority).toContain('legacyJwtRole(key) === "service_role"');
+    expect(keyAuthority).toContain("MODERN_PRIVILEGED_PREFIX");
   });
 });

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -28,6 +28,14 @@ describe("repository CI coverage", () => {
     expect(workflow).toContain("github.event_name == 'workflow_dispatch'");
     expect(workflow).not.toContain("github.event_name != 'pull_request'");
     expect(workflow).toContain("supabase db push --linked --yes");
+  });
+
+  it("pins the Supabase CLI wherever migration-list output is parsed", () => {
+    for (const source of [workflow, productionWorkflow]) {
+      expect(source).toMatch(/supabase\/setup-cli@v1[\s\S]*?version: \d+\.\d+\.\d+/);
+      expect(source).not.toMatch(/\n\s+version: latest/);
+      expect(source).not.toContain('--password "$SUPABASE_DB_PASSWORD"');
+    }
   });
 
   it("runs read-only attendance and Storage preflight before db push", () => {
@@ -84,7 +92,7 @@ describe("repository CI coverage", () => {
   it("runs Production preflight and suppresses the manual bootstrap before db push", () => {
     const launchPreflight = productionWorkflow.indexOf("npm run launch:preflight");
     const repair = productionWorkflow.indexOf("supabase migration repair 20260628000002 --status applied");
-    const push = productionWorkflow.indexOf("supabase db push --linked --yes");
+    const push = productionWorkflow.indexOf("supabase db push --linked --yes --include-all");
     const livePreflight = productionWorkflow.indexOf("npm run preflight:supabase");
 
     expect(launchPreflight).toBeGreaterThan(0);
@@ -92,6 +100,21 @@ describe("repository CI coverage", () => {
     expect(push).toBeGreaterThan(repair);
     expect(livePreflight).toBeGreaterThan(push);
     expect(productionWorkflow).toContain("without executing its placeholder Auth UUID SQL");
+  });
+
+  it("uses --include-all so a fresh Production project accepts migrations older than the repaired bootstrap", () => {
+    // Mirrors the Supabase CLI FindPendingMigrations reconciliation: with only
+    // the repaired bootstrap in remote history, earlier canonical files are
+    // out-of-order and the CLI aborts unless --include-all is supplied.
+    const localVersions = readdirSync(resolve(process.cwd(), "supabase/migrations"))
+      .filter((file) => file.endsWith(".sql"))
+      .map((file) => file.slice(0, 14))
+      .sort();
+    const remoteVersions = ["20260628000002"];
+    const outOfOrder = localVersions.filter((version) => version < remoteVersions[0]);
+
+    expect(outOfOrder.length).toBeGreaterThan(0);
+    expect(productionWorkflow).toContain("supabase db push --linked --yes --include-all");
   });
 
   it("provisions only the canonical center shell and then runs rollback-safe Production acceptance", () => {

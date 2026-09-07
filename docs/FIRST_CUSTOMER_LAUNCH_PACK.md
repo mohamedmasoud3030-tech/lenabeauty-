@@ -40,7 +40,15 @@ The service-role key is server-only inside the Production workflow. It must neve
 
 Before accepting real transactions, GitHub `main` must be protected by branch protection or a repository ruleset that requires PR review/CI and blocks accidental force/deletion/direct-write paths appropriate to the account. This is repository configuration, not application runtime code; the launch pack is not complete merely because tests are green if `main` remains unprotected.
 
-Exit gate: production preflight passes, the guarded Production release succeeds, repository protection is active, and the owner can sign in and access only the intended center.
+The workflow's `environment: production` line is only a boundary once the GitHub environment itself is protected. Environment names are case-insensitive, so it binds to the existing `Production` environment, which currently has no protection rules. Before the first dispatch, configure on that environment:
+
+- **Required reviewers**: at least one owner other than the dispatcher.
+- **Deployment branches**: restrict to `main` only (this backs the in-workflow `GITHUB_REF` refusal with a server-side rule).
+- Store every `PRODUCTION_*` secret as an **environment secret**, not a repository secret, so no other workflow can read it.
+
+Without these, the typed confirmations are the only control between any collaborator with write access and a Production schema mutation.
+
+Exit gate: production preflight passes, the guarded Production release succeeds, repository and environment protection are active, and the owner can sign in and access only the intended center.
 
 ## 2. Configure salon identity
 
@@ -158,6 +166,7 @@ The salon is LIVE only when all boxes are true:
 - [ ] guarded Production release workflow succeeds
 - [ ] canonical migrations/audit green
 - [ ] `main` branch protection/ruleset active
+- [ ] GitHub `production` environment has required reviewers + `main`-only deployment branches
 - [ ] owner/admin login verified
 - [ ] staff login and role boundary verified
 - [ ] center profile completed
