@@ -1,5 +1,5 @@
 export const arCommonCore = {
-  "LenaBeauty": "لينا بيوتي",
+  "LenaBeauty": "لارا بيوتي",
   "Signing in...": "جاري تسجيل الدخول...",
   "Spa Management System — v1.1": "نظام إدارة المركز — v1.1",
   "Enter credentials to continue": "أدخل بياناتك للمتابعة",

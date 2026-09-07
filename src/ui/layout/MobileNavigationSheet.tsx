@@ -77,7 +77,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
               <div className="flex min-w-0 items-center gap-2.5">
                 <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold text-foreground">LenaBeauty</p>
+                  <p className="truncate text-sm font-extrabold text-foreground">LaraBeauty</p>
                   <p className="text-[11px] font-bold text-muted-foreground">{t("Primary navigation")}</p>
                 </div>
               </div>

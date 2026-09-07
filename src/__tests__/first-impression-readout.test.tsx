@@ -74,7 +74,7 @@ describe.each([
       await waitFor(() => expect(within(main).getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
 
       const visible = main.textContent ?? "";
-      expect(visible).toContain("LENA");
+      expect(visible).toContain("LARA");
       expect(visible).toContain("BEAUTY");
 
       const labels = lang === "ar"

@@ -78,7 +78,7 @@ describe("A — the pre-auth screen presents Lena Beauty as a finished product",
     const { container } = renderLogin();
     await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
     expect(container.querySelector('img[src="/lena-mark.svg"]')).not.toBeNull();
-    expect(container.textContent).toContain("LENA");
+    expect(container.textContent).toContain("LARA");
     expect(container.textContent).toContain("BEAUTY");
   });
 

@@ -85,9 +85,9 @@ export default function Layout() {
   }, [location.pathname, t]);
 
   useEffect(() => {
-    document.title = `${pageTitle} — LenaBeauty`;
+    document.title = `${pageTitle} — LaraBeauty`;
     return () => {
-      document.title = "Lena Beauty";
+      document.title = "Lara Beauty";
     };
   }, [pageTitle]);
 
@@ -125,7 +125,7 @@ export default function Layout() {
 
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
               <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
-              <span className="truncate text-sm font-extrabold tracking-tight text-foreground">LenaBeauty</span>
+              <span className="truncate text-sm font-extrabold tracking-tight text-foreground">LaraBeauty</span>
             </div>
 
             <div className="hidden min-w-0 items-center gap-3 lg:flex">

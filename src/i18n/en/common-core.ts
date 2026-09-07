@@ -1,5 +1,5 @@
 export const enCommonCore = {
-  "LenaBeauty": "لينا بيوتي",
+  "LenaBeauty": "Lara Beauty",
   "Home": "Home",
   "Menu": "Menu",
   "Open menu": "Open menu",

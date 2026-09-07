@@ -165,7 +165,7 @@ export const enPos = {
   "pos.visitContext.deposit": "Deposit",
   "actionCenter.readyForCheckout": "Visits ready for checkout",
   "actionCenter.checkout": "Checkout",
-  "wallet.title": "LENA Wallet",
+  "wallet.title": "Lara Wallet",
   "wallet.giftCard": "Gift card",
   "wallet.packageSession": "Package sessions",
   "wallet.rewards": "Reward points",

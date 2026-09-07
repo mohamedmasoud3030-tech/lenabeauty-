@@ -24,8 +24,8 @@ export interface BrandingSettings {
 }
 
 const DEFAULT_BRANDING: BrandingSettings = {
-  salonName: 'LenaBeauty',
-  salonNameAr: 'لينا بيوتي',
+  salonName: 'LaraBeauty',
+  salonNameAr: 'لارا بيوتي',
   address: 'Muscat, Oman',
   addressAr: 'مسقط، عمان',
   phone: '+968 9414 1330',
@@ -36,8 +36,8 @@ const DEFAULT_BRANDING: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: 'Powered by LenaBeauty',
-  footerTextAr: 'مدعوم بواسطة لينا بيوتي',
+  footerText: 'Powered by LaraBeauty',
+  footerTextAr: 'مدعوم بواسطة لارا بيوتي',
 };
 
 const BRANDING_STRING_FIELDS = [

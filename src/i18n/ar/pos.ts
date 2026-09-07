@@ -165,7 +165,7 @@ export const arPos = {
   "pos.visitContext.deposit": "العربون",
   "actionCenter.readyForCheckout": "زيارات جاهزة للدفع",
   "actionCenter.checkout": "الدفع",
-  "wallet.title": "محفظة لينا",
+  "wallet.title": "محفظة لارا",
   "wallet.giftCard": "بطاقة هدية",
   "wallet.packageSession": "جلسات الباقة",
   "wallet.rewards": "نقاط المكافآت",

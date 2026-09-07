@@ -75,14 +75,14 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="relative z-10 flex h-20 flex-col justify-center border-b border-border px-4 sm:px-6">
         <div className="flex items-center gap-3">
           {logoUrl ? (
-            <SalonLogo logoUrl={logoUrl} salonName="LenaBeauty" size="md" />
+            <SalonLogo logoUrl={logoUrl} salonName="LaraBeauty" size="md" />
           ) : (
             <div className="h-10 w-10 flex-shrink-0">
-              <img src="/lena-mark.svg" alt="Lena Beauty" className="h-full w-full" />
+              <img src="/lena-mark.svg" alt="Lara Beauty" className="h-full w-full" />
             </div>
           )}
           <div className="flex min-w-0 flex-col">
-            <span className="text-base font-bold leading-none tracking-tight text-foreground">LenaBeauty</span>
+            <span className="text-base font-bold leading-none tracking-tight text-foreground">LaraBeauty</span>
             <span className="mt-1 text-xs font-bold uppercase tracking-wide text-primary">
               {t("Salon operations")}
             </span>

@@ -140,7 +140,7 @@ interface SalonLogoProps {
 
 export const SalonLogo: React.FC<SalonLogoProps> = ({
   logoUrl,
-  salonName = "LenaBeauty",
+  salonName = "LaraBeauty",
   size = "md",
   className = "",
 }) => {

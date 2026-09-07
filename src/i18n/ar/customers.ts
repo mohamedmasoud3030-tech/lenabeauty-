@@ -118,7 +118,7 @@ export const arCustomers = {
   "passport.retention": "الاحتفاظ وإعادة الحجز",
   "passport.daysSinceLastVisit": "منذ {{count}} يومًا عن آخر زيارة",
   "passport.rebookingWindow": "نافذة العودة المعتادة: {{min}}–{{max}} يومًا",
-  "passport.wallet": "محفظة لينا",
+  "passport.wallet": "محفظة لارا",
   "passport.walletEmpty": "لا توجد أرصدة نشطة",
   "passport.sessionsLeft": "جلسات متبقية",
   "passport.timeline": "سجل الزيارات",

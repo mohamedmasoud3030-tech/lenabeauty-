@@ -428,7 +428,7 @@ export default function PosInvoicesPage() {
         setPrintData(receipt);
         setShowPrintModal(true);
         if (isDesktopShell()) {
-          const html = `<div><h1>${escapePrintText(receipt.settings?.name || "LenaBeauty")}</h1><p>Invoice ${escapePrintText(receipt.invoice.id)}</p><p>Total: ${escapePrintText(formatOMRAmount(receipt.invoice.totalAmount))}</p></div>`;
+          const html = `<div><h1>${escapePrintText(receipt.settings?.name || "LaraBeauty")}</h1><p>Invoice ${escapePrintText(receipt.invoice.id)}</p><p>Total: ${escapePrintText(formatOMRAmount(receipt.invoice.totalAmount))}</p></div>`;
           await desktopRepository.printHtml(`Invoice ${receipt.invoice.id}`, html);
         }
       } catch (error) {

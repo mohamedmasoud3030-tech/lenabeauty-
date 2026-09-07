@@ -237,9 +237,9 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
         </div>
 
         {/* Product signature — deliberately separate from the center's own logo. */}
-        <div className="lena-receipt-signature" aria-label="Lena Beauty">
+        <div className="lena-receipt-signature" aria-label="Lara Beauty">
           <img src="/lena-mark.svg" alt="" aria-hidden="true" />
-          <span>LENA · BEAUTY</span>
+          <span>LARA · BEAUTY</span>
         </div>
 
         {/* Print Styles */}

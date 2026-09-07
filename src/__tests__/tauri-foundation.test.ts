@@ -18,7 +18,7 @@ describe('tauri foundation files', () => {
 
   it('contains tauri product config', () => {
     const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
-    expect(conf.productName).toContain('LenaBeauty');
+    expect(conf.productName).toContain('LaraBeauty');
     expect(conf.identifier).toBe('com.lenabeauty.desktop');
   });
 });

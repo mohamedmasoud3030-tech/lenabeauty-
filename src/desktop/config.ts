@@ -19,7 +19,7 @@ export interface DesktopShellConfig {
 }
 
 export const desktopShellConfig: DesktopShellConfig = {
-  productName: 'LenaBeauty Desktop',
+  productName: 'LaraBeauty Desktop',
   bundleId: 'com.lenabeauty.desktop',
   defaultWindow: {
     width: 1440,

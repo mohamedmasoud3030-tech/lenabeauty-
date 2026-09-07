@@ -41,5 +41,5 @@ export const enLaunch = {
   "An employee record is not a login account. Staff access requires an Auth user plus a server-side center membership and role; never grant memberships from the browser.": "An employee record is not a login account. Staff access requires an Auth user plus a server-side center membership and role; never grant memberships from the browser.",
   "Review operating staff": "Review operating staff",
   "Activation journey": "Activation journey",
-  "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using LENA Beauty.": "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using LENA Beauty.",
+  "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using LENA Beauty.": "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using Lara Beauty.",
 };

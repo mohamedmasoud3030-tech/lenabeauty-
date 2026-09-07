@@ -53,7 +53,7 @@ const LOGIN_COPY = {
     parentEyebrow: "A LENA DIGITAL HOUSE PRODUCT",
     parentPrefix: "Designed and developed by",
     parentSubline: "Part of the LENA family of digital products.",
-    parentMenuBody: "The parent digital house behind Lena Beauty and the LENA product family.",
+    parentMenuBody: "The parent digital house behind Lara Beauty and the LENA product family.",
     parentMenuCta: "Visit LENA Digital House",
   },
   ar: {
@@ -66,9 +66,9 @@ const LOGIN_COPY = {
     footer: "الجمال، بإدارة أجمل.",
     menuLabel: "قائمة LENA",
     parentEyebrow: "أحد منتجات LENA DIGITAL HOUSE",
-    parentPrefix: "تم تصميم وتطوير LENA Beauty بواسطة",
+    parentPrefix: "تم تصميم وتطوير Lara Beauty بواسطة",
     parentSubline: "جزء من عائلة LENA للمنتجات الرقمية.",
-    parentMenuBody: "البيت الرقمي الأم وراء Lena Beauty وبقية عائلة منتجات LENA.",
+    parentMenuBody: "البيت الرقمي الأم وراء Lara Beauty وبقية عائلة منتجات LENA.",
     parentMenuCta: "زيارة LENA Digital House",
   },
 } as const;
@@ -172,7 +172,7 @@ export default function LoginPage() {
           className={`${compact ? "text-[2rem]" : "text-[2.65rem] xl:text-5xl"} font-serif tracking-[0.13em] text-foreground`}
           style={{ textShadow: "0 8px 28px rgba(106, 69, 130, 0.12)" }}
         >
-          LENA
+          LARA
         </p>
         <p
           className={`${compact ? "mt-0.5 text-[10px]" : "mt-1.5 text-xs"} font-semibold tracking-[0.32em]`}

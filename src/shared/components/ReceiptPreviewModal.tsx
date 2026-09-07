@@ -25,7 +25,7 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
   const buildReceiptText = () => {
     if (!data) return "";
     return [
-      `=== ${data.settings?.name || 'LenaBeauty'} ===`,
+      `=== ${data.settings?.name || 'LaraBeauty'} ===`,
       `${t("Invoice")}: ${data.invoice.id?.slice(-6).toUpperCase() || ''}`,
       `Date: ${new Date(data.invoice.date).toLocaleString()}`,
       '---',

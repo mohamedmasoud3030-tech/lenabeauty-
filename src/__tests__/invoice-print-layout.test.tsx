@@ -72,8 +72,8 @@ describe("thermal invoice print layout", () => {
 
   it("keeps the center identity and adds a separate Lena product signature at the bottom", () => {
     render(<InvoicePrintLayout data={receipt} />);
-    const signature = screen.getByLabelText("Lena Beauty");
-    expect(signature).toHaveTextContent("LENA · BEAUTY");
+    const signature = screen.getByLabelText("Lara Beauty");
+    expect(signature).toHaveTextContent("LARA · BEAUTY");
     expect(signature.querySelector('img[src="/lena-mark.svg"]')).not.toBeNull();
     expect(screen.getAllByText("لينا بيوتي").length).toBeGreaterThan(0);
   });

@@ -30,9 +30,9 @@ export default defineConfig(({mode}) => {
           ],
         },
         manifest: {
-          name: 'Lena Beauty - إدارة مركز التجميل',
-          short_name: 'Lena Beauty',
-          description: 'نظام إدارة مركز التجميل - Lena Beauty',
+          name: 'Lara Beauty - إدارة مركز التجميل',
+          short_name: 'Lara Beauty',
+          description: 'نظام إدارة مركز التجميل - Lara Beauty',
           theme_color: '#8B5CF6',
           background_color: '#FCFAFF',
           display: 'standalone',

@@ -118,7 +118,7 @@ export const enCustomers = {
   "passport.retention": "Retention & rebooking",
   "passport.daysSinceLastVisit": "{{count}} days since last visit",
   "passport.rebookingWindow": "Usual return window: {{min}}–{{max}} days",
-  "passport.wallet": "LENA Wallet",
+  "passport.wallet": "Lara Wallet",
   "passport.walletEmpty": "No active value instruments",
   "passport.sessionsLeft": "sessions left",
   "passport.timeline": "Visit timeline",

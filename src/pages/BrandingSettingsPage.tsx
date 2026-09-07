@@ -30,8 +30,8 @@ const ALLOWED_LOGO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'
 const ALLOWED_IMPORTED_LOGO_PREFIX = /^data:image\/(?:jpeg|png|webp);base64,/i;
 
 const DEFAULT_SETTINGS: BrandingSettings = {
-  salonName: 'LenaBeauty',
-  salonNameAr: 'لينا بيوتي',
+  salonName: 'LaraBeauty',
+  salonNameAr: 'لارا بيوتي',
   address: 'Muscat, Oman',
   addressAr: 'مسقط، عمان',
   phone: '+968 9414 1330',
@@ -42,8 +42,8 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: 'Powered by LenaBeauty',
-  footerTextAr: 'مدعوم بواسطة لينا بيوتي',
+  footerText: 'Powered by LaraBeauty',
+  footerTextAr: 'مدعوم بواسطة لارا بيوتي',
 };
 
 function fromCenterSettings(cs: any): BrandingSettings {

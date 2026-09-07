@@ -105,7 +105,7 @@ describe("print HTML security", () => {
     try {
       withHostDocument("en", "ltr", () => {
         const before = printService.generatePrintHTML("<p>doc</p>");
-        expect(before).toContain("LenaBeauty");
+        expect(before).toContain("LaraBeauty");
         expect(before).not.toContain("Updated Salon");
 
         // This is exactly what BrandingSettingsPage.persistSettings does after
@@ -119,7 +119,7 @@ describe("print HTML security", () => {
         const after = printService.generatePrintHTML("<p>doc</p>");
         expect(after).toContain(">Updated Salon</h1>");
         expect(after).toContain("--primary-color: #123456");
-        expect(after).not.toContain(">LenaBeauty</h1>");
+        expect(after).not.toContain(">LaraBeauty</h1>");
       });
     } finally {
       brandingService.resetToDefaults();
