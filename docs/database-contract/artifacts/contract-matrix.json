@@ -769,6 +769,29 @@
       ]
     },
     {
+      "name": "get_center_gemini_key_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_center_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
       "name": "get_dashboard_pnl_v1",
       "exists": true,
       "frontend_args": [
@@ -939,6 +962,30 @@
         {
           "schema": "public",
           "signature": "p_entitlement_id uuid, p_amount numeric, p_reason text, p_actor_employee_id uuid",
+          "security_definer": true,
+          "search_path": [
+            "search_path=pg_catalog, public, app_private"
+          ],
+          "client_roles": [
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": false,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "save_center_gemini_key_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_api_key",
+        "p_center_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_api_key text",
           "security_definer": true,
           "search_path": [
             "search_path=pg_catalog, public, app_private"

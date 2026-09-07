@@ -1,5 +1,5 @@
 {
-  "files": 317,
+  "files": 322,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1370,6 +1370,15 @@
       "args": []
     },
     {
+      "name": "get_center_gemini_key_v1",
+      "files": [
+        "src/infrastructure/gemini/adminAssistantStore.ts"
+      ],
+      "args": [
+        "p_center_id"
+      ]
+    },
+    {
       "name": "get_dashboard_pnl_v1",
       "files": [
         "src/infrastructure/supabase/repositories/dashboard.ts"
@@ -1455,6 +1464,16 @@
         "p_amount",
         "p_entitlement_id",
         "p_reason"
+      ]
+    },
+    {
+      "name": "save_center_gemini_key_v1",
+      "files": [
+        "src/infrastructure/gemini/adminAssistantStore.ts"
+      ],
+      "args": [
+        "p_api_key",
+        "p_center_id"
       ]
     },
     {
@@ -1544,6 +1563,7 @@
       "key": "dynamic-from",
       "reason": "non-literal .from() argument (non-Supabase or dynamic)",
       "files": [
+        "src/infrastructure/gemini/adminAssistantLive.ts",
         "src/infrastructure/services/printService.ts",
         "src/infrastructure/supabase/repositories/settings.ts",
         "src/infrastructure/supabase/repositories/shared.ts"
