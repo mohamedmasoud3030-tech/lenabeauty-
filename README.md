@@ -2,7 +2,7 @@
 
 A salon/spa management Progressive Web App for the Omani market, built with React 19, TypeScript, Vite 6, Tailwind CSS v4, and a live **Supabase** backend (Auth + Postgres + Storage + RPC).
 
-> Runtime status: Supabase-backed only — there is no fake/offline operating data adapter. Canonical Demo/Staging deployment and database contracts are maintained separately from any future protected Production environment.
+> Runtime status: Supabase-backed only — there is no fake/offline operating data adapter. Canonical Demo/Staging and guarded Production deployment/database contracts are maintained as separate targets.
 
 ## Architecture
 
@@ -42,11 +42,12 @@ See `.env.example`. Locally these live in `.env`; deployed client variables belo
 |---|---|
 | `VITE_DATA_BACKEND` | Must be `supabase` |
 | `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key (never the service-role secret) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key; modern secret keys and legacy `service_role` JWTs are rejected |
 | `VITE_CENTER_ID` | Active center UUID |
 | `VITE_BRANCH_MODE` | `single` or `multi` |
 | `VITE_ENVIRONMENT` | Optional: `development` \| `staging` \| `production` |
 | `VITE_USE_DEMO_CREDENTIALS` | Optional local-development escape hatch only; ignored for Production and must never cause a Production fallback to Demo |
+| `PRODUCTION_SUPABASE_PROJECT_REF` | Server/operator-only Production target binding consumed by `launch:preflight`; never a `VITE_*` secret channel |
 
 ## Supabase setup
 
@@ -60,7 +61,7 @@ Important rules:
 4. `20260628000002_admin_bootstrap.sql` is the **single manual/operator bootstrap** because it requires a real Auth user UUID. It is excluded from automated replay and must be handled deliberately on a fresh project.
 5. Continue through **all later filenames present on disk**. Never use a README/runbook “last filename” as the deployment boundary.
 
-As of 2026-09-01 the generated audit discovers 41 migrations: 40 automated + the one manual bootstrap. This number is evidence, not a hard-coded deployment rule. The current Visit/Recipe tail is:
+As of 2026-09-03 the generated audit discovers 42 migrations: 41 automated + the one manual bootstrap. This number is evidence, not a hard-coded deployment rule. The current Visit/Recipe tail is:
 
 - `20260901100838_visit_lifecycle_recipes.sql`
 - `20260901101133_visit_recipe_index_hardening.sql`
@@ -73,7 +74,7 @@ The optional service catalog under `supabase/seeds/` is Demo/Staging data and is
 
 ### Approval-gated Demo migration sync
 
-`.github/workflows/demo-supabase-migrations.yml` always runs the static application/database gate for PRs and `main`. The **credentialed remote migration job is approval-gated**: it only runs on explicit `workflow_dispatch` when the complete Demo secret set is configured. Ordinary PRs/main pushes do not mutate the hosted database.
+`.github/workflows/demo-supabase-migrations.yml` always runs the static application/database gate for PRs and `main`. The **credentialed remote migration job is approval-gated by explicit dispatch**: it only runs on `workflow_dispatch` when the complete Demo secret set is configured. Ordinary PRs/main pushes do not mutate the hosted database.
 
 The workflow verifies that the target is exactly the canonical Lena Demo project, aligns migration history, applies pending canonical migrations, runs `preflight:supabase`, and executes every rollback-safe `supabase/tests/*.sql` file through `psql`.
 
@@ -90,15 +91,41 @@ Required GitHub Actions secrets for that live Demo job are:
 | `DEMO_CENTER_ID` | Canonical Demo center UUID |
 | `DEMO_SUPABASE_SERVICE_ROLE_KEY` | Server-only key used by controlled live preflight; never a `VITE_*` value |
 
-If any validation/migration/acceptance step fails, the workflow stops. Seeds are deliberately excluded. A future Production database must use separately protected credentials/workflow controls.
+If any validation/migration/acceptance step fails, the workflow stops. Seeds are deliberately excluded.
 
-Before release, run:
+### Guarded Production release
+
+`.github/workflows/production-supabase-release.yml` is the canonical Production schema-release lane. It is **manual-dispatch only**, refuses dispatches that do not target `main`, and uses the GitHub `production` environment for server-only credentials.
+
+Required Production secrets are:
+
+| Secret | Purpose |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | Supabase management access |
+| `PRODUCTION_SUPABASE_PROJECT_REF` | Exact approved Production project ref |
+| `PRODUCTION_SUPABASE_DB_PASSWORD` | Production database password for CLI/psql |
+| `PRODUCTION_SUPABASE_URL` | Exact Production API URL; must match the project ref |
+| `PRODUCTION_SUPABASE_PUBLISHABLE_KEY` | Browser-safe publishable/anon key |
+| `PRODUCTION_CENTER_ID` | Explicit single-center UUID |
+| `PRODUCTION_SUPABASE_SERVICE_ROLE_KEY` | Server-only live-preflight key; never exposed as `VITE_*` |
+
+At dispatch the operator must retype the project ref and center UUID, supply the salon name, and confirm that a current recovery point/procedure exists. The workflow reruns all static gates, runs `launch:preflight`, refuses the Demo target, handles the manual placeholder bootstrap out-of-band, applies pending canonical migrations, provisions only the configured center shell, verifies the live schema/center, and runs all rollback-safe SQL acceptance tests.
+
+Before accepting real customer transactions, `main` must also have GitHub branch protection or a repository ruleset enabled. That is repository governance, not application runtime code.
+
+For local/operator Production validation before dispatch:
+
+```bash
+npm run launch:preflight
+```
+
+For live schema verification after a controlled migration:
 
 ```bash
 npm run preflight:supabase
 ```
 
-The current preflight verifies the effective September contract, not only the older August checkout foundation: appointment-aware checkout, Visit RPC, recipe tables, RPC-only recipe writes, duplicate-service-line aggregation and internal consumer revocation are all part of the check.
+The current live preflight verifies the effective September contract, not only the older August checkout foundation: appointment-aware checkout, Visit RPC, recipe tables, RPC-only recipe writes, duplicate-service-line aggregation and internal consumer revocation are all part of the check.
 
 ## Scripts
 
@@ -112,6 +139,8 @@ npm run audit:gate
 npm run db:types:check
 npm run ci:migrations
 npm run ci:rpc-check
+npm run launch:preflight
+npm run launch:membership -- --user-id <uuid> --center-id <uuid> --role <ADMIN|MANAGER|STAFF> --name "Full Name"
 npm run preflight:supabase
 ```
 
@@ -142,6 +171,7 @@ At that time the main Demo center contained services/customers/invoices but no p
 
 - Apply the full canonical migration chain before storing real data.
 - Never commit `.env` or secret/service-role keys.
+- Modern `sb_secret_*` keys and legacy JWTs with `role=service_role` are invalid browser publishable credentials.
 - Recipe table writes are deliberately unavailable to normal client roles; `save_service_recipe_v1` is the governed write path.
 - `process_checkout_v1` and `app_private.consume_invoice_recipes_v1` are internal/non-client-executable.
 - Security headers (CSP, X-Frame-Options, etc.) are configured in `vercel.json`.

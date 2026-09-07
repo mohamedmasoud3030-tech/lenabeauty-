@@ -12,7 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "preflight:supabase": "node scripts/supabase-live-preflight.mjs",
+    "preflight:supabase": "node scripts/supabase-live-preflight-entry.mjs",
     "launch:preflight": "node scripts/launch/production-preflight.mjs",
     "launch:membership": "node scripts/launch/render-membership-bootstrap.mjs",
     "ci:rpc-check": "node scripts/check-rpc-contracts.mjs",
