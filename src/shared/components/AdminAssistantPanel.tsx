@@ -6,6 +6,9 @@ import { useToast } from "./Toast";
 import {
   askGemini,
   type ChatTurn,
+  geminiErrorDetail,
+  GEMINI_STUDIO_KEY_URL,
+  sanitizeGeminiKey,
   verifyGeminiKey,
 } from "../../infrastructure/gemini/adminAssistant";
 import {
@@ -30,9 +33,16 @@ const SUGGESTIONS = [
 
 function errorCopy(code: string, t: (key: string) => string): string {
   if (code === "GEMINI_KEY_MISSING") return t("Add a Gemini key to start");
+  if (code === "GEMINI_KEY_INVALID") return t("This key is not valid. Copy it again from Google AI Studio.");
+  if (code === "GEMINI_KEY_REFERRER_BLOCKED") return t("This key is restricted to other websites. Remove the website restriction, or create a new unrestricted key.");
+  if (code === "GEMINI_API_DISABLED") return t("Enable the Generative Language API on the key's Google project, then try again.");
   if (code === "GEMINI_KEY_REJECTED") return t("Gemini rejected this key. Check it in Google AI Studio.");
+  if (code === "GEMINI_REQUEST_REJECTED") return t("Gemini rejected the request. Check the key and try again.");
+  if (code === "GEMINI_SERVER_ERROR") return t("Gemini service is down right now. Try again shortly.");
   if (code === "GEMINI_UNREACHABLE") return t("Could not reach Gemini. Try again.");
   if (code === "GEMINI_EMPTY_REPLY") return t("The assistant returned an empty reply.");
+  if (code === "GEMINI_TRUNCATED_REPLY") return t("The reply was cut off. Ask a shorter question.");
+  if (code === "GEMINI_BLOCKED_REPLY") return t("Gemini blocked this reply. Rephrase the question.");
   if (code === "GEMINI_MODEL_UNAVAILABLE") return t("Gemini model is unavailable. Try again later.");
   if (code === "GEMINI_BUSY") return t("Gemini is busy. Wait a moment and try again.");
   if (code === "GEMINI_MIC_DENIED") return t("Microphone permission is required");
@@ -67,7 +77,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
   const liveGen = useRef(0);
   const [apiKey, setApiKey] = useState(() => {
     try {
-      return window.localStorage?.getItem("lara_admin_gemini_key")?.trim() ?? "";
+      return sanitizeGeminiKey(window.localStorage?.getItem("lara_admin_gemini_key") ?? "");
     } catch {
       return "";
     }
@@ -79,6 +89,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [inlineError, setInlineError] = useState("");
+  const [errorDetail, setErrorDetail] = useState("");
   const [liveStatus, setLiveStatus] = useState<LiveStatus>("idle");
 
   const active = apiKey.length > 0;
@@ -138,13 +149,14 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
     const node = logRef.current;
     if (!node || typeof node.scrollTo !== "function") return;
     node.scrollTo({ top: node.scrollHeight });
-  }, [history, sending, inlineError, liveStatus]);
+  }, [history, sending, inlineError, errorDetail, liveStatus]);
 
   async function persistKey() {
-    const next = keyDraft.trim();
+    const next = sanitizeGeminiKey(keyDraft);
     if (!next || verifying) return;
     setVerifying(true);
     setInlineError("");
+    setErrorDetail("");
     try {
       await verifyGeminiKey(next);
       const location = await persistGeminiKey(next);
@@ -155,6 +167,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
     } catch (error) {
       const code = error instanceof Error ? error.message : "GEMINI_REQUEST_FAILED";
       setInlineError(errorCopy(code, t));
+      setErrorDetail(geminiErrorDetail(error));
     } finally {
       setVerifying(false);
     }
@@ -167,6 +180,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
     setKeyLocation(null);
     setHistory([]);
     setInlineError("");
+    setErrorDetail("");
     showToast("success", t("Success"), t("Key removed"));
   }
 
@@ -178,6 +192,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
     const id = liveGen.current + 1;
     liveGen.current = id;
     setInlineError("");
+    setErrorDetail("");
     setLiveStatus("connecting");
     try {
       const session = await startLiveAssistant({
@@ -223,6 +238,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
     if (!message || sending || !active) return;
     setDraft("");
     setInlineError("");
+    setErrorDetail("");
     if (liveRef.current) {
       setHistory((prev) => upsertTurn(prev, "user", message));
       liveRef.current.sendText(message);
@@ -244,6 +260,7 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
       setHistory(history);
       setDraft(preset ? "" : message);
       setInlineError(errorCopy(code, t));
+      setErrorDetail(geminiErrorDetail(error));
     } finally {
       setSending(false);
     }
@@ -324,7 +341,25 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
             >
               {verifying ? t("Checking key...") : t("Save key")}
             </button>
-            {inlineError ? <p role="alert" className="text-xs font-bold text-destructive">{inlineError}</p> : null}
+            {inlineError ? (
+              <div role="alert" className="space-y-1 rounded-xl bg-destructive/10 px-3 py-2">
+                <p className="text-xs font-bold text-destructive">{inlineError}</p>
+                {errorDetail ? (
+                  <p dir="ltr" className="break-words text-start text-[11px] leading-relaxed text-muted-foreground">{errorDetail}</p>
+                ) : null}
+              </div>
+            ) : null}
+            <a
+              href={GEMINI_STUDIO_KEY_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center text-xs font-bold text-primary underline"
+            >
+              {t("Get a free key from Google AI Studio")}
+            </a>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              {t("The key must belong to a Google project with the Generative Language API enabled, and must not be restricted to other websites.")}
+            </p>
           </div>
         ) : (
           <>
@@ -336,6 +371,11 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
                 {t("Remove key")}
               </button>
             </div>
+            {keyLocation === "device" ? (
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {t("Saved on this device only. Open the assistant while signed in as the center admin to save it for the whole center.")}
+              </p>
+            ) : null}
             <div className="rounded-2xl border border-border bg-muted/40 px-3 py-3">
               <button
                 type="button"
@@ -384,7 +424,14 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
               ))
             )}
             {sending ? <p className="text-xs font-bold text-muted-foreground">{t("Waiting for a reply...")}</p> : null}
-            {inlineError ? <p role="alert" className="text-xs font-bold text-destructive">{inlineError}</p> : null}
+            {inlineError ? (
+              <div role="alert" className="space-y-1 rounded-xl bg-destructive/10 px-3 py-2">
+                <p className="text-xs font-bold text-destructive">{inlineError}</p>
+                {errorDetail ? (
+                  <p dir="ltr" className="break-words text-start text-[11px] leading-relaxed text-muted-foreground">{errorDetail}</p>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )}
       </div>
