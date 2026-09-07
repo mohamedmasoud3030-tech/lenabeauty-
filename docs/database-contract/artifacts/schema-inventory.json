@@ -18,6 +18,10 @@
     },
     {
       "schema": "public",
+      "name": "center_gemini_settings"
+    },
+    {
+      "schema": "public",
       "name": "center_memberships"
     },
     {
@@ -759,6 +763,46 @@
       "nullable": "NO",
       "default": "now()",
       "position": 12
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "api_key",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": "now()",
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "updated_by",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "YES",
+      "default": null,
+      "position": 4
     },
     {
       "schema": "public",
@@ -4522,6 +4566,34 @@
     },
     {
       "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_api_key_not_null",
+      "type": "n",
+      "definition": "NOT NULL api_key"
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_updated_at_not_null",
+      "type": "n",
+      "definition": "NOT NULL updated_at"
+    },
+    {
+      "schema": "public",
       "table": "center_memberships",
       "name": "center_memberships_center_id_not_null",
       "type": "n",
@@ -7083,6 +7155,14 @@
     },
     {
       "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
       "table": "center_memberships",
       "name": "center_memberships_center_id_fkey",
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
@@ -7814,6 +7894,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_attendance_employee ON public.attendance_records USING btree (center_id, employee_id)"
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX center_gemini_settings_pkey ON public.center_gemini_settings USING btree (center_id)"
     },
     {
       "schema": "public",
@@ -9331,6 +9420,19 @@
     },
     {
       "schema": "public",
+      "name": "get_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "s",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.get_center_gemini_key_v1(p_center_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_key TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  SELECT api_key INTO v_key\n  FROM public.center_gemini_settings\n  WHERE center_id = p_center_id;\n\n  RETURN jsonb_build_object('api_key', COALESCE(v_key, ''));\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "get_dashboard_pnl_v1",
       "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
       "result": "jsonb",
@@ -9601,6 +9703,19 @@
         "search_path=pg_catalog, public, app_private"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.rotate_customer_portal_token_v1(p_center_id uuid, p_customer_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_token TEXT;\n  v_customer public.customers%ROWTYPE;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.is_center_member(p_center_id) THEN\n    RAISE EXCEPTION 'Unauthorized client portal center' USING ERRCODE = '42501';\n  END IF;\n\n  v_token := substring(replace(gen_random_uuid()::text, '-', '') from 1 for 12);\n\n  UPDATE public.customers\n  SET portal_access_token = v_token,\n      portal_failed_login_attempts = 0,\n      portal_locked_until = NULL,\n      updated_at = now()\n  WHERE id = p_customer_id\n    AND center_id = p_center_id\n  RETURNING * INTO v_customer;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'Customer is not available for this center' USING ERRCODE = '23503';\n  END IF;\n\n  RETURN jsonb_build_object(\n    'customer_id', v_customer.id,\n    'portal_access_token', v_customer.portal_access_token\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "save_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid, p_api_key text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.save_center_gemini_key_v1(p_center_id uuid, p_api_key text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_key TEXT;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n\n  v_key := btrim(COALESCE(p_api_key, ''));\n  IF v_key = '' THEN\n    DELETE FROM public.center_gemini_settings WHERE center_id = p_center_id;\n    RETURN jsonb_build_object('saved', FALSE);\n  END IF;\n\n  INSERT INTO public.center_gemini_settings (center_id, api_key, updated_at, updated_by)\n  VALUES (p_center_id, v_key, now(), auth.uid())\n  ON CONFLICT (center_id) DO UPDATE\n    SET api_key = EXCLUDED.api_key,\n        updated_at = now(),\n        updated_by = EXCLUDED.updated_by;\n\n  RETURN jsonb_build_object('saved', TRUE);\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10071,6 +10186,20 @@
     },
     {
       "schema": "public",
+      "name": "get_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "get_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "get_dashboard_pnl_v1",
       "identity_args": "p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone",
       "grantee": "authenticated",
@@ -10281,6 +10410,20 @@
     },
     {
       "schema": "public",
+      "name": "save_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid, p_api_key text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "save_center_gemini_key_v1",
+      "identity_args": "p_center_id uuid, p_api_key text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "save_service_recipe_v1",
       "identity_args": "p_center_id uuid, p_service_id uuid, p_items jsonb",
       "grantee": "authenticated",
@@ -10440,6 +10583,18 @@
       "schema": "public",
       "table": "attendance_records",
       "name": "attendance_admin",
+      "permissive": "PERMISSIVE",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "ALL",
+      "qual": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])",
+      "with_check": "app_private.has_center_role(center_id, ARRAY['ADMIN'::text])"
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
+      "name": "center_gemini_settings_admin",
       "permissive": "PERMISSIVE",
       "roles": [
         "authenticated"
@@ -11547,6 +11702,118 @@
       "kind": "relation",
       "schema": "public",
       "object": "attendance_records_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "center_gemini_settings_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -20324,6 +20591,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "get_center_gemini_key_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "get_center_gemini_key_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "get_dashboard_pnl_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -20534,6 +20815,20 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "save_center_gemini_key_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "save_center_gemini_key_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "save_service_recipe_v1",
       "grantee": "authenticated",
       "privilege": "EXECUTE"
@@ -20708,6 +21003,12 @@
     {
       "schema": "public",
       "table": "attendance_records",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "center_gemini_settings",
       "rls_enabled": true,
       "rls_forced": false
     },

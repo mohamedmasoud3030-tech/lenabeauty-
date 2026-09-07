@@ -59,11 +59,18 @@ export async function loadPersistedGeminiKey(): Promise<{ key: string; location:
     saveGeminiKey(remote);
     return { key: remote, location: "database" };
   }
-  if (remote === "") {
-    clearGeminiKey();
-    return { key: "", location: "database" };
-  }
   const local = readGeminiKey();
+  if (remote === "") {
+    // The center row is empty. A key that is still on this device means the
+    // earlier save never reached the database (offline, or the RPC was not
+    // deployed yet), so push it up instead of silently deactivating.
+    if (!local) {
+      clearGeminiKey();
+      return { key: "", location: "database" };
+    }
+    const healed = await writeToDatabase(local);
+    return { key: local, location: healed ? "database" : "device" };
+  }
   return { key: local, location: local ? "device" : null };
 }
 

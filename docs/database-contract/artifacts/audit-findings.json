@@ -1,22 +1,22 @@
 {
   "summary": {
     "schema": {
-      "tables": 37,
-      "columns": 392,
+      "tables": 38,
+      "columns": 396,
       "enum_types": 2,
       "enum_labels": 9,
-      "constraints": 409,
-      "foreign_keys": 89,
-      "indexes": 117,
+      "constraints": 413,
+      "foreign_keys": 90,
+      "indexes": 118,
       "triggers": 23,
       "views": 0,
-      "functions": 63,
-      "policies": 49,
-      "grants": 1385
+      "functions": 65,
+      "policies": 50,
+      "grants": 1405
     },
     "frontend": {
       "tables": 29,
-      "rpc": 24,
+      "rpc": 26,
       "storage": 1
     },
     "findings_by_severity": {
@@ -34,9 +34,10 @@
       "needs": "manual-review",
       "title": "Scanner limitation (manual review): dynamic-from",
       "category": "scanner-limitation",
-      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts, src/infrastructure/supabase/repositories/shared.ts",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/gemini/adminAssistantLive.ts, src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts, src/infrastructure/supabase/repositories/shared.ts",
       "affected": {
         "files": [
+          "src/infrastructure/gemini/adminAssistantLive.ts",
           "src/infrastructure/services/printService.ts",
           "src/infrastructure/supabase/repositories/settings.ts",
           "src/infrastructure/supabase/repositories/shared.ts"

@@ -7,7 +7,7 @@ import { ToastProvider } from "../shared/components/Toast";
 import { AdminAssistantPanel } from "../shared/components/AdminAssistantPanel";
 import { MobileActionDock } from "../ui/layout/MobileActionDock";
 import i18n from "../i18n";
-import { GEMINI_KEY_STORAGE_KEY, GEMINI_MODEL } from "../infrastructure/gemini/adminAssistant";
+import { GEMINI_KEY_STORAGE_KEY, GEMINI_MODEL, GEMINI_MODELS } from "../infrastructure/gemini/adminAssistant";
 import { NAV_DESTINATIONS } from "../app/navigation";
 
 function wrapPanel(open = true) {
@@ -110,6 +110,115 @@ describe("admin Gemini assistant", () => {
     const panel = readFileSync(resolve(process.cwd(), "src/shared/components/AdminAssistantPanel.tsx"), "utf8");
     expect(panel).not.toContain("createAppointment");
     expect(panel).not.toContain("window.prompt");
+  });
+
+  it("activates a valid key even when the ping reply has no text", async () => {
+    // Reasoning models can spend the whole token budget on thinking and return
+    // a candidate with no parts. HTTP 200 still means the key works.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [] } }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "test-gemini-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+
+    expect(await screen.findByLabelText(i18n.t("Write a question"))).toBeInTheDocument();
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBe("test-gemini-key");
+  });
+
+  it("disables thinking tokens and leaves room for the verification reply", async () => {
+    const fetchMock = mockGeminiOk("OK");
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "test-gemini-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+    await screen.findByLabelText(i18n.t("Write a question"));
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as {
+      generationConfig: { maxOutputTokens: number; thinkingConfig?: { thinkingBudget: number } };
+    };
+    expect(body.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+    expect(body.generationConfig.maxOutputTokens).toBeGreaterThan(64);
+  });
+
+  it("cleans quotes, spaces and bidi marks out of a pasted key", async () => {
+    const fetchMock = mockGeminiOk("OK");
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), {
+      target: { value: '\u200f "AIzaSyTEST-key-value " ' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+    await screen.findByLabelText(i18n.t("Write a question"));
+
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBe("AIzaSyTEST-key-value");
+    expect(fetchMock.mock.calls[0][1].headers["x-goog-api-key"]).toBe("AIzaSyTEST-key-value");
+  });
+
+  it("explains an invalid key and shows the reason returned by Google", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({
+        error: {
+          status: "INVALID_ARGUMENT",
+          message: "API key not valid. Please pass a valid API key.",
+          details: [{ reason: "API_KEY_INVALID" }],
+        },
+      }),
+    }));
+
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "bad-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/this key is not valid/i);
+    expect(screen.getByText(/API key not valid/i)).toBeInTheDocument();
+    expect(localStorage.getItem(GEMINI_KEY_STORAGE_KEY)).toBeNull();
+  });
+
+  it("names a website-restricted key instead of blaming the network", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => JSON.stringify({
+        error: {
+          status: "PERMISSION_DENIED",
+          message: "Requests from referer https://app.example are blocked.",
+          details: [{ reason: "API_KEY_HTTP_REFERRER_BLOCKED" }],
+        },
+      }),
+    }));
+
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "restricted-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/restricted to other websites/i);
+  });
+
+  it("falls back to the next model when the first one is retired", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => JSON.stringify({ error: { status: "NOT_FOUND", message: "models/gemini-2.5-flash is not found" } }),
+      })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ candidates: [{ content: { parts: [{ text: "OK" }] } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    wrapPanel();
+    fireEvent.change(screen.getByLabelText(i18n.t("Gemini API key")), { target: { value: "test-gemini-key" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("Save key") }));
+
+    expect(await screen.findByLabelText(i18n.t("Write a question"))).toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[1][0])).toContain(GEMINI_MODELS[1]);
   });
 
   it("keeps the key form when Gemini rejects the key", async () => {

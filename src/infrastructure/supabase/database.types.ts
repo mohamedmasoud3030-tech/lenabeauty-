@@ -305,6 +305,35 @@ export type Database = {
           }
         ]
       }
+      "center_gemini_settings": {
+        Row: {
+          "center_id": string
+          "api_key": string
+          "updated_at": string
+          "updated_by": string | null
+        }
+        Insert: {
+          "center_id": string
+          "api_key": string
+          "updated_at"?: string
+          "updated_by"?: string | null
+        }
+        Update: {
+          "center_id"?: string
+          "api_key"?: string
+          "updated_at"?: string
+          "updated_by"?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "center_gemini_settings_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "center_memberships": {
         Row: {
           "id": string
@@ -2246,6 +2275,10 @@ export type Database = {
         Args: { "p_entitlement_id": string | null; "p_reason": string | null; "p_actor_employee_id": string | null }
         Returns: Json
       },
+      "get_center_gemini_key_v1": {
+        Args: { "p_center_id": string | null }
+        Returns: Json
+      },
       "get_dashboard_pnl_v1": {
         Args: { "p_center_id": string | null; "p_from": string | null; "p_to": string | null }
         Returns: Json
@@ -2328,6 +2361,10 @@ export type Database = {
       },
       "rotate_customer_portal_token_v1": {
         Args: { "p_center_id": string | null; "p_customer_id": string | null }
+        Returns: Json
+      },
+      "save_center_gemini_key_v1": {
+        Args: { "p_center_id": string | null; "p_api_key": string | null }
         Returns: Json
       },
       "save_service_recipe_v1": {
