@@ -39,6 +39,7 @@ function errorCopy(code: string, t: (key: string) => string): string {
   if (code === "GEMINI_KEY_REJECTED") return t("Gemini rejected this key. Check it in Google AI Studio.");
   if (code === "GEMINI_REQUEST_REJECTED") return t("Gemini rejected the request. Check the key and try again.");
   if (code === "GEMINI_SERVER_ERROR") return t("Gemini service is down right now. Try again shortly.");
+  if (code === "GEMINI_BLOCKED_BY_BROWSER") return t("The browser blocked the call to Gemini itself. Check the connection, and that the site allows generativelanguage.googleapis.com.");
   if (code === "GEMINI_UNREACHABLE") return t("Could not reach Gemini. Try again.");
   if (code === "GEMINI_EMPTY_REPLY") return t("The assistant returned an empty reply.");
   if (code === "GEMINI_TRUNCATED_REPLY") return t("The reply was cut off. Ask a shorter question.");
