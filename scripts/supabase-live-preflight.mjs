@@ -1,8 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { isPrivilegedPublishableKey, loadPreflightEnvironment } from "./lib/supabase-key-authority.mjs";
 
 const root = process.cwd();
-const envFiles = [".env.local", ".env"];
 const migrationsDir = resolve(root, "supabase/migrations");
 
 const requiredEnv = [
@@ -49,35 +49,6 @@ if (canonicalMigrations.length === 0) {
   process.exit(1);
 }
 
-function parseEnvFile(path) {
-  if (!existsSync(path)) return {};
-
-  const content = readFileSync(path, "utf8");
-  const values = {};
-
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-
-    const equalsIndex = trimmed.indexOf("=");
-    if (equalsIndex === -1) continue;
-
-    const key = trimmed.slice(0, equalsIndex).trim();
-    const rawValue = trimmed.slice(equalsIndex + 1).trim();
-    values[key] = rawValue.replace(/^['"]|['"]$/g, "");
-  }
-
-  return values;
-}
-
-function loadEnv() {
-  const fileEnv = envFiles.reduce((merged, filename) => {
-    return { ...merged, ...parseEnvFile(resolve(root, filename)) };
-  }, {});
-
-  return { ...fileEnv, ...process.env };
-}
-
 function validateUrl(value) {
   try {
     const url = new URL(value);
@@ -100,7 +71,7 @@ function pass(message) {
   console.log(`PASS ${message}`);
 }
 
-const env = loadEnv();
+const env = loadPreflightEnvironment(root);
 
 for (const key of requiredEnv) {
   if (!env[key]) {
@@ -126,8 +97,11 @@ if (env.VITE_SUPABASE_URL && !validateUrl(env.VITE_SUPABASE_URL)) {
   fail("VITE_SUPABASE_URL must be a valid https URL");
 }
 
-if (env.VITE_SUPABASE_PUBLISHABLE_KEY?.startsWith("sb_secret_")) {
-  fail("VITE_SUPABASE_PUBLISHABLE_KEY must not be a secret service-role key");
+if (isPrivilegedPublishableKey(env.VITE_SUPABASE_PUBLISHABLE_KEY)) {
+  // Fail closed before any live check: a privileged key in the browser slot
+  // must never be used to "verify" a schema, even from an operator machine.
+  fail("VITE_SUPABASE_PUBLISHABLE_KEY must be browser-safe and must not carry service-role authority");
+  process.exit(1);
 }
 
 if (env.VITE_CENTER_ID && !validateUuid(env.VITE_CENTER_ID)) {

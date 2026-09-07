@@ -44,13 +44,8 @@ body {
  * authenticated UI source. Mapping them here prevents amber/rose islands while
  * the markup stays stable and keeps warning red/yellow semantics separate.
  */
-.text-rose-500,
-.text-rose-600 {
+.text-rose-500 {
   color: hsl(var(--destructive)) !important;
-}
-
-.hover\:bg-rose-500\/10:hover {
-  background-color: hsl(var(--destructive) / 0.1) !important;
 }
 
 .bg-amber-500\/10 {

@@ -1,20 +1,9 @@
-import { AuthRepository, CustomerRepository, EmployeeRepository, ServiceRepository, AppointmentRepository, ProductRepository, ExpenseRepository, InvoiceRepository, SettingsRepository, DashboardRepository, ReportRepository, Result, DomainError, AuthError, BookingRepository, BookingInput, PublicService, PublicStaff, PublicCenterInfo, GiftCardRepository, ServicePackageRepository, EntitlementRepository, CustomerExperienceRepository, ForecastRepository, AccountingRepository, AdvancedRepository, AttendanceRepository, AdvanceRepository, PayrollRepository, ServiceRecipeRepository, RecipeItemInput } from "../../../domain/ports/repositories";
-import { Customer, Employee, Service, Appointment, AppointmentStatus, VisitStage, Product, Expense, Invoice, CenterSettings, AttendanceRecord, EmployeeAdvance, PayrollRun, PayrollLineItem, CustomerEntitlement, EntitlementLedgerEntry, ServiceRecipe, InventoryConsumption } from "../../../domain/entities";
-import { SessionState } from "../../../domain/entities/Session";
-import { createUnsupportedWriteError, createUnsupportedReadError, createQueryError, createUnsupportedAuthError } from ".././errors";
+import { AuthError, DomainError, Result } from "../../../domain/ports/repositories";
+import { createQueryError } from ".././errors";
 import { getSupabaseClient } from ".././client";
-import { Json, TablesInsert, TablesUpdate } from ".././database.types";
-import { mapCustomer, mapEmployee, mapService, mapProduct, mapAppointment, mapExpense, mapCenterSettings, mapAuthSession, mapInvoice, mapInvoiceItem, mapGiftCard, mapGiftCardTransaction, mapServicePackage, mapCustomerEntitlement, mapEntitlementLedgerEntry, mapNotificationSettings, mapPaymentGatewaySettings, mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead, mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem, mapServiceRecipe, mapInventoryConsumption } from ".././mappers";
-import { tenantContext, requireConfiguredCenterId } from "../../tenantContext";
-import { passwordResetRedirectUrl } from "../../../shared/auth/passwordResetRedirect";
-import { requiredText, optionalText, nonNegativeNumber, positiveNumber, positiveInteger, nonNegativeInteger, percentField, phoneField, emailField, dateField, notInPastField, collectIssues, numberField, DomainValidationError, ValidationIssue, FieldResult } from "../../../domain/validation";
-import { CheckoutPayload, InvoicePrintData, DashboardSummary, PnlData, ChartData, SalesReportRow, AppointmentReportRow, InventoryReportRow, BackupPayload, validateBackupPayload, EntitlementSummary } from "../../../application/dto";
-import { mapSalesReportRows, mapInvoicePrintItems } from ".././salesReportMapper";
-import { validateCheckoutContract } from "../../../domain/commerce";
-import { isCheckoutAfterCheckin } from "../../../domain/attendance";
-import { localDateRangeISO } from "../../../shared/dateRange";
-import { LENA_BRAND_PALETTE, normalizeBrandColor } from "../../../shared/theme/brandPalette";
-
+import { Json } from ".././database.types";
+import { requireConfiguredCenterId } from "../../tenantContext";
+import { collectIssues, DomainValidationError, FieldResult, ValidationIssue } from "../../../domain/validation";
 
 /**
  * Repository-boundary validation helper. Validates a payload's fields with the
@@ -221,8 +210,6 @@ export async function resolveServiceCategoryId(centerId: string, rawCategory: st
   if (!data?.id) throw new Error("No service category returned after upsert");
   return data.id;
 }
-
-
 
 export const ENTITLEMENT_SELECT = `
   *,

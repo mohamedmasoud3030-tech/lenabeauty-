@@ -11,7 +11,6 @@ export interface DesktopShellConfig {
   };
   capabilities: {
     offlineFirst: boolean;
-    localDraftStorage: boolean;
     desktopShortcuts: boolean;
     deepLinksReady: boolean;
     autoUpdaterReady: boolean;
@@ -32,7 +31,6 @@ export const desktopShellConfig: DesktopShellConfig = {
   },
   capabilities: {
     offlineFirst: false,
-    localDraftStorage: true,
     desktopShortcuts: false,
     deepLinksReady: false,
     autoUpdaterReady: false,

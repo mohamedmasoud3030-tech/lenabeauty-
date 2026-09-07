@@ -1,6 +1,6 @@
 import { CustomerRepository, Result, DomainError } from "../../../domain/ports/repositories";
 import { Customer, Appointment, Invoice } from "../../../domain/entities";
-import { createUnsupportedWriteError, createQueryError } from ".././errors";
+import { createQueryError } from ".././errors";
 import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapCustomer, mapAppointment, mapInvoice } from ".././mappers";
@@ -15,8 +15,6 @@ export class SupabaseCustomerAdapter implements CustomerRepository {
       const client = getSupabaseClient();
       const q = query?.trim();
       if (q) {
-        // Use typed filters rather than interpolating user text into raw
-        // PostgREST disjunction grammar. Merge duplicate matches by id.
         const [byName, byPhone] = await Promise.all([
           client.from('customers').select('*')
             .eq('center_id', centerRes.data)
@@ -135,8 +133,7 @@ export class SupabaseCustomerAdapter implements CustomerRepository {
       if (data.notes !== undefined) payload.notes = data.notes;
       if (data.totalSpent !== undefined) payload.total_spent = data.totalSpent;
       if (data.loyaltyPoints !== undefined) payload.loyalty_points = data.loyaltyPoints;
-      
-      // Explicitly delete center_id from payload if it exists to prevent tenant reassignment
+
       delete payload.center_id;
 
       const { data: row, error } = await getSupabaseClient()
@@ -152,30 +149,6 @@ export class SupabaseCustomerAdapter implements CustomerRepository {
       return { ok: true, data: mapCustomer(row) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Customer.update", (e as Error).message) };
-    }
-  }
-
-  async rotatePortalToken(id: string): Promise<Result<{ customerId: string; portalAccessToken: string }, DomainError>> {
-    const centerRes = getCenterIdFor("Customer.rotatePortalToken");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { data, error } = await getSupabaseClient().rpc('rotate_customer_portal_token_v1', {
-        p_center_id: centerRes.data,
-        p_customer_id: id,
-      });
-      if (error) {
-        if (error.code === 'PGRST202' || error.code === '42883' || error.message?.includes('Could not find the function')) {
-          return { ok: false, error: createUnsupportedWriteError("Customer.rotatePortalToken") };
-        }
-        return { ok: false, error: createQueryError("Customer.rotatePortalToken", error.message) };
-      }
-      const row = (data || {}) as any;
-      if (!row.customer_id || !row.portal_access_token) {
-        return { ok: false, error: createQueryError("Customer.rotatePortalToken", "Invalid response from portal token RPC") };
-      }
-      return { ok: true, data: { customerId: String(row.customer_id), portalAccessToken: String(row.portal_access_token) } };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Customer.rotatePortalToken", (e as Error).message) };
     }
   }
 

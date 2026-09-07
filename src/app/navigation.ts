@@ -34,7 +34,7 @@ import {
  *  - One destination has exactly one canonical name everywhere.
  *  - `adminOnly` controls *visibility only*. Authorization is enforced by
  *    `RequireAdmin` in `src/routes.tsx`; hiding a link is never the boundary.
- *  - `group` drives sidebar grouping and reflects the operator's actual job,
+ *  - `group` drives navigation grouping and reflects the operator's actual job,
  *    not the engineering module layout.
  */
 
@@ -123,17 +123,16 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { path: "/settings", labelKey: "Settings", icon: Settings, group: "system", adminOnly: true, searchIcon: "⚙️" },
 ];
 
-/** Mobile bottom bar — exactly 5 slots, ordered by real usage frequency. */
-export const MOBILE_PRIMARY_PATHS = ["/dashboard", "/appointments", "/pos", "/customers"] as const;
-
 /**
- * Mobile "More" sheet. Everything not in the bottom bar, so mobile can reach
- * every destination desktop can. Optional modules and admin items are filtered
- * at render time using the same rules as the sidebar.
+ * Destination-style mobile bottom navigation is intentionally empty. Phones
+ * use the compact icon dock (menu/search/quick-add) plus the navigation bottom
+ * sheet instead of maintaining a second destination model.
  */
+export const MOBILE_PRIMARY_PATHS: readonly string[] = [];
+
+/** Every shipped destination is reachable from the mobile navigation sheet. */
 export const MOBILE_MORE_PATHS = NAV_DESTINATIONS
   .filter((d) => !d.deferred)
-  .filter((d) => !MOBILE_PRIMARY_PATHS.includes(d.path as (typeof MOBILE_PRIMARY_PATHS)[number]))
   .map((d) => d.path);
 
 const BY_PATH = new Map(NAV_DESTINATIONS.map((d) => [d.path, d]));

@@ -11,5 +11,4 @@ export { SupabaseDashboardAdapter } from "./dashboard.ts";
 export { SupabaseReportAdapter } from "./reports.ts";
 export { SupabaseGiftCardAdapter, SupabaseEntitlementAdapter, SupabaseServicePackageAdapter } from "./gifting.ts";
 export { SupabaseCustomerExperienceAdapter, SupabaseForecastAdapter, SupabaseAccountingAdapter, SupabaseAdvancedAdapter } from "./engagement.ts";
-export { SupabaseBookingAdapter } from "./booking.ts";
 export { SupabaseAttendanceAdapter, SupabaseAdvanceAdapter, SupabasePayrollAdapter } from "./workforce.ts";

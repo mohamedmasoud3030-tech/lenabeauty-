@@ -111,7 +111,7 @@ Required Production secrets are:
 
 At dispatch the operator must retype the project ref and center UUID, supply the salon name, and confirm that a current recovery point/procedure exists. The workflow reruns all static gates, runs `launch:preflight`, refuses the Demo target, handles the manual placeholder bootstrap out-of-band, applies pending canonical migrations, provisions only the configured center shell, verifies the live schema/center, and runs all rollback-safe SQL acceptance tests.
 
-Before accepting real customer transactions, `main` must also have GitHub branch protection or a repository ruleset enabled. That is repository governance, not application runtime code.
+Before accepting real customer transactions, `main` must also have GitHub branch protection or a repository ruleset enabled, and the GitHub `production` environment must carry required reviewers and a `main`-only deployment-branch rule (see the launch pack). That is repository governance, not application runtime code.
 
 For local/operator Production validation before dispatch:
 

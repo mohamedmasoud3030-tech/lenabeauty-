@@ -1,3 +1,5 @@
+import { isPrivilegedPublishableKey } from "../lib/supabase-key-authority.mjs";
+
 const DEMO_SUPABASE_PROJECT_REF = "tuzzvqsnbtzvkffmazyf";
 const DEMO_SUPABASE_HOST = `${DEMO_SUPABASE_PROJECT_REF}.supabase.co`;
 const CANONICAL_SINGLE_CENTER_ID = "7f0b8e2a-6d5a-4a1b-9c2d-3e4f5a6b7c8d";
@@ -15,26 +17,6 @@ function hostOf(value) {
   } catch {
     return "";
   }
-}
-
-function jwtRole(value) {
-  const token = read(value);
-  const parts = token.split(".");
-  if (parts.length !== 3) return "";
-
-  try {
-    const base64 = parts[1].replaceAll("-", "+").replaceAll("_", "/");
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-    const payload = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
-    return read(payload?.role).toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-function isPrivilegedBrowserKey(value) {
-  const key = read(value);
-  return key.startsWith("sb_secret_") || jwtRole(key) === "service_role";
 }
 
 export function validateProductionEnvironment(env) {
@@ -78,7 +60,7 @@ export function validateProductionEnvironment(env) {
 
   if (!publishableKey) {
     errors.push("VITE_SUPABASE_PUBLISHABLE_KEY is required");
-  } else if (isPrivilegedBrowserKey(publishableKey)) {
+  } else if (isPrivilegedPublishableKey(publishableKey)) {
     errors.push("A Supabase privileged/service-role key must never be exposed as VITE_SUPABASE_PUBLISHABLE_KEY");
   }
 

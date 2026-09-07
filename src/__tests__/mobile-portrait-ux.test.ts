@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { MOBILE_MORE_PATHS, NAV_DESTINATIONS, visibleDestinations } from "../app/navigation";
+import { NAV_DESTINATIONS, visibleDestinations } from "../app/navigation";
 import {
   applyKeyboardInset,
   clearKeyboardInset,
@@ -16,6 +16,8 @@ const appointmentsSchedule = readFileSync(resolve(process.cwd(), "src/pages/appo
 const bookingDialog = readFileSync(resolve(process.cwd(), "src/pages/appointments/AppointmentBookingDialog.tsx"), "utf8");
 const pos = readFileSync(resolve(process.cwd(), "src/pages/PosInvoicesPage.tsx"), "utf8");
 const layout = readFileSync(resolve(process.cwd(), "src/ui/layout/Layout.tsx"), "utf8");
+const mobileDock = readFileSync(resolve(process.cwd(), "src/ui/layout/MobileActionDock.tsx"), "utf8");
+const mobileSheet = readFileSync(resolve(process.cwd(), "src/ui/layout/MobileNavigationSheet.tsx"), "utf8");
 const receipt = readFileSync(resolve(process.cwd(), "src/shared/components/ReceiptPreviewModal.tsx"), "utf8");
 const modal = readFileSync(resolve(process.cwd(), "src/shared/components/Modal.tsx"), "utf8");
 
@@ -34,30 +36,49 @@ describe("small-phone portrait UX contracts", () => {
     expect(css).toContain(".above-bottom-nav");
   });
 
-  it("hides the bottom nav while the keyboard is open", () => {
+  it("hides the compact mobile dock while the keyboard is open", () => {
     expect(layout).toContain("useKeyboardInset");
     expect(layout).toContain("useScrollFieldIntoView");
     expect(layout).toContain("isKeyboardOpen");
-    expect(layout).toContain("translate-y-full");
+    expect(mobileDock).toContain("isKeyboardOpen");
+    expect(mobileDock).toContain("translate-y-[calc(100%+2rem)]");
   });
 
-  it("filters admin-only destinations from the mobile More menu", () => {
-    expect(layout).toContain("visibleMoreMenuItems.map");
-    expect(layout).toContain("visibleDestinations");
-    expect(layout).toContain('isAdmin: me?.role === "ADMIN"');
+  it("uses a bottom navigation sheet instead of a mobile sidebar or destination bar", () => {
+    expect(layout).toContain('<div id="app-sidebar" className="hidden h-screen print:hidden lg:block">');
+    expect(layout).toContain("<MobileNavigationSheet");
+    expect(mobileSheet).toContain('id="mobile-navigation-sheet"');
+    expect(mobileSheet).toContain("data-mobile-nav-sheet");
+    expect(mobileSheet).toContain('initial={{ y: "100%" }}');
+    expect(mobileSheet).toContain("visibleDestinations");
+    expect(mobileSheet).toContain('isAdmin: me?.role === "ADMIN"');
+  });
+
+  it("keeps the mobile dock icon-only and removes the fake notification shortcut", () => {
+    expect(mobileDock).toContain("<Menu");
+    expect(mobileDock).toContain("<GlobalSearch");
+    expect(mobileDock).toContain("<Plus");
+    expect(mobileDock).not.toContain("<span");
+    expect(layout).not.toContain("Bell");
+    expect(layout).not.toContain('nav("/settings?tab=notifications")');
+  });
+
+  it("filters admin-only destinations from the mobile navigation sheet", () => {
+    expect(mobileSheet).toContain("visibleDestinations");
+    expect(mobileSheet).toContain('isAdmin: me?.role === "ADMIN"');
+
+    const staffVisible = visibleDestinations({
+      isAdmin: false,
+      optionalModules: { giftCards: true, packages: true },
+    });
+    expect(staffVisible.every((d) => !d.adminOnly)).toBe(true);
 
     for (const path of ["/reports", "/employees", "/settings"]) {
       const destination = NAV_DESTINATIONS.find((d) => d.path === path);
       expect(destination, `${path} must exist in the registry`).toBeDefined();
       expect(destination!.adminOnly, `${path} must be admin-only`).toBe(true);
-      expect(MOBILE_MORE_PATHS, `${path} must be reachable from the More menu`).toContain(path);
+      expect(staffVisible.some((d) => d.path === path)).toBe(false);
     }
-
-    const staffMore = visibleDestinations({
-      isAdmin: false,
-      optionalModules: { giftCards: true, packages: true },
-    }).filter((d) => MOBILE_MORE_PATHS.includes(d.path));
-    expect(staffMore.every((d) => !d.adminOnly)).toBe(true);
   });
 
   it("does not implement gesture-driven customer actions (accidental delete risk)", () => {
@@ -69,10 +90,13 @@ describe("small-phone portrait UX contracts", () => {
     expect(customers).not.toContain("useCases.customers.delete");
   });
 
-  it("defaults Appointments to day mode on a phone-sized viewport", () => {
+  it("defaults Appointments to day mode and lets the dock open booking directly", () => {
     expect(appointments).toContain("window.innerWidth < 1024 ? \"day\" : \"week\"");
+    expect(appointments).toContain("useSearchParams");
+    expect(appointments).toContain('searchParams.get("new") !== "1"');
+    expect(appointments).toContain("openBooking();");
     expect(appointmentsSchedule).toContain("window.innerWidth >= 1024");
-    expect(appointmentsSchedule).toContain("above-bottom-nav");
+    expect(appointmentsSchedule).not.toContain("fixed end-4 above-bottom-nav");
     expect(bookingDialog).toContain("<Modal");
     expect(modal).toContain("--keyboard-inset");
   });

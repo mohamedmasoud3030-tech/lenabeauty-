@@ -1,26 +1,21 @@
 # 04 — Root-Cause Remediation Status
 
-The blocking findings from the 2026-08 database contract audit were remediated on 2026-08-16.
+The blocking findings from the database-contract audit are remediated. This file records the
+current ownership model rather than historical implementation debt.
 
-| Area | Resolution | Verification |
-|---|---|---|
-| Migration idempotency / fingerprint drift | Added missing policy drops; repeat replay is deterministic | `npm run audit:replay` |
-| Payroll role governance | Added server-governed `center_memberships.role`, `has_center_role`, and ADMIN-only payroll RLS | canonical replay + targeted migration test |
-| Dormant public RPC contract | Audit recognizes the explicit disabled surface and fails if a dormant RPC becomes client-executable | `npm run audit:gate` + grant tests |
-| Tenant reference integrity | Added and validated center-scoped FKs; added the optional advance/run center trigger | canonical replay + targeted migration test |
-| Ambiguous relationships | Removed equivalent simple FKs after validating composite replacements | contract matrix |
-| Internal function grants | Revoked all client execution on trigger-only routines | contract matrix + targeted migration test |
-| Database TypeScript contract | Generated types from deterministic replay, typed the client and payloads, added drift check | `npm run db:types:check` + `npm run typecheck` |
-| CI wiring | Commands are complete, but GitHub rejected workflow-file changes because the App lacks `workflows` permission | owner must wire the commands documented in `CI_WIRING.md` |
+| Area | Current resolution | Verification |
+| --- | --- | --- |
+| Migration idempotency / fingerprint drift | Repeat replay is deterministic | `npm run audit:replay` / `npm run audit:gate` |
+| Payroll role governance | Sensitive workforce/payroll writes are server-governed and ADMIN-only | canonical replay + migration tests |
+| Public booking / client portal | Removed from the live frontend TypeScript contract; historical DB functions remain deny-by-default | frontend scan + migration/grant tests |
+| Tenant reference integrity | Center-scoped foreign keys are canonical and PostgREST relationships resolve | contract matrix |
+| Internal function grants | Trigger-only/internal routines are not client executable | contract matrix + migration tests |
+| Database TypeScript contract | Generated `Database` types are committed and the Supabase client is typed | `npm run db:types:check` + typecheck |
+| CI wiring | Contract, migration/RPC, tests, typecheck, lint, build and audit checks run in GitHub Actions | `.github/workflows/demo-supabase-migrations.yml` |
 
 ## Live deployment acceptance
 
-Repository verification cannot prove the hosted Supabase catalog has applied the latest migration. Before production release:
-
-1. apply pending migrations to Demo/staging;
-2. run the committed Supabase SQL acceptance tests;
-3. run `npm run preflight:supabase` with temporary server-only credentials;
-4. verify Supabase Auth leaked-password protection in the managed dashboard;
-5. perform the browser checklist in `docs/SUPABASE_LIVE_QA_RUNBOOK.md`.
-
-No remote database is modified by repository-local verification.
+Repository verification and live deployment verification are separate. Production acceptance
+still requires the hosted Supabase project to have the canonical migrations applied and the
+committed live QA/security checks to pass. Repository cleanup must not rewrite migration
+history to remove dormant database objects.

@@ -180,10 +180,14 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: the repair/drift steps below parse `supabase migration list`
+          # table output, so an unreviewed CLI bump must not change it silently.
+          version: 2.116.0
 
       - name: Link explicitly approved Production project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        # SUPABASE_DB_PASSWORD is read from the environment; do not pass it as a
+        # command-line flag where it would be visible in process listings.
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Show Production migration state before apply
         run: supabase migration list --linked
@@ -210,7 +214,13 @@ jobs:
           fi
 
       - name: Apply pending canonical migrations
-        run: supabase db push --linked --yes
+        # --include-all is required on a fresh Production project: after the
+        # manual bootstrap (20260628000002) is repaired as applied, the three
+        # earlier canonical migrations sort before the remote head and the CLI
+        # refuses them as out-of-order without this flag. The CLI still applies
+        # every pending file in version order, and the alignment check below
+        # verifies the resulting history is complete.
+        run: supabase db push --linked --yes --include-all
 
       - name: Verify Production migration history is fully aligned
         shell: bash

@@ -43,8 +43,6 @@ export const enCustomers = {
   "Demo preview": "Demo preview",
   "Assign to customer (optional)": "Assign to customer (optional)",
   "Manage WhatsApp and SMS notifications for your customers": "Manage WhatsApp and SMS notifications for your customers",
-  "Client Portal": "Client Portal",
-  "Could not load client portal profile": "Could not load client portal profile",
   "Tier": "Tier",
   "Total Clients": "Total Clients",
   "VIP": "VIP",

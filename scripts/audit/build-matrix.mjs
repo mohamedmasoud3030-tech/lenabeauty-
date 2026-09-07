@@ -192,24 +192,6 @@ const rpcMatrix = [];
 const rpcNoClientGrant = [];
 const rpcPublicGrant = [];
 const rpcUnpinned = [];
-const dormantRpcCorrectlyDisabled = [];
-const dormantRpcUnexpectedlyGranted = [];
-
-// These adapters are retained for a future customer-booking release, but the
-// pages are not registered in src/routes.tsx and the production contract
-// explicitly requires zero client-role EXECUTE grants. Treating that deliberate
-// deny-by-default state as a missing grant made the audit gate permanently red.
-const DORMANT_PUBLIC_RPC = new Set([
-  "public_cancel_booking_v1",
-  "public_center_info_v1",
-  "public_client_portal_login_v1",
-  "public_client_portal_profile_v2",
-  "public_create_booking_v1",
-  "public_list_services_v1",
-  "public_list_staff_v1",
-  "public_reschedule_booking_v1",
-  "public_taken_slots_v1",
-]);
 for (const r of frontend.rpc) {
   const overloads = functionsByName.get(r.name) ?? [];
   const row = {
@@ -249,12 +231,7 @@ for (const r of frontend.rpc) {
     const hasClientGrant = row.overloads.some((o) => o.has_anon || o.has_authenticated);
     const unexpectedPublic = row.overloads.some((o) => o.public_execute);
     const unpinned = row.overloads.some((o) => o.security_definer && (!o.search_path || o.search_path.length === 0));
-    if (DORMANT_PUBLIC_RPC.has(r.name)) {
-      if (hasClientGrant || unexpectedPublic) dormantRpcUnexpectedlyGranted.push(r.name);
-      else dormantRpcCorrectlyDisabled.push(r.name);
-    } else if (!hasClientGrant) {
-      rpcNoClientGrant.push(r.name);
-    }
+    if (!hasClientGrant) rpcNoClientGrant.push(r.name);
     if (unexpectedPublic) rpcPublicGrant.push(r.name);
     if (unpinned) rpcUnpinned.push(r.name);
 
@@ -279,33 +256,11 @@ if (rpcNoClientGrant.length) {
     severity: "high",
     title: "Frontend-referenced RPCs with no client-role EXECUTE grant",
     category: "rpc-grant-missing",
-    evidence: `${rpcNoClientGrant.join(", ")} have EXECUTE only for the owner (postgres); no anon/authenticated grant. The security-grant-repair migration deliberately left the public booking/portal RPCs un-granted; the frontend still references them.`,
+    evidence: `${rpcNoClientGrant.join(", ")} have no anon/authenticated EXECUTE grant.`,
     affected: { rpcs: rpcNoClientGrant },
     remediation:
-      "For each: grant EXECUTE to the intended client role (if the feature should be live) OR mark the frontend call as not-yet-enabled and remove it from the live surface.",
+      "Grant EXECUTE to the intended client role, or remove the frontend call if the capability is not part of the live application.",
     needs: "manual-review",
-  });
-}
-if (dormantRpcUnexpectedlyGranted.length) {
-  F({
-    severity: "high",
-    title: "Dormant public booking/portal RPCs unexpectedly executable by a client role",
-    category: "rpc-dormant-exposed",
-    evidence: `${dormantRpcUnexpectedlyGranted.join(", ")} must remain ungranted while their routes are disabled.`,
-    affected: { rpcs: dormantRpcUnexpectedlyGranted },
-    remediation: "Revoke EXECUTE from PUBLIC, anon, and authenticated, or explicitly release and secure the complete public feature.",
-    needs: "future-migration",
-  });
-}
-if (dormantRpcCorrectlyDisabled.length) {
-  F({
-    severity: "info",
-    title: "Dormant public booking/portal RPCs are correctly deny-by-default",
-    category: "rpc-dormant-disabled",
-    evidence: `${dormantRpcCorrectlyDisabled.join(", ")} have no PUBLIC, anon, or authenticated EXECUTE grant and their pages are not registered in src/routes.tsx.`,
-    affected: { rpcs: dormantRpcCorrectlyDisabled },
-    remediation: "No change. Re-audit grants, rate limiting, and abuse controls before enabling the public routes.",
-    needs: "no-code-change",
   });
 }
 if (rpcPublicGrant.length) {
@@ -536,7 +491,7 @@ F({
   title: "RPC return shapes (jsonb/record) are untyped at rest",
   category: "rpc-return-shape",
   evidence:
-    "Several RPCs return jsonb or record (e.g. process_checkout_v1, public_*_v1) and the frontend reads specific fields; generated types cannot fully guarantee these shapes.",
+    "Several frontend-used RPCs return jsonb or record (for example process_checkout_v1); generated SQL types cannot fully guarantee application-level result shapes.",
   affected: { layer: "RPC results" },
   remediation: "Add typed DTO/mapper + runtime contract tests for non-table RPC results.",
   needs: "manual-review",

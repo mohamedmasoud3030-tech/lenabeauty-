@@ -9,7 +9,6 @@ const entry = read("src/main.tsx");
 const polish = read("src/brand-polish.css");
 const premiumCard = read("src/shared/components/PremiumCard.tsx");
 const pageHeader = read("src/shared/components/PageHeader.tsx");
-const tabs = read("src/shared/components/Tabs.tsx");
 
 const rawDecorativePalette = /(?:bg|text|border|ring|shadow|from|via|to)-(?:blue|purple|pink|emerald|amber|sky|indigo|violet|cyan|orange|rose|red|green|yellow)-\d/;
 
@@ -45,8 +44,8 @@ describe("Lena app-wide brand polish", () => {
     expect(polish).toContain("#main-content :where(.rounded-2xl, .rounded-3xl)");
   });
 
-  it("keeps shared surfaces on semantic Lena tokens only", () => {
-    for (const [name, source] of Object.entries({ premiumCard, pageHeader, tabs })) {
+  it("keeps live shared surfaces on semantic Lena tokens only", () => {
+    for (const [name, source] of Object.entries({ premiumCard, pageHeader })) {
       expect(source, name).not.toMatch(rawDecorativePalette);
     }
   });

@@ -222,10 +222,6 @@ export function AppointmentsSchedule({
             );
           })
         )}
-
-        <button type="button" onClick={() => onNewAppointment()} aria-label={t("New Appointment")} className="fixed end-4 above-bottom-nav z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-all lg:hidden touch-target">
-          <Plus className="h-6 w-6" />
-        </button>
       </div>
     </motion.div>
   );
