@@ -48,6 +48,16 @@ Second live pass covering the journeys and surfaces not exercised in the first m
 - **Global search palette:** opens from chrome, grouped destinations + keyboard hints (↑↓/Enter/Esc).
 - **English pass:** `dir` flips to `ltr`, sidebar/content mirror correctly, translations complete on dashboard/customers/POS.
 
+## Milestone 6 — End-to-end operational journey, live (mobile, real data) + P0 defect fix
+**Scope:** execute the full salon money journey on a phone viewport against live Demo data: book an appointment for an existing customer → arrive → start service → finish service → POS handoff → record completed sale → receipt → verify customer spend/loyalty and appointment completion.
+**Status:** VERIFIED COMPLETE — 2026-09-09. Journey executed end-to-end with real data: booking created; all three visit transitions succeeded via the booking dialog; POS handoff auto-filled the visit context (customer, specialist, and the booked service line); checkout recorded invoice `INV-20260909…` (OMR 3.000) with QR receipt; customer "اماني" moved 11.000 → **14.000** with loyalty 11 → **14**; center revenue 136.000 → **139.000**; appointment shows **مكتمل** with stats updated. Evidence: `verify-shots-4/` (workspace).
+
+**P0 defect found by this journey and fixed (`PosInvoicesPage.tsx`):**
+Under React StrictMode (always on in dev), the appointment→POS hydration effect double-invokes: run #1 is cancelled immediately — **after** arming the `visitHydrationRef` once-guard — and run #2 was then permanently blocked by that guard. Result: the visit handoff silently degraded to a plain sale (empty cart, no pre-filled service line, no visit context card) in every dev session; production builds mask it (no double-invoke). Fix: the cleanup resets the guard (`visitHydrationRef.current = ""`), preserving its real purpose (no redundant re-fetch with the same param while mounted; effect deps already ensure that) without ever blocking hydration. Post-fix live rerun: handoff complete (visit card + stage + customer + service line), zero console/page errors.
+**Gates after fix:** typecheck ✓, source-policy lint ✓, full suite 136 files / 880 tests ✓, production build ✓, live mobile journey ✓.
+
+### M4 supplement — extended live verification (2026-09-09, same session)
+
 ### Delivery state
 - **PR #72 opened (NOT merged):** `arena/interface-architecture-m1` → `main` — merge is the product owner's explicit call.
 - **CI incident (resolved):** the PR's "Static application and database gates" failed on a NEW `npm audit` advisory (GHSA-82fw-gwwq-j7x9, moderate, `@vitest/mocker ≤ 4.1.10`, dev-only dependency) published after `main`'s last green run — a time-based failure unrelated to interface changes. `npm audit fix`/lockfile regeneration crashes with npm 10.9.4's arborist `edgesOut` bug, so the lock was patched surgically (8 vitest/@vitest entries, 45+/45− lines, registry metadata only — zero transitive drift) in `629a2d1`. All gates re-run locally under Node 22 (CI parity): audit 0 vulnerabilities, full 880-test suite, typecheck/lint/build — then the PR gate went **green** on that commit.
