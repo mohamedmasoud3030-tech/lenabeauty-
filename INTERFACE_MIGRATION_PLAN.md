@@ -59,7 +59,9 @@ Under React StrictMode (always on in dev), the appointment→POS hydration effec
 ### M4 supplement — extended live verification (2026-09-09, same session)
 
 ### Delivery state
-- **PR #72 opened (NOT merged):** `arena/interface-architecture-m1` → `main` — merge is the product owner's explicit call.
+- **PR #72: MERGED into `main` (2026-09-09, owner-approved, all checks green).** `main`'s own gate passed on the merge commit.
+- **PR #73 (P0 StrictMode fix): MERGED into `main` (2026-09-09, owner-approved "merge on green", all checks green).**
+- Branch `arena/interface-architecture-m1` retained for audit trail; every milestone status above is VERIFIED COMPLETE.
 - **CI incident (resolved):** the PR's "Static application and database gates" failed on a NEW `npm audit` advisory (GHSA-82fw-gwwq-j7x9, moderate, `@vitest/mocker ≤ 4.1.10`, dev-only dependency) published after `main`'s last green run — a time-based failure unrelated to interface changes. `npm audit fix`/lockfile regeneration crashes with npm 10.9.4's arborist `edgesOut` bug, so the lock was patched surgically (8 vitest/@vitest entries, 45+/45− lines, registry metadata only — zero transitive drift) in `629a2d1`. All gates re-run locally under Node 22 (CI parity): audit 0 vulnerabilities, full 880-test suite, typecheck/lint/build — then the PR gate went **green** on that commit.
 
 ## Milestone 5 — Readability floor sweep (scoped: readable money/quantity labels)
