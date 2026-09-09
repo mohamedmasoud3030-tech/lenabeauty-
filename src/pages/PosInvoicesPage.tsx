@@ -171,7 +171,15 @@ export default function PosInvoicesPage() {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // StrictMode (dev) double-invokes mount effects: run #1 is cancelled
+      // right after arming the once-guard, so run #2 must be allowed to
+      // hydrate. Resetting here keeps the guard's real purpose — no redundant
+      // re-fetch while the effect stays mounted with the same param (deps
+      // already prevent that) — without permanently blocking hydration.
+      visitHydrationRef.current = "";
+    };
   }, [appointmentParam]);
 
   useEffect(() => {
