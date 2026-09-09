@@ -39,6 +39,18 @@ Audited every search surface. Already compliant: customers, expenses, inventory,
 **Accepted observations (documented, non-blocking):** native `type="month"` inputs render in browser locale (browser-owned behavior, out of product scope); everything else matched `PAGE_CONTENT_ARCHITECTURE.md`.
 **Evidence:** 27 captures in the workspace `verify-shots/` (not committed — binary hygiene).
 
+### M4 supplement — extended live verification (2026-09-09, same session)
+Second live pass covering the journeys and surfaces not exercised in the first matrix — desktop 1440 Arabic RTL + English LTR, real Chromium, Demo data, **0 console / 0 page errors** (captured in `verify-shots-3/`, workspace-only):
+- **Appointments journey:** day view, week-grid toggle, booking dialog (labels, smart defaults, disabled confirm until required fields, embedded no-show policy note).
+- **Customer passport:** opened from row action — identity header, visit stats, retention panel, chronological history (T3 record-detail template as documented).
+- **Reports:** sales tab with live period data (4 transactions, OMR 86.000) — T9 evidence template as documented.
+- **Settings + branding tab; growth pages** (customer-experience, forecasting, accounting, booking requests): all render with owned states.
+- **Global search palette:** opens from chrome, grouped destinations + keyboard hints (↑↓/Enter/Esc).
+- **English pass:** `dir` flips to `ltr`, sidebar/content mirror correctly, translations complete on dashboard/customers/POS.
+
+### Delivery state
+- **PR #72 opened (NOT merged):** `arena/interface-architecture-m1` → `main` — merge is the product owner's explicit call.
+
 ## Milestone 5 — Readability floor sweep (scoped: readable money/quantity labels)
 Swept `text-[9px]` → `text-[10px]` for the read-content class only: dashboard chart money eyebrows (Daily revenue trend / Total / This Month / Net Profit), `MoneyStat` label + currency, POS cart items count + total OMR, employees OMR labels (desktop + mobile), inventory OMR/cost/price labels (6 sites), services OMR price labels (desktop + mobile), customers mobile loyalty points.
 **Deliberately kept at 9px (documented density choice, not defects):** status badges/chips, zebra timestamps, decorative eyebrows ("اليوم في مركزك"), kbd hints, and the print layout (physical mm-scale paper). Native `type="month"` inputs render in browser locale — browser-owned behavior, out of product scope.
