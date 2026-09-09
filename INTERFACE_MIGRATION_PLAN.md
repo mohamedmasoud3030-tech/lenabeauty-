@@ -27,8 +27,16 @@ Same PageHeader migration for the remaining three admin pages. **Status:** NOT S
 ## Milestone 3 — Canonical no-results wording audit
 Verify every searchable list applies the conditional no-results copy (customers, expenses, inventory, services, POS catalog done; audit remaining search surfaces: gift cards, packages, employees if searchable, GlobalSearch N/A). Standardize via ListState docs; add tests only where a gap is found. **Status:** NOT STARTED.
 
-## Milestone 4 — Representative journey re-verification pass
-Re-run the three critical journeys (login→dashboard, book→POS→receipt, customers→passport) with fresh rendered inspection at mobile/tablet/desktop + RTL once demo credentials are provided by the owner (currently BLOCKED BY OWNER OR EXTERNAL ACTION for live authenticated rendering; jsdom + committed captures are the standing evidence). **Status:** BLOCKED BY OWNER OR EXTERNAL ACTION (credentials), partial via tests. 
+## Milestone 4 — Representative journey re-verification pass (live, authenticated)
+**Status:** VERIFIED COMPLETE — 2026-09-09, with owner-provided Demo credentials (not stored in the repository; `.env` is git-ignored and holds only the demo opt-in flag).
+**Method:** real Chromium (Playwright headless) against the dev server with live Demo Supabase data.
+**Executed matrix:**
+- Desktop 1440×900 (RTL/Arabic): login → dashboard, then all 15 shipped admin/operational routes + Add Expense dialog — 17 captures, **0 console errors, 0 page errors**.
+- Tablet 768×1024: dashboard, expenses, inventory — clean.
+- Mobile 390×844 (touch): dashboard + 8 key routes + mobile navigation sheet — clean; dock/sheet/dock-thumb checkout confirmed.
+- Migrated M1 pages re-verified **live** against their acceptance criteria: canonical PageHeader + normalized CTA on expenses/employees/inventory/gift-cards/packages/attendance; expenses stat density + table-header density confirmed with data; RTL logical layout visually confirmed throughout.
+**Accepted observations (documented, non-blocking):** native date input renders month in browser locale on `attendance` (M5 polish candidate); everything else matched `PAGE_CONTENT_ARCHITECTURE.md`.
+**Evidence:** 27 captures in the workspace `verify-shots/` (not committed — binary hygiene).
 
 ## Milestone 5 — Remaining low-impact polish (post-M2 sweep)
 - Appointments/POS chrome-title pages: evaluate whether an in-page PageHeader adds value without double-titling (currently chrome title suffices — keep unless owner wants page-level subtitles).
