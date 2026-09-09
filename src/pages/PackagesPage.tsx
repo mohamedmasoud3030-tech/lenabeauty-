@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Boxes, Plus, Search, UserCheck, History } from "lucide-react";
+import { Boxes, Plus, Search, UserCheck, History, Package } from "lucide-react";
 import { ListState } from "../shared/components/ListState";
+import { PageHeader } from "../shared/components/PageHeader";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -129,10 +130,11 @@ export default function PackagesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("Packages")}</h1>
-        <p className="text-sm text-muted-foreground">{t("Sell grouped services at a discounted package price")}</p>
-      </div>
+      <PageHeader
+        icon={<Package className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Packages")}
+        subtitle={t("Sell grouped services at a discounted package price")}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
         <section className="space-y-4 rounded-3xl border border-border bg-card p-5 shadow-sm">
@@ -233,7 +235,7 @@ export default function PackagesPage() {
               onRetry={load}
               loadingTitle={t("Loading packages...")}
               emptyTitle={t("No packages found")}
-              emptyDescription={t("Create a package to sell grouped services")}
+              emptyDescription={query.trim() ? t("Try a different search term") : t("Create a package to sell grouped services")}
               emptyIcon={<Boxes className="h-6 w-6" />}
               empty={filtered.length === 0}
               compact

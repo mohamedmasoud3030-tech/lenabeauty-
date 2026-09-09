@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Gift, Plus, Search, Receipt, History, ShieldCheck } from "lucide-react";
 import { ListState } from "../shared/components/ListState";
+import { PageHeader } from "../shared/components/PageHeader";
 import { useCases } from "../app/composition/useCases";
 import { unwrap, formatError } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
@@ -128,12 +129,11 @@ export default function GiftCardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{t("Gift Cards")}</h1>
-          <p className="text-sm text-muted-foreground">{t("Sell prepaid value; redemption is booked as a deferred obligation until used")}</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Gift className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Gift Cards")}
+        subtitle={t("Sell prepaid value; redemption is booked as a deferred obligation until used")}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[380px,1fr]">
         <div className="rounded-3xl border bg-card p-5 space-y-4">
@@ -197,7 +197,7 @@ export default function GiftCardsPage() {
             </div>
           </div>
           <div className="space-y-3">
-            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading gift cards...")} emptyTitle={t("No gift cards found")} emptyDescription={t("Sell a gift card to get started")} emptyIcon={<Gift className="h-6 w-6" />} empty={filtered.length === 0} compact />
+            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading gift cards...")} emptyTitle={t("No gift cards found")} emptyDescription={query.trim() ? t("Try a different search term") : t("Sell a gift card to get started")} emptyIcon={<Gift className="h-6 w-6" />} empty={filtered.length === 0} compact />
             {filtered.length > 0 && filtered.map((card) => {
               const status = effectiveStatus(card);
               return (

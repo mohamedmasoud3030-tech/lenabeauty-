@@ -423,7 +423,7 @@ export default function ServicesPage() {
                     <td>
                       <div className="flex flex-col">
                         <span className="font-bold text-foreground text-base">{formatOMRAmount(s.price)}</span>
-                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
                         </span>
                       </div>
@@ -514,7 +514,7 @@ export default function ServicesPage() {
 
                 <div className="mt-auto border-t border-border pt-1.5 space-y-0.5">
                   <div className="font-bold text-foreground text-sm leading-none">{formatOMRAmount(s.price)}</div>
-                  <div className="text-[9px] font-bold text-muted-foreground">
+                  <div className="text-[10px] font-bold text-muted-foreground">
                     {s.pricingMode === "STARTING_FROM" ? `${t("Starts from")} · ` : ""}{t("OMR")}
                   </div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">

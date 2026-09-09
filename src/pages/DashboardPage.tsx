@@ -362,11 +362,11 @@ export default function DashboardPage() {
                   <TrendingUp className="h-5 w-5 text-success" />
                   {t("7-Day Revenue")}
                 </h2>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Daily revenue trend")}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("Daily revenue trend")}</p>
               </div>
               <div className="text-end">
                 <p className="text-sm font-bold text-foreground">{formatOMRAmount(totalRevenue7Days)} {summary?.currency}</p>
-                <p className="text-[9px] text-muted-foreground font-bold uppercase">{t("Total")}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase">{t("Total")}</p>
               </div>
             </div>
           </div>
@@ -450,7 +450,7 @@ export default function DashboardPage() {
                 <Wallet className="h-5 w-5 text-success" />
                 {t("Financial Summary")}
               </h2>
-              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("This Month")}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{t("This Month")}</p>
             </div>
           </div>
           <div className="p-4 sm:p-6 flex-1 flex flex-col">
@@ -474,7 +474,7 @@ export default function DashboardPage() {
                 {/* Net Profit - Highlighted */}
                 <div className="relative rounded-xl bg-gradient-to-br from-success to-success p-4 text-white shadow-lg overflow-hidden group">
                   <div className="relative z-10">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-80">{t("Net Profit")}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-80">{t("Net Profit")}</p>
                     <div className="flex items-baseline gap-2 mt-2">
                       <h3 className="text-3xl sm:text-4xl font-bold tracking-tighter">{formatOMRAmount(pnl.profit)}</h3>
                       <span className="text-xs font-bold opacity-70 uppercase">{summary?.currency}</span>
