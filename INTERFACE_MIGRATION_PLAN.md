@@ -77,3 +77,15 @@ Swept `text-[9px]` → `text-[10px]` for the read-content class only: dashboard 
 
 ## Verification gates applied to every milestone
 1. `npm run typecheck` 2. targeted page/dialog tests 3. full `npm test` (880 baseline) 4. `npm run build` 5. dev-server rendered inspection 6. Git diff review (no unrelated changes) 7. update this file's status labels.
+
+## Operational follow-ups — 2026-09-10 (owner-approved execution)
+
+### 1. Demo Supabase migrations via `workflow_dispatch`
+- Dispatched `demo-supabase-migrations.yml` on `main` @ `833bc96`: run `34405193034` → completed **success**, but the **Live Demo migration and security gates** job was **SKIPPED**. Root cause: the credential probe requires all 8 repository Actions secrets, and the repository had **zero** configured — this gate has always skipped (the 2026-09-07 precedent dispatch shows the identical result). Nothing about the code or migrations was at fault.
+- Configured via the GitHub API the 5 values that are public-by-design (taken from the repo's own committed `src/config/env.ts` and the workflow's own hard assertions): `DEMO_SUPABASE_URL`, `DEMO_SUPABASE_PUBLISHABLE_KEY` (anon key — browser-public by design), `DEMO_CENTER_ID`, `DEMO_SUPABASE_PROJECT_REF`, `SUPABASE_PROJECT_REF` (the workflow refuses to run unless both refs equal the canonical Demo project `tuzzvqsnbtzvkffmazyf`).
+- `SUPABASE_ACCESS_TOKEN` appeared configured in the repository during this session (added via the GitHub UI).
+- **Remaining BLOCKED BY OWNER — 2 secrets:** `SUPABASE_DB_PASSWORD` (the Demo project's Postgres password) and `DEMO_SUPABASE_SERVICE_ROLE_KEY` (Supabase Dashboard → Project Settings → API Keys → `service_role`). Once both exist in *Settings → Secrets and variables → Actions*, re-dispatch `demo-supabase-migrations.yml` on `main`; the live job will then verify the Demo target, enforce the password-reauthentication security setting, link the CLI, apply pending migrations, and run the psql preflight/acceptance suites. No code or doc change is required first.
+- **Status: BLOCKED BY OWNER OR EXTERNAL ACTION** (2 owner-only secrets). All other live gates were verified green in this session.
+
+### 2. Demo admin password rotation
+- Executed and verified against the hosted Demo project: password-grant login with the old password → `PUT /auth/v1/user` set a strong new password → fresh login with the new password succeeded → the old password is now rejected. The new value was communicated to the owner in chat **only** and is deliberately never stored in the repository (detect-credentials gate policy). Any demo login must now use the new password.
