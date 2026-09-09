@@ -57,5 +57,7 @@ Inventory and canonical plan for the shared UI system. Classification: **KEEP / 
 
 Deliberate non-adopters (documented): `LoginPage`/`ResetPasswordPage` (auth template), `DashboardPage` (welcome composition), `SettingsPage` (side-nav layout), `PosInvoicesPage`/`AppointmentsPage` (chrome-title operational layouts).
 
+**Adoption status 2026-09-09: COMPLETE for every standalone operational page.** M1 migrated expenses, employees, inventory, gift-cards, packages, attendance; M2 completed the roster with advances, payroll, staff-analytics. Every remaining route is either a deliberate non-adopter (above) or already used PageHeader.
+
 ## Deprecation plan
 None required this round — no component is deprecated. The `SHARED_COMPONENT_IMPROVEMENTS.md` table from the prior round is superseded by this file; issues it listed (8px stat labels, `h-9` toggles, missing gift-card labels, settings chevron RTL, POS prompt) are verified fixed in code and closed here.

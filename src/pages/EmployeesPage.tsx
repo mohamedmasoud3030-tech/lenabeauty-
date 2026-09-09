@@ -200,7 +200,7 @@ export default function EmployeesPage() {
                       <td>
                         <div className="flex flex-col">
                           <span className="font-bold text-foreground text-base">{formatOMRAmount(emp.baseSalary)}</span>
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{t("OMR Base")}</span>
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("OMR Base")}</span>
                         </div>
                       </td>
                     )}
@@ -280,7 +280,7 @@ export default function EmployeesPage() {
 
                 {isAdmin && (
                   <div className="flex flex-col border-t border-border pt-2">
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{t("Base Salary")}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("Base Salary")}</span>
                     <div className="flex items-baseline gap-1">
                       <span className="font-bold text-foreground text-sm">{formatOMRAmount(emp.baseSalary)}</span>
                       <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>

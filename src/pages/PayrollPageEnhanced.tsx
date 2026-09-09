@@ -5,6 +5,7 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { Spinner } from "../shared/components/Spinner";
+import { PageHeader } from "../shared/components/PageHeader";
 import { Download, Printer, Trash2, FileText, Users, DollarSign, TrendingDown, CalendarClock } from "lucide-react";
 import { PayrollRun, PayrollLineItem, Employee } from "../domain/entities";
 import printService, { escapePrintText } from "../infrastructure/services/printService";
@@ -145,10 +146,11 @@ export default function PayrollPageEnhanced() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{t("Payroll Management")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("Net salary = base − advances deducted in the same month")}</p>
-      </div>
+      <PageHeader
+        icon={<FileText className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Payroll Management")}
+        subtitle={t("Net salary = base − advances deducted in the same month")}
+      />
 
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

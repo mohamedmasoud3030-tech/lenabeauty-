@@ -558,7 +558,7 @@ export default function PosInvoicesPage() {
             <div className="p-3 lg:p-6 border-b border-border flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
                 <span className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><ShoppingCart className="h-5 w-5" /></span>
-                <div><h2 className="text-sm lg:text-lg font-bold">{t("Order")}</h2><p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{cart.length} {t("Items")}</p></div>
+                <div><h2 className="text-sm lg:text-lg font-bold">{t("Order")}</h2><p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{cart.length} {t("Items")}</p></div>
               </div>
               {cart.length > 0 && <button onClick={clearCart} className="h-11 w-11 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center touch-target" title={t("Clear cart")}><Trash2 className="h-4 w-4" /></button>}
             </div>
@@ -626,7 +626,7 @@ export default function PosInvoicesPage() {
 
               {/* Record completed sale stays in the mobile thumb zone above-bottom-nav. */}
               <div className="pt-3 border-t border-border space-y-3 sticky z-20 bg-muted/95 backdrop-blur-sm -mx-3 px-3 pb-3 lg:static lg:bg-transparent lg:mx-0 lg:px-0 lg:pb-0 above-bottom-nav lg:bottom-auto">
-                <div className="flex items-center justify-between"><span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("Total")}</span><span className="text-2xl font-bold text-primary">{formatOMRAmount(total)} <small className="text-[9px] text-muted-foreground">{t("OMR")}</small></span></div>
+                <div className="flex items-center justify-between"><span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("Total")}</span><span className="text-2xl font-bold text-primary">{formatOMRAmount(total)} <small className="text-[10px] text-muted-foreground">{t("OMR")}</small></span></div>
                 <button onClick={() => void handleCheckout()} disabled={checkingOut || cart.length === 0 || !selectedCustomer || !selectedEmployee} className="w-full min-h-12 rounded-xl bg-primary py-3.5 font-bold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2 touch-target"><CheckCircle2 className="h-5 w-5" /><span>{checkingOut ? t("Processing...") : t("Record completed sale")}</span></button>
               </div>
             </div>

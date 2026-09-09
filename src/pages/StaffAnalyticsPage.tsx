@@ -5,6 +5,7 @@ import { unwrap } from "../shared/hooks/useApplication";
 import { useToast } from "../shared/components/Toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Activity } from "lucide-react";
+import { PageHeader } from "../shared/components/PageHeader";
 import { AttendanceRecord, EmployeeAdvance, Employee, PayrollLineItem } from "../domain/entities";
 import { formatOMRAmount } from "../shared/money";
 
@@ -137,19 +138,19 @@ export default function StaffAnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          <Activity className="h-7 w-7 text-primary" />
-          {t("Staff Analytics")}
-        </h1>
-        <input
-          type="month"
-          aria-label={t("Month")}
-          value={selectedMonth}
-          onChange={(event) => setSelectedMonth(event.target.value)}
-          className="min-h-11 rounded-xl border border-input bg-background px-4 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-        />
-      </div>
+      <PageHeader
+        icon={<Activity className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Staff Analytics")}
+        actions={
+          <input
+            type="month"
+            aria-label={t("Month")}
+            value={selectedMonth}
+            onChange={(event) => setSelectedMonth(event.target.value)}
+            className="min-h-11 rounded-xl border border-input bg-background px-4 py-2 text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {summaryCards.map((card) => (

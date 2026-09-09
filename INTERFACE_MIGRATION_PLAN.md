@@ -21,11 +21,12 @@ Safe, ordered, vertical milestones. Ordered by: broken critical journeys → sev
 **Status:** VERIFIED COMPLETE — 2026-09-09: typecheck ✓, source-policy lint ✓ (355 files), full suite 136 files / 880 tests ✓ (baseline parity), production build ✓ (PWA generated), all 7 touched modules transform+serve 200 on the dev server, git diff reviewed (7 files, +104/−116, presentation-only).
 
 ## Milestone 2 — Workforce header alignment (advances, payroll, staff-analytics)
-Same PageHeader migration for the remaining three admin pages. **Status:** NOT STARTED.
-**Acceptance:** same as M1; workforce i18n/navigation tests stay green.
+Same PageHeader migration for the remaining three admin pages: `AdvancesPage` (TrendingDown icon + New Advance Request action), `PayrollPageEnhanced` (FileText icon + formula subtitle), `StaffAnalyticsPage` (Activity icon + month control in actions). Accessible names, month inputs, and permission gating preserved verbatim.
+**Status:** VERIFIED COMPLETE — 2026-09-09: typecheck ✓, source-policy lint ✓, targeted suite (16 files / 128 tests incl. `workforce-i18n-navigation`) ✓, full suite 136 files / 880 tests ✓, production build ✓, live rendered verification (desktop 1440 + mobile 390, real Chromium, Demo data): payroll with 6 live employee rows, advances empty state, staff-analytics per-employee cards — 0 console/page errors.
 
 ## Milestone 3 — Canonical no-results wording audit
-Verify every searchable list applies the conditional no-results copy (customers, expenses, inventory, services, POS catalog done; audit remaining search surfaces: gift cards, packages, employees if searchable, GlobalSearch N/A). Standardize via ListState docs; add tests only where a gap is found. **Status:** NOT STARTED.
+Audited every search surface. Already compliant: customers, expenses, inventory, services, POS catalog. Found and fixed: `GiftCardsPage` and `PackagesPage` always showed onboarding copy even when a query filtered everything out — now `query.trim() ? "Try a different search term" : onboarding copy`.
+**Status:** VERIFIED COMPLETE — 2026-09-09 (same verification gates as M2; GlobalSearch has no list-empty surface to fix).
 
 ## Milestone 4 — Representative journey re-verification pass (live, authenticated)
 **Status:** VERIFIED COMPLETE — 2026-09-09, with owner-provided Demo credentials (not stored in the repository; `.env` is git-ignored and holds only the demo opt-in flag).
@@ -35,13 +36,13 @@ Verify every searchable list applies the conditional no-results copy (customers,
 - Tablet 768×1024: dashboard, expenses, inventory — clean.
 - Mobile 390×844 (touch): dashboard + 8 key routes + mobile navigation sheet — clean; dock/sheet/dock-thumb checkout confirmed.
 - Migrated M1 pages re-verified **live** against their acceptance criteria: canonical PageHeader + normalized CTA on expenses/employees/inventory/gift-cards/packages/attendance; expenses stat density + table-header density confirmed with data; RTL logical layout visually confirmed throughout.
-**Accepted observations (documented, non-blocking):** native date input renders month in browser locale on `attendance` (M5 polish candidate); everything else matched `PAGE_CONTENT_ARCHITECTURE.md`.
+**Accepted observations (documented, non-blocking):** native `type="month"` inputs render in browser locale (browser-owned behavior, out of product scope); everything else matched `PAGE_CONTENT_ARCHITECTURE.md`.
 **Evidence:** 27 captures in the workspace `verify-shots/` (not committed — binary hygiene).
 
-## Milestone 5 — Remaining low-impact polish (post-M2 sweep)
-- Appointments/POS chrome-title pages: evaluate whether an in-page PageHeader adds value without double-titling (currently chrome title suffices — keep unless owner wants page-level subtitles).
-- `text-[9px]` microcopy sweep (dashboard badge, POS order count) → `text-[10px]` floor where it is read-content rather than decorative eyebrow.
-**Status:** NOT STARTED.
+## Milestone 5 — Readability floor sweep (scoped: readable money/quantity labels)
+Swept `text-[9px]` → `text-[10px]` for the read-content class only: dashboard chart money eyebrows (Daily revenue trend / Total / This Month / Net Profit), `MoneyStat` label + currency, POS cart items count + total OMR, employees OMR labels (desktop + mobile), inventory OMR/cost/price labels (6 sites), services OMR price labels (desktop + mobile), customers mobile loyalty points.
+**Deliberately kept at 9px (documented density choice, not defects):** status badges/chips, zebra timestamps, decorative eyebrows ("اليوم في مركزك"), kbd hints, and the print layout (physical mm-scale paper). Native `type="month"` inputs render in browser locale — browser-owned behavior, out of product scope.
+**Status:** VERIFIED COMPLETE — 2026-09-09 (same gates + live captures of dashboard/POS/services with data).
 
 ## Frozen by decision (do not do)
 - No shell restyle (Layout/Sidebar/Dock/Sheet) — test-locked and correct.

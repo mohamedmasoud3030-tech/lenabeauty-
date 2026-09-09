@@ -197,7 +197,7 @@ export default function GiftCardsPage() {
             </div>
           </div>
           <div className="space-y-3">
-            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading gift cards...")} emptyTitle={t("No gift cards found")} emptyDescription={t("Sell a gift card to get started")} emptyIcon={<Gift className="h-6 w-6" />} empty={filtered.length === 0} compact />
+            <ListState loading={loading} error={null} onRetry={load} loadingTitle={t("Loading gift cards...")} emptyTitle={t("No gift cards found")} emptyDescription={query.trim() ? t("Try a different search term") : t("Sell a gift card to get started")} emptyIcon={<Gift className="h-6 w-6" />} empty={filtered.length === 0} compact />
             {filtered.length > 0 && filtered.map((card) => {
               const status = effectiveStatus(card);
               return (

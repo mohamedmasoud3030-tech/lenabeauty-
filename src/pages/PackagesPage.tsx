@@ -235,7 +235,7 @@ export default function PackagesPage() {
               onRetry={load}
               loadingTitle={t("Loading packages...")}
               emptyTitle={t("No packages found")}
-              emptyDescription={t("Create a package to sell grouped services")}
+              emptyDescription={query.trim() ? t("Try a different search term") : t("Create a package to sell grouped services")}
               emptyIcon={<Boxes className="h-6 w-6" />}
               empty={filtered.length === 0}
               compact

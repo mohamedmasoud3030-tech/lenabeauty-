@@ -106,11 +106,11 @@ export function FinancialRow({ label, value, currency, icon, color }: {
         <div className={clsx("h-8 w-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 shadow-sm", colorClasses[color])}>
           {icon}
         </div>
-        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{label}</span>
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{label}</span>
       </div>
       <div className="text-end">
         <span className="text-sm font-bold text-foreground">{formatOMRAmount(value)}</span>
-        <span className="ms-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{currency}</span>
+        <span className="ms-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{currency}</span>
       </div>
     </div>
   );

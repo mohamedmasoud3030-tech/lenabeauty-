@@ -241,7 +241,7 @@ export default function InventoryPage() {
           </div>
           <div className="flex items-baseline gap-1">
             <span className="text-lg sm:text-2xl font-bold text-foreground">{formatOMRAmount(stats.totalValue)}</span>
-            <span className="text-[9px] font-bold text-muted-foreground">{t("OMR")}</span>
+            <span className="text-[10px] font-bold text-muted-foreground">{t("OMR")}</span>
           </div>
         </div>
         <div className={clsx(
@@ -344,15 +344,15 @@ export default function InventoryPage() {
                       </td>
                       <td className="text-muted-foreground font-bold text-sm">
                         <span className="font-bold text-foreground">{formatOMRAmount(p.cost)}</span>
-                        <span className="ms-1 text-[9px] uppercase tracking-wider opacity-50">{t("OMR")}</span>
+                        <span className="ms-1 text-[10px] uppercase tracking-wider opacity-50">{t("OMR")}</span>
                       </td>
                       <td>
                         <div className="flex flex-col items-start">
                           <div className="flex items-baseline gap-1">
                             <span className="font-bold text-primary text-base">{formatOMRAmount(p.price)}</span>
-                            <span className="text-[9px] font-bold text-primary uppercase tracking-wider">{t("OMR")}</span>
+                            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{t("OMR")}</span>
                           </div>
-                          <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
+                          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
                             {t("Profit")}: {((p.price - p.cost) / (p.price || 1) * 100).toFixed(0)}%
                           </div>
                         </div>
@@ -433,11 +433,11 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-2 gap-1.5 border-t border-border pt-2">
                     <div className="min-w-0">
-                      <div className="text-[9px] font-bold text-muted-foreground">{t("Cost")}</div>
+                      <div className="text-[10px] font-bold text-muted-foreground">{t("Cost")}</div>
                       <div className="truncate text-[11px] font-bold text-foreground">{formatOMRAmount(p.cost)}</div>
                     </div>
                     <div className="min-w-0 text-end">
-                      <div className="text-[9px] font-bold text-primary">{t("Price")}</div>
+                      <div className="text-[10px] font-bold text-primary">{t("Price")}</div>
                       <div className="truncate text-xs font-bold text-primary">{formatOMRAmount(p.price)}</div>
                     </div>
                   </div>
