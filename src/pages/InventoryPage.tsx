@@ -21,6 +21,7 @@ import {
   requiredText, nonNegativeNumber, positiveNumber, nonNegativeInteger, collectIssues, issuesToMap
 } from "../domain/validation";
 import { ListState } from "../shared/components/ListState";
+import { PageHeader } from "../shared/components/PageHeader";
 import { formatOMRAmount } from "../shared/money";
 import { exportToCSV } from "./inventory/helpers";
 
@@ -195,36 +196,31 @@ export default function InventoryPage() {
         </motion.div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Boxes className="h-5 w-5" />
+      <PageHeader
+        icon={<Boxes className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Inventory")}
+        subtitle={t("Manage your products and stock levels")}
+        actions={
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-1 sm:w-64 group">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                className="min-h-11 w-full rounded-xl border border-border bg-card ps-9 pe-3 text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                placeholder={t("Search products...")}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={openCreate}
+              className="min-h-11 shrink-0 inline-flex items-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="whitespace-nowrap">{t("Add Product")}</span>
+            </button>
           </div>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">{t("Inventory")}</h1>
-            <p className="text-[11px] text-muted-foreground truncate">{t("Manage your products and stock levels")}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64 group">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              className="w-full rounded-lg border border-border bg-card py-2.5 ps-9 pe-3 text-sm focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-              placeholder={t("Search products...")}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={openCreate}
-            className="h-11 shrink-0 inline-flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="whitespace-nowrap">{t("Add Product")}</span>
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-sm">

@@ -8,6 +8,7 @@ import { Modal } from "../shared/components/Modal";
 import { AttendanceRecord, AttendanceStatus, AttendanceMethod, Employee } from "../domain/entities";
 import { computeAttendanceWorkHours, isCheckoutAfterCheckin } from "../domain/attendance";
 import { StatusPill, StatusTone } from "../shared/components/StatusPill";
+import { PageHeader } from "../shared/components/PageHeader";
 
 const STATUS_LABEL_KEYS: Record<AttendanceStatus, string> = {
   PRESENT: "Present",
@@ -174,20 +175,20 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          <Fingerprint className="h-7 w-7 text-primary" />
-          {t("Attendance")}
-        </h1>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          {t("Record Attendance")}
-        </button>
-      </div>
+      <PageHeader
+        icon={<Fingerprint className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Attendance")}
+        actions={
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            {t("Record Attendance")}
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {summaryCards.map((card) => (

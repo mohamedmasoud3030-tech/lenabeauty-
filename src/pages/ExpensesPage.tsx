@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { ScreenState } from "../shared/components/ScreenState";
 import { ListState } from "../shared/components/ListState";
+import { PageHeader } from "../shared/components/PageHeader";
 import { Modal } from "../shared/components/Modal";
 import { formatOMRAmount } from "../shared/money";
 
@@ -135,58 +136,49 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6 sm:space-y-10 pb-10">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-6">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/30">
-            <Receipt className="h-8 w-8 transition-transform group-hover:rotate-12" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight flex items-center gap-3">
-              {t("Expenses")}
-            </h1>
-            <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest">{t("Track your business costs")}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="h-14 w-full sm:w-auto px-8 rounded-[1.5rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-        >
-          <Plus className="h-6 w-6" />
-          {t("Add Expense")}
-        </button>
-      </div>
+      {/* Header — canonical PageHeader (shared component standard) */}
+      <PageHeader
+        icon={<Receipt className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Expenses")}
+        subtitle={t("Track your business costs")}
+        actions={
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="min-h-11 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            {t("Add Expense")}
+          </button>
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid gap-8 md:grid-cols-3">
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden">
-          <div className="absolute top-0 end-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingDown className="h-24 w-24 -rotate-12" /></div>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><DollarSign className="h-6 w-6" /></div>
+      {/* Stats — operational density (shared stat-card pattern) */}
+      <div className="grid gap-3 md:grid-cols-3">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><DollarSign className="h-5 w-5" /></div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Total Expenses")}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-foreground">{formatOMRAmount(totalExpenses)}</span>
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
+            <span className="text-2xl font-bold text-foreground">{formatOMRAmount(totalExpenses)}</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("OMR")}</span>
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden">
-          <div className="absolute top-0 end-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><PieChart className="h-24 w-24 rotate-12" /></div>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Tag className="h-6 w-6" /></div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><Tag className="h-5 w-5" /></div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Transactions")}</span>
           </div>
-          <div className="text-4xl font-bold text-foreground">{filtered.length}</div>
+          <div className="text-2xl font-bold text-foreground">{filtered.length}</div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="group rounded-[2.5rem] border border-border bg-card p-8 shadow-xl hover:shadow-2xl transition-all relative overflow-hidden">
-          <div className="absolute top-0 end-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity"><Calendar className="h-24 w-24" /></div>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner"><Calendar className="h-6 w-6" /></div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><Calendar className="h-5 w-5" /></div>
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{t("Current Period")}</span>
           </div>
-          <div className="text-2xl font-bold text-foreground uppercase tracking-tight">
+          <div className="text-lg font-bold text-foreground">
             {new Date().toLocaleDateString(i18n.language === "ar" ? "ar-OM" : "en-US", { month: "long", year: "numeric" })}
           </div>
         </motion.div>
@@ -234,7 +226,7 @@ export default function ExpensesPage() {
         <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[700px] text-sm">
             <thead className="bg-muted/30 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-              <tr className="[&>th]:px-10 [&>th]:py-8 [&>th]:text-start">
+              <tr className="[&>th]:px-6 [&>th]:py-4 [&>th]:text-start">
                 <th>{t("Description")}</th>
                 <th>{t("Category")}</th>
                 <th>{t("Amount")}</th>

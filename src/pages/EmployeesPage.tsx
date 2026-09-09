@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
 import { ListState } from "../shared/components/ListState";
+import { PageHeader } from "../shared/components/PageHeader";
 import { Employee } from "../domain/entities";
 import { requiredText, nonNegativeNumber, collectIssues, issuesToMap } from "../domain/validation";
 import { formatOMRAmount } from "../shared/money";
@@ -120,26 +121,22 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Users className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">{t("Employees")}</h1>
-            <p className="text-[11px] text-muted-foreground truncate">{t("Manage your team and performance")}</p>
-          </div>
-        </div>
-        {isAdmin && (
-          <button
-            onClick={openCreate}
-            className="h-11 shrink-0 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
-          >
-            <UserPlus className="h-4 w-4" />
-            {t("Add Employee")}
-          </button>
-        )}
-      </div>
+      <PageHeader
+        icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />}
+        title={t("Employees")}
+        subtitle={t("Manage your team and performance")}
+        actions={
+          isAdmin ? (
+            <button
+              onClick={openCreate}
+              className="min-h-11 shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-95 transition-all"
+            >
+              <UserPlus className="h-4 w-4" />
+              {t("Add Employee")}
+            </button>
+          ) : undefined
+        }
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -286,7 +283,7 @@ export default function EmployeesPage() {
                     <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{t("Base Salary")}</span>
                     <div className="flex items-baseline gap-1">
                       <span className="font-bold text-foreground text-sm">{formatOMRAmount(emp.baseSalary)}</span>
-                      <span className="text-[8px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase">{t("OMR")}</span>
                     </div>
                   </div>
                 )}

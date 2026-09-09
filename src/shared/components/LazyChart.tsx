@@ -162,7 +162,7 @@ export const AutoRefreshChart: React.FC<AutoRefreshChartProps> = ({
   return (
     <div className={`relative ${className}`}>
       {children}
-      <span className="absolute bottom-1 right-2 text-[10px] text-gray-300 select-none">
+      <span className="absolute bottom-1 end-2 text-[10px] text-gray-300 select-none">
         {t("Last updated")}: {lastRefresh.toLocaleTimeString(i18n.language === "ar" ? "ar-OM" : "en-US")}
       </span>
     </div>
