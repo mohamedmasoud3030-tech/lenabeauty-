@@ -50,6 +50,7 @@ Second live pass covering the journeys and surfaces not exercised in the first m
 
 ### Delivery state
 - **PR #72 opened (NOT merged):** `arena/interface-architecture-m1` → `main` — merge is the product owner's explicit call.
+- **CI incident (resolved):** the PR's "Static application and database gates" failed on a NEW `npm audit` advisory (GHSA-82fw-gwwq-j7x9, moderate, `@vitest/mocker ≤ 4.1.10`, dev-only dependency) published after `main`'s last green run — a time-based failure unrelated to interface changes. `npm audit fix`/lockfile regeneration crashes with npm 10.9.4's arborist `edgesOut` bug, so the lock was patched surgically (8 vitest/@vitest entries, 45+/45− lines, registry metadata only — zero transitive drift) in `629a2d1`. All gates re-run locally under Node 22 (CI parity): audit 0 vulnerabilities, full 880-test suite, typecheck/lint/build — then the PR gate went **green** on that commit.
 
 ## Milestone 5 — Readability floor sweep (scoped: readable money/quantity labels)
 Swept `text-[9px]` → `text-[10px]` for the read-content class only: dashboard chart money eyebrows (Daily revenue trend / Total / This Month / Net Profit), `MoneyStat` label + currency, POS cart items count + total OMR, employees OMR labels (desktop + mobile), inventory OMR/cost/price labels (6 sites), services OMR price labels (desktop + mobile), customers mobile loyalty points.
