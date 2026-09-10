@@ -189,7 +189,7 @@ export default function ExpensesPage() {
         <div className="relative flex-1 group">
           <Search className="absolute start-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
-            className="w-full rounded-[1.5rem] border border-border bg-card py-4 ps-14 pe-6 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
+            className="w-full rounded-xl border border-border bg-card min-h-11 ps-14 pe-6 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm"
             placeholder={t("Search expenses...")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -221,7 +221,7 @@ export default function ExpensesPage() {
       </div>
 
       {/* Table */}
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="rounded-[1.5rem] sm:rounded-[3rem] border border-border bg-card shadow-2xl overflow-hidden">
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl sm:rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         {/* Desktop */}
         <div className="hidden lg:block overflow-x-auto scrollbar-hide">
           <table className="w-full min-w-[700px] text-sm">
@@ -362,7 +362,7 @@ export default function ExpensesPage() {
         description={t("Record New Cost")}
         className="sm:rounded-[3rem]"
         footer={
-          <button type="button" onClick={handleAdd} className="group relative w-full h-14 rounded-[2rem] bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
+          <button type="button" onClick={handleAdd} className="group relative w-full min-h-11 rounded-xl bg-primary font-bold text-primary-foreground shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             <Save className="h-5 w-5 relative z-10" />
             <span className="text-base relative z-10">{t("Save Expense")}</span>
@@ -419,7 +419,7 @@ export default function ExpensesPage() {
         description={t("Update expense details")}
         className="sm:rounded-[3rem]"
         footer={
-          <button type="button" onClick={handleSaveEdit} className="group relative w-full h-14 rounded-[2rem] bg-amber-500 font-bold text-white shadow-2xl shadow-amber-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
+          <button type="button" onClick={handleSaveEdit} className="group relative w-full min-h-11 rounded-xl bg-amber-500 font-bold text-white shadow-2xl shadow-amber-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             <Save className="h-5 w-5 relative z-10" />
             <span className="text-base relative z-10">{t("Save Changes")}</span>
