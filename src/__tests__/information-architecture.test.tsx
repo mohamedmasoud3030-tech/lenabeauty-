@@ -69,8 +69,10 @@ describe("route and registry integrity", () => {
 
   it("IA-T1b — every declared route is in the registry or is a legacy redirect", () => {
     // `/login` is the public entry point and deliberately has no in-app
-    // navigation entry.
-    const PUBLIC_ROUTES = ["/login"];
+    // navigation entry. `/book` and `/portal` are anonymous customer-facing
+    // surfaces (online booking + client portal); they are shared BY LINK from
+    // Settings → Online Booking, never shown inside the staff navigation.
+    const PUBLIC_ROUTES = ["/login", "/book", "/portal"];
     for (const path of declaredRoutePaths()) {
       if (LEGACY_REDIRECTS.includes(path) || PUBLIC_ROUTES.includes(path)) continue;
       expect(

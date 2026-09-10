@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapCustomer, mapAppointment, mapInvoice } from ".././mappers";
 import { requiredText, phoneField, emailField } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor } from "./shared";
 
 export class SupabaseCustomerAdapter implements CustomerRepository {
   async list(query?: string): Promise<Result<Customer[], DomainError>> {
@@ -152,8 +152,22 @@ export class SupabaseCustomerAdapter implements CustomerRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('customers', 'Customer.delete', id);
+
+  async rotatePortalToken(id: string): Promise<Result<{ portalToken: string }, DomainError>> {
+    const centerRes = getCenterIdFor("Customer.rotatePortalToken");
+    if (!centerRes.ok) return centerRes as any;
+    try {
+      const { data, error } = await getSupabaseClient().rpc("rotate_customer_portal_token_v1", {
+        p_center_id: centerRes.data,
+        p_customer_id: id,
+      });
+      if (error) return { ok: false, error: createQueryError("Customer.rotatePortalToken", error.message) };
+      const token = typeof (data as any)?.portal_access_token === "string" ? (data as any).portal_access_token : "";
+      if (!token) return { ok: false, error: createQueryError("Customer.rotatePortalToken", "Portal code missing from server response") };
+      return { ok: true, data: { portalToken: token } };
+    } catch (e: unknown) {
+      return { ok: false, error: createQueryError("Customer.rotatePortalToken", (e as Error).message) };
+    }
   }
 
   async getHistory(id: string): Promise<Result<{ appointments: Appointment[], invoices: Invoice[] }, DomainError>> {

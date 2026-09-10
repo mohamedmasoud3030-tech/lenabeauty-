@@ -13,6 +13,7 @@ const DOMAIN_PORT_FILES = [
   "engagement.ts",
   "finance.ts",
   "inventory.ts",
+  "publicAccess.ts",
   "reports.ts",
   "services.ts",
   "settings.ts",

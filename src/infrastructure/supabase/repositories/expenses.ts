@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapExpense } from ".././mappers";
 import { requiredText, positiveNumber } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor } from "./shared";
 
 export class SupabaseExpenseAdapter implements ExpenseRepository {
   async list(): Promise<Result<Expense[], DomainError>> {
@@ -97,7 +97,4 @@ export class SupabaseExpenseAdapter implements ExpenseRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('expenses', 'Expense.delete', id);
-  }
 }

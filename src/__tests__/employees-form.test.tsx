@@ -90,33 +90,48 @@ describe("Employees modal CRUD (portaled overlay)", () => {
     expect(screen.getByText(/Edit Employee/i)).toBeInTheDocument();
   });
 
-  it("does not present unimplemented commission values or mutate legacy commission fields", async () => {
+  it("edits the commission percentage but never mutates the legacy monthly snapshot", async () => {
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [employee()] });
     const update = vi.spyOn(useCases.employees, "update").mockResolvedValue({ ok: true, data: employee() });
     renderPage();
     await waitFor(() => expect(screen.getAllByText(/Layla Hassan/i).length).toBeGreaterThan(0));
+    // The legacy server-owned snapshot stays out of the UI.
     expect(screen.queryByText("Month Commission")).not.toBeInTheDocument();
     expect(screen.queryByText("Total Team Commission")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole("button", { name: /^Edit$/i })[0]);
-    expect(await screen.findByDisplayValue("Layla Hassan")).toBeInTheDocument();
-    expect(screen.queryByText("Commission (%)")).not.toBeInTheDocument();
+    const commissionInput = await screen.findByLabelText(/Commission \(%\)/i);
+    expect(commissionInput).toHaveValue(10);
+    fireEvent.change(commissionInput, { target: { value: "12.5" } });
     fireEvent.click(screen.getByRole("button", { name: /Save Employee/i }));
     await waitFor(() => expect(update).toHaveBeenCalled());
-    expect(update.mock.calls[0][1]).not.toHaveProperty("commissionPercentage");
+    expect(update.mock.calls[0][1]).toHaveProperty("commissionPercentage", 12.5);
     expect(update.mock.calls[0][1]).not.toHaveProperty("monthCommissionTotal");
+  });
+
+  it("rejects a commission percentage outside 0–100", async () => {
+    vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [employee()] });
+    const update = vi.spyOn(useCases.employees, "update").mockResolvedValue({ ok: true, data: employee() });
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText(/Layla Hassan/i).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByRole("button", { name: /^Edit$/i })[0]);
+    const commissionInput = await screen.findByLabelText(/Commission \(%\)/i);
+    fireEvent.change(commissionInput, { target: { value: "140" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save Employee/i }));
+    await waitFor(() => expect(screen.getByText(i18n.t("validation.percent_range"))).toBeInTheDocument());
+    expect(update).not.toHaveBeenCalled();
   });
 
   it("deactivates without deleting payroll or attendance history", async () => {
     vi.spyOn(useCases.employees, "list").mockResolvedValue({ ok: true, data: [employee()] });
     const update = vi.spyOn(useCases.employees, "update").mockResolvedValue({ ok: true, data: employee({ isActive: false }) });
-    const hardDelete = vi.spyOn(useCases.employees, "delete");
     renderPage();
     await waitFor(() => expect(screen.getAllByText(/Layla Hassan/i).length).toBeGreaterThan(0));
     fireEvent.click(screen.getAllByRole("button", { name: /^Deactivate$/i })[0]);
     expect(await screen.findByText(/without deleting payroll or attendance history/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Confirm$/i }));
     await waitFor(() => expect(update).toHaveBeenCalledWith("e1", { isActive: false }));
-    expect(hardDelete).not.toHaveBeenCalled();
+    // Hard delete is not part of the employee contract at all (DB revokes it).
+    expect("delete" in useCases.employees).toBe(false);
   });
 });

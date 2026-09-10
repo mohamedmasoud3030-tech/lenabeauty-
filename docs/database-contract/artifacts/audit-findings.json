@@ -2,21 +2,21 @@
   "summary": {
     "schema": {
       "tables": 38,
-      "columns": 396,
+      "columns": 397,
       "enum_types": 2,
       "enum_labels": 9,
-      "constraints": 413,
+      "constraints": 415,
       "foreign_keys": 90,
       "indexes": 118,
       "triggers": 23,
       "views": 0,
       "functions": 65,
       "policies": 50,
-      "grants": 1405
+      "grants": 1423
     },
     "frontend": {
       "tables": 29,
-      "rpc": 26,
+      "rpc": 35,
       "storage": 1
     },
     "findings_by_severity": {
@@ -34,13 +34,12 @@
       "needs": "manual-review",
       "title": "Scanner limitation (manual review): dynamic-from",
       "category": "scanner-limitation",
-      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/gemini/adminAssistantLive.ts, src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts, src/infrastructure/supabase/repositories/shared.ts",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/gemini/adminAssistantLive.ts, src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts",
       "affected": {
         "files": [
           "src/infrastructure/gemini/adminAssistantLive.ts",
           "src/infrastructure/services/printService.ts",
-          "src/infrastructure/supabase/repositories/settings.ts",
-          "src/infrastructure/supabase/repositories/shared.ts"
+          "src/infrastructure/supabase/repositories/settings.ts"
         ]
       },
       "remediation": "Manually confirm this construct against the canonical schema."

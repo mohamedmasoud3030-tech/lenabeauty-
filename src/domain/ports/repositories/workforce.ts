@@ -6,7 +6,6 @@ export interface AttendanceRepository {
   listByEmployee(employeeId: string, range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>>;
   create(data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>>;
   update(id: string, data: Partial<AttendanceRecord>): Promise<Result<AttendanceRecord, DomainError>>;
-  delete(id: string): Promise<Result<void, DomainError>>;
 }
 
 export interface AdvanceRepository {
@@ -14,7 +13,6 @@ export interface AdvanceRepository {
   listByEmployee(employeeId: string, range?: { fromISO: string; toISO: string }): Promise<Result<EmployeeAdvance[], DomainError>>;
   create(data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>>;
   update(id: string, data: Partial<EmployeeAdvance>): Promise<Result<EmployeeAdvance, DomainError>>;
-  delete(id: string): Promise<Result<void, DomainError>>;
 }
 
 export interface PayrollRepository {

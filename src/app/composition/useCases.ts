@@ -37,18 +37,11 @@ export const useCases = {
     update: async (id: string, data: Partial<Appointment>) => getRepositoryBundle().appointmentAdapter.update(id, data),
     markNoShow: async (id: string, input?: { chargeNoShowFee?: boolean; note?: string }) => getRepositoryBundle().appointmentAdapter.markNoShow(id, input),
     transitionVisit: async (id: string, stage: VisitStage) => getRepositoryBundle().appointmentAdapter.transitionVisit(id, stage),
-    delete: async (id: string) => getRepositoryBundle().appointmentAdapter.delete(id),
-    sendReminder: async (_id: string): Promise<Result<void, any>> => {
-      const error = new Error("NOTIFICATION_PROVIDER_NOT_CONFIGURED") as Error & { code: string };
-      error.code = "BACKEND_METHOD_UNSUPPORTED";
-      return { ok: false, error };
-    },
   },
   services: {
     list: () => getRepositoryBundle().serviceAdapter.list(),
     create: async (data: Partial<Service>) => getRepositoryBundle().serviceAdapter.create(data),
     update: async (id: string, data: Partial<Service>) => getRepositoryBundle().serviceAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().serviceAdapter.delete(id),
   },
   recipes: {
     getForService: (serviceId: string) => getRepositoryBundle().serviceRecipeAdapter.getForService(serviceId),
@@ -61,26 +54,23 @@ export const useCases = {
     create: async (data: Partial<Customer>) => getRepositoryBundle().customerAdapter.create(data),
     update: async (id: string, data: Partial<Customer>) => getRepositoryBundle().customerAdapter.update(id, data),
     getHistory: (id: string) => getRepositoryBundle().customerAdapter.getHistory(id),
-    delete: async (id: string) => getRepositoryBundle().customerAdapter.delete(id),
+    rotatePortalToken: (id: string) => getRepositoryBundle().customerAdapter.rotatePortalToken(id),
   },
   employees: {
     list: () => getRepositoryBundle().employeeAdapter.list(),
     create: async (data: Partial<Employee>) => getRepositoryBundle().employeeAdapter.create(data),
     update: async (id: string, data: Partial<Employee>) => getRepositoryBundle().employeeAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().employeeAdapter.delete(id),
   },
   products: {
     list: () => getRepositoryBundle().productAdapter.list(),
     listFull: () => getRepositoryBundle().productAdapter.listFull(),
     create: async (data: Partial<Product>) => getRepositoryBundle().productAdapter.create(data),
     update: async (id: string, data: Partial<Product>) => getRepositoryBundle().productAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().productAdapter.delete(id),
   },
   expenses: {
     list: () => getRepositoryBundle().expenseAdapter.list(),
     create: async (data: Partial<Expense>) => getRepositoryBundle().expenseAdapter.create(data),
     update: async (id: string, data: Partial<Expense>) => getRepositoryBundle().expenseAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().expenseAdapter.delete(id),
   },
   settings: {
     get: () => getRepositoryBundle().settingsAdapter.get(),
@@ -152,7 +142,6 @@ export const useCases = {
     listByEmployee: (employeeId: string, range?: { fromISO: string; toISO: string }) => getRepositoryBundle().attendanceAdapter.listByEmployee(employeeId, range),
     create: async (data: Partial<AttendanceRecord>) => getRepositoryBundle().attendanceAdapter.create(data),
     update: async (id: string, data: Partial<AttendanceRecord>) => getRepositoryBundle().attendanceAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().attendanceAdapter.delete(id),
   },
 
   advances: {
@@ -160,7 +149,6 @@ export const useCases = {
     listByEmployee: (employeeId: string, range?: { fromISO: string; toISO: string }) => getRepositoryBundle().advanceAdapter.listByEmployee(employeeId, range),
     create: async (data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.create(data),
     update: async (id: string, data: Partial<EmployeeAdvance>) => getRepositoryBundle().advanceAdapter.update(id, data),
-    delete: async (id: string) => getRepositoryBundle().advanceAdapter.delete(id),
   },
 
   payroll: {
@@ -168,6 +156,23 @@ export const useCases = {
     getRun: (id: string) => getRepositoryBundle().payrollAdapter.getRun(id),
     createRun: async (input: { periodMonth: string; notes?: string }) => getRepositoryBundle().payrollAdapter.createRun(input),
     deleteRun: async (id: string) => getRepositoryBundle().payrollAdapter.deleteRun(id),
+  },
+
+  public: {
+    getCenterInfo: (centerId: string) => getRepositoryBundle().publicAccessAdapter.getCenterInfo(centerId),
+    listServices: (centerId: string) => getRepositoryBundle().publicAccessAdapter.listServices(centerId),
+    listStaff: (centerId: string) => getRepositoryBundle().publicAccessAdapter.listStaff(centerId),
+    listTakenSlots: (centerId: string, day: Date) => getRepositoryBundle().publicAccessAdapter.listTakenSlots(centerId, day),
+    createBooking: (request: import("../../domain/ports/repositories").PublicBookingRequest) =>
+      getRepositoryBundle().publicAccessAdapter.createBooking(request),
+    portalLogin: (credentials: import("../../domain/ports/repositories").PortalCredentials) =>
+      getRepositoryBundle().publicAccessAdapter.portalLogin(credentials),
+    portalProfile: (credentials: import("../../domain/ports/repositories").PortalCredentials) =>
+      getRepositoryBundle().publicAccessAdapter.portalProfile(credentials),
+    cancelBooking: (credentials: import("../../domain/ports/repositories").PortalCredentials, appointmentId: string, reason?: string) =>
+      getRepositoryBundle().publicAccessAdapter.cancelBooking(credentials, appointmentId, reason),
+    rescheduleBooking: (credentials: import("../../domain/ports/repositories").PortalCredentials, appointmentId: string, newDateTime: Date, reason?: string) =>
+      getRepositoryBundle().publicAccessAdapter.rescheduleBooking(credentials, appointmentId, newDateTime, reason),
   },
 
   tenant: {

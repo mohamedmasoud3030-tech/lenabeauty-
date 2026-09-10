@@ -87,8 +87,13 @@ describe("authorization boundary repair", () => {
       const fn = inventory.functions.find((entry: any) => entry.name === name);
       expect(fn.definition).toContain("has_center_role");
       expect(fn.definition).toContain("ADMIN");
-      expect(repositories).toContain(`rpc('${name}'`);
     }
+    // Deactivation is the employee lifecycle: create/update stay RPC-governed
+    // in the adapter, and the hard-delete RPC — still ADMIN-governed in the
+    // database — has no frontend caller at all.
+    expect(repositories).toContain("rpc('admin_create_employee_v1'");
+    expect(repositories).toContain("rpc('admin_update_employee_v1'");
+    expect(repositories).not.toContain("rpc('admin_delete_employee_v1'");
     expect(repositories).toContain("rpc('list_employees_v1'");
     expect(migration).toMatch(/GRANT SELECT \(id, center_id, name, role, phone, is_active, created_at, updated_at\)/i);
     expect(migration).toMatch(/REVOKE SELECT ON public\.employees FROM authenticated/i);

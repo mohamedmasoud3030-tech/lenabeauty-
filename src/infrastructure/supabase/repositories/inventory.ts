@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapProduct } from ".././mappers";
 import { requiredText, nonNegativeNumber, positiveNumber, nonNegativeInteger } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor } from "./shared";
 
 export class SupabaseProductAdapter implements ProductRepository {
   async list(): Promise<Result<Product[], DomainError>> {
@@ -121,7 +121,4 @@ export class SupabaseProductAdapter implements ProductRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('products', 'Product.delete', id);
-  }
 }

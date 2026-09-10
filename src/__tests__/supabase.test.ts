@@ -180,20 +180,6 @@ describe("Supabase Repository Tests", () => {
             expect(mockEq2).toHaveBeenCalledWith("center_id", "test-center-123");
         });
 
-        it("delete customer hits delete with correct id", async () => {
-            const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-            const mockEq = vi.fn().mockReturnValue({ eq: mockEq2 });
-            const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-            mockFrom.mockReturnValue({ delete: mockDelete });
-
-            const bundle = createRepositoryBundle();
-            const res = await bundle.customerAdapter.delete("123");
-            expect(res.ok).toBe(true);
-            expect(mockFrom).toHaveBeenCalledWith("customers");
-            expect(mockDelete).toHaveBeenCalled();
-            expect(mockEq).toHaveBeenCalledWith("id", "123");
-            expect(mockEq2).toHaveBeenCalledWith("center_id", "test-center-123");
-        });
         it("malformed row returns mapped error on create", async () => {
             const mockSelect = vi.fn().mockReturnValue({
                 maybeSingle: vi.fn().mockResolvedValue({
@@ -274,20 +260,6 @@ describe("Supabase Repository Tests", () => {
             expect(mockEq2).toHaveBeenCalledWith("center_id", "test-center-123");
         });
 
-        it("delete service hits delete with correct id", async () => {
-            const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-            const mockEq = vi.fn().mockReturnValue({ eq: mockEq2 });
-            const mockDelete = vi.fn().mockReturnValue({ eq: mockEq });
-            mockFrom.mockReturnValue({ delete: mockDelete });
-
-            const bundle = createRepositoryBundle();
-            const res = await bundle.serviceAdapter.delete("10");
-            expect(res.ok).toBe(true);
-            expect(mockFrom).toHaveBeenCalledWith("services");
-            expect(mockDelete).toHaveBeenCalled();
-            expect(mockEq).toHaveBeenCalledWith("id", "10");
-            expect(mockEq2).toHaveBeenCalledWith("center_id", "test-center-123");
-        });
     });
 
     it("lazy client initialization is preserved", () => {
@@ -407,18 +379,6 @@ describe("Supabase Repository Tests", () => {
             expect(mockFrom).toHaveBeenCalledWith("appointments");
             expect(mockUpdate).toHaveBeenCalledWith({ notes: "test" });
         });
-        it("delete appointment hits delete", async () => {
-            const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-            const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
-            const mockDelete = vi.fn().mockReturnValue({ eq: mockEq1 });
-            mockFrom.mockReturnValue({ delete: mockDelete });
-
-            const bundle = createRepositoryBundle();
-            const res = await bundle.appointmentAdapter.delete("1");
-            expect(res.ok).toBe(true);
-            expect(mockFrom).toHaveBeenCalledWith("appointments");
-            expect(mockDelete).toHaveBeenCalled();
-        });
     });
 
     describe("Product Adapter DML", () => {
@@ -455,16 +415,6 @@ describe("Supabase Repository Tests", () => {
             expect(res.ok).toBe(true);
             expect(mockUpdate).toHaveBeenCalledWith({ price: 15 });
         });
-        it("delete product hits delete", async () => {
-            const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-            const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
-            const mockDelete = vi.fn().mockReturnValue({ eq: mockEq1 });
-            mockFrom.mockReturnValue({ delete: mockDelete });
-
-            const bundle = createRepositoryBundle();
-            const res = await bundle.productAdapter.delete("1");
-            expect(res.ok).toBe(true);
-        });
     });
 
     describe("Expense Adapter DML", () => {
@@ -483,16 +433,6 @@ describe("Supabase Repository Tests", () => {
             expect(res.ok).toBe(true);
             expect(mockFrom).toHaveBeenCalledWith("expenses");
             expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({ category: "Supplies", center_id: "test-center-123" }));
-        });
-        it("delete expense hits delete", async () => {
-            const mockEq2 = vi.fn().mockResolvedValue({ error: null });
-            const mockEq1 = vi.fn().mockReturnValue({ eq: mockEq2 });
-            const mockDelete = vi.fn().mockReturnValue({ eq: mockEq1 });
-            mockFrom.mockReturnValue({ delete: mockDelete });
-
-            const bundle = createRepositoryBundle();
-            const res = await bundle.expenseAdapter.delete("1");
-            expect(res.ok).toBe(true);
         });
     });
 

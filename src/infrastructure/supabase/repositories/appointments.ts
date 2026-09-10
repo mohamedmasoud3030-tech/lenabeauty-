@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapAppointment } from ".././mappers";
 import { requiredText, nonNegativeNumber, dateField } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor } from "./shared";
 
 export class SupabaseAppointmentAdapter implements AppointmentRepository {
   async list(range: { fromISO: string, toISO: string }): Promise<Result<Appointment[], DomainError>> {
@@ -190,9 +190,6 @@ export class SupabaseAppointmentAdapter implements AppointmentRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('appointments', 'Appointment.delete', id);
-  }
 
   async transitionVisit(id: string, stage: VisitStage): Promise<Result<Appointment, DomainError>> {
     const centerRes = getCenterIdFor("Appointment.transitionVisit");

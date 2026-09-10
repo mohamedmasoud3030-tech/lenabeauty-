@@ -6,7 +6,6 @@ export interface ExpenseRepository {
   list(): Promise<Result<Expense[], DomainError>>;
   create(data: Partial<Expense>): Promise<Result<Expense, DomainError>>;
   update(id: string, data: Partial<Expense>): Promise<Result<Expense, DomainError>>;
-  delete(id: string): Promise<Result<void, DomainError>>;
 }
 
 export interface InvoiceRepository {

@@ -104,13 +104,12 @@ describe("Inventory modal CRUD (closed-by-default)", () => {
       data: [product()],
     });
     const update = vi.spyOn(useCases.products, "update").mockResolvedValue({ ok: true, data: product({ isActive: false }) });
-    const hardDelete = vi.spyOn(useCases.products, "delete");
     renderPage();
     await waitFor(() =>
       expect(screen.getAllByText(/Luxury Shampoo/i).length).toBeGreaterThan(0)
     );
     fireEvent.click(screen.getAllByRole("button", { name: /^Disable$/i })[0]);
     await waitFor(() => expect(update).toHaveBeenCalledWith("p1", { isActive: false }));
-    expect(hardDelete).not.toHaveBeenCalled();
+    expect("delete" in useCases.products).toBe(false);
   });
 });

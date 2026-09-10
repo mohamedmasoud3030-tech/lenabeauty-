@@ -137,4 +137,6 @@ export const enCommonPlatform = {
   "No results found": "No results found",
   "Quick Navigation": "Quick Navigation",
   "Navigate": "Navigate",
+  "Opening inventory": "مخزون افتتاحي",
+  "Opening products have been loaded and can be physically verified": "تم تحميل المنتجات الافتتاحية ويمكن جردُها فعليًا",
 };

@@ -5,7 +5,6 @@ export interface ServiceRepository {
   list(): Promise<Result<Service[], DomainError>>;
   create(data: Partial<Service>): Promise<Result<Service, DomainError>>;
   update(id: string, data: Partial<Service>): Promise<Result<Service, DomainError>>;
-  delete(id: string): Promise<Result<void, DomainError>>;
 }
 
 export interface RecipeItemInput {

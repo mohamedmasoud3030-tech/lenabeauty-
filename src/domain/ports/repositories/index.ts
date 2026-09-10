@@ -10,3 +10,4 @@ export * from "./reports";
 export * from "./settings";
 export * from "./engagement";
 export * from "./workforce";
+export * from "./publicAccess";

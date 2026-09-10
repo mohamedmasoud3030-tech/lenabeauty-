@@ -107,18 +107,4 @@ export class SupabaseEmployeeAdapter implements EmployeeRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    const centerRes = getCenterIdFor("Employee.delete");
-    if (!centerRes.ok) return centerRes as any;
-    try {
-      const { error } = await getSupabaseClient().rpc('admin_delete_employee_v1', {
-        p_center_id: centerRes.data,
-        p_employee_id: id,
-      });
-      if (error) return { ok: false, error: createQueryError("Employee.delete", error.message) };
-      return { ok: true, data: undefined };
-    } catch (e: unknown) {
-      return { ok: false, error: createQueryError("Employee.delete", (e as Error).message) };
-    }
-  }
 }

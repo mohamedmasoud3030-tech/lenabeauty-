@@ -10,7 +10,7 @@ import { mapErrorToMessage } from "../application/errors/ErrorMapper";
 import { useAuth } from "../auth";
 import {
   Plus, Edit, Users, UserPlus, Save,
-  Briefcase, UserCheck, UserX, Wallet,
+  Briefcase, UserCheck, UserX, Wallet, Percent,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { clsx } from "clsx";
@@ -74,10 +74,15 @@ export default function EmployeesPage() {
     e?.preventDefault();
     const nameR = requiredText(form?.name);
     const salaryR = nonNegativeNumber(form?.baseSalary);
+    const commissionPct = Number(form?.commissionPercentage ?? 0);
     const issues = collectIssues([
       { field: "name", result: nameR },
       { field: "baseSalary", result: salaryR },
     ]);
+    if (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100) {
+      setErrors((previous) => ({ ...previous, commissionPercentage: "validation.percent_range" }));
+      return;
+    }
     if (issues.length > 0) {
       setErrors(issuesToMap(issues));
       return;
@@ -89,11 +94,11 @@ export default function EmployeesPage() {
         ...form,
         name: (nameR as { ok: true; value: string }).value,
         baseSalary: (salaryR as { ok: true; value: number }).value,
+        commissionPercentage: commissionPct,
       };
-      // Commission calculation has no approved earning/refund attribution
-      // contract. Preserve any legacy stored value but do not expose or mutate
-      // it through a UI that would imply automatic calculation.
-      delete payload.commissionPercentage;
+      // month_commission_total is a legacy snapshot column kept in the
+      // database but never written from the UI: commissions are derived by the
+      // server from PAID invoices (create_payroll_run_v1 / get_dashboard_pnl_v1).
       delete payload.monthCommissionTotal;
       if (form.id) {
         await unwrap(useCases.employees.update(form.id, payload));
@@ -407,6 +412,26 @@ export default function EmployeesPage() {
                     />
                   </div>
                   {errors.baseSalary && <div className="text-xs font-bold text-destructive">{t(errors.baseSalary)}</div>}
+                </div>
+              )}
+              {isAdmin && (
+                <div className="space-y-1.5">
+                  <label htmlFor="employee-commission" className="text-[11px] font-bold text-muted-foreground">{t("Commission (%)")}</label>
+                  <div className="relative">
+                    <Percent className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      id="employee-commission"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.5"
+                      className="w-full rounded-lg border border-border bg-muted/30 ps-9 pe-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                      value={form.commissionPercentage ?? 0}
+                      onChange={(e) => { setForm({ ...form, commissionPercentage: e.target.value }); if (errors.commissionPercentage) setErrors((p) => ({ ...p, commissionPercentage: "" })); }}
+                    />
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">{t("Commission is calculated by the payroll run from recorded paid sales.")}</p>
+                  {errors.commissionPercentage && <div className="text-xs font-bold text-destructive">{t(errors.commissionPercentage)}</div>}
                 </div>
               )}
             </div>

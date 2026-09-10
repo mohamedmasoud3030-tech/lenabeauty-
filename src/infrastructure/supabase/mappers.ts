@@ -826,6 +826,7 @@ export function mapPayrollLineItem(row: unknown): PayrollLineItem {
     employeeId: row.employee_id,
     employeeName: typeof row.employee_name === "string" ? row.employee_name : undefined,
     baseSalary: Number(row.base_salary) || 0,
+    commissionAmount: Number(row.commission_amount) || 0,
     advancesDeducted: Number(row.advances_deducted) || 0,
     netSalary: Number(row.net_salary) || 0,
     notes: typeof row.notes === "string" ? row.notes : undefined,

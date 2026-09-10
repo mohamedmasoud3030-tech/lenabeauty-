@@ -1,0 +1,64 @@
+// English strings for the public online-booking surface, the client portal,
+// the Settings → Online Booking section, and the commission UI completed by
+// the commission engine migration. Keys must mirror ar/booking.ts exactly.
+
+export const enBooking = {
+  // — Public booking page —
+  "Loading booking options...": "Loading booking options...",
+  "Booking is unavailable right now": "Booking is unavailable right now",
+  "This booking link is not configured. Please contact the salon.": "This booking link is not configured. Please contact the salon.",
+  "This portal link is not configured. Please contact the salon.": "This portal link is not configured. Please contact the salon.",
+  "No services are published for booking yet": "No services are published for booking yet",
+  "No specialists are available for booking yet": "No specialists are available for booking yet",
+  "Back": "Back",
+  "Continue": "Continue",
+  "Date & Time": "Date & Time",
+  "Your Name": "Your Name",
+  "Please enter your full name": "Please enter your full name",
+  "Please enter a valid phone number": "Please enter a valid phone number",
+  "Your appointment is booked": "Your appointment is booked",
+  "We look forward to seeing you": "We look forward to seeing you",
+  "Need to change it? Ask the salon for your portal code, then open the client portal from this page.": "Need to change it? Ask the salon for your portal code, then open the client portal from this page.",
+
+  // — Client portal —
+  "Client Portal": "Client Portal",
+  "Client portal": "Client portal",
+  "Your visits, your rewards": "Your visits, your rewards",
+  "Sign in to your portal": "Sign in to your portal",
+  "Use the phone number you booked with and the code from the salon": "Use the phone number you booked with and the code from the salon",
+  "Enter your phone number and the code given to you by the salon": "Enter your phone number and the code given to you by the salon",
+  "Loading your visits...": "Loading your visits...",
+  "Visits": "Visits",
+  "Upcoming Appointments": "Upcoming Appointments",
+  "No upcoming appointments": "No upcoming appointments",
+  "Appointment": "Appointment",
+  "Reschedule": "Reschedule",
+  "Confirm New Time": "Confirm New Time",
+  "Visit History": "Visit History",
+  "No visits recorded yet": "No visits recorded yet",
+  "Past appointments": "Past appointments",
+  "Exit Portal": "Exit Portal",
+  "Powered by Lara Beauty": "Powered by Lara Beauty",
+
+  // — Settings → Online Booking —
+  "Your public booking link and client portal": "Your public booking link and client portal",
+  "Let clients book themselves, 24/7, without calling you.": "Let clients book themselves, 24/7, without calling you.",
+  "Public booking link": "Public booking link",
+  "Share this link on Instagram or WhatsApp. Anyone who opens it can pick a service, a specialist and a free time — it lands in your Appointments calendar as a scheduled visit.": "Share this link on Instagram or WhatsApp. Anyone who opens it can pick a service, a specialist and a free time — it lands in your Appointments calendar as a scheduled visit.",
+  "Copy booking link": "Copy booking link",
+  "Copy portal link": "Copy portal link",
+  "Scan to open the booking page": "Scan to open the booking page",
+  "Each customer gets a personal code from the Customers screen. With their phone number and that code they can open the portal, see their visits and rewards, and cancel or move an upcoming appointment themselves.": "Each customer gets a personal code from the Customers screen. With their phone number and that code they can open the portal, see their visits and rewards, and cancel or move an upcoming appointment themselves.",
+  "Appointments created online appear instantly in your calendar.": "Appointments created online appear instantly in your calendar.",
+  "Customers can only cancel or reschedule a future scheduled appointment.": "Customers can only cancel or reschedule a future scheduled appointment.",
+  "Wrong code entries lock the portal for 15 minutes, exactly like a bank.": "Wrong code entries lock the portal for 15 minutes, exactly like a bank.",
+
+  // — Customers screen: portal code action —
+  "Portal code": "Portal code",
+  "Issuing...": "Issuing...",
+  "Code for {{name}}: {{code}} — share it with her privately.": "Code for {{name}}: {{code}} — share it with her privately.",
+
+  // — Commission UI (payroll + employees) —
+  "Commission is calculated by the payroll run from recorded paid sales.": "Commission is calculated by the payroll run from recorded paid sales.",
+  "Net salary = base + commission from recorded sales − advances in the same month": "Net salary = base + commission from recorded sales − advances in the same month",
+} as const;

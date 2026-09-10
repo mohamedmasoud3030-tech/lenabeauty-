@@ -1,0 +1,65 @@
+// Arabic strings for the public online-booking surface, the client portal,
+// the Settings → Online Booking section, and the commission UI completed by
+// the commission engine migration. Keys must mirror en/booking.ts exactly
+// (the no-language-leak guard treats any divergence as a CI failure).
+
+export const arBooking = {
+  // — Public booking page —
+  "Loading booking options...": "جاري تحميل خيارات الحجز...",
+  "Booking is unavailable right now": "الحجز غير متاح حاليًا",
+  "This booking link is not configured. Please contact the salon.": "رابط الحجز غير مُهيأ. يُرجى التواصل مع الصالون.",
+  "This portal link is not configured. Please contact the salon.": "رابط البوابة غير مُهيأ. يُرجى التواصل مع الصالون.",
+  "No services are published for booking yet": "لا توجد خدمات متاحة للحجز بعد",
+  "No specialists are available for booking yet": "لا توجد أخصائيات متاحات للحجز بعد",
+  "Back": "رجوع",
+  "Continue": "متابعة",
+  "Date & Time": "التاريخ والوقت",
+  "Your Name": "اسمك",
+  "Please enter your full name": "يُرجى إدخال الاسم الكامل",
+  "Please enter a valid phone number": "يُرجى إدخال رقم هاتف صحيح",
+  "Your appointment is booked": "تم حجز موعدك بنجاح",
+  "We look forward to seeing you": "نتطلع لرؤيتك",
+  "Need to change it? Ask the salon for your portal code, then open the client portal from this page.": "تريدين التغيير؟ اطلبي رمز البوابة من الصالون ثم افتحي بوابة العميل من هذه الصفحة.",
+
+  // — Client portal —
+  "Client Portal": "بوابة العميل",
+  "Client portal": "بوابة العميل",
+  "Your visits, your rewards": "زياراتك ومكافآتك",
+  "Sign in to your portal": "الدخول إلى بوابتك",
+  "Use the phone number you booked with and the code from the salon": "استخدمي رقم الهاتف الذي حجزتِ به والرمز الذي أعطاكِ إياه الصالون",
+  "Enter your phone number and the code given to you by the salon": "أدخلي رقم هاتفك والرمز الذي أعطاكِ إياه الصالون",
+  "Loading your visits...": "جاري تحميل زياراتك...",
+  "Visits": "الزيارات",
+  "Upcoming Appointments": "المواعيد القادمة",
+  "No upcoming appointments": "لا توجد مواعيد قادمة",
+  "Appointment": "الموعد",
+  "Reschedule": "تغيير الموعد",
+  "Confirm New Time": "تأكيد الوقت الجديد",
+  "Visit History": "سجل الزيارات",
+  "No visits recorded yet": "لا توجد زيارات مسجلة بعد",
+  "Past appointments": "المواعيد السابقة",
+  "Exit Portal": "الخروج من البوابة",
+  "Powered by Lara Beauty": "بتقنية Lara Beauty",
+
+  // — Settings → Online Booking —
+  "Your public booking link and client portal": "رابط الحجز العام وبوابة العميل",
+  "Let clients book themselves, 24/7, without calling you.": "دعي العميلات يحجزن بأنفسهن على مدار الساعة دون اتصال.",
+  "Public booking link": "رابط الحجز العام",
+  "Share this link on Instagram or WhatsApp. Anyone who opens it can pick a service, a specialist and a free time — it lands in your Appointments calendar as a scheduled visit.": "شاركي هذا الرابط على إنستغرام أو واتساب. من يفتحه تختار خدمة وأخصائية ووقتًا متاحًا — ويظهر الموعد فورًا في تقويم المواعيد كزيارة مجدولة.",
+  "Copy booking link": "نسخ رابط الحجز",
+  "Copy portal link": "نسخ رابط البوابة",
+  "Scan to open the booking page": "امسحي الكود لفتح صفحة الحجز",
+  "Each customer gets a personal code from the Customers screen. With their phone number and that code they can open the portal, see their visits and rewards, and cancel or move an upcoming appointment themselves.": "تحصل كل عميلة على رمز خاص من شاشة العملاء. برقم هاتفها ورمزها تستطيع فتح البوابة ومشاهدة زياراتها ومكافآتها، وإلغاء موعد قادم أو تأجيله بنفسها.",
+  "Appointments created online appear instantly in your calendar.": "المواعيد المحجوزة أونلاين تظهر فورًا في تقويمك.",
+  "Customers can only cancel or reschedule a future scheduled appointment.": "يمكن للعميلة إلغاء أو تغيير الموعد المجدول القادم فقط.",
+  "Wrong code entries lock the portal for 15 minutes, exactly like a bank.": "تكرار الرمز الخطأ يقفل البوابة 15 دقيقة، تمامًا كما في البنوك.",
+
+  // — Customers screen: portal code action —
+  "Portal code": "رمز البوابة",
+  "Issuing...": "جاري الإصدار...",
+  "Code for {{name}}: {{code}} — share it with her privately.": "رمز {{name}}: {{code}} — شاركيه معها بسرية.",
+
+  // — Commission UI (payroll + employees) —
+  "Commission is calculated by the payroll run from recorded paid sales.": "تُحسب العمولة في مسير الرواتب من المبيعات المدفوعة المسجلة.",
+  "Net salary = base + commission from recorded sales − advances in the same month": "الراتب الصافي = الأساسي + عمولة المبيعات المسجلة − السلف في نفس الشهر",
+} as const;

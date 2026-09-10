@@ -6,7 +6,7 @@ import { TablesInsert, TablesUpdate } from ".././database.types";
 import { mapAttendanceRecord, mapEmployeeAdvance, mapPayrollRun, mapPayrollLineItem } from ".././mappers";
 import { requiredText, nonNegativeNumber, positiveNumber, dateField, DomainValidationError } from "../../../domain/validation";
 import { isCheckoutAfterCheckin } from "../../../domain/attendance";
-import { validatePayload, okValue, getCenterIdFor, toDateOnly, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, toDateOnly } from "./shared";
 
 export class SupabaseAttendanceAdapter implements AttendanceRepository {
   async list(range?: { fromISO: string; toISO: string }): Promise<Result<AttendanceRecord[], DomainError>> {
@@ -139,9 +139,6 @@ export class SupabaseAttendanceAdapter implements AttendanceRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('attendance_records', 'Attendance.delete', id);
-  }
 }
 
 export class SupabaseAdvanceAdapter implements AdvanceRepository {
@@ -250,9 +247,6 @@ export class SupabaseAdvanceAdapter implements AdvanceRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('employee_advances', 'Advance.delete', id);
-  }
 }
 
 export class SupabasePayrollAdapter implements PayrollRepository {

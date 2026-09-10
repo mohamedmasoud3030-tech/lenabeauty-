@@ -1,5 +1,5 @@
 {
-  "files": 322,
+  "files": 333,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1244,16 +1244,6 @@
       ]
     },
     {
-      "name": "admin_delete_employee_v1",
-      "files": [
-        "src/infrastructure/supabase/repositories/employees.ts"
-      ],
-      "args": [
-        "p_center_id",
-        "p_employee_id"
-      ]
-    },
-    {
       "name": "admin_update_employee_v1",
       "files": [
         "src/infrastructure/supabase/repositories/employees.ts"
@@ -1455,6 +1445,109 @@
       ]
     },
     {
+      "name": "public_cancel_booking_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_phone",
+        "p_portal_token",
+        "p_reason"
+      ]
+    },
+    {
+      "name": "public_center_info_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id"
+      ]
+    },
+    {
+      "name": "public_client_portal_login_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_phone",
+        "p_token"
+      ]
+    },
+    {
+      "name": "public_client_portal_profile_v2",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_customer_id",
+        "p_phone",
+        "p_token"
+      ]
+    },
+    {
+      "name": "public_create_booking_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_customer_name",
+        "p_customer_phone",
+        "p_date_time",
+        "p_employee_id",
+        "p_notes",
+        "p_service_id"
+      ]
+    },
+    {
+      "name": "public_list_services_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id"
+      ]
+    },
+    {
+      "name": "public_list_staff_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id"
+      ]
+    },
+    {
+      "name": "public_reschedule_booking_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_new_date_time",
+        "p_new_employee_id",
+        "p_phone",
+        "p_portal_token",
+        "p_reason"
+      ]
+    },
+    {
+      "name": "public_taken_slots_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_day"
+      ]
+    },
+    {
       "name": "refund_entitlement_v1",
       "files": [
         "src/infrastructure/supabase/repositories/gifting.ts"
@@ -1464,6 +1557,16 @@
         "p_amount",
         "p_entitlement_id",
         "p_reason"
+      ]
+    },
+    {
+      "name": "rotate_customer_portal_token_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/customers.ts"
+      ],
+      "args": [
+        "p_center_id",
+        "p_customer_id"
       ]
     },
     {
@@ -1565,8 +1668,7 @@
       "files": [
         "src/infrastructure/gemini/adminAssistantLive.ts",
         "src/infrastructure/services/printService.ts",
-        "src/infrastructure/supabase/repositories/settings.ts",
-        "src/infrastructure/supabase/repositories/shared.ts"
+        "src/infrastructure/supabase/repositories/settings.ts"
       ]
     },
     {

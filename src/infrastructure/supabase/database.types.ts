@@ -1655,6 +1655,7 @@ export type Database = {
           "notes": string | null
           "created_at": string
           "updated_at": string
+          "commission_amount": number
         }
         Insert: {
           "id"?: string
@@ -1667,6 +1668,7 @@ export type Database = {
           "notes"?: string | null
           "created_at"?: string
           "updated_at"?: string
+          "commission_amount"?: number
         }
         Update: {
           "id"?: string
@@ -1679,6 +1681,7 @@ export type Database = {
           "notes"?: string | null
           "created_at"?: string
           "updated_at"?: string
+          "commission_amount"?: number
         }
         Relationships: [
           {

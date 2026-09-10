@@ -541,6 +541,8 @@ export interface PayrollLineItem {
   employeeId: string;
   employeeName?: string;
   baseSalary: number;
+  /** Commission derived by the server from PAID invoices in the run period. */
+  commissionAmount: number;
   advancesDeducted: number;
   netSalary: number;
   notes?: string;

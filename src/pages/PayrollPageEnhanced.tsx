@@ -6,7 +6,9 @@ import { useToast } from "../shared/components/Toast";
 import { useConfirm } from "../shared/components/ConfirmDialog";
 import { Spinner } from "../shared/components/Spinner";
 import { PageHeader } from "../shared/components/PageHeader";
-import { Download, Printer, Trash2, FileText, Users, DollarSign, TrendingDown, CalendarClock } from "lucide-react";
+import { Download, Printer, Trash2, FileText, Users, DollarSign, TrendingDown, CalendarClock,
+  Percent,
+} from "lucide-react";
 import { PayrollRun, PayrollLineItem, Employee } from "../domain/entities";
 import printService, { escapePrintText } from "../infrastructure/services/printService";
 import { formatOMRAmount } from "../shared/money";
@@ -66,11 +68,12 @@ export default function PayrollPageEnhanced() {
   }, [selectedMonth, runs]);
 
   const totals = useMemo(() => {
-    if (!selectedRun) return { base: 0, advances: 0, net: 0, count: 0 };
+    if (!selectedRun) return { base: 0, commission: 0, advances: 0, net: 0, count: 0 };
     const base = selectedRun.lines.reduce((sum, line) => sum + line.baseSalary, 0);
+    const commission = selectedRun.lines.reduce((sum, line) => sum + (line.commissionAmount || 0), 0);
     const advances = selectedRun.lines.reduce((sum, line) => sum + line.advancesDeducted, 0);
     const net = selectedRun.lines.reduce((sum, line) => sum + line.netSalary, 0);
-    return { base, advances, net, count: selectedRun.lines.length };
+    return { base, commission, advances, net, count: selectedRun.lines.length };
   }, [selectedRun]);
 
   async function handleCreate() {
@@ -110,6 +113,7 @@ export default function PayrollPageEnhanced() {
       <tr>
         <td>${escapePrintText(employeeName(line.employeeId))}</td>
         <td class="text-right">${line.baseSalary.toFixed(3)}</td>
+        <td class="text-right">${(line.commissionAmount || 0).toFixed(3)}</td>
         <td class="text-right">${line.advancesDeducted.toFixed(3)}</td>
         <td class="text-right font-bold">${line.netSalary.toFixed(3)}</td>
       </tr>`).join("");
@@ -121,6 +125,7 @@ export default function PayrollPageEnhanced() {
           <thead><tr>
             <th>${escapePrintText(t("Employee"))}</th>
             <th>${escapePrintText(t("Base"))}</th>
+            <th>${escapePrintText(t("Commission"))}</th>
             <th>${escapePrintText(t("Advances"))}</th>
             <th>${escapePrintText(t("Net"))}</th>
           </tr></thead>
@@ -129,6 +134,7 @@ export default function PayrollPageEnhanced() {
             <tr style="background-color: var(--primary-color); color: white;">
               <td class="font-bold">${escapePrintText(t("Total"))}</td>
               <td class="text-right">${totals.base.toFixed(3)}</td>
+              <td class="text-right">${totals.commission.toFixed(3)}</td>
               <td class="text-right">${totals.advances.toFixed(3)}</td>
               <td class="text-right font-bold">${totals.net.toFixed(3)}</td>
             </tr>
@@ -140,6 +146,7 @@ export default function PayrollPageEnhanced() {
   const summaryCards = selectedRun ? [
     { label: t("Employees"), value: String(totals.count), Icon: Users, tone: "text-primary" },
     { label: t("Base Salaries"), value: `${formatOMRAmount(totals.base)} OMR`, Icon: DollarSign, tone: "text-success" },
+    { label: t("Commissions"), value: `${formatOMRAmount(totals.commission)} OMR`, Icon: Percent, tone: "text-primary" },
     { label: t("Advances Deducted"), value: `${formatOMRAmount(totals.advances)} OMR`, Icon: TrendingDown, tone: "text-warning" },
     { label: t("Net Salary"), value: `${formatOMRAmount(totals.net)} OMR`, Icon: FileText, tone: "text-secondary" },
   ] : [];
@@ -149,7 +156,7 @@ export default function PayrollPageEnhanced() {
       <PageHeader
         icon={<FileText className="h-5 w-5 sm:h-6 sm:w-6" />}
         title={t("Payroll Management")}
-        subtitle={t("Net salary = base − advances deducted in the same month")}
+        subtitle={t("Net salary = base + commission from recorded sales − advances in the same month")}
       />
 
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -236,6 +243,7 @@ export default function PayrollPageEnhanced() {
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-start text-xs font-bold text-muted-foreground">{t("Employee")}</th>
                   <th className="px-4 py-3 text-start text-xs font-bold text-muted-foreground">{t("Base")}</th>
+                  <th className="px-4 py-3 text-start text-xs font-bold text-muted-foreground">{t("Commission")}</th>
                   <th className="px-4 py-3 text-start text-xs font-bold text-muted-foreground">{t("Advances")}</th>
                   <th className="px-4 py-3 text-start text-xs font-bold text-foreground">{t("Net")}</th>
                 </tr>
@@ -245,6 +253,7 @@ export default function PayrollPageEnhanced() {
                   <tr key={line.id} className="border-b border-border/70 transition last:border-b-0 hover:bg-muted/35">
                     <td className="px-4 py-4 font-semibold text-foreground">{employeeName(line.employeeId)}</td>
                     <td className="px-4 py-4 text-muted-foreground">{formatOMRAmount(line.baseSalary)}</td>
+                    <td className="px-4 py-4 font-medium text-primary">{formatOMRAmount(line.commissionAmount || 0)}</td>
                     <td className="px-4 py-4 font-medium text-warning">-{formatOMRAmount(line.advancesDeducted)}</td>
                     <td className="px-4 py-4 font-bold text-foreground">{formatOMRAmount(line.netSalary)}</td>
                   </tr>
@@ -252,6 +261,7 @@ export default function PayrollPageEnhanced() {
                 <tr className="border-t-2 border-border bg-muted/35 font-bold">
                   <td className="px-4 py-4 text-foreground">{t("Total")}</td>
                   <td className="px-4 py-4 text-foreground">{formatOMRAmount(totals.base)}</td>
+                  <td className="px-4 py-4 text-foreground">{formatOMRAmount(totals.commission)}</td>
                   <td className="px-4 py-4 text-warning">-{formatOMRAmount(totals.advances)}</td>
                   <td className="px-4 py-4 text-primary">{formatOMRAmount(totals.net)}</td>
                 </tr>

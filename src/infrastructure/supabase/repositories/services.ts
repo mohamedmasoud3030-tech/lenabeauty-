@@ -5,7 +5,7 @@ import { getSupabaseClient } from ".././client";
 import { Json, TablesInsert, TablesUpdate } from ".././database.types";
 import { mapService, mapServiceRecipe, mapInventoryConsumption } from ".././mappers";
 import { requiredText, positiveNumber, positiveInteger } from "../../../domain/validation";
-import { validatePayload, okValue, getCenterIdFor, resolveServiceCategoryId, deleteById } from "./shared";
+import { validatePayload, okValue, getCenterIdFor, resolveServiceCategoryId } from "./shared";
 
 export class SupabaseServiceAdapter implements ServiceRepository {
   async list(): Promise<Result<Service[], DomainError>> {
@@ -111,9 +111,6 @@ export class SupabaseServiceAdapter implements ServiceRepository {
     }
   }
 
-  async delete(id: string): Promise<Result<void, DomainError>> {
-    return deleteById('services', 'Service.delete', id);
-  }
 }
 
 export class SupabaseServiceRecipeAdapter implements ServiceRecipeRepository {

@@ -3306,6 +3306,16 @@
     },
     {
       "schema": "public",
+      "table": "payroll_line_items",
+      "name": "commission_amount",
+      "type": "numeric",
+      "udt": "numeric",
+      "nullable": "NO",
+      "default": "0",
+      "position": 11
+    },
+    {
+      "schema": "public",
       "table": "payroll_runs",
       "name": "id",
       "type": "uuid",
@@ -6261,6 +6271,13 @@
     {
       "schema": "public",
       "table": "payroll_line_items",
+      "name": "payroll_line_commission_non_negative",
+      "type": "c",
+      "definition": "CHECK ((commission_amount >= (0)::numeric))"
+    },
+    {
+      "schema": "public",
+      "table": "payroll_line_items",
       "name": "payroll_line_items_advances_deducted_not_null",
       "type": "n",
       "definition": "NOT NULL advances_deducted"
@@ -6278,6 +6295,13 @@
       "name": "payroll_line_items_center_id_not_null",
       "type": "n",
       "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "payroll_line_items",
+      "name": "payroll_line_items_commission_amount_not_null",
+      "type": "n",
+      "definition": "NOT NULL commission_amount"
     },
     {
       "schema": "public",
@@ -9338,7 +9362,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.create_payroll_run_v1(p_center_id uuid, p_period_month text, p_notes text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_run public.payroll_runs;\n  v_lines JSONB;\n  v_year INTEGER;\n  v_month INTEGER;\n  v_month_start TIMESTAMPTZ;\n  v_month_end TIMESTAMPTZ;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_period_month IS NULL OR p_period_month !~ '^[0-9]{4}-(0[1-9]|1[0-2])$' THEN\n    RAISE EXCEPTION 'invalid_payroll_period' USING ERRCODE = '22023';\n  END IF;\n\n  v_year := split_part(p_period_month, '-', 1)::INTEGER;\n  v_month := split_part(p_period_month, '-', 2)::INTEGER;\n  v_month_start := make_timestamptz(v_year, v_month, 1, 0, 0, 0, 'UTC');\n  v_month_end := v_month_start + INTERVAL '1 month';\n\n  INSERT INTO public.payroll_runs (center_id, period_month, notes)\n  VALUES (p_center_id, p_period_month, NULLIF(btrim(COALESCE(p_notes, '')), ''))\n  RETURNING * INTO v_run;\n\n  WITH approved_advances AS (\n    SELECT employee_id, round(COALESCE(sum(amount), 0), 3) AS amount\n    FROM public.employee_advances\n    WHERE center_id = p_center_id\n      AND status = 'APPROVED'\n      AND advance_date >= v_month_start\n      AND advance_date < v_month_end\n    GROUP BY employee_id\n  ), inserted AS (\n    INSERT INTO public.payroll_line_items (\n      center_id, payroll_run_id, employee_id,\n      base_salary, advances_deducted, net_salary\n    )\n    SELECT\n      p_center_id,\n      v_run.id,\n      employee.id,\n      round(COALESCE(employee.base_salary, employee.salary, 0), 3),\n      round(COALESCE(advance.amount, 0), 3),\n      round(greatest(\n        COALESCE(employee.base_salary, employee.salary, 0) - COALESCE(advance.amount, 0),\n        0\n      ), 3)\n    FROM public.employees employee\n    LEFT JOIN approved_advances advance ON advance.employee_id = employee.id\n    WHERE employee.center_id = p_center_id AND employee.is_active = TRUE\n    ORDER BY employee.name\n    RETURNING *\n  )\n  SELECT COALESCE(jsonb_agg(to_jsonb(inserted) ORDER BY inserted.created_at, inserted.id), '[]'::jsonb)\n  INTO v_lines\n  FROM inserted;\n\n  UPDATE public.employee_advances\n  SET status = 'DEDUCTED', deducted_in_run_id = v_run.id\n  WHERE center_id = p_center_id\n    AND status = 'APPROVED'\n    AND advance_date >= v_month_start\n    AND advance_date < v_month_end;\n\n  RETURN jsonb_build_object('run', to_jsonb(v_run), 'lines', v_lines);\nEXCEPTION\n  WHEN unique_violation THEN\n    RAISE EXCEPTION 'payroll_period_already_exists' USING ERRCODE = '23505';\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.create_payroll_run_v1(p_center_id uuid, p_period_month text, p_notes text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_run public.payroll_runs;\n  v_lines JSONB;\n  v_year INTEGER;\n  v_month INTEGER;\n  v_month_start TIMESTAMPTZ;\n  v_month_end TIMESTAMPTZ;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_period_month IS NULL OR p_period_month !~ '^[0-9]{4}-(0[0-9]|1[0-2])$' THEN\n    RAISE EXCEPTION 'invalid_payroll_period' USING ERRCODE = '22023';\n  END IF;\n\n  v_year := split_part(p_period_month, '-', 1)::INTEGER;\n  v_month := split_part(p_period_month, '-', 2)::INTEGER;\n  v_month_start := make_timestamptz(v_year, v_month, 1, 0, 0, 0, 'UTC');\n  v_month_end := v_month_start + INTERVAL '1 month';\n\n  INSERT INTO public.payroll_runs (center_id, period_month, notes)\n  VALUES (p_center_id, p_period_month, NULLIF(btrim(COALESCE(p_notes, '')), ''))\n  RETURNING * INTO v_run;\n\n  WITH\n  -- Prepaid instruments (packages / gift cards) sold on an invoice in the\n  -- period: their sale value is deferred revenue, not earned revenue.\n  prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= v_month_start AND inv.date < v_month_end\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ),\n  -- Prepaid instruments redeemed on an invoice: redemption is the moment the\n  -- revenue is actually earned by the delivering employee.\n  redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  ),\n  -- Earned revenue per invoice, attributed to the checkout employee.\n  earned_per_invoice AS (\n    SELECT inv.employee_id,\n           sum(greatest(\n             inv.total_amount\n             - COALESCE(inv.tax, 0)\n             - COALESCE(prepaid.amount, 0)\n             + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n             0\n           )) AS earned\n    FROM public.invoices inv\n    LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n    LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= v_month_start AND inv.date < v_month_end\n      AND inv.employee_id IS NOT NULL\n    GROUP BY inv.employee_id\n  ),\n  approved_advances AS (\n    SELECT employee_id, round(COALESCE(sum(amount), 0), 3) AS amount\n    FROM public.employee_advances\n    WHERE center_id = p_center_id\n      AND status = 'APPROVED'\n      AND advance_date >= v_month_start\n      AND advance_date < v_month_end\n    GROUP BY employee_id\n  ),\n  inserted AS (\n    INSERT INTO public.payroll_line_items (\n      center_id, payroll_run_id, employee_id,\n      base_salary, commission_amount, advances_deducted, net_salary\n    )\n    SELECT\n      p_center_id,\n      v_run.id,\n      employee.id,\n      round(COALESCE(employee.base_salary, employee.salary, 0), 3),\n      round(\n        COALESCE(employee.commission_percentage, 0) / 100.0\n        * COALESCE(earned.earned, 0),\n        3\n      ),\n      round(COALESCE(advance.amount, 0), 3),\n      round(greatest(\n        COALESCE(employee.base_salary, employee.salary, 0)\n        + round(\n            COALESCE(employee.commission_percentage, 0) / 100.0\n            * COALESCE(earned.earned, 0),\n            3\n          )\n        - COALESCE(advance.amount, 0),\n        0\n      ), 3)\n    FROM public.employees employee\n    LEFT JOIN earned_per_invoice earned ON earned.employee_id = employee.id\n    LEFT JOIN approved_advances advance ON advance.employee_id = employee.id\n    WHERE employee.center_id = p_center_id AND employee.is_active = TRUE\n    ORDER BY employee.name\n    RETURNING *\n  )\n  SELECT COALESCE(jsonb_agg(to_jsonb(inserted) ORDER BY inserted.created_at, inserted.id), '[]'::jsonb)\n  INTO v_lines\n  FROM inserted;\n\n  UPDATE public.employee_advances\n  SET status = 'DEDUCTED', deducted_in_run_id = v_run.id\n  WHERE center_id = p_center_id\n    AND status = 'APPROVED'\n    AND advance_date >= v_month_start\n    AND advance_date < v_month_end;\n\n  RETURN jsonb_build_object('run', to_jsonb(v_run), 'lines', v_lines);\nEXCEPTION\n  WHEN unique_violation THEN\n    RAISE EXCEPTION 'payroll_period_already_exists' USING ERRCODE = '23505';\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -9442,7 +9466,7 @@
       "config": [
         "search_path=pg_catalog, public, app_private"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.get_dashboard_pnl_v1(p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_revenue NUMERIC(14,3) := 0;\n  v_expenses NUMERIC(14,3) := 0;\n  v_base_salaries NUMERIC(14,3) := 0;\n  v_commissions NUMERIC(14,3) := 0;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_from IS NULL OR p_to IS NULL OR p_to <= p_from THEN\n    RAISE EXCEPTION 'invalid_dashboard_range' USING ERRCODE = '22023';\n  END IF;\n\n  WITH prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ), redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  )\n  SELECT round(COALESCE(sum(greatest(\n    inv.total_amount\n    - COALESCE(inv.tax, 0)\n    - COALESCE(prepaid.amount, 0)\n    + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n    0\n  )), 0), 3)\n  INTO v_revenue\n  FROM public.invoices inv\n  LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n  LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n  WHERE inv.center_id = p_center_id\n    AND inv.status = 'PAID'\n    AND inv.date >= p_from AND inv.date < p_to;\n\n  SELECT round(COALESCE(sum(amount), 0), 3)\n  INTO v_expenses\n  FROM public.expenses\n  WHERE center_id = p_center_id AND date >= p_from AND date < p_to;\n\n  SELECT\n    round(COALESCE(sum(COALESCE(base_salary, salary, 0)), 0), 3),\n    round(COALESCE(sum(COALESCE(month_commission_total, 0)), 0), 3)\n  INTO v_base_salaries, v_commissions\n  FROM public.employees\n  WHERE center_id = p_center_id AND is_active = TRUE;\n\n  RETURN jsonb_build_object(\n    'revenue', v_revenue,\n    'base_salaries', v_base_salaries,\n    'commissions', v_commissions,\n    'expenses', v_expenses,\n    'profit', round(v_revenue - v_base_salaries - v_commissions - v_expenses, 3)\n  );\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.get_dashboard_pnl_v1(p_center_id uuid, p_from timestamp with time zone, p_to timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_revenue NUMERIC(14,3) := 0;\n  v_expenses NUMERIC(14,3) := 0;\n  v_base_salaries NUMERIC(14,3) := 0;\n  v_commissions NUMERIC(14,3) := 0;\nBEGIN\n  IF p_center_id IS NULL OR NOT app_private.has_center_role(p_center_id, ARRAY['ADMIN']) THEN\n    RAISE EXCEPTION 'admin_role_required' USING ERRCODE = '42501';\n  END IF;\n  IF p_from IS NULL OR p_to IS NULL OR p_to <= p_from THEN\n    RAISE EXCEPTION 'invalid_dashboard_range' USING ERRCODE = '22023';\n  END IF;\n\n  WITH prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ), redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  )\n  SELECT round(COALESCE(sum(greatest(\n    inv.total_amount\n    - COALESCE(inv.tax, 0)\n    - COALESCE(prepaid.amount, 0)\n    + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n    0\n  )), 0), 3)\n  INTO v_revenue\n  FROM public.invoices inv\n  LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n  LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n  WHERE inv.center_id = p_center_id\n    AND inv.status = 'PAID'\n    AND inv.date >= p_from AND inv.date < p_to;\n\n  SELECT round(COALESCE(sum(amount), 0), 3)\n  INTO v_expenses\n  FROM public.expenses\n  WHERE center_id = p_center_id AND date >= p_from AND date < p_to;\n\n  SELECT\n    round(COALESCE(sum(COALESCE(base_salary, salary, 0)), 0), 3)\n  INTO v_base_salaries\n  FROM public.employees\n  WHERE center_id = p_center_id AND is_active = TRUE;\n\n  -- Period commissions: earned revenue per employee in the SAME window times\n  -- each employee's current percentage. Derived from invoices, never from the\n  -- legacy per-employee snapshot column.\n  WITH prepaid AS (\n    SELECT ii.invoice_id,\n           round(COALESCE(sum(ii.price * ii.quantity), 0), 3) AS amount\n    FROM public.invoice_items ii\n    JOIN public.invoices inv ON inv.id = ii.invoice_id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND (ii.package_id IS NOT NULL OR ii.gift_card_id IS NOT NULL)\n    GROUP BY ii.invoice_id\n  ), redeemed AS (\n    SELECT el.invoice_id, round(COALESCE(sum(el.amount), 0), 3) AS amount\n    FROM public.entitlement_ledger el\n    WHERE el.center_id = p_center_id\n      AND el.entry_type = 'REDEEM'\n      AND el.invoice_id IS NOT NULL\n    GROUP BY el.invoice_id\n  ), earned_per_invoice AS (\n    SELECT inv.employee_id,\n           sum(greatest(\n             inv.total_amount\n             - COALESCE(inv.tax, 0)\n             - COALESCE(prepaid.amount, 0)\n             + COALESCE(redeemed.amount, inv.gift_card_discount, 0),\n             0\n           )) AS earned\n    FROM public.invoices inv\n    LEFT JOIN prepaid ON prepaid.invoice_id = inv.id\n    LEFT JOIN redeemed ON redeemed.invoice_id = inv.id\n    WHERE inv.center_id = p_center_id\n      AND inv.status = 'PAID'\n      AND inv.date >= p_from AND inv.date < p_to\n      AND inv.employee_id IS NOT NULL\n    GROUP BY inv.employee_id\n  )\n  SELECT round(COALESCE(sum(\n    COALESCE(e.commission_percentage, 0) / 100.0 * COALESCE(earned.earned, 0)\n  ), 0), 3)\n  INTO v_commissions\n  FROM public.employees e\n  LEFT JOIN earned_per_invoice earned ON earned.employee_id = e.id\n  WHERE e.center_id = p_center_id AND e.is_active = TRUE;\n\n  RETURN jsonb_build_object(\n    'revenue', v_revenue,\n    'base_salaries', v_base_salaries,\n    'commissions', v_commissions,\n    'expenses', v_expenses,\n    'profit', round(v_revenue - v_base_salaries - v_commissions - v_expenses, 3)\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10307,6 +10331,20 @@
       "schema": "public",
       "name": "public_cancel_booking_v1",
       "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_reason text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_cancel_booking_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_reason text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_cancel_booking_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_reason text",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -10314,7 +10352,35 @@
       "schema": "public",
       "name": "public_center_info_v1",
       "identity_args": "p_center_id uuid",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_center_info_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_center_info_v1",
+      "identity_args": "p_center_id uuid",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_login_v1",
+      "identity_args": "p_center_id uuid, p_phone text, p_token text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_login_v1",
+      "identity_args": "p_center_id uuid, p_phone text, p_token text",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -10335,7 +10401,35 @@
       "schema": "public",
       "name": "public_client_portal_profile_v2",
       "identity_args": "p_center_id uuid, p_customer_id uuid, p_phone text, p_token text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_profile_v2",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_phone text, p_token text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_profile_v2",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_phone text, p_token text",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_create_booking_v1",
+      "identity_args": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_create_booking_v1",
+      "identity_args": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -10349,7 +10443,35 @@
       "schema": "public",
       "name": "public_list_services_v1",
       "identity_args": "p_center_id uuid",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_list_services_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_list_services_v1",
+      "identity_args": "p_center_id uuid",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_list_staff_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_list_staff_v1",
+      "identity_args": "p_center_id uuid",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -10363,7 +10485,35 @@
       "schema": "public",
       "name": "public_reschedule_booking_v1",
       "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_new_date_time timestamp with time zone, p_new_employee_id uuid, p_reason text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_reschedule_booking_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_new_date_time timestamp with time zone, p_new_employee_id uuid, p_reason text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_reschedule_booking_v1",
+      "identity_args": "p_center_id uuid, p_appointment_id uuid, p_phone text, p_portal_token text, p_new_date_time timestamp with time zone, p_new_employee_id uuid, p_reason text",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_taken_slots_v1",
+      "identity_args": "p_center_id uuid, p_day date",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_taken_slots_v1",
+      "identity_args": "p_center_id uuid, p_day date",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -20711,6 +20861,20 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_cancel_booking_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_cancel_booking_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_cancel_booking_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -20718,7 +20882,35 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_center_info_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_center_info_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_center_info_v1",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_login_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_login_v1",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -20739,7 +20931,35 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_client_portal_profile_v2",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_profile_v2",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_profile_v2",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_create_booking_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_create_booking_v1",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -20753,7 +20973,35 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_list_services_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_list_services_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_list_services_v1",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_list_staff_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_list_staff_v1",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {
@@ -20767,7 +21015,35 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_reschedule_booking_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_reschedule_booking_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_reschedule_booking_v1",
       "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_taken_slots_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_taken_slots_v1",
+      "grantee": "authenticated",
       "privilege": "EXECUTE"
     },
     {

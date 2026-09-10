@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 44,
-    "automated": 43,
+    "total": 46,
+    "automated": 45,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -220,6 +220,16 @@
     },
     {
       "file": "20260907120000_center_gemini_key.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260912100000_commission_engine.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260912110000_public_booking_release.sql",
       "status": "ok",
       "error": null
     }
@@ -439,6 +449,16 @@
       "file": "20260907120000_center_gemini_key.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260912100000_commission_engine.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260912110000_public_booking_release.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -459,8 +479,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "adf308074404a0db4eb1167b42b2b6f0809580069b68900fc678a4d24d39643c",
-    "after_repeat": "adf308074404a0db4eb1167b42b2b6f0809580069b68900fc678a4d24d39643c",
+    "after_first_replay": "bdc5b62b81acb58bc4e32d8b330f32aac62ccdd73ad4877107187d0115861489",
+    "after_repeat": "bdc5b62b81acb58bc4e32d8b330f32aac62ccdd73ad4877107187d0115861489",
     "identical": true,
     "diff": {
       "changed_sections": [],

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   History, Search, User, Phone, UserPlus,
   MoreVertical, Sparkles, TrendingUp, Pencil,
-  Download, Star, Users, Crown,
+  Download, Star, Users, Crown, KeyRound,
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
 import { unwrap } from "../shared/hooks/useApplication";
@@ -45,6 +45,7 @@ export default function CustomersPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [printData, setPrintData] = useState<InvoicePrintData | null>(null);
+  const [portalBusyId, setPortalBusyId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -79,6 +80,19 @@ export default function CustomersPage() {
       newThisMonth: rows.filter((customer) => customer.createdAt && customer.createdAt.getTime() >= monthStart.getTime()).length,
     };
   }, [rows]);
+
+  async function issuePortalCode(customer: Customer) {
+    setMenuId(null);
+    setPortalBusyId(customer.id);
+    try {
+      const result = await unwrap(useCases.customers.rotatePortalToken(customer.id));
+      showToast("success", t("Portal code"), t("Code for {{name}}: {{code}} — share it with her privately.", { name: customer.name, code: result.portalToken }));
+    } catch (error: any) {
+      showToast("error", t("Error"), error?.message || String(error));
+    } finally {
+      setPortalBusyId(null);
+    }
+  }
 
   async function openHistory(customer: Customer) {
     setOpenId(customer.id);
@@ -270,7 +284,7 @@ export default function CustomersPage() {
                     <div className="text-end shrink-0"><div className="text-sm font-bold text-foreground">{formatOMRAmount(customer.totalSpent)}</div><div className="flex items-center gap-1 text-[10px] font-bold text-warning"><Sparkles className="h-3 w-3" />{customer.loyaltyPoints}</div></div>
                   </button>
                   <button type="button" aria-label={t("Actions")} aria-expanded={menuId === customer.id} onClick={(event) => { event.stopPropagation(); setMenuId(menuId === customer.id ? null : customer.id); }} className="shrink-0 h-auto min-h-[56px] w-11 flex items-center justify-center text-muted-foreground hover:text-foreground touch-target"><MoreVertical className="h-4 w-4" /></button>
-                  {menuId === customer.id && <div className="absolute end-2 top-14 z-30 min-w-[148px] rounded-xl border border-border bg-card shadow-xl overflow-hidden"><button type="button" onClick={() => { setMenuId(null); openEdit(customer); }} className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-foreground hover:bg-muted/60"><Pencil className="h-4 w-4" />{t("Edit")}</button></div>}
+                  {menuId === customer.id && <div className="absolute end-2 top-14 z-30 min-w-[148px] rounded-xl border border-border bg-card shadow-xl overflow-hidden"><button type="button" onClick={() => { setMenuId(null); openEdit(customer); }} className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-foreground hover:bg-muted/60"><Pencil className="h-4 w-4" />{t("Edit")}</button><button type="button" disabled={portalBusyId === customer.id} onClick={() => { void issuePortalCode(customer); }} className="w-full min-h-11 flex items-center gap-2 px-3 text-sm font-bold text-foreground hover:bg-muted/60 disabled:opacity-50"><KeyRound className="h-4 w-4" />{portalBusyId === customer.id ? t("Issuing...") : t("Portal code")}</button></div>}
                 </motion.div>
               ))}
             </AnimatePresence>
