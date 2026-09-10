@@ -12,6 +12,31 @@ This pack starts after Round 4. It is not another cleanup round. Its purpose is 
 - Confirm the authenticated owner resolves to the intended `center_id` before entering operational data.
 - Keep public booking/portal RPCs deny-by-default unless that channel is intentionally released with its abuse controls.
 
+### Automated provisioning (`launch:provision`)
+
+Steps 1–4 above are automated end to end by `scripts/launch/provision-client-project.mjs`
+through the Supabase Management API: it creates the isolated project, waits for it to become
+ACTIVE, reveals the API keys, applies the canonical migration chain (discovered from disk and
+recorded in `supabase_migrations.schema_migrations`), provisions the canonical center shell,
+creates the first ADMIN account through the canonical membership bootstrap, and emits the exact
+environment contract required by `launch:preflight`.
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... npm run launch:provision -- \
+  --name layla-beauty --salon-name "Layla Beauty" \
+  --admin-email owner@layla.om --admin-name "Layla"
+
+# Preview the plan without any API calls:
+npm run launch:provision -- --name layla-beauty --dry-run
+```
+
+Outputs land in `.launch/` (git-ignored): `<name>.env` (browser-safe, passes
+`npm run launch:preflight` unchanged) and `<name>.operator.env` (database password, service
+key, first admin credentials — server-only, never `VITE_*`). The access token is created at
+<https://supabase.com/dashboard/account/tokens>. The same no-bypass rules apply: migrations and
+the admin identity go through the canonical paths only — no direct financial inserts, no manual
+invoice fabrication, no disabling RLS/RPC/auth controls.
+
 Before deploying the customer build, configure the production environment and run:
 
 ```bash
