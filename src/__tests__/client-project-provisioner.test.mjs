@@ -9,6 +9,7 @@ import {
   mask,
   normalizeProjectName,
   parseArgs,
+  provisioningHintFor,
   quoteSqlLiteral,
   renderCenterShellSql,
   renderClientBrowserEnv,
@@ -74,6 +75,20 @@ describe("client project provisioner — credentials", () => {
   it("masks secrets for logs", () => {
     expect(mask(`${SECRET_KEY_PREFIX}verylongsecretvalue`)).toBe("sb_s…");
     expect(mask("")).toBe("****");
+  });
+
+  it("explains live Management API failures with actionable hints", () => {
+    const quotaError =
+      "The following organization members have reached their maximum limits for the number of active free projects within organizations where they are an administrator or owner: Mohamed Masoud  (2 project limit). To continue, these users will need to either delete, pause or upgrade one or more of these projects.";
+    expect(provisioningHintFor(quotaError)).toMatch(/pausing a project/i);
+    expect(provisioningHintFor(quotaError)).toMatch(/Pro/i);
+
+    const privilegesError =
+      "Your account does not have the necessary privileges to access this endpoint. For more details, refer to our documentation https://supabase.com/docs/guides/platform/access-control";
+    expect(provisioningHintFor(privilegesError)).toMatch(/Owner or Administrator/i);
+
+    expect(provisioningHintFor("network timeout")).toBe("");
+    expect(provisioningHintFor("")).toBe("");
   });
 });
 

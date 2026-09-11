@@ -248,6 +248,33 @@ export function mask(value) {
 }
 
 /**
+ * Turns real Management API provisioning failures into actionable operator
+ * guidance. Patterns below were captured from live API responses:
+ *   - "Your account does not have the necessary privileges to access this
+ *     endpoint" (Developer role cannot create projects)
+ *   - "...reached their maximum limits for the number of active free
+ *     projects... (2 project limit)" (free-plan active project cap)
+ */
+export function provisioningHintFor(message) {
+  const text = String(message || "");
+  if (/maximum limits? for the number of active (free )?projects|\d+ project limit/i.test(text)) {
+    return (
+      "Free-plan active-project limit reached. Free one slot by pausing a project " +
+      "(reversible, data preserved: Supabase Dashboard or POST /v1/projects/{ref}/pause), " +
+      "delete a project, or upgrade the organization to Pro."
+    );
+  }
+  if (/does not have the necessary privileges|access control/i.test(text)) {
+    return (
+      "The access token's account needs the Owner or Administrator role in the target " +
+      "organization (Supabase Dashboard → organization → Team). The Developer role cannot " +
+      "create projects."
+    );
+  }
+  return "";
+}
+
+/**
  * Renders the browser-safe client environment. This builder deliberately
  * receives ONLY browser-safe inputs — it structurally cannot leak the
  * service-role key or the database password into a VITE_* variable.
@@ -723,6 +750,8 @@ async function runCli() {
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   runCli().catch((error) => {
     console.error(`PROVISION: FAIL — ${error.message}`);
+    const hint = provisioningHintFor(error.message);
+    if (hint) console.error(`HINT: ${hint}`);
     process.exitCode = 1;
   });
 }

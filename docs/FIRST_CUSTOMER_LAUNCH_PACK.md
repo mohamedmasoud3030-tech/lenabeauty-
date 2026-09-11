@@ -30,12 +30,15 @@ SUPABASE_ACCESS_TOKEN=sbp_... npm run launch:provision -- \
 npm run launch:provision -- --name layla-beauty --dry-run
 ```
 
-Outputs land in `.launch/` (git-ignored): `<name>.env` (browser-safe, passes
+The outputs land in `.launch/` (git-ignored): `<name>.env` (browser-safe, passes
 `npm run launch:preflight` unchanged) and `<name>.operator.env` (database password, service
 key, first admin credentials — server-only, never `VITE_*`). The access token is created at
-<https://supabase.com/dashboard/account/tokens>. The same no-bypass rules apply: migrations and
-the admin identity go through the canonical paths only — no direct financial inserts, no manual
-invoice fabrication, no disabling RLS/RPC/auth controls.
+<https://supabase.com/dashboard/account/tokens>. Requirements verified against the live API:
+the token's account must hold the **Owner or Administrator** role in the target organization
+(Developer cannot create projects), and the organization needs a free active-project slot on
+the free plan (pause/delete a project or upgrade to Pro). The same no-bypass rules apply:
+migrations and the admin identity go through the canonical paths only — no direct financial
+inserts, no manual invoice fabrication, no disabling RLS/RPC/auth controls.
 
 Before deploying the customer build, configure the production environment and run:
 
