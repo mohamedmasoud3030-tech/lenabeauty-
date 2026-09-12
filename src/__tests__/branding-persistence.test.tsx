@@ -5,6 +5,7 @@ import BrandingSettingsPage from "../pages/BrandingSettingsPage";
 import { ToastProvider } from "../shared/components/Toast";
 import { useCases } from "../app/composition/useCases";
 import brandingService from "../infrastructure/services/brandingService";
+import { DEVELOPER_FOOTER_TEXT, DEVELOPER_FOOTER_TEXT_AR } from "../config/brand";
 import i18n from "../i18n";
 
 function renderPage() {
@@ -83,6 +84,25 @@ describe("branding persistence", () => {
     expect(cachedBranding().salonName).toBe("LenaBeauty Remote");
   });
 
+  it("keeps the developer footer credit fixed even when the remote stores a custom one", async () => {
+    // The remote mock above stores brandFooterText: "Powered by LenaBeauty".
+    // That value must be ignored everywhere: page state, singleton, and cache.
+    renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+    expect(brandingService.getSettings().footerText).toBe(DEVELOPER_FOOTER_TEXT);
+    expect(brandingService.getSettings().footerTextAr).toBe(DEVELOPER_FOOTER_TEXT_AR);
+    expect(cachedBranding().footerText).toBe(DEVELOPER_FOOTER_TEXT);
+    expect(cachedBranding().footerTextAr).toBe(DEVELOPER_FOOTER_TEXT_AR);
+    expect(screen.queryByDisplayValue("Powered by LenaBeauty")).toBeNull();
+  });
+
+  it("no longer renders an editable footer text field (developer credit is fixed)", async () => {
+    renderPage();
+    await screen.findByDisplayValue("LenaBeauty Remote");
+    expect(screen.queryByText("Footer Text (English)")).toBeNull();
+    expect(screen.queryByText("Footer Text (Arabic)")).toBeNull();
+  });
+
   it("falls back to the singleton's validated cache when Supabase settings are unavailable", async () => {
     vi.spyOn(useCases.settings, "get").mockResolvedValue({ ok: false, error: new Error("not found") as any });
     localStorage.setItem("lenabeauty_branding", JSON.stringify({ salonName: "Legacy Local", salonNameAr: "موروث" }));
@@ -144,6 +164,15 @@ describe("branding persistence", () => {
     expect(await screen.findByDisplayValue("Imported Salon")).toBeInTheDocument();
     // The old values must never be persisted.
     expect(updateMock).not.toHaveBeenCalledWith(expect.objectContaining({ displayName: "LenaBeauty Remote" }));
+    // The imported custom footer must never be applied (credit is fixed by
+    // contract) and the footer columns must not be written at all.
+    expect(brandingService.getSettings().footerText).toBe(DEVELOPER_FOOTER_TEXT);
+    expect(brandingService.getSettings().footerTextAr).toBe(DEVELOPER_FOOTER_TEXT_AR);
+    expect(cachedBranding().footerText).toBe(DEVELOPER_FOOTER_TEXT);
+    for (const call of updateMock.mock.calls) {
+      expect(call[0]).not.toHaveProperty("brandFooterText");
+      expect(call[0]).not.toHaveProperty("brandFooterTextAr");
+    }
   });
 
   it.each([

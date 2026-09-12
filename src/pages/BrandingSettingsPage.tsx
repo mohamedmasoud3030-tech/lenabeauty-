@@ -1,4 +1,4 @@
-import { PARENT_HOUSE_NAME, PRODUCT_NAME, PRODUCT_NAME_AR } from "../config/brand";
+import { DEVELOPER_FOOTER_TEXT, DEVELOPER_FOOTER_TEXT_AR, PRODUCT_NAME, PRODUCT_NAME_AR } from "../config/brand";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Save, Download, Share2, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,8 +43,10 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: `Powered by ${PARENT_HOUSE_NAME}`,
-  footerTextAr: `بتقنية ${PARENT_HOUSE_NAME}`,
+  // Fixed developer credit (src/config/brand.ts). There is deliberately no
+  // editable footer field on this page: the attribution is not salon data.
+  footerText: DEVELOPER_FOOTER_TEXT,
+  footerTextAr: DEVELOPER_FOOTER_TEXT_AR,
 };
 
 function fromCenterSettings(cs: any): BrandingSettings {
@@ -61,8 +63,10 @@ function fromCenterSettings(cs: any): BrandingSettings {
     primaryColor: normalizeBrandColor(cs?.brandPrimaryColor, DEFAULT_SETTINGS.primaryColor),
     secondaryColor: normalizeBrandColor(cs?.brandSecondaryColor, DEFAULT_SETTINGS.secondaryColor),
     accentColor: normalizeBrandColor(cs?.brandAccentColor, DEFAULT_SETTINGS.accentColor),
-    footerText: cs?.brandFooterText ?? DEFAULT_SETTINGS.footerText,
-    footerTextAr: cs?.brandFooterTextAr ?? DEFAULT_SETTINGS.footerTextAr,
+    // The footer credit is fixed by contract: any stored custom footer is
+    // ignored, so it can never reach the page, the local cache, or receipts.
+    footerText: DEFAULT_SETTINGS.footerText,
+    footerTextAr: DEFAULT_SETTINGS.footerTextAr,
   };
 }
 
@@ -209,8 +213,8 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
         brandPrimaryColor: next.primaryColor,
         brandSecondaryColor: next.secondaryColor,
         brandAccentColor: next.accentColor,
-        brandFooterText: next.footerText,
-        brandFooterTextAr: next.footerTextAr,
+        // The footer credit is NOT written: it is fixed by contract
+        // (src/config/brand.ts) and must never follow a salon save.
         phone: next.phone,
         address: next.address,
         // Send null explicitly when the logo is cleared: the repository skips
@@ -442,19 +446,9 @@ export default function BrandingSettingsPage({ embedded = false }: { embedded?: 
             </div>
           </div>
 
-          <div className={cardCls}>
-            <h2 className="text-sm font-bold text-foreground mb-3">{t('Footer Text')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>{t('Footer Text (English)')}</label>
-                <input type="text" value={settings.footerText} onChange={(e) => handleInputChange('footerText', e.target.value)} className={inputCls} dir="ltr" />
-              </div>
-              <div>
-                <label className={labelCls}>{t('Footer Text (Arabic)')}</label>
-                <input type="text" value={settings.footerTextAr} onChange={(e) => handleInputChange('footerTextAr', e.target.value)} className={inputCls} dir="rtl" />
-              </div>
-            </div>
-          </div>
+          {/* The developer footer credit has no editable field here on
+              purpose: it is fixed by contract (src/config/brand.ts) and
+              always renders from the branding singleton. */}
 
           <div className="flex flex-wrap gap-2">
             <button

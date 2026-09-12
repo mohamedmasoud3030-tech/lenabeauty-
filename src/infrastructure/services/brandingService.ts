@@ -1,5 +1,10 @@
 import { LENA_BRAND_PALETTE, normalizeBrandColor } from '../../shared/theme/brandPalette';
-import { PARENT_HOUSE_NAME, PRODUCT_NAME, PRODUCT_NAME_AR } from '../../config/brand';
+import {
+  DEVELOPER_FOOTER_TEXT,
+  DEVELOPER_FOOTER_TEXT_AR,
+  PRODUCT_NAME,
+  PRODUCT_NAME_AR,
+} from '../../config/brand';
 
 /**
  * Branding Service
@@ -39,8 +44,11 @@ const DEFAULT_BRANDING: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: `Powered by ${PARENT_HOUSE_NAME}`,
-  footerTextAr: `بتقنية ${PARENT_HOUSE_NAME}`,
+  // Fixed developer credit — never replaced by customer values (see
+  // src/config/brand.ts). Kept in the snapshot shape for export/import
+  // compatibility, but every boundary applies these constants.
+  footerText: DEVELOPER_FOOTER_TEXT,
+  footerTextAr: DEVELOPER_FOOTER_TEXT_AR,
 };
 
 const BRANDING_STRING_FIELDS = [
@@ -86,8 +94,11 @@ export function validateBrandingImport(raw: unknown): BrandingSettings {
     email: src.email as string,
     taxNumber: src.taxNumber as string,
     registrationNumber: src.registrationNumber as string,
-    footerText: src.footerText as string,
-    footerTextAr: src.footerTextAr as string,
+    // The footer field stays REQUIRED so existing exported snapshots still
+    // validate, but its value is never applied: the developer credit is
+    // fixed by contract and an import file must not rewrite it.
+    footerText: DEFAULT_BRANDING.footerText,
+    footerTextAr: DEFAULT_BRANDING.footerTextAr,
     logo: typeof src.logo === 'string' ? src.logo : null,
     primaryColor: normalizeBrandColor(src.primaryColor, LENA_BRAND_PALETTE.primary),
     secondaryColor: normalizeBrandColor(src.secondaryColor, LENA_BRAND_PALETTE.secondary),
@@ -138,8 +149,9 @@ class BrandingService {
             ...(typeof raw.email === 'string' ? { email: raw.email } : {}),
             ...(typeof raw.taxNumber === 'string' ? { taxNumber: raw.taxNumber } : {}),
             ...(typeof raw.registrationNumber === 'string' ? { registrationNumber: raw.registrationNumber } : {}),
-            ...(typeof raw.footerText === 'string' ? { footerText: raw.footerText } : {}),
-            ...(typeof raw.footerTextAr === 'string' ? { footerTextAr: raw.footerTextAr } : {}),
+            // The footer is deliberately NOT read from the cache: a stored
+            // custom footer (pre-freeze) must never resurrect. The constants
+            // in DEFAULT_BRANDING always win.
             logo: typeof raw.logo === 'string' ? raw.logo : null,
             primaryColor: normalizeBrandColor(raw.primaryColor, LENA_BRAND_PALETTE.primary),
             secondaryColor: normalizeBrandColor(raw.secondaryColor, LENA_BRAND_PALETTE.secondary),
@@ -203,9 +215,15 @@ class BrandingService {
    * Update branding settings
    */
   updateSettings(updates: Partial<BrandingSettings>): void {
+    // The developer footer credit is fixed by contract (src/config/brand.ts):
+    // the type still carries the fields for snapshot compatibility, but no
+    // caller — page save, import, or cache seed — may rewrite them.
+    const { footerText, footerTextAr, ...rest } = updates;
+    void footerText;
+    void footerTextAr;
     // Enforce the strict color contract at the in-memory boundary too: a
     // malformed color never enters the cached settings or the saved cache.
-    const sanitized: Partial<BrandingSettings> = { ...updates };
+    const sanitized: Partial<BrandingSettings> = { ...rest };
     if (sanitized.primaryColor !== undefined) {
       sanitized.primaryColor = normalizeBrandColor(sanitized.primaryColor, this.settings.primaryColor);
     }
@@ -264,7 +282,8 @@ class BrandingService {
   }
 
   /**
-   * Get footer text (bilingual)
+   * Get footer text (bilingual). Always the fixed developer credit — the
+   * singleton can only ever hold the constants from src/config/brand.ts.
    */
   getFooterText(isArabic: boolean = false): string {
     return isArabic ? this.settings.footerTextAr : this.settings.footerText;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { isValidBrandColor, normalizeBrandColor, LENA_BRAND_PALETTE } from "../shared/theme/brandPalette";
+import { DEVELOPER_FOOTER_TEXT, DEVELOPER_FOOTER_TEXT_AR } from "../config/brand";
 
 /**
  * Strict brand-color contract tests.
@@ -165,5 +166,9 @@ describe("brandingService color sanitization", () => {
     expect(service.getSettings().primaryColor).toBe(LENA_BRAND_PALETTE.primary);
     expect(service.getSettings().secondaryColor).toBe("#112233");
     expect(service.getSettings().accentColor).toBe(LENA_BRAND_PALETTE.surfaceAccent);
+    // The footer field validated (snapshot shape) but its value was never
+    // applied: the developer credit is fixed by contract.
+    expect(service.getSettings().footerText).toBe(DEVELOPER_FOOTER_TEXT);
+    expect(service.getSettings().footerTextAr).toBe(DEVELOPER_FOOTER_TEXT_AR);
   });
 });

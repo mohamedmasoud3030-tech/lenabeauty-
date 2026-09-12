@@ -70,6 +70,16 @@ describe("thermal invoice print layout", () => {
     expect(document.querySelector("#invoice-print-container")).toHaveAttribute("dir", "rtl");
   });
 
+  it("prints the fixed developer credit in the footer, never the stored custom footer", () => {
+    // The mock settings above store brandFooterTextAr: "شكرًا لزيارتكم".
+    // The footer is fixed by contract (src/config/brand.ts), so that value
+    // must never reach the receipt.
+    render(<InvoicePrintLayout data={receipt} />);
+
+    expect(screen.getByText("بتقنية LENA Digital House")).toBeInTheDocument();
+    expect(screen.queryByText("شكرًا لزيارتكم")).toBeNull();
+  });
+
   it("signs the receipt with the salon's own identity, not a hard-coded product name", () => {
     render(<InvoicePrintLayout data={receipt} />);
 

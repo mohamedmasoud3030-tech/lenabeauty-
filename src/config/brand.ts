@@ -28,6 +28,17 @@ export const PARENT_HOUSE_NAME = "LENA Digital House";
 export const PARENT_HOUSE_URL = "https://lenadigital.vercel.app";
 
 /**
+ * Fixed developer credit used in document footers (receipts, printed
+ * invoices). Like the developer identity itself, it is fixed by contract:
+ * no customer setting, stored value, or imported branding snapshot may
+ * rewrite who made the product. The Branding page therefore has no editable
+ * footer field, and every boundary (save, import, cache, print) applies these
+ * constants instead of any salon-provided text.
+ */
+export const DEVELOPER_FOOTER_TEXT = `Powered by ${PARENT_HOUSE_NAME}`;
+export const DEVELOPER_FOOTER_TEXT_AR = `بتقنية ${PARENT_HOUSE_NAME}`;
+
+/**
  * Name of the INSTALLED app (PWA manifest, OS share sheets).
  *
  * A manifest is static build output, so it cannot follow a runtime setting.

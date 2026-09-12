@@ -39,8 +39,10 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
   const salonPhone = settings?.phone || brandingService.getSetting("phone");
   const taxNumber = settings?.brandTaxNumber || brandingService.getSetting("taxNumber");
   const receiptLogo = settings?.brandLogoBase64 || settings?.logoPath;
-  const footerText = (isRtl ? settings?.brandFooterTextAr : settings?.brandFooterText)
-    || brandingService.getFooterText(isRtl);
+  // The footer is the fixed developer credit (src/config/brand.ts): stored
+  // center values are deliberately not applied, so the attribution is the
+  // same on every deployment and can never be rewritten by a customer.
+  const footerText = brandingService.getFooterText(isRtl);
   const paymentKey = ({ cash: "Cash", card: "Card", transfer: "Transfer" } as const)[
     invoice.paymentMethod.toLowerCase() as "cash" | "card" | "transfer"
   ] || invoice.paymentMethod;
