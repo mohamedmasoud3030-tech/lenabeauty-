@@ -54,6 +54,27 @@ describe("small-phone portrait UX contracts", () => {
     expect(mobileSheet).toContain('isAdmin: me?.role === "ADMIN"');
   });
 
+  it("leads the mobile header with the page title and keeps the salon identity beside it", () => {
+    // The mobile header must show the CURRENT section (primary line) with the
+    // salon's business name as the secondary line — a static name-only header
+    // hid where the user was. The logo stays beside the text block.
+    expect(layout).toContain(
+      '<p className="truncate text-[15px] font-extrabold tracking-tight text-foreground">{pageTitle}</p>',
+    );
+    expect(layout).toContain(
+      '<p className="truncate text-[11px] font-bold text-muted-foreground">{salon.name}</p>',
+    );
+    expect(layout).toContain('className="flex min-w-0 items-center gap-2.5 lg:hidden"');
+  });
+
+  it("moves the language switch out of the mobile header into the user menu", () => {
+    // The header no longer carries a standalone language icon button...
+    expect(layout).not.toContain('aria-label={t("Change Language")}');
+    // ...the user menu does, labelled with the language it switches TO.
+    expect(layout).toContain('onClick={() => { setShowUserMenu(false); toggleLanguage(); }}');
+    expect(layout).toContain('i18n.language === "ar" ? "English" : "العربية"');
+  });
+
   it("keeps the mobile dock icon-only and removes the fake notification shortcut", () => {
     expect(mobileDock).toContain("<Menu");
     expect(mobileDock).toContain("<GlobalSearch");

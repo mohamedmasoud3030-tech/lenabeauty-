@@ -137,13 +137,20 @@ export default function Layout() {
           <header className="sticky top-0 z-[var(--z-header)] flex h-14 items-center justify-between gap-2 border-b border-border bg-card/85 px-3 shadow-sm backdrop-blur-3xl sm:h-16 sm:px-6 lg:h-20 lg:px-10 print:hidden">
             <span id="current-page-title" className="sr-only">{pageTitle}</span>
 
-            <div className="flex min-w-0 items-center gap-2 lg:hidden">
+            {/* Mobile header: the CURRENT section leads (the page title is
+                what changes as the salon works), with the salon's business
+                identity beside it — logo plus the name as a secondary line.
+                A static name-only header hid where the user was. */}
+            <div className="flex min-w-0 items-center gap-2.5 lg:hidden">
               {salon.logoUrl ? (
                 <SalonLogo logoUrl={salon.logoUrl} salonName={salon.name} size="sm" />
               ) : (
-                <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
+                <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-9 w-9 shrink-0" />
               )}
-              <span className="truncate text-sm font-extrabold tracking-tight text-foreground">{salon.name}</span>
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-[15px] font-extrabold tracking-tight text-foreground">{pageTitle}</p>
+                <p className="truncate text-[11px] font-bold text-muted-foreground">{salon.name}</p>
+              </div>
             </div>
 
             <div className="hidden min-w-0 items-center gap-3 lg:flex">
@@ -205,6 +212,17 @@ export default function Layout() {
                           {me?.role === "ADMIN" ? t("Administrator") : me?.role === "MANAGER" ? t("Manager") : me?.role === "STAFF" ? t("Staff Member") : ""}
                         </p>
                       </div>
+                      {/* The language switch left the mobile header: it now
+                          lives here, labelled with the language it switches
+                          TO (same place as Settings/Logout). */}
+                      <button
+                        type="button"
+                        onClick={() => { setShowUserMenu(false); toggleLanguage(); }}
+                        className="flex w-full items-center gap-2 px-4 py-3 text-sm font-bold text-foreground transition hover:bg-muted/50"
+                      >
+                        <Globe className="h-4 w-4" />
+                        {i18n.language === "ar" ? "English" : "العربية"}
+                      </button>
                       {me?.role === "ADMIN" && (
                         <button
                           type="button"
@@ -227,16 +245,6 @@ export default function Layout() {
                   )}
                 </AnimatePresence>
               </div>
-
-              <button
-                type="button"
-                onClick={toggleLanguage}
-                className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-primary lg:hidden"
-                aria-label={t("Change Language")}
-                title={t("Change Language")}
-              >
-                <Globe aria-hidden="true" className="h-4 w-4" />
-              </button>
             </div>
           </header>
 
