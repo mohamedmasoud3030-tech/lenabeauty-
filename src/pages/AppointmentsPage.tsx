@@ -1,3 +1,4 @@
+import { formatOMRAmount } from "../shared/money";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -328,7 +329,7 @@ export default function AppointmentsPage() {
         note: noShowNote || undefined,
       }));
       const feeNote = chargeNoShowFee
-        ? `${t("No-show fee recorded (not collected)")}: ${result.chargedAmount.toFixed(2)} ${t("OMR")}`
+        ? `${t("No-show fee recorded (not collected)")}: ${formatOMRAmount(result.chargedAmount)} ${t("OMR")}`
         : t("No-show saved");
       showToast("success", t("Success"), feeNote);
       await load();

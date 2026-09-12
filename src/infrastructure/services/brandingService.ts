@@ -1,4 +1,5 @@
 import { LENA_BRAND_PALETTE, normalizeBrandColor } from '../../shared/theme/brandPalette';
+import { PARENT_HOUSE_NAME, PRODUCT_NAME, PRODUCT_NAME_AR } from '../../config/brand';
 
 /**
  * Branding Service
@@ -23,9 +24,11 @@ export interface BrandingSettings {
   footerTextAr: string;
 }
 
+// Fallbacks only. Once an operator saves the salon's name/logo in Settings,
+// `updateSettings` overwrites these and every surface follows.
 const DEFAULT_BRANDING: BrandingSettings = {
-  salonName: 'LaraBeauty',
-  salonNameAr: 'لارا بيوتي',
+  salonName: PRODUCT_NAME,
+  salonNameAr: PRODUCT_NAME_AR,
   address: 'Muscat, Oman',
   addressAr: 'مسقط، عمان',
   phone: '+968 9414 1330',
@@ -36,8 +39,8 @@ const DEFAULT_BRANDING: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: 'Powered by LaraBeauty',
-  footerTextAr: 'مدعوم بواسطة لارا بيوتي',
+  footerText: `Powered by ${PARENT_HOUSE_NAME}`,
+  footerTextAr: `بتقنية ${PARENT_HOUSE_NAME}`,
 };
 
 const BRANDING_STRING_FIELDS = [
@@ -92,9 +95,12 @@ export function validateBrandingImport(raw: unknown): BrandingSettings {
   };
 }
 
+type BrandingListener = (settings: BrandingSettings) => void;
+
 class BrandingService {
   private static instance: BrandingService;
   private settings: BrandingSettings = DEFAULT_BRANDING;
+  private listeners = new Set<BrandingListener>();
 
   private constructor() {
     this.loadSettings();
@@ -154,6 +160,32 @@ class BrandingService {
   }
 
   /**
+   * Observe branding changes.
+   *
+   * The singleton is the app-wide source of salon identity, and Settings can
+   * change it at any moment. Without this, the sidebar/header kept rendering
+   * whatever the identity was at mount and only caught up after a reload.
+   */
+  subscribe(listener: BrandingListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(): void {
+    const snapshot = { ...this.settings };
+    for (const listener of this.listeners) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        // A broken subscriber must not stop the others from updating.
+        console.error('Branding listener failed:', error);
+      }
+    }
+  }
+
+  /**
    * Get all branding settings
    */
   getSettings(): BrandingSettings {
@@ -198,13 +230,30 @@ class BrandingService {
     } else {
       localStorage.removeItem('lenabeauty_logo');
     }
+
+    this.notify();
   }
 
   /**
-   * Get salon name (bilingual)
+   * Get salon name (bilingual).
+   *
+   * Falls back to the product name when a salon has not configured one, so the
+   * shell always has something to render. This is raw customer data and must
+   * never be passed through i18n as a translation key.
    */
   getSalonName(isArabic: boolean = false): string {
-    return isArabic ? this.settings.salonNameAr : this.settings.salonName;
+    const configured = isArabic ? this.settings.salonNameAr : this.settings.salonName;
+    const trimmed = typeof configured === 'string' ? configured.trim() : '';
+    if (trimmed) return trimmed;
+    return isArabic ? PRODUCT_NAME_AR : PRODUCT_NAME;
+  }
+
+  /**
+   * The salon's own logo, or null when it has not uploaded one. A configured
+   * logo replaces the product mark everywhere it is rendered.
+   */
+  getSalonLogo(): string | null {
+    return this.settings.logo ?? null;
   }
 
   /**
@@ -243,6 +292,7 @@ class BrandingService {
     this.settings = DEFAULT_BRANDING;
     localStorage.removeItem('lenabeauty_branding');
     localStorage.removeItem('lenabeauty_logo');
+    this.notify();
   }
 
   /**
@@ -253,6 +303,7 @@ class BrandingService {
    */
   reloadFromCache(): BrandingSettings {
     this.loadSettings();
+    this.notify();
     return { ...this.settings };
   }
 

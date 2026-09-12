@@ -4,6 +4,7 @@ import { Modal } from "./Modal";
 import { InvoicePrintLayout } from "./InvoicePrintLayout";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
+import { PRODUCT_NAME } from "../../config/brand";
 import { formatOMRAmount } from "../money";
 import { useToast } from "./Toast";
 
@@ -25,7 +26,7 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
   const buildReceiptText = () => {
     if (!data) return "";
     return [
-      `=== ${data.settings?.name || 'LaraBeauty'} ===`,
+      `=== ${data.settings?.name || PRODUCT_NAME} ===`,
       `${t("Invoice")}: ${data.invoice.id?.slice(-6).toUpperCase() || ''}`,
       `Date: ${new Date(data.invoice.date).toLocaleString()}`,
       '---',

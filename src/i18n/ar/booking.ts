@@ -50,7 +50,7 @@ export const arBooking = {
   "No visits recorded yet": "لا توجد زيارات مسجلة بعد",
   "Past appointments": "المواعيد السابقة",
   "Exit Portal": "الخروج من البوابة",
-  "Powered by Lara Beauty": "بتقنية Lara Beauty",
+  "Powered by": "بتقنية",
 
   // — Settings → Online Booking —
   "Your public booking link and client portal": "رابط الحجز العام وبوابة العميل",

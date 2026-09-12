@@ -19,6 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useCases } from "../app/composition/useCases";
+import { PRODUCT_NAME } from "../config/brand";
 import type { EntitlementRedemptionInput, InvoicePrintData } from "../application/dto";
 import { calculateCheckoutTotals, estimatePackageRedemptionValue } from "../domain/commerce";
 import type { Appointment, Customer, CustomerEntitlement } from "../domain/entities";
@@ -436,7 +437,7 @@ export default function PosInvoicesPage() {
         setPrintData(receipt);
         setShowPrintModal(true);
         if (isDesktopShell()) {
-          const html = `<div><h1>${escapePrintText(receipt.settings?.name || "LaraBeauty")}</h1><p>Invoice ${escapePrintText(receipt.invoice.id)}</p><p>Total: ${escapePrintText(formatOMRAmount(receipt.invoice.totalAmount))}</p></div>`;
+          const html = `<div><h1>${escapePrintText(receipt.settings?.name || PRODUCT_NAME)}</h1><p>Invoice ${escapePrintText(receipt.invoice.id)}</p><p>Total: ${escapePrintText(formatOMRAmount(receipt.invoice.totalAmount))}</p></div>`;
           await desktopRepository.printHtml(`Invoice ${receipt.invoice.id}`, html);
         }
       } catch (error) {

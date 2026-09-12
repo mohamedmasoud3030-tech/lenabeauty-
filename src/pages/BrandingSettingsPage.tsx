@@ -1,3 +1,4 @@
+import { PARENT_HOUSE_NAME, PRODUCT_NAME, PRODUCT_NAME_AR } from "../config/brand";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, Save, Download, Share2, ImageIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -30,8 +31,8 @@ const ALLOWED_LOGO_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'
 const ALLOWED_IMPORTED_LOGO_PREFIX = /^data:image\/(?:jpeg|png|webp);base64,/i;
 
 const DEFAULT_SETTINGS: BrandingSettings = {
-  salonName: 'LaraBeauty',
-  salonNameAr: 'لارا بيوتي',
+  salonName: PRODUCT_NAME,
+  salonNameAr: PRODUCT_NAME_AR,
   address: 'Muscat, Oman',
   addressAr: 'مسقط، عمان',
   phone: '+968 9414 1330',
@@ -42,8 +43,8 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   primaryColor: LENA_BRAND_PALETTE.primary,
   secondaryColor: LENA_BRAND_PALETTE.secondary,
   accentColor: LENA_BRAND_PALETTE.surfaceAccent,
-  footerText: 'Powered by LaraBeauty',
-  footerTextAr: 'مدعوم بواسطة لارا بيوتي',
+  footerText: `Powered by ${PARENT_HOUSE_NAME}`,
+  footerTextAr: `بتقنية ${PARENT_HOUSE_NAME}`,
 };
 
 function fromCenterSettings(cs: any): BrandingSettings {

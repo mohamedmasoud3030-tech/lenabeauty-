@@ -214,7 +214,7 @@ export default function LaunchReadinessSection() {
 
       <div className="rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-8">
         <h3 className="font-bold text-foreground">{t("Activation journey")}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{t("These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using LENA Beauty.")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using Lara Beauty.")}</p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {activationJourney.map((step) => (
             <Link key={step.key} to={step.href} className="flex min-h-20 items-center gap-3 rounded-2xl border border-border bg-muted/20 p-4 transition hover:bg-muted/50">

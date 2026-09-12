@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from "../config/brand";
+
 export interface DesktopShellConfig {
   productName: string;
   bundleId: string;
@@ -19,7 +21,7 @@ export interface DesktopShellConfig {
 }
 
 export const desktopShellConfig: DesktopShellConfig = {
-  productName: 'LaraBeauty Desktop',
+  productName: `${PRODUCT_NAME} Desktop`,
   bundleId: 'com.lenabeauty.desktop',
   defaultWindow: {
     width: 1440,

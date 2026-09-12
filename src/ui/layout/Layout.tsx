@@ -11,17 +11,20 @@ import { ErrorBoundary } from "../../shared/components/ErrorBoundary";
 import { getDisplayName, getInitials } from "../../shared/displayName";
 import CenterSwitcher from "./CenterSwitcher";
 import { useKeyboardInset, useScrollFieldIntoView } from "../../shared/hooks/useKeyboardInset";
+import { SalonLogo } from "../../shared/components/LazyImage";
 import { destinationLabelKey } from "../../app/navigation";
 import { persistLanguage, persistTheme } from "../../preferences";
 import { MobileActionDock } from "./MobileActionDock";
 import { MobileNavigationSheet } from "./MobileNavigationSheet";
 import { AdminAssistantPanel } from "../../shared/components/AdminAssistantPanel";
 import { UserRole } from "../../domain/entities/Session";
+import { useSalonIdentity } from "../../shared/hooks/useSalonIdentity";
 
 export default function Layout() {
   const nav = useNavigate();
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
+  const salon = useSalonIdentity();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showAssistant, setShowAssistant] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -91,12 +94,14 @@ export default function Layout() {
     return t(key ?? "Dashboard");
   }, [location.pathname, t]);
 
+  // The browser tab follows the salon's configured name — a tab that still
+  // said the product name was one of the places a salon's identity leaked.
   useEffect(() => {
-    document.title = `${pageTitle} — Lara Beauty`;
+    document.title = `${pageTitle} — ${salon.name}`;
     return () => {
-      document.title = "Lara Beauty";
+      document.title = salon.name;
     };
-  }, [pageTitle]);
+  }, [pageTitle, salon.name]);
 
   function toggleTheme() {
     const next = !isDark;
@@ -133,8 +138,12 @@ export default function Layout() {
             <span id="current-page-title" className="sr-only">{pageTitle}</span>
 
             <div className="flex min-w-0 items-center gap-2 lg:hidden">
-              <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
-              <span className="truncate text-sm font-extrabold tracking-tight text-foreground">Lara Beauty</span>
+              {salon.logoUrl ? (
+                <SalonLogo logoUrl={salon.logoUrl} salonName={salon.name} size="sm" />
+              ) : (
+                <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
+              )}
+              <span className="truncate text-sm font-extrabold tracking-tight text-foreground">{salon.name}</span>
             </div>
 
             <div className="hidden min-w-0 items-center gap-3 lg:flex">

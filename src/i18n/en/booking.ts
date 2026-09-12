@@ -49,7 +49,7 @@ export const enBooking = {
   "No visits recorded yet": "No visits recorded yet",
   "Past appointments": "Past appointments",
   "Exit Portal": "Exit Portal",
-  "Powered by Lara Beauty": "Powered by Lara Beauty",
+  "Powered by": "Powered by",
 
   // — Settings → Online Booking —
   "Your public booking link and client portal": "Your public booking link and client portal",

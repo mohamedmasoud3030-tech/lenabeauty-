@@ -1,16 +1,20 @@
 /**
- * Public parent-brand contract for Lena Beauty.
+ * Public parent-brand contract for the product (fixed developer identity).
  *
- * Lena Beauty remains an independent product surface. LENA Digital House is the
+ * The product remains an independent surface. LENA Digital House is the
  * parent digital house that designs and develops the LENA product family. The
  * login endorsement therefore links to LENA's independent public homepage,
  * never to support, GitHub, WhatsApp, or an in-app pseudo-company route.
  */
 
+import { PARENT_HOUSE_NAME, PARENT_HOUSE_URL } from "../config/brand";
+
 export type LenaHouseLocale = "ar" | "en";
 
-export const LENA_HOUSE_NAME = "LENA Digital House";
-const DEFAULT_LENA_HOUSE_ORIGIN = "https://lenadigital.vercel.app";
+// Re-exported from the single product-identity module so the developer
+// attribution cannot drift from the rest of the app.
+export const LENA_HOUSE_NAME = PARENT_HOUSE_NAME;
+const DEFAULT_LENA_HOUSE_ORIGIN = PARENT_HOUSE_URL;
 
 function readConfiguredOrigin(): string {
   try {

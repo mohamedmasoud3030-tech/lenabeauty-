@@ -4,6 +4,7 @@
  * Ensures consistent appearance across print, preview, and PDF export
  */
 
+import { formatOMRAmount } from "../../shared/money";
 import brandingService from './brandingService';
 
 export interface PrintOptions {
@@ -455,8 +456,8 @@ class PrintService {
               <tr>
                 <td>${escapePrintText(item.name)}</td>
                 <td class="text-center">${escapePrintText(item.qty)}</td>
-                <td class="text-right">${escapePrintText(item.price.toFixed(3))}</td>
-                <td class="text-right">${escapePrintText((item.qty * item.price).toFixed(3))}</td>
+                <td class="text-right">${escapePrintText(formatOMRAmount(item.price))}</td>
+                <td class="text-right">${escapePrintText(formatOMRAmount(item.qty * item.price))}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -467,23 +468,23 @@ class PrintService {
         <table>
           <tr>
             <td class="font-bold">${isArabic ? 'الإجمالي' : 'Subtotal'}:</td>
-            <td class="text-right">${escapePrintText(totals.subtotal.toFixed(3))}</td>
+            <td class="text-right">${escapePrintText(formatOMRAmount(totals.subtotal))}</td>
           </tr>
           ${totals.discount > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الخصم' : 'Discount'}:</td>
-              <td class="text-right">-${escapePrintText(totals.discount.toFixed(3))}</td>
+              <td class="text-right">-${escapePrintText(formatOMRAmount(totals.discount))}</td>
             </tr>
           ` : ''}
           ${totals.tax > 0 ? `
             <tr>
               <td class="font-bold">${isArabic ? 'الضريبة' : 'Tax'}:</td>
-              <td class="text-right">+${escapePrintText(totals.tax.toFixed(3))}</td>
+              <td class="text-right">+${escapePrintText(formatOMRAmount(totals.tax))}</td>
             </tr>
           ` : ''}
           <tr style="background-color: var(--primary-color); color: white;">
             <td class="font-bold">${isArabic ? 'الإجمالي النهائي' : 'Grand Total'}:</td>
-            <td class="text-right font-bold">${escapePrintText(totals.total.toFixed(3))}</td>
+            <td class="text-right font-bold">${escapePrintText(formatOMRAmount(totals.total))}</td>
           </tr>
         </table>
       </div>

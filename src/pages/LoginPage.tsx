@@ -1,3 +1,4 @@
+import { PARENT_HOUSE_NAME, PRODUCT_NAME } from "../config/brand";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -50,11 +51,11 @@ const LOGIN_COPY = {
     tagline: "Everything you need to run your beauty center with elegance.",
     footer: "Beauty, organized beautifully.",
     menuLabel: "LENA menu",
-    parentEyebrow: "A LENA DIGITAL HOUSE PRODUCT",
+    parentEyebrow: `A ${PARENT_HOUSE_NAME.toUpperCase()} PRODUCT`,
     parentPrefix: "Designed and developed by",
     parentSubline: "Part of the LENA family of digital products.",
-    parentMenuBody: "The parent digital house behind Lara Beauty and the LENA product family.",
-    parentMenuCta: "Visit LENA Digital House",
+    parentMenuBody: `The parent digital house behind ${PRODUCT_NAME} and the LENA product family.`,
+    parentMenuCta: `Visit ${PARENT_HOUSE_NAME}`,
   },
   ar: {
     system: "نظام إدارة مركز التجميل",
@@ -65,11 +66,11 @@ const LOGIN_COPY = {
     tagline: "كل ما تحتاجينه لإدارة مركزك بجمال وسلاسة.",
     footer: "الجمال، بإدارة أجمل.",
     menuLabel: "قائمة LENA",
-    parentEyebrow: "أحد منتجات LENA DIGITAL HOUSE",
-    parentPrefix: "تم تصميم وتطوير Lara Beauty بواسطة",
+    parentEyebrow: `أحد منتجات ${PARENT_HOUSE_NAME.toUpperCase()}`,
+    parentPrefix: `تم تصميم وتطوير ${PRODUCT_NAME} بواسطة`,
     parentSubline: "جزء من عائلة LENA للمنتجات الرقمية.",
-    parentMenuBody: "البيت الرقمي الأم وراء Lara Beauty وبقية عائلة منتجات LENA.",
-    parentMenuCta: "زيارة LENA Digital House",
+    parentMenuBody: `البيت الرقمي الأم وراء ${PRODUCT_NAME} وبقية عائلة منتجات LENA.`,
+    parentMenuCta: `زيارة ${PARENT_HOUSE_NAME}`,
   },
 } as const;
 

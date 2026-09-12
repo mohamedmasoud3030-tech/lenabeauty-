@@ -1,3 +1,4 @@
+import { formatOMRAmount } from "../../shared/money";
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -360,7 +361,7 @@ export function AppointmentBookingDialog({
               <div>
                 <p className="text-sm font-bold text-warning">{t("Mark as No-Show")}</p>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                  {t("Manual no-show fee record")}: {Math.max(depositAmount, noShowFeeAmount).toFixed(2)} {t("OMR")}
+                  {t("Manual no-show fee record")}: {formatOMRAmount(Math.max(depositAmount, noShowFeeAmount))} {t("OMR")}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t("Recording this amount does not create a payment or invoice.")}
