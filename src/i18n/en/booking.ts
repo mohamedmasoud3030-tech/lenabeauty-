@@ -30,6 +30,7 @@ export const enBooking = {
   "Please choose a time in the future.": "Please choose a time in the future.",
   "The selected specialist is not available for that time.": "The selected specialist is not available for that time.",
   "This time slot is no longer available": "This time slot is no longer available",
+  "Too many attempts. Please try again in a little while.": "Too many attempts. Please try again in a little while.",
   "This booking link is not configured. Please contact the salon.": "This booking link is not configured. Please contact the salon.",
   "This portal link is not configured. Please contact the salon.": "This portal link is not configured. Please contact the salon.",
   "No services are published for booking yet": "No services are published for booking yet",

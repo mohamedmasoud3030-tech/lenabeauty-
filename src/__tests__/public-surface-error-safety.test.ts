@@ -228,6 +228,23 @@ describe("formatPublicError behaviour", () => {
     expect(prose.length, `untranslated sentences: ${prose.slice(0, 4).join(" | ")}`).toBeLessThanOrEqual(11);
   });
 
+  it("translates the throttle refusal, which the reachability scan cannot see", async () => {
+    const { formatPublicError } = await import("../shared/hooks/useApplication");
+    const i18n = (await import("../i18n")).default;
+
+    // 'rate_limited' is raised by app_private.throttle_public_action(), which the
+    // scan above never attributes to an anon function — but it does reach a
+    // visitor, because the anonymous write functions PERFORM it. Pin the mapping
+    // directly instead of relying on a scan that cannot find it.
+    await i18n.changeLanguage("ar");
+    const arabic = formatPublicError({ message: "rate_limited" }, "fallback");
+    expect(arabic).not.toBe("fallback");
+    expect(arabic).toMatch(/[\u0600-\u06FF]/);
+
+    await i18n.changeLanguage("en");
+    expect(formatPublicError({ message: "rate_limited" }, "fallback")).toMatch(/too many attempts/i);
+  });
+
   it("preserves structured validation keys so per-field messages keep working", async () => {
     const { formatPublicError } = await import("../shared/hooks/useApplication");
 

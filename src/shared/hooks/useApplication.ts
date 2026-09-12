@@ -79,6 +79,10 @@ const PUBLIC_ACTION_CODES: Record<string, string> = {
   appointment_not_in_center: "This appointment does not belong to this salon.",
   service_not_in_center: "This service does not belong to this salon.",
   admin_role_required: "Only an administrator can do that.",
+  // Raised by app_private.throttle_public_action(), which the anonymous write
+  // functions call. A visitor who submits a form repeatedly — or someone
+  // guessing a portal code — must be told to wait, not shown a transport error.
+  rate_limited: "Too many attempts. Please try again in a little while.",
 };
 
 function looksLikeInternalDetail(message: string): boolean {

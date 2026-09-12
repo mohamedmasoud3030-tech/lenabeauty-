@@ -34,6 +34,7 @@ export const arBooking = {
   "Please choose a time in the future.": "يُرجى اختيار وقت في المستقبل.",
   "The selected specialist is not available for that time.": "الأخصائية المختارة غير متاحة في هذا الوقت.",
   "This time slot is no longer available": "هذا الوقت لم يعد متاحًا",
+  "Too many attempts. Please try again in a little while.": "محاولات كثيرة في وقت قصير. يُرجى المحاولة بعد قليل.",
   "This booking link is not configured. Please contact the salon.": "رابط الحجز غير مُهيأ. يُرجى التواصل مع الصالون.",
   "This portal link is not configured. Please contact the salon.": "رابط البوابة غير مُهيأ. يُرجى التواصل مع الصالون.",
   "No services are published for booking yet": "لا توجد خدمات متاحة للحجز بعد",
