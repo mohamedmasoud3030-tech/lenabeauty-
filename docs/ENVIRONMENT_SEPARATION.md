@@ -10,7 +10,14 @@
 | Unrelated product — never use | `starting` | `livpmxwwxsfnaceczyth` | outside LenaBeauty |
 | Lena Production | not provisioned | none | no production customer data exists |
 
-The public Lena trial deployment currently targets `tuzzvqsnbtzvkffmazyf`. A production-optimized Vite bundle is only a build mode; it does not make its database a Production environment. Until a separate Production project is explicitly provisioned, the embedded fallback is classified as `staging`.
+The public Lena trial deployment currently targets `tuzzvqsnbtzvkffmazyf`. A production-optimized Vite bundle is only a build mode; it does not make its database a Production environment.
+
+As of 2026-09-12 there is **no implicit fallback at all**. `scripts/vercel-build.mjs` resolves exactly one target and fails the build otherwise:
+
+- an explicit target (`VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` + `VITE_CENTER_ID` + `VITE_ENVIRONMENT`) builds against that project only;
+- the public Demo requires an explicit `VITE_USE_DEMO_CREDENTIALS=true`, and is then pinned to `staging` so it can never claim Production.
+
+Until a separate Production project is provisioned, no deployment can silently borrow the Demo database.
 
 ## Runtime selection
 

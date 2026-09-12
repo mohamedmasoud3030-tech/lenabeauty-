@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useCases } from "../../app/composition/useCases";
 import { config } from "../../config/env";
-import { formatError } from "../../shared/hooks/useApplication";
+import { formatPublicError } from "../../shared/hooks/useApplication";
 import { formatOMRAmount } from "../../shared/money";
 import { PublicShell, usePublicDirection } from "./PublicShell";
 import type { PublicServiceOption, PublicStaffOption } from "../../domain/ports/repositories";
@@ -113,7 +113,11 @@ export default function PublicBookingPage() {
     ]);
     if (!infoRes.ok || !servicesRes.ok || !staffRes.ok) {
       const failure = [infoRes, servicesRes, staffRes].find((response) => !response.ok);
-      setLoadError(failure && !failure.ok ? formatError(failure.error) : t("Booking is unavailable right now"));
+      setLoadError(
+        failure && !failure.ok
+          ? formatPublicError(failure.error, t("Booking is unavailable right now"))
+          : t("Booking is unavailable right now"),
+      );
       setLoading(false);
       return;
     }
@@ -201,7 +205,7 @@ export default function PublicBookingPage() {
     });
     setSubmitting(false);
     if (!result.ok) {
-      setFormError(formatError(result.error));
+      setFormError(formatPublicError(result.error, t("Booking is unavailable right now")));
       // The slot may have been taken in the meantime — refresh availability.
       if (step === "details") void loadTakenSlots(day);
       return;

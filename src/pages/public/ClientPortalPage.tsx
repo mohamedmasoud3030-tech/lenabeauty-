@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useCases } from "../../app/composition/useCases";
 import { config } from "../../config/env";
-import { formatError } from "../../shared/hooks/useApplication";
+import { formatPublicError } from "../../shared/hooks/useApplication";
 import { formatOMRAmount } from "../../shared/money";
 import { PublicShell, usePublicDirection } from "./PublicShell";
 import type { PortalCredentials, PortalProfile } from "../../domain/ports/repositories";
@@ -64,7 +64,7 @@ export default function ClientPortalPage() {
       const result = await useCases.public.portalProfile(credentials);
       setLoadingProfile(false);
       if (!result.ok) {
-        setActionError(formatError(result.error));
+        setActionError(formatPublicError(result.error, t("The request could not be completed. Please try again.")));
         return;
       }
       setProfile(result.data);
@@ -96,7 +96,7 @@ export default function ClientPortalPage() {
     const result = await useCases.public.portalProfile(credentials);
     setSigningIn(false);
     if (!result.ok) {
-      setSignInError(formatError(result.error));
+      setSignInError(formatPublicError(result.error, t("Could not sign in. Please check your phone number and portal code.")));
       return;
     }
     setProfile(result.data);
@@ -117,7 +117,7 @@ export default function ClientPortalPage() {
     const result = await useCases.public.cancelBooking(credentialsFrom(centerId, phone, code), appointmentId);
     setBusyAppointmentId(null);
     if (!result.ok) {
-      setActionError(formatError(result.error));
+      setActionError(formatPublicError(result.error, t("The request could not be completed. Please try again.")));
       return;
     }
     await loadProfile(credentialsFrom(centerId, phone, code));
@@ -134,7 +134,7 @@ export default function ClientPortalPage() {
     );
     setBusyAppointmentId(null);
     if (!result.ok) {
-      setActionError(formatError(result.error));
+      setActionError(formatPublicError(result.error, t("The request could not be completed. Please try again.")));
       return;
     }
     setRescheduling(null);
