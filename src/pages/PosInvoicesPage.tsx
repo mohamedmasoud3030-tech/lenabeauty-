@@ -59,6 +59,14 @@ interface CartItem {
 
 type PosPrintData = InvoicePrintData;
 
+/**
+ * How long the customer search waits after the last keystroke. The search is a
+ * substring match (`%…%`), which no btree index can serve, and it runs twice per
+ * input — once for the name, once for the phone. Without a pause, an eight
+ * character name costs sixteen scans of the salon's client list; with it, two.
+ */
+export const CUSTOMER_SEARCH_DEBOUNCE_MS = 300;
+
 export default function PosInvoicesPage() {
   const { showToast } = useToast();
   const { t } = useTranslation();
@@ -112,6 +120,9 @@ export default function PosInvoicesPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
   const customerSearchRequestRef = useRef(0);
+  const customerSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => clearCustomerSearchTimer, []);
   const visitHydrationRef = useRef("");
   const servicePrefillRef = useRef("");
 
@@ -209,6 +220,33 @@ export default function PosInvoicesPage() {
     if (appointmentParam) setSearchParams({}, { replace: true });
   }
 
+  /** Cancels a scheduled search. Called when the field clears or a client is chosen. */
+  function clearCustomerSearchTimer() {
+    if (customerSearchTimerRef.current === null) return;
+    clearTimeout(customerSearchTimerRef.current);
+    customerSearchTimerRef.current = null;
+  }
+
+  /**
+   * The input handler. The typed text appears immediately; the query waits. This
+   * is the difference between one scan per pause and one scan per keystroke.
+   */
+  function handleCustomerSearchInput(value: string) {
+    setSearchQ(value);
+    clearCustomerSearchTimer();
+    if (value.trim().length <= 1) {
+      // Invalidate any in-flight request so a late result cannot repopulate a
+      // list the user has already cleared.
+      customerSearchRequestRef.current += 1;
+      setCustomers([]);
+      return;
+    }
+    customerSearchTimerRef.current = setTimeout(() => {
+      customerSearchTimerRef.current = null;
+      void searchCustomers(value);
+    }, CUSTOMER_SEARCH_DEBOUNCE_MS);
+  }
+
   async function searchCustomers(query: string) {
     setSearchQ(query);
     const requestId = ++customerSearchRequestRef.current;
@@ -227,6 +265,8 @@ export default function PosInvoicesPage() {
   }
 
   async function selectCustomer(customer: Customer) {
+    clearCustomerSearchTimer();
+    customerSearchRequestRef.current += 1;
     setSelectedCustomer(customer);
     setCustomers([]);
     setSearchQ("");
@@ -601,7 +641,7 @@ export default function PosInvoicesPage() {
                   ) : (
                     <div className="relative group">
                       <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input ref={searchInputRef} className="w-full rounded-lg border border-border bg-card ps-9 pe-10 py-2.5 text-xs font-medium mobile-input" placeholder={t("Search customer...")} value={searchQ} onChange={(event) => void searchCustomers(event.target.value)} />
+                      <input ref={searchInputRef} className="w-full rounded-lg border border-border bg-card ps-9 pe-10 py-2.5 text-xs font-medium mobile-input" placeholder={t("Search customer...")} value={searchQ} onChange={(event) => handleCustomerSearchInput(event.target.value)} />
                       <button onClick={() => { setShowNewCustomer((value) => !value); setCustomers([]); }} className="absolute end-1 top-1/2 -translate-y-1/2 h-8 px-2 rounded-md bg-primary/10 text-primary touch-target" title={t("New customer")}><UserPlus className="h-3.5 w-3.5" /></button>
                       {customers.length > 0 && <div className="absolute bottom-full inset-x-0 mb-2 rounded-lg border border-border bg-card shadow-xl max-h-44 overflow-auto z-50 p-1">{customers.map((customer) => <button key={customer.id} onClick={() => void selectCustomer(customer)} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-start touch-target"><span className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center text-[10px] font-bold">{getInitials(customer, "·")}</span><span className="text-xs font-bold truncate">{getDisplayName(customer, t("Unnamed"))}</span></button>)}</div>}
                     </div>

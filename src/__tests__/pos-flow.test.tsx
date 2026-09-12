@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
 import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { useCases } from "../app/composition/useCases";
-import PosInvoicesPage from "../pages/PosInvoicesPage";
+import PosInvoicesPage, { CUSTOMER_SEARCH_DEBOUNCE_MS } from "../pages/PosInvoicesPage";
 import { ToastProvider } from "../shared/components/Toast";
 import i18n from "../i18n";
 
@@ -69,8 +69,13 @@ describe("POS operational flow", () => {
     renderPos();
     await screen.findByText("قص شعر");
     const input = screen.getByPlaceholderText(i18n.t("Search customer..."));
+    // The field now waits for a pause in typing (CUSTOMER_SEARCH_DEBOUNCE_MS), so
+    // two overlapping requests come from two bursts, not from two keystrokes.
     fireEvent.change(input, { target: { value: "Am" } });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, CUSTOMER_SEARCH_DEBOUNCE_MS + 60)); });
+    await waitFor(() => expect(useCases.customers.list).toHaveBeenCalledTimes(1));
     fireEvent.change(input, { target: { value: "Amal" } });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, CUSTOMER_SEARCH_DEBOUNCE_MS + 60)); });
     await waitFor(() => expect(useCases.customers.list).toHaveBeenCalledTimes(2));
 
     await act(async () => resolveSecond({ ok: true, data: [{ id: "new", name: "Newest Customer" }] }));

@@ -8206,6 +8206,15 @@
     {
       "schema": "public",
       "table": "customers",
+      "name": "idx_customers_center_phone",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_customers_center_phone ON public.customers USING btree (center_id, phone)"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
       "name": "idx_customers_center_portal_token",
       "unique": true,
       "primary": false,
@@ -8733,6 +8742,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_products_center ON public.products USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "products",
+      "name": "idx_products_center_name",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_products_center_name ON public.products USING btree (center_id, name)"
     },
     {
       "schema": "public",
@@ -14996,6 +15014,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_customers_center_portal_token",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -17006,6 +17080,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_products_center",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
