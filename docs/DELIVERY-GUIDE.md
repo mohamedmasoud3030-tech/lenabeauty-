@@ -78,6 +78,19 @@ supabase/migrations/
 >   (`PRODUCTION_DEMO_PROJECT_FORBIDDEN`) — لم يعد ممكنًا حتى يمر حارس وقت التشغيل.
 > - `VITE_ENVIRONMENT` **إلزامي** في وضع العميل ولم يعد يُستنتج ضمنيًا.
 > - سكربت `vercel-demo-build.mjs` **حُذف**؛ لا تعتمد على أي مسار آخر.
+>
+> **المعاينات (Previews) — قاعدة 2026-09-13.** بيئة Preview في Vercel لا تحمل بيانات
+> اعتماد الإنتاج عمومًا، فكان **كل دفع لفرع يُنتج نشرًا فاشلًا بلا معاينة تُفتح**،
+> وزر «Vercel» الأحمر في الـPR. لذلك: بناء Preview يهبط إلى **الديمو العام**
+> (`VERCEL_ENV=preview` فقط، وبشرط ألّا يوجد هدف صريح ولا opt-in)، ويطبع تحذيرًا
+> `PREVIEW_DEMO_TARGET` في السجل. **حالة Production لم تتغير**: بلا هدف صريح = فشل
+> مقصود (`MISSING_BUILD_TARGET`)، و`VITE_ENVIRONMENT=production` مع مشروع الديمو
+> مرفوض (`PRODUCTION_DEMO_PROJECT_FORBIDDEN`). القاعدة كاملة في
+> `scripts/vercel-build.mjs` ومثبّتة بـ20 اختبارًا في
+> `src/__tests__/vercel-build-contract.test.mjs`.
+>
+> دلالة عملية: **معاينة خضراء ≠ نشر إنتاج**. الإنتاج الحقيقي يُنشر من `main` مع
+> متغيرات العميل أعلاه.
 
 ```bash
 git clone https://github.com/mohamedmasoud3030-tech/lenabeauty- lenabeauty-[client]

@@ -122,6 +122,25 @@ export function validateVercelBuildEnvironment(env = {}) {
   const explicitKey = String(env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim();
   const hasExplicitTarget = Boolean(explicitUrl || explicitKey);
 
+  // Vercel builds carry VERCEL_ENV (production | preview | development). This
+  // project gives the *Preview* environment no production credentials on
+  // purpose, so every branch push used to end as a failed deployment with no
+  // preview to look at. A preview is not a deployment to a client: it goes to
+  // the public Demo, it says so in the build log, and it only happens when
+  // nothing else was configured. Production is untouched — it still refuses to
+  // build without an explicit target, which is the rule that protects a real
+  // salon's data.
+  const vercelEnv = String(env.VERCEL_ENV ?? "").trim().toLowerCase();
+  const previewDemoFallback =
+    vercelEnv === "preview" && !demoOptIn && !hasExplicitTarget;
+  const usesDemo = demoOptIn || previewDemoFallback;
+  if (previewDemoFallback) {
+    warnings.push(
+      "PREVIEW_DEMO_TARGET: this is a Vercel preview deployment, which has no production credentials, " +
+        "so it targets the public Demo. Never enter real client data in a preview.",
+    );
+  }
+
   const rawEnvironment = String(env.VITE_ENVIRONMENT ?? "").trim().toLowerCase();
   const backend = String(env.VITE_DATA_BACKEND ?? "supabase").trim().toLowerCase() || "supabase";
   const branchMode = String(env.VITE_BRANCH_MODE ?? "single").trim().toLowerCase() || "single";
@@ -141,7 +160,7 @@ export function validateVercelBuildEnvironment(env = {}) {
     errors.push(`INVALID_BUILD_BRANCH_MODE: VITE_BRANCH_MODE must be 'single' or 'multi' (received '${branchMode}').`);
   }
 
-  if (!demoOptIn && !hasExplicitTarget) {
+  if (!usesDemo && !hasExplicitTarget) {
     errors.push(
       "MISSING_BUILD_TARGET: this build cannot tell which Supabase project it targets. " +
         "Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (plus VITE_ENVIRONMENT) in the Vercel project, " +
@@ -155,7 +174,7 @@ export function validateVercelBuildEnvironment(env = {}) {
   }
 
   // ---- Target A: an explicit Supabase project -------------------------------
-  if (!demoOptIn) {
+  if (!usesDemo) {
     if (!rawEnvironment) {
       errors.push(
         "MISSING_BUILD_ENVIRONMENT: VITE_ENVIRONMENT must be set explicitly on Vercel " +
@@ -255,6 +274,7 @@ export function validateVercelBuildEnvironment(env = {}) {
       environment: "staging",
       targetHost: hostnameOf(demo.url),
       centerId: demo.centerId,
+      demoReason: previewDemoFallback ? "vercel-preview" : "explicit-opt-in",
     },
   };
 }

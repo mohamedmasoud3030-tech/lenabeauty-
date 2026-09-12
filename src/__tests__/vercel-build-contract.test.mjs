@@ -151,6 +151,72 @@ describe("vercel build environment contract", () => {
     expect(result.resolved.VITE_CENTER_ID).toBeUndefined();
   });
 
+  /**
+   * Preview deployments, added after every branch push ended as a failed Vercel
+   * deployment with no preview to open: the Preview environment has no
+   * production credentials, and the guard correctly refused to guess a target.
+   * The rule now is narrow and explicit — a preview may fall back to the public
+   * Demo, and only a preview.
+   */
+  it("builds a Vercel preview against the public Demo instead of failing", () => {
+    const result = validateVercelBuildEnvironment({ VERCEL_ENV: "preview" });
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.summary).toMatchObject({ mode: "demo", demoReason: "vercel-preview" });
+    expect(result.warnings.join(" ")).toMatch(/PREVIEW_DEMO_TARGET/);
+    expect(result.resolved.VITE_SUPABASE_URL).toBe(loadDemoConstants().url);
+  });
+
+  it("keeps production fail-closed: no preview rule leaks into it", () => {
+    const result = validateVercelBuildEnvironment({ VERCEL_ENV: "production" });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toMatch(/MISSING_BUILD_TARGET/);
+  });
+
+  it("still refuses a target-less build outside Vercel", () => {
+    // No VERCEL_ENV at all: CI and local runs stay explicit.
+    const result = validateVercelBuildEnvironment({});
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toMatch(/MISSING_BUILD_TARGET/);
+  });
+
+  it("honours an explicit target in a preview, and says so", () => {
+    const result = validateVercelBuildEnvironment({
+      ...explicitTarget,
+      VITE_ENVIRONMENT: "staging",
+      VERCEL_ENV: "preview",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.summary).toMatchObject({ mode: "explicit", environment: "staging" });
+    expect(result.summary.demoReason).toBeUndefined();
+    expect(result.warnings.join(" ")).not.toMatch(/PREVIEW_DEMO_TARGET/);
+  });
+
+  it("treats the explicit Demo opt-in as its own reason, not the preview rule", () => {
+    const result = validateVercelBuildEnvironment({
+      VITE_USE_DEMO_CREDENTIALS: "true",
+      VERCEL_ENV: "production",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.summary).toMatchObject({ mode: "demo", demoReason: "explicit-opt-in" });
+  });
+
+  it("still refuses a production preview that would target the Demo", () => {
+    // A preview that declares itself production must not reach the Demo host.
+    const result = validateVercelBuildEnvironment({
+      VERCEL_ENV: "preview",
+      VITE_ENVIRONMENT: "production",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors.join(" ")).toMatch(/PRODUCTION_DEMO_PROJECT_FORBIDDEN/);
+  });
+
   it("detects the Demo host regardless of surrounding whitespace or case", () => {
     const demo = loadDemoConstants();
     expect(isDemoHost(demo.url)).toBe(true);
