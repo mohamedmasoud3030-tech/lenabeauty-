@@ -1048,7 +1048,7 @@
           "signature": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
           "security_definer": true,
           "search_path": [
-            "search_path=pg_catalog, public, app_private"
+            "search_path=public"
           ],
           "client_roles": [
             "anon",

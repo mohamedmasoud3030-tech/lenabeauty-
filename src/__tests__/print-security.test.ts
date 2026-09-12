@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../config/brand";
 import { describe, expect, it, vi } from "vitest";
 import printService, { escapePrintText, sanitizePrintHTML } from "../infrastructure/services/printService";
 import brandingService from "../infrastructure/services/brandingService";
@@ -105,7 +106,8 @@ describe("print HTML security", () => {
     try {
       withHostDocument("en", "ltr", () => {
         const before = printService.generatePrintHTML("<p>doc</p>");
-        expect(before).toContain("LaraBeauty");
+        // Unconfigured salon -> the product fallback, never an invented business.
+        expect(before).toContain(PRODUCT_NAME);
         expect(before).not.toContain("Updated Salon");
 
         // This is exactly what BrandingSettingsPage.persistSettings does after
@@ -119,7 +121,8 @@ describe("print HTML security", () => {
         const after = printService.generatePrintHTML("<p>doc</p>");
         expect(after).toContain(">Updated Salon</h1>");
         expect(after).toContain("--primary-color: #123456");
-        expect(after).not.toContain(">LaraBeauty</h1>");
+        // The saved salon name replaces the product fallback completely.
+        expect(after).not.toContain(`>${PRODUCT_NAME}</h1>`);
       });
     } finally {
       brandingService.resetToDefaults();

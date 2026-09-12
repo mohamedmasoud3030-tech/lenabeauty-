@@ -1,3 +1,4 @@
+import { formatOMRAmount } from "../../shared/money";
 import { Customer } from "../../domain/entities";
 import { getTierBySpend } from "../../domain/loyalty";
 import { RetentionStatus } from "../../domain/retention";
@@ -46,7 +47,7 @@ export function exportCustomersCSV(customers: Customer[], t: (k: string) => stri
   const rows = customers.map(c => [
     c.name,
     c.phone ?? '',
-    c.totalSpent.toFixed(3),
+    formatOMRAmount(c.totalSpent),
     c.loyaltyPoints,
     t(getTierBySpend(c.totalSpent).labelKey)
   ]);

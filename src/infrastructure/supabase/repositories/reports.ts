@@ -142,7 +142,7 @@ export class SupabaseReportAdapter implements ReportRepository {
       const client = getSupabaseClient();
       const { data, error } = await client
         .from('products')
-        .select('id, name, cost, price, stock_quantity')
+        .select('id, name, cost, price, stock_quantity, reorder_level')
         .eq('center_id', centerRes.data)
         .order('name', { ascending: true });
 
@@ -153,7 +153,8 @@ export class SupabaseReportAdapter implements ReportRepository {
         name: d.name,
         cost: Number(d.cost) || 0,
         price: Number(d.price) || 0,
-        stockQuantity: Number(d.stock_quantity) || 0
+        stockQuantity: Number(d.stock_quantity) || 0,
+        reorderLevel: d.reorder_level === null || d.reorder_level === undefined ? undefined : Number(d.reorder_level)
       }));
 
       return { ok: true, data: rows };

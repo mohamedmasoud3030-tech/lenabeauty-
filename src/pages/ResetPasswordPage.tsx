@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../config/brand";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -77,7 +78,7 @@ export default function ResetPasswordPage() {
 
       <section className="relative z-10 w-full max-w-sm rounded-3xl border border-border bg-card/95 p-6 shadow-2xl shadow-primary/10 backdrop-blur-xl sm:p-8">
         <div className="mb-5 h-14 w-14">
-          <img src="/lena-mark.svg" alt="Lara Beauty" className="h-full w-full" />
+          <img src="/lena-mark.svg" alt={PRODUCT_NAME} className="h-full w-full" />
         </div>
         <h1 id="reset-title" className="text-2xl font-bold tracking-tight text-foreground">
           {t("Choose a new password")}

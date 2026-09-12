@@ -122,6 +122,10 @@
     },
     {
       "schema": "public",
+      "name": "public_request_throttle"
+    },
+    {
+      "schema": "public",
       "name": "service_categories"
     },
     {
@@ -3536,6 +3540,56 @@
     },
     {
       "schema": "public",
+      "table": "public_request_throttle",
+      "name": "center_id",
+      "type": "uuid",
+      "udt": "uuid",
+      "nullable": "NO",
+      "default": null,
+      "position": 1
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "action",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 2
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "subject",
+      "type": "text",
+      "udt": "text",
+      "nullable": "NO",
+      "default": null,
+      "position": 3
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "window_start",
+      "type": "timestamp with time zone",
+      "udt": "timestamptz",
+      "nullable": "NO",
+      "default": null,
+      "position": 4
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "hits",
+      "type": "integer",
+      "udt": "int4",
+      "nullable": "NO",
+      "default": "0",
+      "position": 5
+    },
+    {
+      "schema": "public",
       "table": "service_categories",
       "name": "id",
       "type": "uuid",
@@ -6564,6 +6618,48 @@
     },
     {
       "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_action_not_null",
+      "type": "n",
+      "definition": "NOT NULL action"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_center_id_not_null",
+      "type": "n",
+      "definition": "NOT NULL center_id"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_hits_not_null",
+      "type": "n",
+      "definition": "NOT NULL hits"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_pkey",
+      "type": "p",
+      "definition": "PRIMARY KEY (center_id, action, subject, window_start)"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_subject_not_null",
+      "type": "n",
+      "definition": "NOT NULL subject"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_window_start_not_null",
+      "type": "n",
+      "definition": "NOT NULL window_start"
+    },
+    {
+      "schema": "public",
       "table": "service_categories",
       "name": "service_categories_center_id_not_null",
       "type": "n",
@@ -7667,6 +7763,14 @@
     },
     {
       "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_center_id_fkey",
+      "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
+      "ref_schema": "public",
+      "ref_table": "centers"
+    },
+    {
+      "schema": "public",
       "table": "service_categories",
       "name": "service_categories_center_id_fkey",
       "definition": "FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE",
@@ -8098,6 +8202,15 @@
       "primary": false,
       "method": "btree",
       "definition": "CREATE INDEX idx_customers_center ON public.customers USING btree (center_id)"
+    },
+    {
+      "schema": "public",
+      "table": "customers",
+      "name": "idx_customers_center_phone",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_customers_center_phone ON public.customers USING btree (center_id, phone)"
     },
     {
       "schema": "public",
@@ -8633,6 +8746,15 @@
     {
       "schema": "public",
       "table": "products",
+      "name": "idx_products_center_name",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_products_center_name ON public.products USING btree (center_id, name)"
+    },
+    {
+      "schema": "public",
+      "table": "products",
       "name": "idx_products_stock",
       "unique": false,
       "primary": false,
@@ -8656,6 +8778,24 @@
       "primary": true,
       "method": "btree",
       "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "idx_public_request_throttle_window",
+      "unique": false,
+      "primary": false,
+      "method": "btree",
+      "definition": "CREATE INDEX idx_public_request_throttle_window ON public.public_request_throttle USING btree (window_start)"
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
+      "name": "public_request_throttle_pkey",
+      "unique": true,
+      "primary": true,
+      "method": "btree",
+      "definition": "CREATE UNIQUE INDEX public_request_throttle_pkey ON public.public_request_throttle USING btree (center_id, action, subject, window_start)"
     },
     {
       "schema": "public",
@@ -9197,6 +9337,19 @@
     },
     {
       "schema": "app_private",
+      "name": "throttle_public_action",
+      "identity_args": "p_center_id uuid, p_action text, p_subject text, p_limit integer, p_window interval",
+      "result": "void",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "void",
+      "config": [
+        "search_path=pg_catalog, public, app_private"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION app_private.throttle_public_action(p_center_id uuid, p_action text, p_subject text, p_limit integer, p_window interval)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n  v_window_start TIMESTAMPTZ;\n  v_hits         INTEGER;\nBEGIN\n  IF p_center_id IS NULL OR p_limit IS NULL OR p_limit < 1 OR p_window IS NULL THEN\n    RETURN;  -- misconfiguration must never block a real booking\n  END IF;\n\n  -- Buckets are anchored to the clock at their first hit, so a caller cannot\n  -- reset its own allowance by waiting for a calendar boundary.\n  v_window_start := to_timestamp(\n    floor(extract(epoch FROM now()) / extract(epoch FROM p_window)) * extract(epoch FROM p_window)\n  );\n\n  INSERT INTO public.public_request_throttle (center_id, action, subject, window_start, hits)\n  VALUES (p_center_id, p_action, COALESCE(NULLIF(btrim(COALESCE(p_subject, '')), ''), '-'), v_window_start, 1)\n  ON CONFLICT (center_id, action, subject, window_start)\n  DO UPDATE SET hits = public.public_request_throttle.hits + 1\n  RETURNING hits INTO v_hits;\n\n  -- Opportunistic sweep: keep the table small without a scheduled job. Bounded\n  -- by the index above, and cheap enough to run on a write path.\n  DELETE FROM public.public_request_throttle\n  WHERE window_start < now() - INTERVAL '1 day';\n\n  IF v_hits > p_limit THEN\n    RAISE EXCEPTION 'rate_limited' USING ERRCODE = '42900';\n  END IF;\nEND;\n$function$\n"
+    },
+    {
+      "schema": "app_private",
       "name": "tier_discount_percent",
       "identity_args": "_total_spent numeric",
       "result": "numeric",
@@ -9633,9 +9786,9 @@
       "volatility": "v",
       "return_type": "jsonb",
       "config": [
-        "search_path=pg_catalog, public, app_private"
+        "search_path=public"
       ],
-      "definition": "CREATE OR REPLACE FUNCTION public.public_create_booking_v1(p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'public', 'app_private'\nAS $function$\nDECLARE\n    v_customer_id  UUID;\n    v_appt_id      UUID;\n    v_clean_name   TEXT := NULLIF(btrim(COALESCE(p_customer_name, '')), '');\n    v_clean_phone  TEXT := NULLIF(btrim(COALESCE(p_customer_phone, '')), '');\nBEGIN\n    -- Basic validation\n    IF p_center_id IS NULL OR p_service_id IS NULL OR p_date_time IS NULL THEN\n        RAISE EXCEPTION 'Missing required booking fields' USING ERRCODE = '22023';\n    END IF;\n    IF v_clean_name IS NULL OR v_clean_phone IS NULL THEN\n        RAISE EXCEPTION 'Name and phone are required' USING ERRCODE = '22023';\n    END IF;\n    IF length(v_clean_phone) < 6 OR length(v_clean_phone) > 20 THEN\n        RAISE EXCEPTION 'Invalid phone number' USING ERRCODE = '22023';\n    END IF;\n    IF p_date_time < now() THEN\n        RAISE EXCEPTION 'Cannot book a time in the past' USING ERRCODE = '22023';\n    END IF;\n\n    -- Service must exist, belong to the center, and be active\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_service_id AND s.center_id = p_center_id AND s.is_active = true;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Service is not available' USING ERRCODE = '23503';\n    END IF;\n\n    -- Optional employee must belong to the center and be active\n    IF p_employee_id IS NOT NULL THEN\n        PERFORM 1 FROM public.employees e\n        WHERE e.id = p_employee_id AND e.center_id = p_center_id AND e.is_active = true;\n        IF NOT FOUND THEN\n            RAISE EXCEPTION 'Selected staff is not available' USING ERRCODE = '23503';\n        END IF;\n    END IF;\n\n    -- Prevent double-booking the same staff at the same time\n    IF p_employee_id IS NOT NULL THEN\n        PERFORM 1 FROM public.appointments a\n        WHERE a.center_id = p_center_id\n          AND a.employee_id = p_employee_id\n          AND a.status = 'SCHEDULED'\n          AND a.date_time = p_date_time;\n        IF FOUND THEN\n            RAISE EXCEPTION 'This time slot is no longer available' USING ERRCODE = '23505';\n        END IF;\n    END IF;\n\n    -- Find existing customer by phone within the center, else create one\n    SELECT c.id INTO v_customer_id\n    FROM public.customers c\n    WHERE c.center_id = p_center_id AND c.phone = v_clean_phone\n    LIMIT 1;\n\n    IF v_customer_id IS NULL THEN\n        INSERT INTO public.customers (center_id, name, phone)\n        VALUES (p_center_id, v_clean_name, v_clean_phone)\n        RETURNING id INTO v_customer_id;\n    END IF;\n\n    -- Create the appointment\n    INSERT INTO public.appointments (center_id, customer_id, employee_id, service_id, date_time, status, notes)\n    VALUES (p_center_id, v_customer_id, p_employee_id, p_service_id, p_date_time, 'SCHEDULED', NULLIF(btrim(COALESCE(p_notes,'')), ''))\n    RETURNING id INTO v_appt_id;\n\n    RETURN jsonb_build_object(\n        'appointment_id', v_appt_id,\n        'customer_id',    v_customer_id,\n        'status',         'SCHEDULED'\n    );\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.public_create_booking_v1(p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n    v_customer_id  UUID;\n    v_appt_id      UUID;\n    v_clean_name   TEXT := NULLIF(btrim(COALESCE(p_customer_name, '')), '');\n    v_clean_phone  TEXT := NULLIF(btrim(COALESCE(p_customer_phone, '')), '');\nBEGIN\n    -- Basic validation\n    IF p_center_id IS NULL OR p_service_id IS NULL OR p_date_time IS NULL THEN\n        RAISE EXCEPTION 'Missing required booking fields' USING ERRCODE = '22023';\n    END IF;\n    IF v_clean_name IS NULL OR v_clean_phone IS NULL THEN\n        RAISE EXCEPTION 'Name and phone are required' USING ERRCODE = '22023';\n    END IF;\n    IF length(v_clean_phone) < 6 OR length(v_clean_phone) > 20 THEN\n        RAISE EXCEPTION 'Invalid phone number' USING ERRCODE = '22023';\n    END IF;\n    IF p_date_time < now() THEN\n        RAISE EXCEPTION 'Cannot book a time in the past' USING ERRCODE = '22023';\n    END IF;\n\n    -- Service must exist, belong to the center, and be active\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_service_id AND s.center_id = p_center_id AND s.is_active = true;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Service is not available' USING ERRCODE = '23503';\n    END IF;\n\n    -- The appointments trigger (20260810000002) requires a staff member on every\n    -- appointment, so the \"optional employee\" this function used to describe was\n    -- fiction: omitting one reached the visitor as the trigger's own name,\n    -- `appointment_customer_service_staff_time_required`. The booking page always\n    -- sends the specialist the client chose, so nothing that works today changes;\n    -- what changes is that a scripted caller gets the salon's words, not ours.\n    IF p_employee_id IS NULL THEN\n        RAISE EXCEPTION 'Selected staff is not available' USING ERRCODE = '23503';\n    END IF;\n\n    PERFORM 1 FROM public.employees e\n    WHERE e.id = p_employee_id AND e.center_id = p_center_id AND e.is_active = true;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Selected staff is not available' USING ERRCODE = '23503';\n    END IF;\n\n    -- Abuse protection. Counted here — after validation, before the writes —\n    -- because a counter write is only observable when the surrounding call\n    -- commits: see the note on refused attempts at the top of this file. Keeping\n    -- it after validation also stops a mistyped form from consuming a client's\n    -- allowance, and stops a bogus center id from reaching the counter table's\n    -- foreign key, whose message would name an internal table to a stranger.\n    PERFORM app_private.throttle_public_action(p_center_id, 'booking', v_clean_phone, 5, INTERVAL '1 hour');\n    PERFORM app_private.throttle_public_action(p_center_id, 'booking', 'center', 120, INTERVAL '1 hour');\n\n    -- Prevent double-booking the same staff at the same time\n    PERFORM 1 FROM public.appointments a\n    WHERE a.center_id = p_center_id\n      AND a.employee_id = p_employee_id\n      AND a.status = 'SCHEDULED'\n      AND a.date_time = p_date_time;\n    IF FOUND THEN\n        RAISE EXCEPTION 'This time slot is no longer available' USING ERRCODE = '23505';\n    END IF;\n\n    -- Find existing customer by phone within the center, else create one\n    SELECT c.id INTO v_customer_id\n    FROM public.customers c\n    WHERE c.center_id = p_center_id AND c.phone = v_clean_phone\n    LIMIT 1;\n\n    IF v_customer_id IS NULL THEN\n        INSERT INTO public.customers (center_id, name, phone)\n        VALUES (p_center_id, v_clean_name, v_clean_phone)\n        RETURNING id INTO v_customer_id;\n    END IF;\n\n    -- Create the appointment\n    INSERT INTO public.appointments (center_id, customer_id, employee_id, service_id, date_time, status, notes)\n    VALUES (p_center_id, v_customer_id, p_employee_id, p_service_id, p_date_time, 'SCHEDULED', NULLIF(btrim(COALESCE(p_notes,'')), ''))\n    RETURNING id INTO v_appt_id;\n\n    RETURN jsonb_build_object(\n        'appointment_id', v_appt_id,\n        'customer_id',    v_customer_id,\n        'status',         'SCHEDULED'\n    );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -9988,6 +10141,13 @@
       "schema": "app_private",
       "name": "storage_path_center_id",
       "identity_args": "p_path text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "app_private",
+      "name": "throttle_public_action",
+      "identity_args": "p_center_id uuid, p_action text, p_subject text, p_limit integer, p_window interval",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -14854,6 +15014,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_customers_center_phone",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_customers_center_portal_token",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -16870,6 +17086,62 @@
     {
       "kind": "relation",
       "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_products_center_name",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
       "object": "idx_products_stock",
       "grantee": "postgres",
       "privilege": "DELETE"
@@ -16920,6 +17192,62 @@
       "kind": "relation",
       "schema": "public",
       "object": "idx_products_stock",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "idx_public_request_throttle_window",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -19209,6 +19537,118 @@
       "kind": "relation",
       "schema": "public",
       "object": "profiles_pkey",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle",
+      "grantee": "postgres",
+      "privilege": "UPDATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "DELETE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "INSERT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "MAINTAIN"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "REFERENCES"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "SELECT"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "TRIGGER"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
+      "grantee": "postgres",
+      "privilege": "TRUNCATE"
+    },
+    {
+      "kind": "relation",
+      "schema": "public",
+      "object": "public_request_throttle_pkey",
       "grantee": "postgres",
       "privilege": "UPDATE"
     },
@@ -20524,6 +20964,13 @@
     {
       "kind": "routine",
       "schema": "app_private",
+      "object": "throttle_public_action",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "app_private",
       "object": "tier_discount_percent",
       "grantee": "postgres",
       "privilege": "EXECUTE"
@@ -21435,6 +21882,12 @@
     {
       "schema": "public",
       "table": "profiles",
+      "rls_enabled": true,
+      "rls_forced": false
+    },
+    {
+      "schema": "public",
+      "table": "public_request_throttle",
       "rls_enabled": true,
       "rls_forced": false
     },

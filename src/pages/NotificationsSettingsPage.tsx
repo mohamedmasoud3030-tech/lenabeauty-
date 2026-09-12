@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../config/brand";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, MessageCircle, Settings2, Save, Clock3, CheckCircle2 } from "lucide-react";
@@ -216,7 +217,7 @@ export default function NotificationsSettingsPage({ embedded = false }: { embedd
                 className="min-h-11 w-full rounded-xl border border-input bg-background px-4 py-3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
                 value={form.whatsappSenderName}
                 onChange={(event) => update("whatsappSenderName", event.target.value)}
-                placeholder="LaraBeauty"
+                placeholder={PRODUCT_NAME}
               />
             </label>
 

@@ -7,6 +7,34 @@ export const arBooking = {
   // — Public booking page —
   "Loading booking options...": "جاري تحميل خيارات الحجز...",
   "Booking is unavailable right now": "الحجز غير متاح حاليًا",
+  "Could not sign in. Please check your phone number and portal code.": "تعذّر تسجيل الدخول. يُرجى التحقق من رقم الهاتف ورمز البوابة.",
+  "The request could not be completed. Please try again.": "تعذّر إتمام الطلب. يُرجى المحاولة مرة أخرى.",
+  "We could not find this appointment. Please contact the salon.": "تعذّر العثور على هذا الموعد. يُرجى التواصل مع الصالون.",
+  "Invalid portal credentials": "بيانات الدخول إلى البوابة غير صحيحة",
+  "Account temporarily locked. Try again later.": "الحساب مقفل مؤقتًا. يُرجى المحاولة لاحقًا.",
+  // Messages public_create_booking_v1 raises directly. They reach the client
+  // mid-flow (a service withdrawn, or a slot taken between load and submit), so
+  // they must render in the client's language rather than in English.
+  "Service is not available": "الخدمة غير متاحة حاليًا",
+  "Selected staff is not available": "الأخصائية المختارة غير متاحة حاليًا",
+  "Cannot book a time in the past": "لا يمكن الحجز في وقت ماضٍ",
+  "Missing required booking fields": "بيانات الحجز غير مكتملة",
+  "Name and phone are required": "الاسم ورقم الهاتف مطلوبان",
+  "Invalid phone number": "رقم الهاتف غير صحيح",
+  "Missing center id": "معرّف المركز مفقود",
+  "You do not have permission to do that.": "لا تملكين صلاحية تنفيذ هذا الإجراء.",
+  "This client does not belong to this salon.": "هذه العميلة لا تنتمي إلى هذا الصالون.",
+  "This appointment does not belong to this salon.": "هذا الموعد لا ينتمي إلى هذا الصالون.",
+  "This service does not belong to this salon.": "هذه الخدمة لا تنتمي إلى هذا الصالون.",
+  "Only an administrator can do that.": "هذا الإجراء متاح لمديرة النظام فقط.",
+  "This appointment can no longer be cancelled.": "لم يعد بالإمكان إلغاء هذا الموعد.",
+  "A past or started appointment cannot be cancelled.": "لا يمكن إلغاء موعد ماضٍ أو بدأ بالفعل.",
+  "This appointment can no longer be rescheduled.": "لم يعد بالإمكان إعادة جدولة هذا الموعد.",
+  "A past or started appointment cannot be rescheduled.": "لا يمكن إعادة جدولة موعد ماضٍ أو بدأ بالفعل.",
+  "Please choose a time in the future.": "يُرجى اختيار وقت في المستقبل.",
+  "The selected specialist is not available for that time.": "الأخصائية المختارة غير متاحة في هذا الوقت.",
+  "This time slot is no longer available": "هذا الوقت لم يعد متاحًا",
+  "Too many attempts. Please try again in a little while.": "محاولات كثيرة في وقت قصير. يُرجى المحاولة بعد قليل.",
   "This booking link is not configured. Please contact the salon.": "رابط الحجز غير مُهيأ. يُرجى التواصل مع الصالون.",
   "This portal link is not configured. Please contact the salon.": "رابط البوابة غير مُهيأ. يُرجى التواصل مع الصالون.",
   "No services are published for booking yet": "لا توجد خدمات متاحة للحجز بعد",
@@ -39,7 +67,7 @@ export const arBooking = {
   "No visits recorded yet": "لا توجد زيارات مسجلة بعد",
   "Past appointments": "المواعيد السابقة",
   "Exit Portal": "الخروج من البوابة",
-  "Powered by Lara Beauty": "بتقنية Lara Beauty",
+  "Powered by": "بتقنية",
 
   // — Settings → Online Booking —
   "Your public booking link and client portal": "رابط الحجز العام وبوابة العميل",

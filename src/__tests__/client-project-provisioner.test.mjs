@@ -97,7 +97,12 @@ describe("client project provisioner — migration discovery", () => {
     const files = discoverMigrations(path.join(root, "supabase/migrations"));
     expect(files.length).toBeGreaterThan(40);
     expect(files[0]).toBe("20260623000001_initial_schema.sql");
-    expect(files.at(-1)).toMatch(/^20260912110000_public_booking_release\.sql$/);
+    // The head of the chain moves every time a migration is added, so this pins
+    // membership rather than a filename: the release migration the operator has
+    // to apply must ship inside the provisioner's chain, and the ordering
+    // assertion below proves the discovery stays sorted.
+    expect(files).toContain("20260912110000_public_booking_release.sql");
+    expect(files).toContain("20260913100000_public_booking_throttle.sql");
     const sorted = [...files].sort();
     expect(files).toEqual(sorted);
   });

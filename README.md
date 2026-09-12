@@ -45,8 +45,8 @@ See `.env.example`. Locally these live in `.env`; deployed client variables belo
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key; modern secret keys and legacy `service_role` JWTs are rejected |
 | `VITE_CENTER_ID` | Active center UUID |
 | `VITE_BRANCH_MODE` | `single` or `multi` |
-| `VITE_ENVIRONMENT` | Optional: `development` \| `staging` \| `production` |
-| `VITE_USE_DEMO_CREDENTIALS` | Optional local-development escape hatch only; ignored for Production and must never cause a Production fallback to Demo |
+| `VITE_ENVIRONMENT` | Optional at runtime: `development` \| `staging` \| `production`. **Required for a Vercel build** — `scripts/vercel-build.mjs` refuses to guess it |
+| `VITE_USE_DEMO_CREDENTIALS` | Optional local-development escape hatch only; ignored for Production and must never cause a Production fallback to Demo. On Vercel it is the **only** way to build the public Demo deployment |
 | `PRODUCTION_SUPABASE_PROJECT_REF` | Server/operator-only Production target binding consumed by `launch:preflight`; never a `VITE_*` secret channel |
 
 ## Supabase setup

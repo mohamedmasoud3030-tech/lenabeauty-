@@ -16,19 +16,19 @@ import { motion } from "motion/react";
 import { SalonLogo } from "../../shared/components/LazyImage";
 import { persistLanguage, persistTheme } from "../../preferences";
 import { useOptionalModules } from "../../shared/hooks/useOptionalModules";
+import { useSalonIdentity } from "../../shared/hooks/useSalonIdentity";
 import { NAV_GROUPS, visibleDestinations, type NavDestination } from "../../app/navigation";
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { me, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const [isDark, setIsDark] = useState(true);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const optionalModules = useOptionalModules();
+  // Salon name + logo come from Settings; the product mark is only the fallback.
+  const salon = useSalonIdentity();
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
-    const stored = localStorage.getItem("lenabeauty_logo");
-    if (stored) setLogoUrl(stored);
   }, []);
 
   const navGroups = useMemo(() => {
@@ -74,15 +74,15 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
       <div className="relative z-10 flex h-20 flex-col justify-center border-b border-border px-4 sm:px-6">
         <div className="flex items-center gap-3">
-          {logoUrl ? (
-            <SalonLogo logoUrl={logoUrl} salonName="Lara Beauty" size="md" />
+          {salon.logoUrl ? (
+            <SalonLogo logoUrl={salon.logoUrl} salonName={salon.name} size="md" />
           ) : (
             <div className="h-10 w-10 flex-shrink-0">
-              <img src="/lena-mark.svg" alt="Lara Beauty" className="h-full w-full" />
+              <img src="/lena-mark.svg" alt={salon.name} className="h-full w-full" />
             </div>
           )}
           <div className="flex min-w-0 flex-col">
-            <span className="text-base font-bold leading-none tracking-tight text-foreground">Lara Beauty</span>
+            <span className="truncate text-base font-bold leading-none tracking-tight text-foreground">{salon.name}</span>
             <span className="mt-1 text-xs font-bold uppercase tracking-wide text-primary">
               {t("Salon operations")}
             </span>

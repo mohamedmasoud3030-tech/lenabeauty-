@@ -70,11 +70,14 @@ describe("thermal invoice print layout", () => {
     expect(document.querySelector("#invoice-print-container")).toHaveAttribute("dir", "rtl");
   });
 
-  it("keeps the center identity and adds a separate Lena product signature at the bottom", () => {
+  it("signs the receipt with the salon's own identity, not a hard-coded product name", () => {
     render(<InvoicePrintLayout data={receipt} />);
-    const signature = screen.getByLabelText("Lara Beauty");
-    expect(signature).toHaveTextContent("LARA · BEAUTY");
-    expect(signature.querySelector('img[src="/lena-mark.svg"]')).not.toBeNull();
+
+    // The salon issuing the receipt owns the signature. The product mark is
+    // only the fallback, so a salon with its own name/logo never sees another
+    // business's identity on its own receipt.
+    const signature = screen.getByLabelText("لينا بيوتي");
+    expect(signature).toHaveTextContent("لينا بيوتي");
     expect(screen.getAllByText("لينا بيوتي").length).toBeGreaterThan(0);
   });
 

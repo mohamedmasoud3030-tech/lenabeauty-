@@ -1,5 +1,4 @@
 export const enCommonCore = {
-  "LenaBeauty": "Lara Beauty",
   "Home": "Home",
   "Menu": "Menu",
   "Open menu": "Open menu",

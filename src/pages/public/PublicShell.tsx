@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "../../config/brand";
 import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -75,7 +76,9 @@ export function PublicShell({
       </header>
       <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
       <footer className="mx-auto max-w-2xl px-4 pb-8 pt-2 text-center">
-        <p className="text-[11px] font-medium text-muted-foreground/70">{t("Powered by Lara Beauty")}</p>
+        <p className="text-[11px] font-medium text-muted-foreground/70">
+          {t("Powered by")} {PRODUCT_NAME}
+        </p>
       </footer>
     </div>
   );

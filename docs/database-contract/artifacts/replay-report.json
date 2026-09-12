@@ -2,8 +2,8 @@
   "engine": "PGlite",
   "postgres": "PostgreSQL 18.3 (PGlite 0.5.5) on wasm32-unknown-linux-gnu, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.74 (1092ec30a3fb1d46b1782ff1b4db5094d3d06ae5), 32-bit",
   "discovered": {
-    "total": 46,
-    "automated": 45,
+    "total": 48,
+    "automated": 47,
     "manual_bootstrap_excluded": 1,
     "manual_bootstrap_file": "20260628000002_admin_bootstrap.sql"
   },
@@ -230,6 +230,16 @@
     },
     {
       "file": "20260912110000_public_booking_release.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260913100000_public_booking_throttle.sql",
+      "status": "ok",
+      "error": null
+    },
+    {
+      "file": "20260913110000_hot_path_indexes.sql",
       "status": "ok",
       "error": null
     }
@@ -459,6 +469,16 @@
       "file": "20260912110000_public_booking_release.sql",
       "status": "idempotent",
       "error": null
+    },
+    {
+      "file": "20260913100000_public_booking_throttle.sql",
+      "status": "idempotent",
+      "error": null
+    },
+    {
+      "file": "20260913110000_hot_path_indexes.sql",
+      "status": "idempotent",
+      "error": null
     }
   ],
   "translations": [
@@ -479,8 +499,8 @@
     }
   ],
   "fingerprints": {
-    "after_first_replay": "bdc5b62b81acb58bc4e32d8b330f32aac62ccdd73ad4877107187d0115861489",
-    "after_repeat": "bdc5b62b81acb58bc4e32d8b330f32aac62ccdd73ad4877107187d0115861489",
+    "after_first_replay": "b480b4b3b22f7827fda7f095773ed56fecbf6aa77ba0c7b88f8a672a1d0f4b04",
+    "after_repeat": "b480b4b3b22f7827fda7f095773ed56fecbf6aa77ba0c7b88f8a672a1d0f4b04",
     "identical": true,
     "diff": {
       "changed_sections": [],

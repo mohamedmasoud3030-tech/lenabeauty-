@@ -7,6 +7,8 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../auth";
 import { NAV_GROUPS, visibleDestinations } from "../../app/navigation";
 import { useOptionalModules } from "../../shared/hooks/useOptionalModules";
+import { useSalonIdentity } from "../../shared/hooks/useSalonIdentity";
+import { SalonLogo } from "../../shared/components/LazyImage";
 
 interface MobileNavigationSheetProps {
   open: boolean;
@@ -17,6 +19,7 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
   const { me } = useAuth();
   const { t } = useTranslation();
   const optionalModules = useOptionalModules();
+  const salon = useSalonIdentity();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const groups = useMemo(() => {
@@ -75,9 +78,13 @@ export function MobileNavigationSheet({ open, onClose }: MobileNavigationSheetPr
 
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
               <div className="flex min-w-0 items-center gap-2.5">
-                <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
+                {salon.logoUrl ? (
+                  <SalonLogo logoUrl={salon.logoUrl} salonName={salon.name} size="sm" />
+                ) : (
+                  <img src="/lena-mark.svg" alt="" aria-hidden="true" className="h-8 w-8 shrink-0" />
+                )}
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold text-foreground">Lara Beauty</p>
+                  <p className="truncate text-sm font-extrabold text-foreground">{salon.name}</p>
                   <p className="text-[11px] font-bold text-muted-foreground">{t("Primary navigation")}</p>
                 </div>
               </div>

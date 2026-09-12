@@ -236,10 +236,15 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, paperSize =
           <p className="text-[7px] opacity-50">{footerText}</p>
         </div>
 
-        {/* Product signature — deliberately separate from the center's own logo. */}
-        <div className="lena-receipt-signature" aria-label="Lara Beauty">
-          <img src="/lena-mark.svg" alt="" aria-hidden="true" />
-          <span>LARA · BEAUTY</span>
+        {/* Signature: the salon's own mark once it has one, otherwise the
+            product mark. The salon is the party issuing this receipt, so its
+            identity wins here; the developer attribution stays in the footer
+            text above instead. */}
+        <div className="lena-receipt-signature" aria-label={salonName}>
+          {receiptLogo
+            ? <img src={receiptLogo} alt="" aria-hidden="true" />
+            : <img src="/lena-mark.svg" alt="" aria-hidden="true" />}
+          <span>{salonName.toLocaleUpperCase()}</span>
         </div>
 
         {/* Print Styles */}

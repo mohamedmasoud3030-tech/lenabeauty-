@@ -21,6 +21,7 @@ import {
   requiredText, nonNegativeNumber, positiveNumber, nonNegativeInteger, collectIssues, issuesToMap
 } from "../domain/validation";
 import { ListState } from "../shared/components/ListState";
+import { isLowStock } from "../domain/inventory";
 import { PageHeader } from "../shared/components/PageHeader";
 import { formatOMRAmount } from "../shared/money";
 import { exportToCSV } from "./inventory/helpers";
@@ -38,7 +39,6 @@ export default function InventoryPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-  const [lowStockThreshold] = useState(5);
   const [name, setName] = useState("");
   const [stockQuantity, setStockQuantity] = useState("0");
   const [reorderLevel, setReorderLevel] = useState("0");
@@ -74,13 +74,13 @@ export default function InventoryPage() {
     let result = rows;
     const text = q.trim().toLowerCase();
     if (text) result = result.filter((p) => p.name.toLowerCase().includes(text));
-    if (showLowStockOnly) result = result.filter((p) => p.isActive && p.trackInventory && p.stockQuantity < (p.reorderLevel ?? lowStockThreshold));
+    if (showLowStockOnly) result = result.filter(isLowStock);
     return result;
-  }, [rows, q, showLowStockOnly, lowStockThreshold]);
+  }, [rows, q, showLowStockOnly]);
 
   const stats = useMemo(() => {
     const totalItems = rows.length;
-    const lowStock = rows.filter(p => p.isActive && p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5)).length;
+    const lowStock = rows.filter(isLowStock).length;
     const totalValue = rows.filter((p) => p.trackInventory).reduce((acc, p) => acc + (p.stockQuantity * p.cost), 0);
     return { totalItems, lowStock, totalValue };
   }, [rows]);
@@ -310,7 +310,7 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-border/50">
               <AnimatePresence mode="popLayout">
                 {filtered.map((p, idx) => {
-                  const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
+                  const low = isLowStock(p);
                   return (
                     <motion.tr
                       layout
@@ -406,7 +406,7 @@ export default function InventoryPage() {
         <div className="lg:hidden grid grid-cols-2 gap-2.5 p-2.5">
           <AnimatePresence mode="popLayout">
             {filtered.map((p, idx) => {
-              const low = p.trackInventory && p.stockQuantity < (p.reorderLevel ?? 5);
+              const low = isLowStock(p);
               return (
                 <motion.div
                   layout

@@ -6,6 +6,7 @@
  * - معالجة أخطاء التحميل
  */
 import React, { useState } from "react";
+import { PRODUCT_NAME } from "../../config/brand";
 import { clsx } from "clsx";
 import { getInitials } from "../displayName";
 import { useInView } from "../hooks/useInView";
@@ -140,7 +141,7 @@ interface SalonLogoProps {
 
 export const SalonLogo: React.FC<SalonLogoProps> = ({
   logoUrl,
-  salonName = "LaraBeauty",
+  salonName = PRODUCT_NAME,
   size = "md",
   className = "",
 }) => {

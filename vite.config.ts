@@ -1,8 +1,13 @@
+import { appName, PRODUCT_DESCRIPTION_AR as PRODUCT_DESCRIPTION } from "./src/config/brand";
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// Single source of truth for the fixed product identity.
+const APP_NAME = appName();
+const PRODUCT_DESCRIPTION_AR = PRODUCT_DESCRIPTION;
 
 export default defineConfig(({mode}) => {
   return {
@@ -30,9 +35,12 @@ export default defineConfig(({mode}) => {
           ],
         },
         manifest: {
-          name: 'Lara Beauty - إدارة مركز التجميل',
-          short_name: 'Lara Beauty',
-          description: 'نظام إدارة مركز التجميل - Lara Beauty',
+          // Static build output: the installed app name cannot follow a runtime
+          // setting, so an operator may brand it per client with VITE_APP_NAME.
+          // Without it the fixed product name is used.
+          name: `${APP_NAME} - ${PRODUCT_DESCRIPTION_AR}`,
+          short_name: APP_NAME,
+          description: `${PRODUCT_DESCRIPTION_AR} - ${APP_NAME}`,
           theme_color: '#8B5CF6',
           background_color: '#FCFAFF',
           display: 'standalone',

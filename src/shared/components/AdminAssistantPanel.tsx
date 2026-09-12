@@ -1,3 +1,4 @@
+import { useSalonIdentity } from "../../shared/hooks/useSalonIdentity";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Mic, PhoneOff, Send, Sparkles, X } from "lucide-react";
@@ -96,11 +97,14 @@ export function AdminAssistantPanel({ open, onClose }: { open: boolean; onClose:
   const active = apiKey.length > 0;
   const liveOn = liveStatus !== "idle";
   const isArabic = i18n.language === "ar";
+  const salon = useSalonIdentity();
+  // The assistant serves THIS salon, so it is introduced with the salon's own
+  // name; the product name is only the fallback before the salon is configured.
   const systemInstruction = useMemo(
     () => (isArabic
-      ? "أنت مساعدة تشغيل لمديرة مركز تجميل Lara Beauty. أجيبي بالعربية بوضوح واختصار، ووجّهي إلى الشاشات الموجودة: المواعيد، نقطة البيع، العملاء، الخدمات، المخزون، الموظفون، التقارير، الإعدادات. لا تحجزي مواعيد، لا تغيّري سجلات، لا تقرئي ملفات العميلات، ولا تدّعي أنك نفّذت إجراءً في التطبيق. إذا طُلب ذلك، وضّحي أن المديرة تنفّذه من شاشات التطبيق."
-      : "You are the Lara Beauty admin assistant for a beauty-center manager. Answer clearly and briefly. Point to existing screens: Appointments, Point of Sale, Customers, Services, Inventory, Employees, Reports, Settings. You cannot book appointments, change records, read customer files, or claim you performed an action in the app. If asked to do those, say the manager must do it on the app screens."),
-    [isArabic],
+      ? `أنت مساعدة تشغيل لمديرة مركز تجميل ${salon.name}. أجيبي بالعربية بوضوح واختصار، ووجّهي إلى الشاشات الموجودة: المواعيد، نقطة البيع، العملاء، الخدمات، المخزون، الموظفون، التقارير، الإعدادات. لا تحجزي مواعيد، لا تغيّري سجلات، لا تقرئي ملفات العميلات، ولا تدّعي أنك نفّذت إجراءً في التطبيق. إذا طُلب ذلك، وضّحي أن المديرة تنفّذه من شاشات التطبيق.`
+      : `You are the ${salon.name} admin assistant for a beauty-center manager. Answer clearly and briefly. Point to existing screens: Appointments, Point of Sale, Customers, Services, Inventory, Employees, Reports, Settings. You cannot book appointments, change records, read customer files, or claim you performed an action in the app. If asked to do those, say the manager must do it on the app screens.`),
+    [isArabic, salon.name],
   );
 
   function stopLive() {

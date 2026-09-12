@@ -112,10 +112,10 @@ export default function PayrollPageEnhanced() {
     const lines = selectedRun.lines.map((line) => `
       <tr>
         <td>${escapePrintText(employeeName(line.employeeId))}</td>
-        <td class="text-right">${line.baseSalary.toFixed(3)}</td>
-        <td class="text-right">${(line.commissionAmount || 0).toFixed(3)}</td>
-        <td class="text-right">${line.advancesDeducted.toFixed(3)}</td>
-        <td class="text-right font-bold">${line.netSalary.toFixed(3)}</td>
+        <td class="text-right">${formatOMRAmount(line.baseSalary)}</td>
+        <td class="text-right">${formatOMRAmount(line.commissionAmount || 0)}</td>
+        <td class="text-right">${formatOMRAmount(line.advancesDeducted)}</td>
+        <td class="text-right font-bold">${formatOMRAmount(line.netSalary)}</td>
       </tr>`).join("");
     return `
       <div class="section">
@@ -133,10 +133,10 @@ export default function PayrollPageEnhanced() {
           <tfoot>
             <tr style="background-color: var(--primary-color); color: white;">
               <td class="font-bold">${escapePrintText(t("Total"))}</td>
-              <td class="text-right">${totals.base.toFixed(3)}</td>
-              <td class="text-right">${totals.commission.toFixed(3)}</td>
-              <td class="text-right">${totals.advances.toFixed(3)}</td>
-              <td class="text-right font-bold">${totals.net.toFixed(3)}</td>
+              <td class="text-right">${formatOMRAmount(totals.base)}</td>
+              <td class="text-right">${formatOMRAmount(totals.commission)}</td>
+              <td class="text-right">${formatOMRAmount(totals.advances)}</td>
+              <td class="text-right font-bold">${formatOMRAmount(totals.net)}</td>
             </tr>
           </tfoot>
         </table>

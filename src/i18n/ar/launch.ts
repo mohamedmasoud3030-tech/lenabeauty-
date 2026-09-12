@@ -17,5 +17,5 @@ export const arLaunch = {
   "An employee record is not a login account. Staff access requires an Auth user plus a server-side center membership and role; never grant memberships from the browser.": "سجل الموظف ليس حساب دخول. وصول الموظف يتطلب مستخدم Auth وعضوية مركز ودورًا يتم ضبطهما من جهة الخادم؛ لا تمنح العضويات من المتصفح.",
   "Review operating staff": "مراجعة فريق التشغيل",
   "Activation journey": "مسار التفعيل",
-  "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using LENA Beauty.": "هذه مؤشرات تشغيل حقيقية وليست عوائق قبل الافتتاح. تتحول إلى مكتملة مع بدء الصالون استخدام لارا بيوتي.",
+  "These are real operating milestones, not pre-launch blockers. They turn green as the salon begins using Lara Beauty.": "هذه مؤشرات تشغيل حقيقية وليست عوائق قبل الافتتاح. تتحول إلى مكتملة مع بدء الصالون استخدام لارا بيوتي.",
 };

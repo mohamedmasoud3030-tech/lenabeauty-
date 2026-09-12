@@ -1824,6 +1824,38 @@ export type Database = {
           }
         ]
       }
+      "public_request_throttle": {
+        Row: {
+          "center_id": string
+          "action": string
+          "subject": string
+          "window_start": string
+          "hits": number
+        }
+        Insert: {
+          "center_id": string
+          "action": string
+          "subject": string
+          "window_start": string
+          "hits"?: number
+        }
+        Update: {
+          "center_id"?: string
+          "action"?: string
+          "subject"?: string
+          "window_start"?: string
+          "hits"?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_request_throttle_center_id_fkey"
+            columns: ["center_id"]
+            isOneToOne: false
+            referencedRelation: "centers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       "service_categories": {
         Row: {
           "id": string
