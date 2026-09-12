@@ -554,3 +554,71 @@ const env = {
 **١٠٣٢ اختبارًا / ١٥٣ ملفًا — كلها ناجحة** (كانت ١٠٢٠/١٥٠)، مع `tsc --noEmit` و`lint` (٣٨٥ ملفًا) و`ci:migrations` (٤٨ ترحيلًا) و`ci:rpc-check` و`db:types:check` و`audit:gate` وبناء Vercel التجريبي.
 
 *تم إعداد هذا التحقق بتشغيل فعلي للاختبارات والبناء، واستعلامات حية على المشروع المنشور وقاعدة بياناته. كل نتيجة في القسمين 2 و3 قابلة لإعادة الإنتاج بالأوامر والاستعلامات المذكورة.*
+
+---
+
+## ١٧. لماذا كان وسام Vercel أحمر — والإصلاح (2026-09-13)
+
+### ١٧.١ السبب، لا التخمين
+
+بلاغك «فيرسال فشل تاني» كان صحيحًا، والسبب **مُقاس لا مُفترض**: كل دفع لفرع
+(`arena/…`) يُنشئ نشر Webhook على Vercel، وبيئة **Preview** في هذا المشروع لا
+تحمل بيانات اعتماد الإنتاج. السكربت `scripts/vercel-build.mjs` fail-closed
+يرفض البناء بلا هدف معلن، فيظهر الالتزام أحمر — وقد أُعيد إنتاجه محليًا:
+
+```bash
+VERCEL_ENV=preview node scripts/vercel-build.mjs
+# BUILD REFUSED — MISSING_BUILD_TARGET   (exit 1)
+```
+
+سجل الحالات على الالتزامات يثبت أن التوقف بدأ مع تغيير بوابة البناء ولم يكن
+عيبًا في الكود المُسلَّم:
+
+| الالتزام | حالة Vercel |
+|---|---|
+| `af66031` (قبل تغيير البوابة) | success — Deployment has completed |
+| `ca8cbf8` / `aa47051` | failure — Deployment was blocked |
+| `65e5616` / `16e6e30` / `820f2dd` | failure — Deployment has failed |
+
+أي أن الديمو المنشور `larabeauty.vercel.app` بقي سليمًا، والفشل كان في
+**معاينات الفروع** فقط: لا معاينة تُفتح، ووسام أحمر على كل دفعة.
+
+### ١٧.٢ الإصلاح — قاعدة ضيقة، والإنتاج لم يتغيّر
+
+| الحالة | السلوك الآن |
+|---|---|
+| `VERCEL_ENV=preview` بلا هدف صريح ولا opt-in | يبني على **الديمو العام** ويطبع `PREVIEW_DEMO_TARGET` في السجل |
+| `VERCEL_ENV=preview` مع هدف صريح | يبني على الهدف الصريح (المعاينة تتبع المشروع الصحيح) |
+| `VERCEL_ENV=preview` مع `VITE_ENVIRONMENT=production` | **فشل** — `PRODUCTION_DEMO_PROJECT_FORBIDDEN` |
+| `VERCEL_ENV=production` بلا هدف صريح | **فشل مقصود** — `MISSING_BUILD_TARGET` (كما كان) |
+| بلا `VERCEL_ENV` (CI/محلي) | بلا استنتاج — يبقى صريحًا |
+
+سبب اختيار الديمو مُعلن في ملخّص البناء (`demoReason=vercel-preview |
+explicit-opt-in`)، فلا يمكن أن يُنشر هدف الديمو ويُظن أنه عميل.
+
+**الأدلة:** `scripts/vercel-build.mjs`، `vercel-build-contract.test.mjs`
+**٢٠/٢٠** (كانت ١٤)، `docs/DELIVERY-GUIDE.md` الخطوة 4، والتحقق بأمرين
+متعاكسين على نفس الشجرة: `VERCEL_ENV=preview` ⇒ exit 0،
+`VERCEL_ENV=production` ⇒ exit 1.
+
+### ١٧.٣ النتيجة على PR #79
+
+`c845fc9` — كل فحوص الـPR خضراء: **Vercel: pass** ("Deployment has
+completed")، **Vercel Deployments – m7mdms3d: pass**، SonarCloud: pass،
+الفحوص الساكنة (تطبيق + قاعدة بيانات): pass.
+
+ملاحظتان تشغيليتان:
+
+- رابط المعاينة `https://larabeauty-qztl2x6ue-m7mdms3d.vercel.app` محجوب
+  بـ**Vercel Authentication** (إعداد الحماية الافتراضي للمعاينات). البناء
+  والنشر ينجحان، لكن فتح الرابط في المتصفح يحتاج تسجيل دخول Vercel أو إيقاف
+  Deployment Protection للمعاينات من إعدادات المشروع.
+- فحص **«Live Demo migration and security gates» يظهر skipping**، وهذا سلوك
+  مقصود لا خطأ: شرطه `github.event_name == 'workflow_dispatch'` (تغيير المخطط
+  البعيد يحتاج تشغيلًا يدويًا من المشغّل) + توفّر ثمانية أسرار في GitHub
+  (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`,
+  `DEMO_SUPABASE_PROJECT_REF`, `DEMO_SUPABASE_URL`,
+  `DEMO_SUPABASE_PUBLISHABLE_KEY`, `DEMO_CENTER_ID`,
+  `DEMO_SUPABASE_SERVICE_ROLE_KEY`). بدونها لا يوجد مسار آلي يُطبّق الترحيلات
+  الأربعة غير المُطبَّقة على القاعدة الحية — تبقى بحاجة إلى التشغيل اليدوي
+  بعد ضبط الأسرار.
