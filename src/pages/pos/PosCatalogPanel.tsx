@@ -4,6 +4,7 @@ import { Boxes, CreditCard, Package, Plus, Scissors, Search, ShoppingCart } from
 import { clsx } from "clsx";
 import type { Product, Service } from "../../domain/entities";
 import { Spinner } from "../../shared/components/Spinner";
+import { isLowStock } from "../../domain/inventory";
 import { ScreenState } from "../../shared/components/ScreenState";
 import { formatOMRAmount } from "../../shared/money";
 import { ServiceCategoryFilters } from "../../shared/catalog/ServiceCategoryFilters";
@@ -156,7 +157,7 @@ export function PosCatalogPanel({
                     {activeTab === "PRODUCTS" && (
                       <div className={clsx(
                         "mt-0.5 text-[9px] lg:text-[10px] font-bold uppercase tracking-wider",
-                        (item as Product).stockQuantity > 5 ? "text-success" : "text-destructive",
+                        isLowStock(item as Product) ? "text-destructive" : "text-success",
                       )}>
                         {(item as Product).stockQuantity} {t("Stock")}
                       </div>

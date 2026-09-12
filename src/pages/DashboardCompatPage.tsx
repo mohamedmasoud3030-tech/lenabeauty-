@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import DashboardPage from "./DashboardPage";
 import { useCases } from "../app/composition/useCases";
 import { ScreenState } from "../shared/components/ScreenState";
+import { isLowStock } from "../domain/inventory";
 import { GettingStartedCard } from "../shared/components/GettingStartedCard";
 import { useAuth } from "../auth";
 import { getDisplayName } from "../shared/displayName";
@@ -72,7 +73,7 @@ export default function DashboardCompatPage() {
       }));
 
     const lowStock = productsRes.data
-      .filter((product) => product.isActive && product.trackInventory && product.stockQuantity <= (product.reorderLevel ?? 5))
+      .filter(isLowStock)
       .sort((a, b) => a.stockQuantity - b.stockQuantity)
       .slice(0, 5)
       .map((product) => ({ id: product.id, name: product.name, stock: product.stockQuantity }));

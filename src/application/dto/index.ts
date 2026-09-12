@@ -142,6 +142,8 @@ export interface InventoryReportRow {
   cost: number;
   price: number;
   stockQuantity: number;
+  /** Carried through so the report uses the same rule as every other screen. */
+  reorderLevel?: number;
 }
 
 export function validateCheckoutPayload(payload: any): string[] {

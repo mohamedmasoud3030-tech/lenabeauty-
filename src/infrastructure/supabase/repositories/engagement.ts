@@ -2,6 +2,7 @@ import { Result, DomainError, CustomerExperienceRepository, ForecastRepository, 
 import { createUnsupportedWriteError, createQueryError } from ".././errors";
 import { getSupabaseClient } from ".././client";
 import { mapCustomerReview, mapServiceFile, mapAccountingJournalEntry, mapAiBookingLead } from ".././mappers";
+import { isLowStock } from "../../../domain/inventory";
 import { requiredText, nonNegativeNumber, phoneField, numberField, DomainValidationError } from "../../../domain/validation";
 import { validatePayload, okValue, getCenterIdFor, resolveCenterAssetUrl, UUID_RE } from "./shared";
 
@@ -149,7 +150,7 @@ export class SupabaseForecastAdapter implements ForecastRepository {
       if (itemsRes.error) return { ok:false, error:createQueryError("Forecast.getInventoryForecast", itemsRes.error.message)};
       const usage = new Map();
       for (const item of (itemsRes.data||[])) usage.set(item.product_id, (usage.get(item.product_id)||0)+Number(item.quantity||0));
-      return { ok:true, data:(productsRes.data||[]).map((p:any)=>{ const sold=Number(usage.get(p.id)||0); const avg=sold/30; const stock=Number(p.stock_quantity)||0; const days=avg>0?stock/avg:999; return { productId:String(p.id), productName:String(p.name||''), stockQuantity:stock, averageDailyUnits:avg, daysRemaining:days, reorderAlert:days <= 14 || stock <= 5 }; }) };
+      return { ok:true, data:(productsRes.data||[]).map((p:any)=>{ const sold=Number(usage.get(p.id)||0); const avg=sold/30; const stock=Number(p.stock_quantity)||0; const days=avg>0?stock/avg:999; return { productId:String(p.id), productName:String(p.name||''), stockQuantity:stock, averageDailyUnits:avg, daysRemaining:days, reorderAlert:days <= 14 || isLowStock({ stockQuantity: stock, reorderLevel: p.reorder_level }) }; }) };
     } catch (e: unknown) {
       return { ok: false, error: createQueryError("Forecast.getInventoryForecast", (e as Error).message) };
     }

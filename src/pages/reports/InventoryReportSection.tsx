@@ -1,3 +1,4 @@
+import { isLowStock } from "../../domain/inventory";
 import { Package } from "lucide-react";
 import type { InventoryReportRow } from "../../application/dto";
 import { ScreenState } from "../../shared/components/ScreenState";
@@ -25,8 +26,8 @@ export function InventoryReportSection({ data, error, onRetry, onOpenInventory, 
         {data.map((item, index) => {
           const quantity = Number((item as any).quantity ?? item.stockQuantity) || 0;
           const name = (item as any).productName ?? item.name;
-          const inStock = quantity > 10;
-          return <div key={`${name}-${index}`} className="rounded-xl border border-border bg-card p-4 min-w-0"><p className="font-bold truncate">{name}</p><p className="text-2xl font-bold mt-2">{quantity}</p><p className={`text-[10px] font-bold mt-1 ${inStock ? "text-success" : "text-destructive"}`}>{inStock ? t("In Stock") : t("Low Stock")}</p></div>;
+          const lowStock = isLowStock({ stockQuantity: quantity, reorderLevel: (item as any).reorderLevel });
+          return <div key={`${name}-${index}`} className="rounded-xl border border-border bg-card p-4 min-w-0"><p className="font-bold truncate">{name}</p><p className="text-2xl font-bold mt-2">{quantity}</p><p className={`text-[10px] font-bold mt-1 ${lowStock ? "text-destructive" : "text-success"}`}>{lowStock ? t("Low Stock") : t("In Stock")}</p></div>;
         })}
       </div>
     </section>

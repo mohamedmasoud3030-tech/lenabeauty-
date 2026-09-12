@@ -1,5 +1,5 @@
 {
-  "files": 337,
+  "files": 339,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1035,7 +1035,8 @@
             "name",
             "cost",
             "price",
-            "stock_quantity"
+            "stock_quantity",
+            "reorder_level"
           ],
           "embeds": []
         },

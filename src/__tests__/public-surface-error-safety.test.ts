@@ -69,12 +69,19 @@ describe("formatPublicError behaviour", () => {
     const { formatPublicError } = await import("../shared/hooks/useApplication");
     const i18n = (await import("../i18n")).default;
 
-    // Portal lockout is a deliberate, user-recoverable message — never suppressed.
+    // Portal lockout is a deliberate, user-recoverable message — never
+    // suppressed, and shown in the language of the screen that raised it.
+    await i18n.changeLanguage("ar");
+    const lockout = formatPublicError({ message: "Account temporarily locked. Try again later." }, "fallback");
+    expect(lockout).not.toBe("fallback");
+    expect(lockout).toMatch(/[\u0600-\u06FF]/);
+    await i18n.changeLanguage("en");
     expect(formatPublicError({ message: "Account temporarily locked. Try again later." }, "fallback")).toBe(
       "Account temporarily locked. Try again later.",
     );
 
     // snake_case action codes are localized rather than shown raw.
+    await i18n.changeLanguage("ar");
     const shown = formatPublicError({ message: "invalid_portal_credentials" }, "fallback");
     expect(shown).toBe(i18n.t("Invalid portal credentials"));
     expect(shown).not.toContain("_");
@@ -111,17 +118,114 @@ describe("formatPublicError behaviour", () => {
     );
   });
 
-  it("keeps deliberate booking business messages intact", async () => {
+  it("keeps deliberate booking business messages reachable, in the client's language", async () => {
     const { formatPublicError } = await import("../shared/hooks/useApplication");
+    const i18n = (await import("../i18n")).default;
 
-    // Raised by public_create_booking_v1 when a slot is taken mid-flow.
-    expect(formatPublicError({ message: "This time slot is no longer available" }, "fallback")).toBe(
+    // Raised by public_create_booking_v1 mid-flow: a service withdrawn, or a
+    // slot taken between page load and submit. They must reach the client and
+    // must not arrive as English text in an Arabic interface.
+    const messages = [
       "This time slot is no longer available",
-    );
-    expect(formatPublicError({ message: "Service is not available" }, "fallback")).toBe("Service is not available");
-    expect(formatPublicError({ message: "Cannot book a time in the past" }, "fallback")).toBe(
+      "Service is not available",
       "Cannot book a time in the past",
+      "Selected staff is not available",
+    ];
+
+    await i18n.changeLanguage("ar");
+    for (const message of messages) {
+      const shown = formatPublicError({ message }, "fallback");
+      expect(shown, `${message} was suppressed`).not.toBe("fallback");
+      expect(shown, `${message} reached an Arabic client untranslated`).toMatch(/[\u0600-\u06FF]/);
+    }
+
+    await i18n.changeLanguage("en");
+    for (const message of messages) {
+      expect(formatPublicError({ message }, "fallback"), message).toBe(message);
+    }
+  });
+
+  it("renders every message the anonymous RPCs can raise in the client's language", async () => {
+    const { formatPublicError } = await import("../shared/hooks/useApplication");
+    const i18n = (await import("../i18n")).default;
+
+    // The nine functions the public release opens to `anon`. Whatever they
+    // raise, a stranger sees it — so nothing here may be English-only, and
+    // nothing may fall through to a generic message.
+    const anonReachable = [
+      "public_list_services_v1",
+      "public_list_staff_v1",
+      "public_center_info_v1",
+      "public_taken_slots_v1",
+      "public_create_booking_v1",
+      "public_cancel_booking_v1",
+      "public_reschedule_booking_v1",
+      "public_client_portal_login_v1",
+      "public_client_portal_profile_v2",
+    ];
+
+    const directory = resolve(process.cwd(), "supabase/migrations");
+    const raised = new Set<string>();
+    for (const file of readdirSync(directory).filter((name) => name.endsWith(".sql"))) {
+      const source = readFileSync(resolve(directory, file), "utf8");
+      // Each chunk is one CREATE OR REPLACE FUNCTION body; keep only the
+      // anonymous ones, whatever migration last redefined them.
+      for (const chunk of source.split(/CREATE OR REPLACE FUNCTION/).slice(1)) {
+        const head = chunk.slice(0, 160);
+        if (!anonReachable.some((name) => head.includes(`public.${name}(`))) continue;
+        for (const match of chunk.matchAll(/RAISE EXCEPTION\s+'([^']+)'/g)) raised.add(match[1]);
+      }
+    }
+
+    // Guard against a scan that silently finds nothing.
+    expect(raised.size).toBeGreaterThan(8);
+
+    await i18n.changeLanguage("ar");
+    for (const message of [...raised].sort()) {
+      const shown = formatPublicError({ message }, "fallback");
+      expect(shown, `"${message}" fell through to the generic fallback`).not.toBe("fallback");
+      expect(shown, `"${message}" reached an Arabic client untranslated`).toMatch(/[\u0600-\u06FF]/);
+    }
+  });
+
+  it("records the untranslated vocabulary of the signed-in screens, so it can only shrink", async () => {
+    const { formatError } = await import("../shared/hooks/useApplication");
+    const i18n = (await import("../i18n")).default;
+
+    // Reachability is decided by the canonical inventory of what the frontend
+    // actually calls — not by every function that exists in the chain.
+    const usage = JSON.parse(readSource("docs/database-contract/artifacts/frontend-usage.json"));
+    const reachable = new Set<string>(
+      usage.rpc.map((entry: any) =>
+        typeof entry === "string" ? entry : (entry.name ?? entry.rpc ?? entry.function),
+      ),
     );
+    expect(reachable.size).toBeGreaterThan(30);
+
+    const messages = new Set<string>();
+    const directory = resolve(process.cwd(), "supabase/migrations");
+    for (const file of readdirSync(directory).filter((name) => name.endsWith(".sql"))) {
+      const source = readFileSync(resolve(directory, file), "utf8");
+      for (const chunk of source.split(/CREATE OR REPLACE FUNCTION/).slice(1)) {
+        const name = /^\s+public\.([a-z0-9_]+)\s*\(/.exec(chunk)?.[1];
+        if (!name || !reachable.has(name)) continue;
+        for (const match of chunk.matchAll(/RAISE EXCEPTION\s+'([^']+)'/g)) messages.add(match[1]);
+      }
+    }
+    expect(messages.size).toBeGreaterThan(50);
+
+    await i18n.changeLanguage("ar");
+    const asCode = (message: string) => /^[a-z0-9_]+$/.test(message);
+    // A message is untranslated when the Arabic screen would show it verbatim.
+    const codes = [...messages].filter((message) => asCode(message) && formatError({ message }) === message);
+    const prose = [...messages].filter((message) => !asCode(message) && i18n.t(message) === message);
+
+    // Recorded debt, not a target: 34 identifiers and 11 sentences can still
+    // reach a staff screen in English. Both numbers may go down freely; either
+    // going UP means new untranslated server text was introduced.
+    // The public (#/book, #/portal) surface is already at zero — see above.
+    expect(codes.length, `untranslated identifiers: ${codes.slice(0, 8).join(", ")}…`).toBeLessThanOrEqual(34);
+    expect(prose.length, `untranslated sentences: ${prose.slice(0, 4).join(" | ")}`).toBeLessThanOrEqual(11);
   });
 
   it("preserves structured validation keys so per-field messages keep working", async () => {

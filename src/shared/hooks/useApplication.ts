@@ -27,7 +27,13 @@ export function formatError(err: any): string {
   if (err === undefined || err === null || err === "") {
     return "An unexpected error occurred. Please try again.";
   }
-  return err?.message || String(err);
+  const message = String(err?.message ?? err);
+  // The database raises bare snake_case identifiers for some refusals. They are
+  // safe but they are not display text, so the signed-in screens translate them
+  // exactly like the public ones do. Any other message is returned untouched.
+  const mapped = PUBLIC_ACTION_CODES[message.trim().toLowerCase()];
+  if (mapped) return i18n.t(mapped);
+  return message;
 }
 
 // The public booking/portal RPCs raise deliberate, human-authored messages for
@@ -64,6 +70,15 @@ const PUBLIC_ACTION_CODES: Record<string, string> = {
   new_time_must_be_in_future: "Please choose a time in the future.",
   selected_staff_not_available: "The selected specialist is not available for that time.",
   this_time_slot_is_no_longer_available: "This time slot is no longer available",
+  // Raised by the signed-in write functions (reviews, service files,
+  // notification events, journal entries, booking leads). A member of staff who
+  // lacks the role, or who passes an id from another salon, used to see the raw
+  // identifier on screen.
+  insufficient_privilege: "You do not have permission to do that.",
+  customer_not_in_center: "This client does not belong to this salon.",
+  appointment_not_in_center: "This appointment does not belong to this salon.",
+  service_not_in_center: "This service does not belong to this salon.",
+  admin_role_required: "Only an administrator can do that.",
 };
 
 function looksLikeInternalDetail(message: string): boolean {
@@ -105,5 +120,12 @@ export function formatPublicError(err: any, fallback: string): string {
     return fallback;
   }
 
-  return message;
+  // What is left is a deliberate business message raised by a database function
+  // (e.g. "Service is not available" when a service is withdrawn between page
+  // load and submit). It is not internal detail, so it is shown — but the
+  // public screens are Arabic by default and the server writes English, so it
+  // goes through the dictionaries first. i18next returns the key unchanged when
+  // there is no entry, so an untranslated message still reaches the caller
+  // exactly as the server wrote it.
+  return i18n.t(message);
 }
