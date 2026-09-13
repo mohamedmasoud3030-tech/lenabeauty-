@@ -13,3 +13,15 @@ export function formatOMRAmount(value: unknown): string {
   const normalized = Math.abs(amount) < 0.0005 ? 0 : amount;
   return normalized.toFixed(OMR_FRACTION_DIGITS);
 }
+
+/**
+ * Plain three-decimal OMR string for machine-readable exports (CSV).
+ * Same precision and normalization contract as formatOMRAmount — no
+ * display-only grouping, so spreadsheets receive a clean number.
+ */
+export function formatOMRPlain(value: unknown): string {
+  const amount = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(amount)) return "0.000";
+  const normalized = Math.abs(amount) < 0.0005 ? 0 : amount;
+  return normalized.toFixed(OMR_FRACTION_DIGITS);
+}

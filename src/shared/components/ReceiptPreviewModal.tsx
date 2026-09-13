@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Printer, X, Share2, Download } from "lucide-react";
 import { Modal } from "./Modal";
-import { InvoicePrintLayout } from "./InvoicePrintLayout";
+import { InvoicePrintLayout, type InvoicePrintFormat } from "./InvoicePrintLayout";
 import { InvoicePrintData } from "../../application/dto";
 import { clsx } from "clsx";
 import { PRODUCT_NAME } from "../../config/brand";
@@ -11,16 +12,26 @@ import { useToast } from "./Toast";
 interface Props {
   data: InvoicePrintData | null;
   onClose: () => void;
-  paperSize?: "80mm" | "58mm";
 }
 
+const FORMAT_OPTIONS: { id: InvoicePrintFormat; label: string }[] = [
+  { id: "a4-premium", label: "A4 Premium" },
+  { id: "a4-luxe", label: "A4 Luxe" },
+  { id: "thermal-80", label: "Thermal 80mm" },
+  { id: "thermal-58", label: "Thermal 58mm" },
+];
+
 /**
- * Shared receipt preview overlay - mobile optimized with Print, Share, and Download options.
- * Opens above all app chrome, scrolls inside the body, and keeps actions in a sticky footer.
+ * Shared receipt preview overlay - mobile optimized with format picker,
+ * Print, Share, and Download options. Opens above all app chrome, scrolls
+ * inside the body, and keeps actions in a sticky footer.
  */
-export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props) {
+export function ReceiptPreviewModal({ data, onClose }: Props) {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const [format, setFormat] = useState<InvoicePrintFormat>("a4-premium");
+
+  const isA4 = format === "a4-premium" || format === "a4-luxe";
 
   /** Plain-text receipt used for both download and clipboard share fallback. */
   const buildReceiptText = () => {
@@ -73,7 +84,7 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
       try {
         await navigator.share({
           title: t("Invoice"),
-          text: `${t("Invoice")} ${data.invoice.id?.slice(-6).toUpperCase() || ''} - ${formatOMRAmount(data.invoice.totalAmount)}`,
+          text: `${t("Invoice")}: ${data.invoice.id?.slice(-6).toUpperCase() || ''} - ${formatOMRAmount(data.invoice.totalAmount)}`,
           url: window.location.href,
         });
         return;
@@ -107,7 +118,7 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
       isOpen={!!data}
       onClose={onClose}
       title={t("Invoice")}
-      size="md"
+      size={isA4 ? "xl" : "md"}
       className="bg-white"
       footer={
         <div className="flex items-center gap-2 min-w-0">
@@ -144,12 +155,53 @@ export function ReceiptPreviewModal({ data, onClose, paperSize = "80mm" }: Props
             aria-label={t("Close")}
             className="h-11 w-11 shrink-0 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center touch-target"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       }
     >
-      {data && <InvoicePrintLayout data={data} hideControls paperSize={paperSize} />}
+      {data && (
+        <div className="space-y-4">
+          {/* Print format picker — screen only, the selection drives the
+              rendered sheet (and the @page size used by the browser). */}
+          <div className="print:hidden">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("Print format")}
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {FORMAT_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setFormat(option.id)}
+                  aria-pressed={format === option.id}
+                  className={clsx(
+                    "min-h-11 rounded-xl border px-2 text-xs font-bold transition-all",
+                    format === option.id
+                      ? "border-primary bg-primary/10 text-primary shadow-sm"
+                      : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {t(option.label)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="overflow-auto rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_18%_8%,rgba(218,160,94,0.08),transparent_18rem),linear-gradient(160deg,#fbf9f6,#f7f3f9)] p-3 sm:p-5">
+            <InvoicePrintLayout data={data} hideControls format={format} />
+          </div>
+
+          <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
+            <p className="font-bold mb-1">{t("Print Tips")}</p>
+            <p>
+              {isA4
+                ? t("Enable background graphics in the print dialog for full colors.")
+                : t("Use thermal printer 80mm or 58mm for best results. Adjust margins in print settings if needed.")}
+            </p>
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

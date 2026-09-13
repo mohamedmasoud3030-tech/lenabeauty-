@@ -43,3 +43,632 @@
     filter: grayscale(1);
   }
 }
+
+/* Premium print sheets — A4 invoices and the A4 report sheet.
+ *
+ * Scoped under #invoice-print-container and #print-area so the global print
+ * visibility isolation (src/index.css) keeps working. Colors are soft tints
+ * with strong rules, so output stays clean on black-and-white printers;
+ * print-color-adjust pushes colors through when "Background graphics" is on.
+ */
+
+#invoice-print-container.lb-sheet,
+#print-area.lb-sheet {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-family: system-ui, -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+  color: #241f2a;
+  background: #fff;
+}
+
+/* ---------- shared A4 chrome ---------- */
+
+.lb-sheet {
+  --lb-gold: #b77a3f;
+  --lb-gold-mid: #c99455;
+  --lb-gold-soft: #e5c58f;
+  --lb-gold-tint: #f7efe2;
+  --lb-plum: #4c2e5b;
+  --lb-plum-soft: #7a4e8f;
+  --lb-plum-tint: #f4eef8;
+  --lb-line: #e4dde9;
+  --lb-muted: #6e6675;
+}
+
+.lb-topline {
+  height: 5px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--lb-gold-mid), var(--lb-gold) 45%, var(--lb-plum-soft));
+}
+
+.lb-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 14px;
+  padding-bottom: 12px;
+  border-bottom: 2.5px solid var(--lb-plum);
+}
+
+.lb-brand {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+}
+
+.lb-mark {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 25%, #fff 0%, var(--lb-gold-tint) 60%, #efe0c8 100%);
+  border: 1px solid var(--lb-gold-soft);
+}
+
+.lb-mark img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.lb-mark .lb-mark-fallback {
+  font-size: 20px;
+  color: var(--lb-gold);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.lb-name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.lb-sub {
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  color: var(--lb-gold);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.lb-contact {
+  text-align: left;
+  direction: ltr;
+  font-size: 9.5px;
+  color: var(--lb-muted);
+  line-height: 1.7;
+  max-width: 55%;
+}
+
+.lb-contact b {
+  color: #241f2a;
+  font-size: 10px;
+}
+
+.lb-docrow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.lb-doctitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--lb-plum);
+}
+
+.lb-docno {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--lb-muted);
+  text-align: left;
+  direction: ltr;
+}
+
+.lb-infogrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.lb-info {
+  background: var(--lb-plum-tint);
+  border: 1px solid #e9e0f0;
+  border-radius: 9px;
+  padding: 7px 9px;
+  min-width: 0;
+}
+
+.lb-info small {
+  display: block;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  color: var(--lb-plum-soft);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.lb-info b {
+  font-size: 10.5px;
+  color: #241f2a;
+  word-break: break-word;
+}
+
+.lb-num {
+  direction: ltr;
+  unicode-bidi: embed;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- items table ---------- */
+
+table.lb-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 13px;
+  font-size: 10px;
+}
+
+table.lb-items thead th {
+  background: var(--lb-plum);
+  color: #fff;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 7px 9px;
+}
+
+table.lb-items thead th:first-child {
+  border-start-start-radius: 8px;
+}
+
+table.lb-items thead th:last-child {
+  border-start-end-radius: 8px;
+}
+
+table.lb-items tbody td {
+  padding: 6.5px 9px;
+  border-bottom: 1px solid var(--lb-line);
+  vertical-align: top;
+}
+
+table.lb-items tbody tr:nth-child(even) {
+  background: #faf7fc;
+}
+
+table.lb-items .lb-item-sub {
+  font-size: 8.5px;
+  color: var(--lb-muted);
+  margin-top: 1px;
+}
+
+/* ---------- totals ---------- */
+
+.lb-totals {
+  margin-top: 12px;
+  min-width: 235px;
+  max-width: 300px;
+  border: 1px solid var(--lb-line);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.lb-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5.5px 11px;
+  font-size: 10px;
+}
+
+.lb-total-disc {
+  color: var(--lb-plum-soft);
+  font-weight: 600;
+}
+
+.lb-grand {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--lb-plum);
+  color: #fff;
+  font-weight: 800;
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+.lb-grand .lb-num {
+  font-size: 13.5px;
+}
+
+/* ---------- bottom: QR + signatures ---------- */
+
+.lb-bottom {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  margin-top: 14px;
+}
+
+.lb-qr {
+  width: 92px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+.lb-qr img {
+  width: 68px;
+  height: 68px;
+}
+
+.lb-qr small {
+  display: block;
+  font-size: 7.5px;
+  color: var(--lb-muted);
+  margin-top: 3px;
+}
+
+.lb-sign {
+  flex: 1;
+  text-align: center;
+  font-size: 9px;
+  color: var(--lb-muted);
+}
+
+.lb-sign .lb-sign-line {
+  border-top: 1.5px dotted #b9aec5;
+  margin-top: 24px;
+  padding-top: 4px;
+  font-weight: 700;
+  color: #241f2a;
+}
+
+/* ---------- footer band ---------- */
+
+.lb-footband {
+  margin-top: 13px;
+  border-top: 2px solid var(--lb-plum);
+  padding-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 8.5px;
+  color: var(--lb-muted);
+  flex-wrap: wrap;
+}
+
+.lb-thanks {
+  font-weight: 800;
+  color: var(--lb-gold);
+  font-size: 10px;
+}
+
+/* ---------- luxe (noir + gold) modifier ---------- */
+
+.lb-luxe .lb-head {
+  background: #221827;
+  color: #fff;
+  margin: 0;
+  padding: 20px 16px 18px;
+  border-bottom: none;
+  border-start-start-radius: 12px;
+  border-start-end-radius: 12px;
+}
+
+.lb-luxe .lb-head + .lb-goldhair {
+  height: 3px;
+  background: linear-gradient(90deg, var(--lb-gold-soft), var(--lb-gold), var(--lb-gold-soft));
+}
+
+.lb-luxe .lb-mark {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(229, 197, 143, 0.55);
+}
+
+.lb-luxe .lb-mark .lb-mark-fallback {
+  color: var(--lb-gold-soft);
+}
+
+.lb-luxe .lb-name {
+  color: #fff;
+}
+
+.lb-luxe .lb-sub {
+  color: var(--lb-gold-soft);
+}
+
+.lb-luxe .lb-doctitle {
+  color: #221827;
+}
+
+.lb-luxe .lb-info {
+  background: #fbf8f3;
+  border-color: #eadfcb;
+}
+
+.lb-luxe .lb-info small {
+  color: var(--lb-gold);
+}
+
+.lb-luxe table.lb-items thead th {
+  background: #2b2030;
+  color: #f3e7d3;
+}
+
+.lb-luxe table.lb-items tbody tr:nth-child(even) {
+  background: #fbf8f3;
+}
+
+.lb-luxe table.lb-items tbody td {
+  border-bottom-color: #ede4d5;
+}
+
+.lb-luxe .lb-totals {
+  border-color: #eadfcb;
+}
+
+.lb-luxe .lb-grand {
+  background: transparent;
+  color: #221827;
+  border-top: 2px solid var(--lb-gold);
+  border-bottom: 2px solid var(--lb-gold);
+}
+
+.lb-luxe .lb-footband {
+  border-top-color: var(--lb-gold);
+}
+
+.lb-luxe .lena-receipt-signature {
+  border-top-color: rgba(183, 122, 63, 0.4);
+  color: rgba(183, 122, 63, 0.75);
+}
+
+/* ---------- report sheet ---------- */
+
+.lb-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.lb-kpi {
+  border: 1px solid var(--lb-line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+
+.lb-kpi::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--lb-gold);
+}
+
+.lb-kpi-plum::before {
+  background: var(--lb-plum);
+}
+
+.lb-kpi small {
+  display: block;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--lb-muted);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.lb-kpi b {
+  font-size: 15px;
+  color: #241f2a;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.lb-kpi u {
+  text-decoration: none;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--lb-plum-soft);
+  display: block;
+  margin-top: 1px;
+}
+
+.lb-block {
+  margin-top: 13px;
+}
+
+.lb-block h3 {
+  font-size: 11.5px;
+  color: var(--lb-plum);
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.lb-block h3 i {
+  font-style: normal;
+  color: var(--lb-gold);
+}
+
+table.lb-rt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+}
+
+table.lb-rt thead {
+  display: table-header-group; /* repeats on every printed page */
+}
+
+table.lb-rt thead th {
+  background: var(--lb-plum);
+  color: #fff;
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  padding: 6px 8px;
+}
+
+table.lb-rt tbody td {
+  padding: 5.5px 8px;
+  border-bottom: 1px solid var(--lb-line);
+  font-variant-numeric: tabular-nums;
+}
+
+table.lb-rt tbody tr:nth-child(even) {
+  background: #faf7fc;
+}
+
+table.lb-rt tfoot td {
+  background: var(--lb-plum-tint);
+  font-weight: 800;
+  border-top: 2px solid var(--lb-plum);
+  padding: 6.5px 8px;
+}
+
+.lb-bar {
+  display: inline-block;
+  height: 7px;
+  background: #ede6f2;
+  border-radius: 99px;
+  overflow: hidden;
+  min-width: 56px;
+  vertical-align: middle;
+}
+
+.lb-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--lb-plum-soft), var(--lb-gold-mid));
+}
+
+.lb-subgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 13px;
+}
+
+.lb-subgrid .lb-block {
+  margin-top: 0;
+}
+
+.lb-rank {
+  list-style: none;
+}
+
+.lb-rank li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9.5px;
+  padding: 5.5px 1px;
+  border-bottom: 1px dashed var(--lb-line);
+}
+
+.lb-rank li:last-child {
+  border-bottom: none;
+}
+
+.lb-rank .lb-rank-no {
+  color: var(--lb-gold);
+  font-weight: 800;
+  width: 16px;
+  flex: 0 0 auto;
+}
+
+.lb-rank b {
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-flag-low {
+  color: #b3261e;
+  font-weight: 800;
+}
+
+.lb-flag-ok {
+  color: #146c43;
+  font-weight: 700;
+}
+
+.lb-repfoot {
+  margin-top: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-top: 2px solid var(--lb-plum);
+  padding-top: 7px;
+  font-size: 8px;
+  color: var(--lb-muted);
+  flex-wrap: wrap;
+}
+
+.lb-repfoot b {
+  color: var(--lb-gold);
+}
+
+/* ---------- A4 sizing / pagination ---------- */
+
+.lb-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 12mm 13mm;
+  box-sizing: border-box;
+}
+
+.lb-a4 .lb-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.lb-a4 .lb-footband,
+.lb-a4 .lb-repfoot,
+.lb-a4 .lena-receipt-signature {
+  margin-top: auto;
+}
+
+/* On-screen preview scaling for narrow viewports (reset in print). */
+@media (max-width: 860px) {
+  .lb-a4 {
+    zoom: 0.46;
+  }
+}
+
+@media (max-width: 520px) {
+  .lb-a4 {
+    zoom: 0.34;
+  }
+}
+
+@media print {
+  .lb-a4 {
+    zoom: 1 !important;
+    width: 210mm !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    break-after: page;
+  }
+}

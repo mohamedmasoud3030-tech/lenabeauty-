@@ -346,10 +346,13 @@ input[type="search"] {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
 
+/* Print isolation. The printable sheet owns its own size: thermal receipts
+   set 80mm/58mm inline, A4 sheets set 210mm via .lb-a4 and declare their own
+   @page size (src/shared/print/print-sheets.css). Keeping this block
+   format-agnostic is what allows A4 invoices and reports alongside thermal. */
 @media print {
   html,
   body {
-    width: 80mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
@@ -370,10 +373,17 @@ input[type="search"] {
   #invoice-print-container {
     position: fixed !important;
     inset: 0 auto auto 0 !important;
-    width: 80mm !important;
     margin: 0 !important;
     color: black !important;
     background: white !important;
+  }
+
+  /* A4 sheets flow across pages, so they need absolute (not fixed) layout. */
+  #print-area.lb-sheet,
+  #invoice-print-container.lb-sheet {
+    position: absolute !important;
+    top: 0;
+    left: 0;
   }
 
   .print\:hidden,
