@@ -75,24 +75,6 @@ describe("small-phone portrait UX contracts", () => {
     expect(layout).toContain('i18n.language === "ar" ? "English" : "العربية"');
   });
 
-  it("leads the mobile sheet with the operator profile and quick-access chips", () => {
-    // Profile header: the operator meets their own name, launch role and
-    // salon first — the old logo + redundant "Primary navigation" caption
-    // header (and the product mark) is gone.
-    expect(mobileSheet).toContain('getInitials(me, "·")');
-    expect(mobileSheet).toContain('getDisplayName(me, t("Unnamed"))');
-    expect(mobileSheet).not.toContain('lena-mark.svg');
-    expect(mobileSheet).not.toContain('SalonLogo');
-    // Quick access: the "today" group becomes a horizontal chip row and is
-    // NOT repeated in the full list — one home per destination.
-    expect(mobileSheet).toContain('group.id === "today"');
-    expect(mobileSheet).toContain("flex gap-2 overflow-x-auto px-1 py-2 scrollbar-hide");
-    expect(mobileSheet).toContain('groups.filter((group) => group.id !== "today")');
-    // The dense 2-column pill grid is replaced by a one-column list.
-    expect(mobileSheet).not.toContain("grid-cols-2");
-    expect(mobileSheet).toContain("flex flex-col");
-  });
-
   it("keeps the mobile dock icon-only and removes the fake notification shortcut", () => {
     expect(mobileDock).toContain("<Menu");
     expect(mobileDock).toContain("<GlobalSearch");

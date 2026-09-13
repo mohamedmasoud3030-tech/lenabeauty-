@@ -161,10 +161,7 @@ describe("salon-facing surfaces read the salon identity", () => {
   });
 
   it("renders the salon's logo in the shell once it is configured", () => {
-    // The logo lives in the desktop sidebar and the mobile page header.
-    // (The mobile nav sheet deliberately carries the operator profile
-    // instead — its salon identity is the salon name in the header row.)
-    for (const path of ["src/ui/layout/Sidebar.tsx", "src/ui/layout/Layout.tsx"]) {
+    for (const path of surfaces) {
       const source = readSource(path);
       expect(source, `${path} does not fall back to the salon logo`).toContain("salon.logoUrl");
     }
