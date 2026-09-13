@@ -20,6 +20,13 @@ function renderPage() {
  * Behavioral test for the Beauty Passport: the customer profile composes real
  * history (appointments + invoices), the loyalty/wallet projection and the
  * retention signal into one view — no fabricated cards.
+ *
+ * Flake contract: this page loads data through several sequential async
+ * hops, and under parallel-suite load the default 1s `findBy*` timeout raced
+ * the last render. The fix is structural — wait for the LAST rendered marker
+ * (the service-files heading, bottom of the sheet) with a generous timeout,
+ * then assert everything synchronously. No assertion may run before that
+ * marker has painted.
  */
 describe("Beauty Passport (customers)", () => {
   beforeEach(async () => {
@@ -43,98 +50,110 @@ describe("Beauty Passport (customers)", () => {
     await i18n.changeLanguage("ar");
   });
 
-  it("composes the passport from real history, entitlements, and service files", async () => {
-    vi.spyOn(useCases.customers, "getById").mockResolvedValue({
-      ok: true,
-      data: {
-        id: "c1",
-        name: "Amal",
-        phone: "90000000",
-        totalSpent: 60,
-        loyaltyPoints: 120,
-        createdAt: new Date("2026-01-15T10:00:00"),
-        updatedAt: new Date("2026-01-15T10:00:00"),
-      },
-    } as any);
-    vi.spyOn(useCases.customers, "getHistory").mockResolvedValue({
-      ok: true,
-      data: {
-        appointments: [
-          {
-            id: "a1",
-            customerId: "c1",
-            employeeId: "e1",
-            serviceId: "s1",
-            dateTime: new Date("2026-08-01T10:00:00"),
-            status: "COMPLETED",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            customer: { id: "c1", name: "Amal", phone: "90000000" },
-            service: { id: "s1", name: "Haircut", durationMinutes: 30, durationMins: 30, price: 30 },
-            employee: { id: "e1", name: "Sara" },
-          },
-          {
-            id: "a2",
-            customerId: "c1",
-            employeeId: "e1",
-            serviceId: "s1",
-            dateTime: new Date("2026-09-05T10:00:00"),
-            status: "SCHEDULED",
-            visitStage: "BOOKED",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            customer: { id: "c1", name: "Amal", phone: "90000000" },
-            service: { id: "s1", name: "Haircut", durationMinutes: 30, durationMins: 30, price: 30 },
-            employee: { id: "e1", name: "Sara" },
-          },
-        ],
-        invoices: [
-          {
-            id: "inv-1",
-            customerId: "c1",
-            totalAmount: 30,
-            subtotalAmount: 30,
-            discount: 0,
-            manualDiscount: 0,
-            tierDiscount: 0,
-            loyaltyDiscount: 0,
-            giftCardDiscount: 0,
-            entitlementRedemption: 0,
-            amountPaid: 30,
-            loyaltyPointsUsed: 0,
-            paymentMethod: "cash",
-            date: new Date("2026-08-01T10:30:00"),
-            status: "PAID",
-            appointmentId: "a1",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-      },
-    } as any);
-    vi.spyOn(useCases.entitlements, "listForCustomer").mockResolvedValue({ ok: true, data: [] } as any);
-    vi.spyOn(useCases.customerExperience, "listServiceFiles").mockResolvedValue({ ok: true, data: [] } as any);
+  it(
+    "composes the passport from real history, entitlements, and service files",
+    { timeout: 15000 },
+    async () => {
+      vi.spyOn(useCases.customers, "getById").mockResolvedValue({
+        ok: true,
+        data: {
+          id: "c1",
+          name: "Amal",
+          phone: "90000000",
+          totalSpent: 60,
+          loyaltyPoints: 120,
+          createdAt: new Date("2026-01-15T10:00:00"),
+          updatedAt: new Date("2026-01-15T10:00:00"),
+        },
+      } as any);
+      vi.spyOn(useCases.customers, "getHistory").mockResolvedValue({
+        ok: true,
+        data: {
+          appointments: [
+            {
+              id: "a1",
+              customerId: "c1",
+              employeeId: "e1",
+              serviceId: "s1",
+              dateTime: new Date("2026-08-01T10:00:00"),
+              status: "COMPLETED",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              customer: { id: "c1", name: "Amal", phone: "90000000" },
+              service: { id: "s1", name: "Haircut", durationMinutes: 30, durationMins: 30, price: 30 },
+              employee: { id: "e1", name: "Sara" },
+            },
+            {
+              id: "a2",
+              customerId: "c1",
+              employeeId: "e1",
+              serviceId: "s1",
+              dateTime: new Date("2026-09-05T10:00:00"),
+              status: "SCHEDULED",
+              visitStage: "BOOKED",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              customer: { id: "c1", name: "Amal", phone: "90000000" },
+              service: { id: "s1", name: "Haircut", durationMinutes: 30, durationMins: 30, price: 30 },
+              employee: { id: "e1", name: "Sara" },
+            },
+          ],
+          invoices: [
+            {
+              id: "inv-1",
+              customerId: "c1",
+              totalAmount: 30,
+              subtotalAmount: 30,
+              discount: 0,
+              manualDiscount: 0,
+              tierDiscount: 0,
+              loyaltyDiscount: 0,
+              giftCardDiscount: 0,
+              entitlementRedemption: 0,
+              amountPaid: 30,
+              loyaltyPointsUsed: 0,
+              paymentMethod: "cash",
+              date: new Date("2026-08-01T10:30:00"),
+              status: "PAID",
+              appointmentId: "a1",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+        },
+      } as any);
+      vi.spyOn(useCases.entitlements, "listForCustomer").mockResolvedValue({ ok: true, data: [] } as any);
+      vi.spyOn(useCases.customerExperience, "listServiceFiles").mockResolvedValue({ ok: true, data: [] } as any);
 
-    renderPage();
+      renderPage();
 
-    // Open the passport through the desktop History action.
-    fireEvent.click(await screen.findByRole("button", { name: i18n.t("History") }));
+      // Open the passport through the desktop History action.
+      const historyButton = await screen.findByRole("button", { name: i18n.t("History") }, { timeout: 5000 });
+      fireEvent.click(historyButton);
 
-    // Passport title and customer identity are present.
-    expect(await screen.findByText(i18n.t("passport.title"))).toBeInTheDocument();
-    expect(screen.getAllByText("Amal").length).toBeGreaterThan(0);
+      // WAIT FOR THE LAST RENDERED MARKER FIRST, then assert synchronously.
+      await screen.findByText(i18n.t("passport.serviceFiles"), {}, { timeout: 5000 });
 
-    // Composed relationship snapshot (lifetime spend from the real record).
-    expect(screen.getByText(i18n.t("passport.snapshot"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("passport.lifetimeSpend"))).toBeInTheDocument();
+      // Passport title and customer identity are present.
+      expect(screen.getByText(i18n.t("passport.title"))).toBeInTheDocument();
+      expect(screen.getAllByText("Amal").length).toBeGreaterThan(0);
 
-    // The timeline merges the paid invoice into the completed visit.
-    expect(screen.getByText(i18n.t("passport.timeline"))).toBeInTheDocument();
-    expect(screen.getAllByText("Haircut").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Sara").length).toBeGreaterThan(0);
+      // Composed relationship snapshot (lifetime spend from the real record).
+      expect(screen.getByText(i18n.t("passport.snapshot"))).toBeInTheDocument();
+      expect(screen.getByText(i18n.t("passport.lifetimeSpend"))).toBeInTheDocument();
 
-    // Wallet summary and retention sections are present (truthful empty state).
-    expect(screen.getByText(i18n.t("passport.wallet"))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t("passport.retention"))).toBeInTheDocument();
-  });
+      // The timeline merges the paid invoice into the completed visit.
+      expect(screen.getByText(i18n.t("passport.timeline"))).toBeInTheDocument();
+      expect(screen.getAllByText("Haircut").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Sara").length).toBeGreaterThan(0);
+
+      // Wallet summary and retention sections are present (truthful empty state).
+      expect(screen.getByText(i18n.t("passport.wallet"))).toBeInTheDocument();
+      expect(screen.getByText(i18n.t("passport.retention"))).toBeInTheDocument();
+
+      // Guard against regressions of the wait contract: every earlier section
+      // must already be painted once the last one is.
+      await waitFor(() => expect(screen.getAllByText("Haircut").length).toBeGreaterThan(0), { timeout: 1000 });
+    },
+  );
 });
