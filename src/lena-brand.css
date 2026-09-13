@@ -672,3 +672,20 @@ table.lb-rt tfoot td {
     break-after: page;
   }
 }
+
+/* Offscreen full-size source used by the client-side PDF export. It renders
+   the sheet at real A4 size (never zoom-scaled like the narrow-viewport
+   preview) just outside the visible viewport. */
+.lb-pdf-source {
+  position: fixed;
+  top: 0;
+  inset-inline-start: -9999px;
+  width: 210mm;
+  background: #fff;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.lb-pdf-source .lb-a4 {
+  zoom: 1 !important;
+}

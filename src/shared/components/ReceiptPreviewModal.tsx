@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Printer, X, Share2, Download } from "lucide-react";
+import { Printer, X, Share2, Download, FileDown } from "lucide-react";
+import { exportElementToPdf } from "../print/pdfExport";
 import { Modal } from "./Modal";
 import { InvoicePrintLayout, type InvoicePrintFormat } from "./InvoicePrintLayout";
 import { InvoicePrintData } from "../../application/dto";
@@ -30,6 +31,9 @@ export function ReceiptPreviewModal({ data, onClose }: Props) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const [format, setFormat] = useState<InvoicePrintFormat>("a4-premium");
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [renderPdfSource, setRenderPdfSource] = useState(false);
+  const pdfSourceRef = useRef<HTMLDivElement | null>(null);
 
   const isA4 = format === "a4-premium" || format === "a4-luxe";
 
@@ -101,6 +105,27 @@ export function ReceiptPreviewModal({ data, onClose }: Props) {
     }
   };
 
+  /** Real one-click .pdf of the currently selected format, rendered from an
+      off-screen full-size copy. */
+  const handlePdfExport = async () => {
+    if (!data || pdfBusy) return;
+    setPdfBusy(true);
+    setRenderPdfSource(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const element = pdfSourceRef.current;
+      if (!element) throw new Error("pdf source not ready");
+      const serial = data.invoice.serialNumber || `invoice-${data.invoice.id.slice(-6)}`;
+      await exportElementToPdf(element, `invoice_${serial}.pdf`);
+      showToast("success", t("Success"), t("PDF exported"));
+    } catch {
+      showToast("error", t("Error"), t("PDF export failed"));
+    } finally {
+      setRenderPdfSource(false);
+      setPdfBusy(false);
+    }
+  };
+
   const handleDownload = () => {
     if (!data) return;
     const receiptText = buildReceiptText();
@@ -122,6 +147,16 @@ export function ReceiptPreviewModal({ data, onClose }: Props) {
       className="bg-white"
       footer={
         <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => void handlePdfExport()}
+            disabled={pdfBusy}
+            aria-label={t("Export PDF")}
+            className="flex-1 min-w-0 h-11 px-2 sm:px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target disabled:opacity-50"
+          >
+            <FileDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="hidden sm:inline">{pdfBusy ? t("Preparing...") : t("Export PDF")}</span>
+          </button>
           <button
             type="button"
             onClick={handleDownload}
@@ -191,6 +226,13 @@ export function ReceiptPreviewModal({ data, onClose }: Props) {
           <div className="overflow-auto rounded-2xl border border-border/70 bg-[radial-gradient(circle_at_18%_8%,rgba(218,160,94,0.08),transparent_18rem),linear-gradient(160deg,#fbf9f6,#f7f3f9)] p-3 sm:p-5">
             <InvoicePrintLayout data={data} hideControls format={format} />
           </div>
+
+          {/* Off-screen full-size copy, mounted only while a PDF is generated. */}
+          {renderPdfSource ? (
+            <div ref={pdfSourceRef} className="lb-pdf-source" aria-hidden="true">
+              <InvoicePrintLayout data={data} hideControls format={format} printAnchor={false} />
+            </div>
+          ) : null}
 
           <div className="print:hidden status-info rounded-lg p-3 text-xs text-center">
             <p className="font-bold mb-1">{t("Print Tips")}</p>

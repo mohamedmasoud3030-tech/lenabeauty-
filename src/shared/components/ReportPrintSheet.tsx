@@ -44,6 +44,12 @@ export interface ReportSheetModel {
 
 interface Props {
   model: ReportSheetModel;
+  /**
+   * `sourceOnly` marks the off-screen, export-only copy of the sheet: it must
+   * NOT own the `#print-area` anchor, so the live preview and the PDF capture
+   * can coexist in the DOM at once.
+   */
+  sourceOnly?: boolean;
 }
 
 /**
@@ -52,7 +58,7 @@ interface Props {
  * branding service (logo, name, address, phone) and ends with the fixed
  * developer credit, so the attribution is the same on every deployment.
  */
-export const ReportPrintSheet: React.FC<Props> = ({ model }) => {
+export const ReportPrintSheet: React.FC<Props> = ({ model, sourceOnly = false }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   const salon = useSalonIdentity();
@@ -82,7 +88,7 @@ export const ReportPrintSheet: React.FC<Props> = ({ model }) => {
 
   return (
     <div
-      id="print-area"
+      {...(!sourceOnly ? { id: "print-area" } : {})}
       className="lb-sheet lb-a4"
       dir={isRtl ? "rtl" : "ltr"}
     >

@@ -200,4 +200,8 @@ export const enCommonCore = {
   "Retail Value": "Retail Value",
   "By Day": "By Day",
   "By Employee": "By Employee",
+  "Export PDF": "Export PDF",
+  "PDF exported": "PDF exported",
+  "PDF export failed": "PDF export failed",
+  "Preparing...": "Preparing...",
 };

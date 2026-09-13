@@ -19,9 +19,11 @@ interface Props {
   format?: InvoicePrintFormat;
   /** When rendered inside a shared Modal, the overlay provides Print/Close. */
   hideControls?: boolean;
+  /** The off-screen PDF export copy must not own the print anchor. */
+  printAnchor?: boolean;
 }
 
-export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "thermal-80", hideControls = false }) => {
+export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "thermal-80", hideControls = false, printAnchor = true }) => {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.language === "ar";
   const { invoice, items, customer, settings } = data;
@@ -101,7 +103,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "t
     return (
       <div className="space-y-4">
         <div
-          id="invoice-print-container"
+          {...(printAnchor ? { id: "invoice-print-container" } : {})}
           className={clsx("lb-sheet lb-a4", isLuxe && "lb-luxe")}
           dir={isRtl ? "rtl" : "ltr"}
         >
@@ -229,7 +231,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "t
   return (
     <div className="space-y-4">
       <div
-        id="invoice-print-container"
+        {...(printAnchor ? { id: "invoice-print-container" } : {})}
         className={clsx("bg-white text-black font-mono print:m-0", isRtl ? "text-right" : "text-left")}
         style={{
           width: paperSize,

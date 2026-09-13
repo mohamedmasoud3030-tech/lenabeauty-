@@ -190,4 +190,8 @@ export const arCommonCore = {
   "Retail Value": "قيمة المخزون (بيع)",
   "By Day": "حسب اليوم",
   "By Employee": "حسب الموظف",
+  "Export PDF": "تصدير PDF",
+  "PDF exported": "تم تصدير PDF",
+  "PDF export failed": "فشل تصدير PDF",
+  "Preparing...": "جاري التحضير...",
 };

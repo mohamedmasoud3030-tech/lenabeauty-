@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import { BarChart3, Calendar, Download, Package, Printer, RefreshCw, ShoppingBag } from "lucide-react";
+import { BarChart3, Calendar, Download, FileDown, Package, Printer, RefreshCw, ShoppingBag } from "lucide-react";
 import { clsx } from "clsx";
 import { useCases } from "../app/composition/useCases";
 import type { AppointmentReportRow, EntitlementSummary, InventoryReportRow, SalesReportRow } from "../application/dto";
 import { Modal } from "../shared/components/Modal";
 import { PageHeader } from "../shared/components/PageHeader";
+import { useToast } from "../shared/components/Toast";
+import { exportElementToPdf } from "../shared/print/pdfExport";
 import { ReportPrintSheet, type ReportSheetModel } from "../shared/components/ReportPrintSheet";
 import { ScreenState } from "../shared/components/ScreenState";
 import { formatLocalDateOnly } from "../shared/dateRange";
@@ -43,6 +45,10 @@ export default function ReportsPage() {
   const [entitlementSummary, setEntitlementSummary] = useState<EntitlementSummary | null>(null);
   const [selectedSale, setSelectedSale] = useState<SalesReportRow | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [renderPdfSource, setRenderPdfSource] = useState(false);
+  const pdfSourceRef = useRef<HTMLDivElement | null>(null);
+  const { showToast } = useToast();
   const requestSeq = useRef(0);
 
   const load = useCallback(async () => {
@@ -120,6 +126,26 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  /** Real one-click .pdf: renders an off-screen, full-size copy of the sheet
+      (never zoom-scaled) and rasterizes it with html2pdf.js. */
+  const handlePdfExport = async () => {
+    if (!printModel || pdfBusy) return;
+    setPdfBusy(true);
+    setRenderPdfSource(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const element = pdfSourceRef.current;
+      if (!element) throw new Error("pdf source not ready");
+      await exportElementToPdf(element, `report_${tab}_${dateRange.from}_${dateRange.to}.pdf`);
+      showToast("success", t("Success"), t("PDF exported"));
+    } catch {
+      showToast("error", t("Error"), t("PDF export failed"));
+    } finally {
+      setRenderPdfSource(false);
+      setPdfBusy(false);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 pb-12">
       <PageHeader
@@ -187,6 +213,14 @@ export default function ReportsPage() {
 
       <SalesTransactionDialog sale={selectedSale} onClose={() => setSelectedSale(null)} t={(key) => String(t(key))} formatDay={formatDay} />
 
+      {/* Off-screen full-size copy of the sheet, mounted only while a PDF is
+          being generated. */}
+      {renderPdfSource && printModel ? (
+        <div ref={pdfSourceRef} className="lb-pdf-source" aria-hidden="true">
+          <ReportPrintSheet model={printModel} sourceOnly />
+        </div>
+      ) : null}
+
       {/* A4 print preview — the shared report sheet; Print hands the page to
           the browser (global print CSS isolates #print-area). */}
       <Modal
@@ -196,6 +230,15 @@ export default function ReportsPage() {
         size="xl"
         footer={
           <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => void handlePdfExport()}
+              disabled={pdfBusy}
+              className="flex-1 min-w-0 h-11 px-2 sm:px-4 rounded-xl border border-border bg-card font-bold text-sm text-foreground hover:bg-muted transition-all flex items-center justify-center gap-2 touch-target disabled:opacity-50"
+            >
+              <FileDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="hidden sm:inline">{pdfBusy ? t("Preparing...") : t("Export PDF")}</span>
+            </button>
             <button
               type="button"
               onClick={handleCsvExport}

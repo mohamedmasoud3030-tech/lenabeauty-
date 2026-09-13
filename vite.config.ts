@@ -106,6 +106,17 @@ export default defineConfig(({mode}) => {
               if (id.includes('i18next') || id.includes('react-i18next')) return 'chunk-i18n';
               // QR code
               if (id.includes('qrcode')) return 'chunk-qrcode';
+              // PDF export (html2pdf + its canvas/PDF engines) — loaded lazily,
+              // only when the user actually clicks "Export PDF".
+              if (
+                id.includes('html2pdf') ||
+                id.includes('html2canvas') ||
+                id.includes('jspdf') ||
+                id.includes('dompurify') ||
+                id.includes('canvg')
+              ) {
+                return 'chunk-pdf';
+              }
               // React core
               if (id.includes('react-dom') || id.includes('react-router')) return 'chunk-react';
               // Everything else
