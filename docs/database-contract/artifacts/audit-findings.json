@@ -10,13 +10,13 @@
       "indexes": 122,
       "triggers": 23,
       "views": 0,
-      "functions": 66,
+      "functions": 69,
       "policies": 50,
-      "grants": 1464
+      "grants": 1473
     },
     "frontend": {
       "tables": 29,
-      "rpc": 35,
+      "rpc": 38,
       "storage": 1
     },
     "findings_by_severity": {
@@ -34,12 +34,13 @@
       "needs": "manual-review",
       "title": "Scanner limitation (manual review): dynamic-from",
       "category": "scanner-limitation",
-      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/gemini/adminAssistantLive.ts, src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts",
+      "evidence": "non-literal .from() argument (non-Supabase or dynamic) in src/infrastructure/gemini/adminAssistantLive.ts, src/infrastructure/services/printService.ts, src/infrastructure/supabase/repositories/settings.ts, src/shared/print/pdfExport.ts",
       "affected": {
         "files": [
           "src/infrastructure/gemini/adminAssistantLive.ts",
           "src/infrastructure/services/printService.ts",
-          "src/infrastructure/supabase/repositories/settings.ts"
+          "src/infrastructure/supabase/repositories/settings.ts",
+          "src/shared/print/pdfExport.ts"
         ]
       },
       "remediation": "Manually confirm this construct against the canonical schema."

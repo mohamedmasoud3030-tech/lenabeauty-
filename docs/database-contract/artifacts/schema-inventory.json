@@ -9779,6 +9779,19 @@
     },
     {
       "schema": "public",
+      "name": "public_client_portal_rate_visit_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=public"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.public_client_portal_rate_visit_v1(p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n  v_customer public.customers%ROWTYPE;\n  v_appointment public.appointments%ROWTYPE;\n  v_review public.customer_reviews%ROWTYPE;\n  v_comment TEXT;\nBEGIN\n  IF p_rating IS NULL OR p_rating NOT BETWEEN 1 AND 5 THEN\n    RAISE EXCEPTION 'invalid_rating' USING ERRCODE = '22023';\n  END IF;\n\n  v_comment := left(NULLIF(btrim(COALESCE(p_comment, '')), ''), 500);\n\n  SELECT *\n  INTO v_customer\n  FROM public.customers\n  WHERE center_id = p_center_id\n    AND id = p_customer_id\n    AND phone = NULLIF(btrim(COALESCE(p_phone, '')), '')\n    AND portal_access_token = NULLIF(btrim(COALESCE(p_token, '')), '')\n    AND portal_access_enabled = TRUE\n  LIMIT 1;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'invalid_portal_credentials' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT *\n  INTO v_appointment\n  FROM public.appointments\n  WHERE id = p_appointment_id\n    AND center_id = p_center_id\n    AND customer_id = v_customer.id;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'appointment_not_found' USING ERRCODE = '22023';\n  END IF;\n\n  INSERT INTO public.customer_reviews\n    (center_id, customer_id, appointment_id, rating, comment, is_published, created_at, updated_at)\n  VALUES\n    (v_customer.center_id, v_customer.id, v_appointment.id, p_rating, v_comment, TRUE, now(), now())\n  ON CONFLICT (appointment_id) WHERE appointment_id IS NOT NULL\n  DO UPDATE\n    SET rating = EXCLUDED.rating,\n        comment = EXCLUDED.comment,\n        is_published = TRUE,\n        updated_at = now()\n  RETURNING * INTO v_review;\n\n  RETURN jsonb_build_object(\n    'id', v_review.id,\n    'appointment_id', v_review.appointment_id,\n    'rating', v_review.rating,\n    'comment', v_review.comment,\n    'is_published', v_review.is_published,\n    'created_at', v_review.created_at\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
       "name": "public_create_booking_v1",
       "identity_args": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
       "result": "jsonb",
@@ -9789,6 +9802,32 @@
         "search_path=public"
       ],
       "definition": "CREATE OR REPLACE FUNCTION public.public_create_booking_v1(p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n    v_customer_id  UUID;\n    v_appt_id      UUID;\n    v_clean_name   TEXT := NULLIF(btrim(COALESCE(p_customer_name, '')), '');\n    v_clean_phone  TEXT := NULLIF(btrim(COALESCE(p_customer_phone, '')), '');\nBEGIN\n    -- Basic validation\n    IF p_center_id IS NULL OR p_service_id IS NULL OR p_date_time IS NULL THEN\n        RAISE EXCEPTION 'Missing required booking fields' USING ERRCODE = '22023';\n    END IF;\n    IF v_clean_name IS NULL OR v_clean_phone IS NULL THEN\n        RAISE EXCEPTION 'Name and phone are required' USING ERRCODE = '22023';\n    END IF;\n    IF length(v_clean_phone) < 6 OR length(v_clean_phone) > 20 THEN\n        RAISE EXCEPTION 'Invalid phone number' USING ERRCODE = '22023';\n    END IF;\n    IF p_date_time < now() THEN\n        RAISE EXCEPTION 'Cannot book a time in the past' USING ERRCODE = '22023';\n    END IF;\n\n    -- Service must exist, belong to the center, and be active\n    PERFORM 1 FROM public.services s\n    WHERE s.id = p_service_id AND s.center_id = p_center_id AND s.is_active = true;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Service is not available' USING ERRCODE = '23503';\n    END IF;\n\n    -- The appointments trigger (20260810000002) requires a staff member on every\n    -- appointment, so the \"optional employee\" this function used to describe was\n    -- fiction: omitting one reached the visitor as the trigger's own name,\n    -- `appointment_customer_service_staff_time_required`. The booking page always\n    -- sends the specialist the client chose, so nothing that works today changes;\n    -- what changes is that a scripted caller gets the salon's words, not ours.\n    IF p_employee_id IS NULL THEN\n        RAISE EXCEPTION 'Selected staff is not available' USING ERRCODE = '23503';\n    END IF;\n\n    PERFORM 1 FROM public.employees e\n    WHERE e.id = p_employee_id AND e.center_id = p_center_id AND e.is_active = true;\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'Selected staff is not available' USING ERRCODE = '23503';\n    END IF;\n\n    -- Abuse protection. Counted here — after validation, before the writes —\n    -- because a counter write is only observable when the surrounding call\n    -- commits: see the note on refused attempts at the top of this file. Keeping\n    -- it after validation also stops a mistyped form from consuming a client's\n    -- allowance, and stops a bogus center id from reaching the counter table's\n    -- foreign key, whose message would name an internal table to a stranger.\n    PERFORM app_private.throttle_public_action(p_center_id, 'booking', v_clean_phone, 5, INTERVAL '1 hour');\n    PERFORM app_private.throttle_public_action(p_center_id, 'booking', 'center', 120, INTERVAL '1 hour');\n\n    -- Prevent double-booking the same staff at the same time\n    PERFORM 1 FROM public.appointments a\n    WHERE a.center_id = p_center_id\n      AND a.employee_id = p_employee_id\n      AND a.status = 'SCHEDULED'\n      AND a.date_time = p_date_time;\n    IF FOUND THEN\n        RAISE EXCEPTION 'This time slot is no longer available' USING ERRCODE = '23505';\n    END IF;\n\n    -- Find existing customer by phone within the center, else create one\n    SELECT c.id INTO v_customer_id\n    FROM public.customers c\n    WHERE c.center_id = p_center_id AND c.phone = v_clean_phone\n    LIMIT 1;\n\n    IF v_customer_id IS NULL THEN\n        INSERT INTO public.customers (center_id, name, phone)\n        VALUES (p_center_id, v_clean_name, v_clean_phone)\n        RETURNING id INTO v_customer_id;\n    END IF;\n\n    -- Create the appointment\n    INSERT INTO public.appointments (center_id, customer_id, employee_id, service_id, date_time, status, notes)\n    VALUES (p_center_id, v_customer_id, p_employee_id, p_service_id, p_date_time, 'SCHEDULED', NULLIF(btrim(COALESCE(p_notes,'')), ''))\n    RETURNING id INTO v_appt_id;\n\n    RETURN jsonb_build_object(\n        'appointment_id', v_appt_id,\n        'customer_id',    v_customer_id,\n        'status',         'SCHEDULED'\n    );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rate_visit_v1",
+      "identity_args": "p_invoice_id uuid, p_rating smallint, p_comment text",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=public"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.public_invoice_rate_visit_v1(p_invoice_id uuid, p_rating smallint, p_comment text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n  v_invoice public.invoices%ROWTYPE;\n  v_review public.customer_reviews%ROWTYPE;\n  v_comment TEXT;\nBEGIN\n  IF p_rating IS NULL OR p_rating NOT BETWEEN 1 AND 5 THEN\n    RAISE EXCEPTION 'invalid_rating' USING ERRCODE = '22023';\n  END IF;\n\n  v_comment := left(NULLIF(btrim(COALESCE(p_comment, '')), ''), 500);\n\n  SELECT * INTO v_invoice FROM public.invoices WHERE id = p_invoice_id;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'invoice_not_found' USING ERRCODE = '22023';\n  END IF;\n\n  IF v_invoice.appointment_id IS NOT NULL THEN\n    INSERT INTO public.customer_reviews\n      (center_id, customer_id, appointment_id, rating, comment, is_published, created_at, updated_at)\n    VALUES\n      (v_invoice.center_id, v_invoice.customer_id, v_invoice.appointment_id, p_rating, v_comment, TRUE, now(), now())\n    ON CONFLICT (appointment_id) WHERE appointment_id IS NOT NULL\n    DO UPDATE\n      SET rating = EXCLUDED.rating,\n          comment = EXCLUDED.comment,\n          is_published = TRUE,\n          updated_at = now()\n    RETURNING * INTO v_review;\n  ELSE\n    -- Walk-in invoice: update the customer's newest general review in place\n    -- (idempotent for repeated scans); create one when none exists.\n    SELECT * INTO v_review\n    FROM public.customer_reviews\n    WHERE center_id = v_invoice.center_id\n      AND customer_id = v_invoice.customer_id\n      AND appointment_id IS NULL\n    ORDER BY created_at DESC\n    LIMIT 1;\n\n    IF FOUND THEN\n      UPDATE public.customer_reviews\n      SET rating = p_rating,\n          comment = v_comment,\n          is_published = TRUE,\n          updated_at = now()\n      WHERE id = v_review.id\n      RETURNING * INTO v_review;\n    ELSE\n      INSERT INTO public.customer_reviews\n        (center_id, customer_id, appointment_id, rating, comment, is_published, created_at, updated_at)\n      VALUES\n        (v_invoice.center_id, v_invoice.customer_id, NULL, p_rating, v_comment, TRUE, now(), now())\n      RETURNING * INTO v_review;\n    END IF;\n  END IF;\n\n  RETURN jsonb_build_object(\n    'id', v_review.id,\n    'appointment_id', v_review.appointment_id,\n    'rating', v_review.rating,\n    'comment', v_review.comment,\n    'is_published', v_review.is_published,\n    'created_at', v_review.created_at\n  );\nEND;\n$function$\n"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rating_lookup_v1",
+      "identity_args": "p_invoice_id uuid",
+      "result": "jsonb",
+      "security_definer": true,
+      "volatility": "v",
+      "return_type": "jsonb",
+      "config": [
+        "search_path=public"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.public_invoice_rating_lookup_v1(p_invoice_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n  v_invoice public.invoices%ROWTYPE;\n  v_existing SMALLINT;\nBEGIN\n  SELECT * INTO v_invoice FROM public.invoices WHERE id = p_invoice_id;\n\n  IF NOT FOUND THEN\n    RAISE EXCEPTION 'invoice_not_found' USING ERRCODE = '22023';\n  END IF;\n\n  SELECT r.rating\n  INTO v_existing\n  FROM public.customer_reviews r\n  WHERE r.center_id = v_invoice.center_id\n    AND r.customer_id = v_invoice.customer_id\n    AND r.appointment_id IS NOT DISTINCT FROM v_invoice.appointment_id\n  ORDER BY r.created_at DESC\n  LIMIT 1;\n\n  RETURN jsonb_build_object(\n    'center_id', v_invoice.center_id,\n    'center_name', (SELECT c.name FROM public.centers c WHERE c.id = v_invoice.center_id),\n    'invoice_id', v_invoice.id,\n    'date', v_invoice.date,\n    'total_amount', v_invoice.total_amount,\n    'appointment_id', v_invoice.appointment_id,\n    'service_name', (\n      SELECT s.name\n      FROM public.appointments a\n      JOIN public.services s ON s.id = a.service_id\n      WHERE a.id = v_invoice.appointment_id\n    ),\n    'employee_name', (\n      SELECT e.name\n      FROM public.appointments a\n      JOIN public.employees e ON e.id = a.employee_id\n      WHERE a.id = v_invoice.appointment_id\n    ),\n    'existing_rating', v_existing\n  );\nEND;\n$function$\n"
     },
     {
       "schema": "public",
@@ -10580,6 +10619,27 @@
     },
     {
       "schema": "public",
+      "name": "public_client_portal_rate_visit_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_rate_visit_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_client_portal_rate_visit_v1",
+      "identity_args": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
       "name": "public_create_booking_v1",
       "identity_args": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
       "grantee": "anon",
@@ -10596,6 +10656,48 @@
       "schema": "public",
       "name": "public_create_booking_v1",
       "identity_args": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rate_visit_v1",
+      "identity_args": "p_invoice_id uuid, p_rating smallint, p_comment text",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rate_visit_v1",
+      "identity_args": "p_invoice_id uuid, p_rating smallint, p_comment text",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rate_visit_v1",
+      "identity_args": "p_invoice_id uuid, p_rating smallint, p_comment text",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rating_lookup_v1",
+      "identity_args": "p_invoice_id uuid",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rating_lookup_v1",
+      "identity_args": "p_invoice_id uuid",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "schema": "public",
+      "name": "public_invoice_rating_lookup_v1",
+      "identity_args": "p_invoice_id uuid",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },
@@ -21398,6 +21500,27 @@
     {
       "kind": "routine",
       "schema": "public",
+      "object": "public_client_portal_rate_visit_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_rate_visit_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_client_portal_rate_visit_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
       "object": "public_create_booking_v1",
       "grantee": "anon",
       "privilege": "EXECUTE"
@@ -21413,6 +21536,48 @@
       "kind": "routine",
       "schema": "public",
       "object": "public_create_booking_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rate_visit_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rate_visit_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rate_visit_v1",
+      "grantee": "postgres",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rating_lookup_v1",
+      "grantee": "anon",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rating_lookup_v1",
+      "grantee": "authenticated",
+      "privilege": "EXECUTE"
+    },
+    {
+      "kind": "routine",
+      "schema": "public",
+      "object": "public_invoice_rating_lookup_v1",
       "grantee": "postgres",
       "privilege": "EXECUTE"
     },

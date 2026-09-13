@@ -1031,6 +1031,36 @@
       ]
     },
     {
+      "name": "public_client_portal_rate_visit_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_comment",
+        "p_customer_id",
+        "p_phone",
+        "p_rating",
+        "p_token"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_center_id uuid, p_customer_id uuid, p_appointment_id uuid, p_phone text, p_token text, p_rating smallint, p_comment text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=public"
+          ],
+          "client_roles": [
+            "anon",
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": true,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
       "name": "public_create_booking_v1",
       "exists": true,
       "frontend_args": [
@@ -1046,6 +1076,56 @@
         {
           "schema": "public",
           "signature": "p_center_id uuid, p_service_id uuid, p_employee_id uuid, p_customer_name text, p_customer_phone text, p_date_time timestamp with time zone, p_notes text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=public"
+          ],
+          "client_roles": [
+            "anon",
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": true,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "public_invoice_rate_visit_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_comment",
+        "p_invoice_id",
+        "p_rating"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_invoice_id uuid, p_rating smallint, p_comment text",
+          "security_definer": true,
+          "search_path": [
+            "search_path=public"
+          ],
+          "client_roles": [
+            "anon",
+            "authenticated"
+          ],
+          "public_execute": false,
+          "has_anon": true,
+          "has_authenticated": true
+        }
+      ]
+    },
+    {
+      "name": "public_invoice_rating_lookup_v1",
+      "exists": true,
+      "frontend_args": [
+        "p_invoice_id"
+      ],
+      "overloads": [
+        {
+          "schema": "public",
+          "signature": "p_invoice_id uuid",
           "security_definer": true,
           "search_path": [
             "search_path=public"

@@ -1,5 +1,5 @@
 {
-  "files": 340,
+  "files": 356,
   "tables": [
     {
       "table": "accounting_journal_entries",
@@ -1491,6 +1491,21 @@
       ]
     },
     {
+      "name": "public_client_portal_rate_visit_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_appointment_id",
+        "p_center_id",
+        "p_comment",
+        "p_customer_id",
+        "p_phone",
+        "p_rating",
+        "p_token"
+      ]
+    },
+    {
       "name": "public_create_booking_v1",
       "files": [
         "src/infrastructure/supabase/repositories/publicAccess.ts"
@@ -1503,6 +1518,26 @@
         "p_employee_id",
         "p_notes",
         "p_service_id"
+      ]
+    },
+    {
+      "name": "public_invoice_rate_visit_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_comment",
+        "p_invoice_id",
+        "p_rating"
+      ]
+    },
+    {
+      "name": "public_invoice_rating_lookup_v1",
+      "files": [
+        "src/infrastructure/supabase/repositories/publicAccess.ts"
+      ],
+      "args": [
+        "p_invoice_id"
       ]
     },
     {
@@ -1669,7 +1704,8 @@
       "files": [
         "src/infrastructure/gemini/adminAssistantLive.ts",
         "src/infrastructure/services/printService.ts",
-        "src/infrastructure/supabase/repositories/settings.ts"
+        "src/infrastructure/supabase/repositories/settings.ts",
+        "src/shared/print/pdfExport.ts"
       ]
     },
     {
