@@ -173,6 +173,12 @@ export const useCases = {
       getRepositoryBundle().publicAccessAdapter.cancelBooking(credentials, appointmentId, reason),
     rescheduleBooking: (credentials: import("../../domain/ports/repositories").PortalCredentials, appointmentId: string, newDateTime: Date, reason?: string) =>
       getRepositoryBundle().publicAccessAdapter.rescheduleBooking(credentials, appointmentId, newDateTime, reason),
+    portalRateVisit: (credentials: import("../../domain/ports/repositories").PortalCredentials, appointmentId: string, rating: number, comment?: string) =>
+      getRepositoryBundle().publicAccessAdapter.portalRateVisit(credentials, appointmentId, rating, comment),
+    lookupInvoiceRating: (invoiceId: string) =>
+      getRepositoryBundle().publicAccessAdapter.lookupInvoiceRating(invoiceId),
+    rateFromInvoice: (invoiceId: string, rating: number, comment?: string) =>
+      getRepositoryBundle().publicAccessAdapter.rateFromInvoice(invoiceId, rating, comment),
   },
 
   tenant: {

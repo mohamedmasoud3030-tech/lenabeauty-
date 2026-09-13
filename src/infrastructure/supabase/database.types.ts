@@ -2366,6 +2366,18 @@ export type Database = {
         Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_phone": string | null; "p_token": string | null }
         Returns: Json
       },
+      "public_client_portal_rate_visit_v1": {
+        Args: { "p_center_id": string | null; "p_customer_id": string | null; "p_appointment_id": string | null; "p_phone": string | null; "p_token": string | null; "p_rating": number | null; "p_comment": string | null }
+        Returns: Json
+      },
+      "public_invoice_rating_lookup_v1": {
+        Args: { "p_invoice_id": string | null }
+        Returns: Json
+      },
+      "public_invoice_rate_visit_v1": {
+        Args: { "p_invoice_id": string | null; "p_rating": number | null; "p_comment": string | null }
+        Returns: Json
+      },
       "public_create_booking_v1": {
         Args: { "p_center_id": string | null; "p_service_id": string | null; "p_employee_id": string | null; "p_customer_name": string | null; "p_customer_phone": string | null; "p_date_time": string | null; "p_notes": string | null }
         Returns: Json

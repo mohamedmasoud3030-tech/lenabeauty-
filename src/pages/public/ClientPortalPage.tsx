@@ -12,10 +12,12 @@ import {
   Loader2,
   LogOut,
   Receipt,
+  Star,
   User,
   Wallet,
   XCircle,
 } from "lucide-react";
+import clsx from "clsx";
 import { useCases } from "../../app/composition/useCases";
 import { config } from "../../config/env";
 import { formatPublicError } from "../../shared/hooks/useApplication";
@@ -56,6 +58,10 @@ export default function ClientPortalPage() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyAppointmentId, setBusyAppointmentId] = useState<string | null>(null);
+  // Self-service ratings: the customer rates their own visits here (staff
+  // never fill these in). Server-side it's one rating per appointment.
+  const [myRatings, setMyRatings] = useState<Record<string, number>>({});
+  const [ratingBusyId, setRatingBusyId] = useState<string | null>(null);
   const [rescheduling, setRescheduling] = useState<{ appointmentId: string; day: Date; time: Date | null } | null>(null);
 
   const loadProfile = useCallback(
@@ -108,6 +114,35 @@ export default function ClientPortalPage() {
     setCode("");
     setActionError(null);
     setRescheduling(null);
+    setMyRatings({});
+    setRatingBusyId(null);
+  }
+
+  const ratingByAppointment = useMemo(
+    () =>
+      new Map(
+        (profile?.reviews ?? [])
+          .filter((review) => review.appointmentId)
+          .map((review) => [review.appointmentId as string, review.rating]),
+      ),
+    [profile],
+  );
+
+  async function rateVisit(appointmentId: string, rating: number) {
+    if (ratingBusyId) return;
+    setRatingBusyId(appointmentId);
+    setActionError(null);
+    const result = await useCases.public.portalRateVisit(
+      credentialsFrom(centerId, phone, code),
+      appointmentId,
+      rating,
+    );
+    setRatingBusyId(null);
+    if (!result.ok) {
+      setActionError(formatPublicError(result.error, t("The request could not be completed. Please try again.")));
+      return;
+    }
+    setMyRatings((prev) => ({ ...prev, [appointmentId]: rating }));
   }
 
   async function cancelAppointment(appointmentId: string) {
@@ -400,15 +435,48 @@ export default function ClientPortalPage() {
               </div>
             ))}
             {past.length > 0 && (
-              <details className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <details className="rounded-2xl border border-border bg-card p-4 shadow-sm" open>
                 <summary className="cursor-pointer text-xs font-bold text-muted-foreground">{t("Past appointments")}</summary>
                 <ul className="mt-2 space-y-1.5">
-                  {past.map((appointment) => (
-                    <li key={appointment.id} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-bold text-foreground">{appointment.serviceName || t("Appointment")}</span>
-                      <span className="text-muted-foreground" dir={isRtl ? "rtl" : "ltr"}>{formatWhen(appointment.dateTime)}</span>
-                    </li>
-                  ))}
+                  {past.map((appointment) => {
+                    const canRate = appointment.status === "COMPLETED";
+                    const currentRating = canRate
+                      ? myRatings[appointment.id] ?? ratingByAppointment.get(appointment.id) ?? 0
+                      : 0;
+                    return (
+                      <li key={appointment.id} className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="font-bold text-foreground">{appointment.serviceName || t("Appointment")}</span>
+                          <span className="text-muted-foreground" dir={isRtl ? "rtl" : "ltr"}>{formatWhen(appointment.dateTime)}</span>
+                        </div>
+                        {canRate && (
+                          <div className="flex items-center gap-1" role="group" aria-label={t("How was this visit?")}>
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() => void rateVisit(appointment.id, value)}
+                                disabled={ratingBusyId !== null}
+                                aria-label={`${t("How was this visit?")} ${value}`}
+                                aria-pressed={currentRating === value}
+                                className="flex h-11 w-9 items-center justify-center"
+                              >
+                                <Star
+                                  className={clsx("h-5 w-5", currentRating >= value ? "text-warning" : "text-muted-foreground")}
+                                  fill={currentRating >= value ? "currentColor" : "none"}
+                                />
+                              </button>
+                            ))}
+                            {currentRating > 0 && (
+                              <span className="ml-1 text-[10px] font-bold text-muted-foreground">
+                                {t("Thanks for your feedback!")}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </details>
             )}

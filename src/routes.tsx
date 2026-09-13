@@ -29,6 +29,7 @@ const CustomerExperiencePage = lazy(() => import("./pages/CustomerExperiencePage
 const ForecastingPage = lazy(() => import("./pages/ForecastingPage"));
 const PublicBookingPage = lazy(() => import("./pages/public/PublicBookingPage"));
 const ClientPortalPage = lazy(() => import("./pages/public/ClientPortalPage"));
+const RateInvoicePage = lazy(() => import("./pages/public/RateInvoicePage"));
 const AccountingPage = lazy(() => import("./pages/AccountingPage"));
 const AdvancedAutomationPage = lazy(() => import("./pages/AdvancedAutomationPage"));
 
@@ -57,6 +58,7 @@ export function AppRoutes() {
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><LoginPage /></Suspense>} />
       <Route path="/book" element={<Suspense fallback={<PageLoader />}><PublicBookingPage /></Suspense>} />
       <Route path="/portal" element={<Suspense fallback={<PageLoader />}><ClientPortalPage /></Suspense>} />
+      <Route path="/rate" element={<Suspense fallback={<PageLoader />}><RateInvoicePage /></Suspense>} />
       <Route path={PASSWORD_RESET_ROUTE} element={<Suspense fallback={<PageLoader />}><ResetPasswordPage /></Suspense>} />
 
       <Route element={<RequireAuth />}>

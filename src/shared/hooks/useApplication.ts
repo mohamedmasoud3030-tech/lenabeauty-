@@ -62,6 +62,8 @@ const INTERNAL_ERROR_PATTERNS: RegExp[] = [
 // that resolves in Arabic and English.
 const PUBLIC_ACTION_CODES: Record<string, string> = {
   appointment_not_found: "We could not find this appointment. Please contact the salon.",
+  invoice_not_found: "We couldn't find this visit. Please ask the salon to reprint the receipt.",
+  invalid_rating: "Please choose a rating between 1 and 5.",
   invalid_portal_credentials: "Invalid portal credentials",
   only_scheduled_can_be_cancelled: "This appointment can no longer be cancelled.",
   cannot_cancel_past_or_started_appointment: "A past or started appointment cannot be cancelled.",

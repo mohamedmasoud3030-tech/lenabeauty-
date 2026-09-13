@@ -8,6 +8,8 @@ import {
   PublicBookingConfirmation,
   PortalCredentials,
   PortalProfile,
+  InvoiceRatingLookup,
+  InvoiceRatingSaved,
 } from "../../../domain/ports/repositories";
 import { DomainError, Result } from "../../../domain/ports/repositories";
 import { createQueryError } from "../errors";
@@ -199,6 +201,16 @@ export class SupabasePublicAccessAdapter implements PublicAccessRepository {
             tax: Number(i.tax) || 0,
             paymentMethod: String(i.payment_method || ""),
           })),
+          // The customer's own reviews — the portal surfaces them so the
+          // "how was this visit?" stars show the existing rating.
+          reviews: (Array.isArray(row?.reviews) ? row.reviews : []).map((r: any) => ({
+            id: String(r.id),
+            appointmentId: r.appointment_id ? String(r.appointment_id) : null,
+            rating: Number(r.rating) || 0,
+            comment: typeof r.comment === "string" ? r.comment : null,
+            isPublished: Boolean(r.is_published),
+            createdAtISO: String(r.created_at || ""),
+          })),
         },
       };
     } catch (e: unknown) {
@@ -239,4 +251,92 @@ export class SupabasePublicAccessAdapter implements PublicAccessRepository {
       return { ok: false, error: toDomainError("Portal.rescheduleBooking", (e as Error).message) };
     }
   }
+
+  async portalRateVisit(credentials: PortalCredentials, appointmentId: string, rating: number, comment?: string): Promise<Result<InvoiceRatingSaved, DomainError>> {
+    try {
+      // Same credential dance as portalProfile: the login RPC resolves the
+      // customer row, then the write RPC re-validates it server-side.
+      const login = await this.portalLogin(credentials);
+      if (!login.ok) return { ok: false, error: login.error };
+      const { data, error } = await getSupabaseClient().rpc("public_client_portal_rate_visit_v1", {
+        p_center_id: credentials.centerId,
+        p_customer_id: login.data.customerId,
+        p_appointment_id: appointmentId,
+        p_phone: credentials.phone,
+        p_token: credentials.token,
+        p_rating: rating,
+        p_comment: comment?.trim() ? comment.trim() : null,
+      });
+      if (error) return { ok: false, error: toDomainError("Portal.rateVisit", error.message) };
+      const row = (data ?? {}) as any;
+      if (!row?.id) return { ok: false, error: toDomainError("Portal.rateVisit", "Invalid response") };
+      return { ok: true, data: mapRatingRow(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: toDomainError("Portal.rateVisit", (e as Error).message) };
+    }
+  }
+
+  async lookupInvoiceRating(invoiceId: string): Promise<Result<InvoiceRatingLookup, DomainError>> {
+    try {
+      const { data, error } = await getSupabaseClient().rpc("public_invoice_rating_lookup_v1", {
+        p_invoice_id: invoiceId,
+      });
+      if (error) {
+        if (isMissingBackendFeature(error.message)) {
+          return { ok: false, error: toDomainError("Public.invoiceRating", "BACKEND_METHOD_UNSUPPORTED") };
+        }
+        return { ok: false, error: toDomainError("Public.invoiceRating", error.message) };
+      }
+      const row = (data ?? {}) as any;
+      if (!row?.invoice_id) return { ok: false, error: toDomainError("Public.invoiceRating", "NOT_FOUND") };
+      return {
+        ok: true,
+        data: {
+          centerId: String(row.center_id),
+          centerName: typeof row.center_name === "string" ? row.center_name : null,
+          invoiceId: String(row.invoice_id),
+          date: new Date(row.date),
+          totalAmount: Number(row.total_amount) || 0,
+          appointmentId: row.appointment_id ? String(row.appointment_id) : null,
+          serviceName: typeof row.service_name === "string" ? row.service_name : null,
+          employeeName: typeof row.employee_name === "string" ? row.employee_name : null,
+          existingRating: row.existing_rating === null || row.existing_rating === undefined ? null : Number(row.existing_rating),
+        },
+      };
+    } catch (e: unknown) {
+      return { ok: false, error: toDomainError("Public.invoiceRating", (e as Error).message) };
+    }
+  }
+
+  async rateFromInvoice(invoiceId: string, rating: number, comment?: string): Promise<Result<InvoiceRatingSaved, DomainError>> {
+    try {
+      const { data, error } = await getSupabaseClient().rpc("public_invoice_rate_visit_v1", {
+        p_invoice_id: invoiceId,
+        p_rating: rating,
+        p_comment: comment?.trim() ? comment.trim() : null,
+      });
+      if (error) {
+        if (isMissingBackendFeature(error.message)) {
+          return { ok: false, error: toDomainError("Public.invoiceRating", "BACKEND_METHOD_UNSUPPORTED") };
+        }
+        return { ok: false, error: toDomainError("Public.invoiceRating", error.message) };
+      }
+      const row = (data ?? {}) as any;
+      if (!row?.id) return { ok: false, error: toDomainError("Public.invoiceRating", "Invalid response") };
+      return { ok: true, data: mapRatingRow(row) };
+    } catch (e: unknown) {
+      return { ok: false, error: toDomainError("Public.invoiceRating", (e as Error).message) };
+    }
+  }
+}
+
+function mapRatingRow(row: any): InvoiceRatingSaved {
+  return {
+    id: String(row.id),
+    appointmentId: row.appointment_id ? String(row.appointment_id) : null,
+    rating: Number(row.rating) || 0,
+    comment: typeof row.comment === "string" ? row.comment : null,
+    isPublished: Boolean(row.is_published),
+    createdAtISO: String(row.created_at || ""),
+  };
 }

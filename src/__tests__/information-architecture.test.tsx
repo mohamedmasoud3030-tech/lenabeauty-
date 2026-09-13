@@ -72,7 +72,8 @@ describe("route and registry integrity", () => {
     // navigation entry. `/book` and `/portal` are anonymous customer-facing
     // surfaces (online booking + client portal); they are shared BY LINK from
     // Settings → Online Booking, never shown inside the staff navigation.
-    const PUBLIC_ROUTES = ["/login", "/book", "/portal"];
+    // `/rate` is the receipt-QR rating page — shared BY SCAN, same rule.
+    const PUBLIC_ROUTES = ["/login", "/book", "/portal", "/rate"];
     for (const path of declaredRoutePaths()) {
       if (LEGACY_REDIRECTS.includes(path) || PUBLIC_ROUTES.includes(path)) continue;
       expect(

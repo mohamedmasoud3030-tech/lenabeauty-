@@ -68,6 +68,16 @@ export interface PortalInvoiceView {
   paymentMethod: string;
 }
 
+/** The customer's own reviews as returned to the portal (their data). */
+export interface PortalReviewView {
+  id: string;
+  appointmentId: string | null;
+  rating: number;
+  comment: string | null;
+  isPublished: boolean;
+  createdAtISO: string;
+}
+
 export interface PortalProfile {
   customerId: string;
   name: string;
@@ -76,12 +86,36 @@ export interface PortalProfile {
   totalSpent: number;
   appointments: PortalAppointmentView[];
   invoices: PortalInvoiceView[];
+  reviews: PortalReviewView[];
 }
 
 export interface PortalCredentials {
   centerId: string;
   phone: string;
   token: string;
+}
+
+/** What a scanned receipt points to — the visit summary + prior rating. */
+export interface InvoiceRatingLookup {
+  centerId: string;
+  centerName: string | null;
+  invoiceId: string;
+  date: Date;
+  totalAmount: number;
+  appointmentId: string | null;
+  serviceName: string | null;
+  employeeName: string | null;
+  existingRating: number | null;
+}
+
+/** A saved rating row (both entry points return the same shape). */
+export interface InvoiceRatingSaved {
+  id: string;
+  appointmentId: string | null;
+  rating: number;
+  comment: string | null;
+  isPublished: boolean;
+  createdAtISO: string;
 }
 
 export interface PublicAccessRepository {
@@ -101,4 +135,11 @@ export interface PublicAccessRepository {
   /** Self-service actions on a SCHEDULED appointment (portal credentials). */
   cancelBooking(credentials: PortalCredentials, appointmentId: string, reason?: string): Promise<Result<void, DomainError>>;
   rescheduleBooking(credentials: PortalCredentials, appointmentId: string, newDateTime: Date, reason?: string): Promise<Result<void, DomainError>>;
+
+  /** Self-service rating of one of the customer's visits (portal credentials). */
+  portalRateVisit(credentials: PortalCredentials, appointmentId: string, rating: number, comment?: string): Promise<Result<InvoiceRatingSaved, DomainError>>;
+
+  /** Receipt QR surface — possession of the invoice id is the credential. */
+  lookupInvoiceRating(invoiceId: string): Promise<Result<InvoiceRatingLookup, DomainError>>;
+  rateFromInvoice(invoiceId: string, rating: number, comment?: string): Promise<Result<InvoiceRatingSaved, DomainError>>;
 }

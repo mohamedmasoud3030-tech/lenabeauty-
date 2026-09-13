@@ -56,7 +56,13 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "t
   ] || invoice.paymentMethod;
   const serial = invoice.serialNumber || invoice.id.slice(0, 8).toUpperCase();
 
-  const qrData = JSON.stringify({ id: invoice.id, date: invoice.date, amount: total, salon: salonName });
+  // The QR opens the customer's self-service rating page (#/rate). The
+  // customer experiences the service, so the customer rates it — scanning
+  // the printed receipt is the credential (the invoice id is on the paper).
+  const appBase = typeof window !== "undefined" && window.location?.origin
+    ? `${window.location.origin}${window.location.pathname}`
+    : "";
+  const qrData = `${appBase}/#/rate?invoice=${invoice.id}`;
   const isA4 = format === "a4-premium" || format === "a4-luxe";
   const isLuxe = format === "a4-luxe";
   const paperSize = format === "thermal-58" ? "58mm" : "80mm";
@@ -187,7 +193,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "t
             <div className="lb-bottom">
               <div className="lb-qr">
                 <QRCode value={qrData} size={68} level="M" includeMargin={false} />
-                <small>{t("Scan to verify this invoice")}</small>
+                <small>{t("Scan to rate this visit")}</small>
               </div>
               <div className="lb-sign"><div className="lb-sign-line">{t("Cashier Signature")}</div></div>
               <div className="lb-sign"><div className="lb-sign-line">{t("Customer Signature")}</div></div>
@@ -345,7 +351,7 @@ export const InvoicePrintLayout: React.FC<Props> = ({ data, onClose, format = "t
         <div className="flex justify-center mt-1">
           <div>
             <QRCode value={qrData} size={60} level="M" includeMargin={false} />
-            <p className="text-[7px] opacity-60 mt-1">{t("Scan to verify this invoice")}</p>
+            <p className="text-[7px] opacity-60 mt-1">{t("Scan to rate this visit")}</p>
           </div>
         </div>
 
