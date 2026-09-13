@@ -104,7 +104,9 @@ describe("A — the pre-auth screen presents Lena Beauty as a finished product",
     renderLogin();
     await waitFor(() => expect(screen.getByLabelText(i18n.t("Work email"))).toBeInTheDocument());
 
-    expect(screen.getByText("أحد منتجات LENA DIGITAL HOUSE")).toBeInTheDocument();
+    // The endorsement appears exactly once — a single credit line at the
+    // bottom of the form, not a repeated menu/popup.
+    expect(document.querySelectorAll("[data-lena-house-endorsement]")).toHaveLength(1);
     const parentLink = screen.getByRole("link", { name: /LENA Digital House/i });
     expect(parentLink).toHaveAttribute("target", "_blank");
     expect(parentLink.getAttribute("href")).toContain("from=lenabeauty");
@@ -325,14 +327,17 @@ describe("F — new surfaces are RTL-safe and touch-safe", () => {
     }
   });
 
-  it("F3 — the phone login keeps menu, language and theme as 44px icon controls", () => {
+  it("F3 — the phone login keeps language and theme as 44px icon controls", () => {
     const login = readFileSync(resolve(process.cwd(), "src/pages/LoginPage.tsx"), "utf8");
-    expect(login).toContain("Mobile-only: three compact controls — LENA menu, language and theme");
+    expect(login).toContain("Mobile-only: two compact controls — language and theme");
     expect(login).toContain("onClick={toggleLanguage}");
     expect(login).toContain("onClick={toggleTheme}");
     expect(login).toContain('"inline-flex h-11 w-11 shrink-0');
-    expect(login).toContain("<Menu");
     expect(login).toContain("<Globe");
+    // The developer endorsement lives exactly once — at the bottom of the
+    // form. No menu button or popup repeats the parent-house brand.
+    expect(login).not.toContain("lena-house-menu");
+    expect(login.match(/href=\{lenaHref\}/g)).toHaveLength(1);
   });
 
   it("F4 — every retained translation contract resolves in Arabic and English", async () => {

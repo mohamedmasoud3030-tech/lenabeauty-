@@ -1,4 +1,4 @@
-import { PARENT_HOUSE_NAME, PRODUCT_NAME } from "../config/brand";
+import { PRODUCT_NAME } from "../config/brand";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -11,7 +11,6 @@ import {
   EyeOff,
   Globe,
   Lock,
-  Menu,
   Moon,
   Package,
   ShoppingBag,
@@ -19,7 +18,6 @@ import {
   Sun,
   User,
   Users,
-  X,
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useTheme } from "../context/ThemeContext";
@@ -50,12 +48,7 @@ const LOGIN_COPY = {
     resetSubtitle: "Enter your work email and we'll send you a reset link.",
     tagline: "Everything you need to run your beauty center with elegance.",
     footer: "Beauty, organized beautifully.",
-    menuLabel: "LENA menu",
-    parentEyebrow: `A ${PARENT_HOUSE_NAME.toUpperCase()} PRODUCT`,
     parentPrefix: "Designed and developed by",
-    parentSubline: "Part of the LENA family of digital products.",
-    parentMenuBody: `The parent digital house behind ${PRODUCT_NAME} and the LENA product family.`,
-    parentMenuCta: `Visit ${PARENT_HOUSE_NAME}`,
   },
   ar: {
     system: "نظام إدارة مركز التجميل",
@@ -65,12 +58,7 @@ const LOGIN_COPY = {
     resetSubtitle: "أدخلي بريد العمل وسنرسل لك رابط إعادة التعيين.",
     tagline: "كل ما تحتاجينه لإدارة مركزك بجمال وسلاسة.",
     footer: "الجمال، بإدارة أجمل.",
-    menuLabel: "قائمة LENA",
-    parentEyebrow: `أحد منتجات ${PARENT_HOUSE_NAME.toUpperCase()}`,
     parentPrefix: `تم تصميم وتطوير ${PRODUCT_NAME} بواسطة`,
-    parentSubline: "جزء من عائلة LENA للمنتجات الرقمية.",
-    parentMenuBody: `البيت الرقمي الأم وراء ${PRODUCT_NAME} وبقية عائلة منتجات LENA.`,
-    parentMenuCta: `زيارة ${PARENT_HOUSE_NAME}`,
   },
 } as const;
 
@@ -107,7 +95,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"sign-in" | "reset">("sign-in");
   const [resetSent, setResetSent] = useState(false);
-  const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
 
   const isRtl = i18n.language === "ar";
   const copy = isRtl ? LOGIN_COPY.ar : LOGIN_COPY.en;
@@ -208,22 +195,11 @@ export default function LoginPage() {
         <div className="absolute bottom-[14%] end-[19%] h-1 w-1 rounded-full bg-[#D29B52] shadow-[0_0_16px_4px_rgba(210,155,82,0.24)]" />
       </div>
 
-      {/* Mobile-only: three compact controls — LENA menu, language and theme. */}
+      {/* Mobile-only: two compact controls — language and theme. */}
       <div
         className="absolute end-4 top-[max(0.9rem,env(safe-area-inset-top))] z-30 flex items-center gap-2 sm:hidden"
         dir="ltr"
       >
-        <button
-          type="button"
-          onClick={() => setIsBrandMenuOpen((open) => !open)}
-          className={controlClass}
-          aria-label={`${copy.menuLabel} mobile`}
-          aria-expanded={isBrandMenuOpen}
-          aria-controls="lena-house-menu"
-          title={copy.menuLabel}
-        >
-          {isBrandMenuOpen ? <X className="h-5 w-5 text-primary" aria-hidden="true" /> : <Menu className="h-5 w-5 text-primary" aria-hidden="true" />}
-        </button>
         <button
           type="button"
           onClick={toggleLanguage}
@@ -245,50 +221,9 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {isBrandMenuOpen ? (
-        <div
-          id="lena-house-menu"
-          className="absolute end-4 top-[calc(max(0.9rem,env(safe-area-inset-top))+3.5rem)] z-40 w-[min(20rem,calc(100vw-2rem))] rounded-[1.5rem] border border-white/90 bg-white/94 p-4 shadow-[0_22px_60px_rgba(76,46,91,0.18)] backdrop-blur-2xl dark:border-border dark:bg-card/95 sm:end-5 sm:top-20 lg:end-8"
-          role="dialog"
-          aria-label={copy.menuLabel}
-        >
-          <div className="flex items-start gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/12 to-[#D5A15D]/15 text-primary">
-              <Sparkles className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold tracking-[0.16em] text-[#B77A3F]">{copy.parentEyebrow}</p>
-              <p className="mt-1 font-serif text-lg font-semibold text-foreground">{LENA_HOUSE_NAME}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{copy.parentMenuBody}</p>
-            </div>
-          </div>
-          <a
-            href={lenaHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => setIsBrandMenuOpen(false)}
-            className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-primary/15 bg-primary/8 px-3 text-sm font-semibold text-primary transition hover:bg-primary/12 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
-          >
-            {copy.parentMenuCta}
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </div>
-      ) : null}
-
       <div className="relative z-10 mx-auto w-full max-w-6xl">
-        {/* Desktop / tablet keeps explicit language labels plus menu and theme controls. */}
+        {/* Desktop / tablet keeps explicit language labels plus the theme control. */}
         <div className="mb-4 hidden items-center justify-end gap-2 sm:flex" dir="ltr">
-          <button
-            type="button"
-            onClick={() => setIsBrandMenuOpen((open) => !open)}
-            className={controlClass}
-            aria-label={`${copy.menuLabel} desktop`}
-            aria-expanded={isBrandMenuOpen}
-            aria-controls="lena-house-menu"
-            title={copy.menuLabel}
-          >
-            {isBrandMenuOpen ? <X className="h-4 w-4 text-primary" aria-hidden="true" /> : <Menu className="h-4 w-4 text-primary" aria-hidden="true" />}
-          </button>
           <div className="inline-flex min-h-11 items-center overflow-hidden rounded-full border border-border/75 bg-card/88 p-1 shadow-sm backdrop-blur-xl">
             <Globe className="mx-2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
             {LANGUAGES.map((language) => (
@@ -511,27 +446,23 @@ export default function LoginPage() {
                 ) : null}
               </div>
 
-              {mode === "sign-in" ? (
-                <div
-                  className="mx-auto mt-4 max-w-lg rounded-2xl border border-[#D6B783]/35 bg-white/52 px-4 py-3 text-center shadow-[0_10px_28px_rgba(76,47,91,0.06)] backdrop-blur-lg dark:border-border dark:bg-card/45"
-                  data-lena-house-endorsement
-                >
-                  <p className="text-[9px] font-bold tracking-[0.18em] text-[#B77A3F]">{copy.parentEyebrow}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {copy.parentPrefix}{" "}
-                    <a
-                      href={lenaHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-11 items-center gap-1 rounded-lg px-1 font-semibold text-foreground underline-offset-4 outline-none transition hover:text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/15"
-                    >
-                      {LENA_HOUSE_NAME}
-                      <ArrowUpRight className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                    </a>
-                  </p>
-                  <p className="-mt-1 text-[10px] leading-relaxed text-muted-foreground/80">{copy.parentSubline}</p>
-                </div>
-              ) : null}
+              <div
+                className="mx-auto mt-4 max-w-lg px-1 text-center"
+                data-lena-house-endorsement
+              >
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {copy.parentPrefix}{" "}
+                  <a
+                    href={lenaHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 items-center gap-1 rounded-lg px-1 font-semibold text-foreground underline-offset-4 outline-none transition hover:text-primary hover:underline focus-visible:ring-4 focus-visible:ring-primary/15"
+                  >
+                    {LENA_HOUSE_NAME}
+                    <ArrowUpRight className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         </section>

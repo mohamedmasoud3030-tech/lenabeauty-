@@ -70,8 +70,12 @@ describe("fixed product identity", () => {
 
   it("keeps the developer attribution in its designated places", () => {
     // Login endorsement is the developer's own surface and must not follow a
-    // customer setting.
-    expect(readSource("src/pages/LoginPage.tsx")).toContain("PARENT_HOUSE_NAME");
+    // customer setting. It appears exactly once — a single credit line at
+    // the bottom of the login form — and always resolves through the fixed
+    // identity constants, never a hardcoded literal.
+    const login = readSource("src/pages/LoginPage.tsx");
+    expect(login).toContain("LENA_HOUSE_NAME");
+    expect(login.match(/LENA_HOUSE_NAME}/g)).toHaveLength(1);
     expect(readSource("src/lib/lena-house.ts")).toContain("PARENT_HOUSE_NAME");
     expect(readSource("src/lib/lena-house.ts")).toContain("PARENT_HOUSE_URL");
   });
